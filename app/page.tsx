@@ -56,7 +56,10 @@ export default function Home() {
 
   // --- ESTILOS DE BOTONES ---
   let buttonText = "ESPERANDO...";
-  let buttonAction = passTurn;
+  
+  // CORRECCIÓN: Definir el tipo para permitir funciones asíncronas
+  let buttonAction: () => void | Promise<void> = passTurn;
+  
   let buttonColorClass = "bg-gray-300 text-gray-600 border-black cursor-not-allowed pattern-diagonal-lines-sm opacity-70";
   let buttonAnimation = {};
 
@@ -172,7 +175,8 @@ export default function Home() {
                         exit={{ opacity: 0, scale: 0 }}
                         className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none"
                     >
-                        <div className="relative">
+                        {/* CAMBIO CENTRADO: Añadido flex y justify-center al contenedor del contenido */}
+                        <div className="relative flex items-center justify-center">
                             <span className="absolute inset-0 text-yellow-400 text-5xl scale-125 z-0 animate-ping">💥</span>
                             <span className="text-3xl font-black text-[#FF2222] drop-shadow-[2px_2px_0_#000] relative z-10" style={{ WebkitTextStroke: '1px black' }}>
                                 -{recentDamage.opponentSlots[slot.index]}
@@ -224,7 +228,8 @@ export default function Home() {
                         exit={{ opacity: 0, scale: 0 }}
                         className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none"
                     >
-                        <div className="relative">
+                        {/* CAMBIO CENTRADO: Añadido flex y justify-center */}
+                        <div className="relative flex items-center justify-center">
                              <span className="absolute inset-0 text-black text-5xl scale-125 z-0 animate-ping">💥</span>
                             <span className="text-3xl font-black text-[#FF2222] drop-shadow-[2px_2px_0_#000] relative z-10" style={{ WebkitTextStroke: '1px black' }}>
                                 -{recentDamage.playerSlots[slot.index]}

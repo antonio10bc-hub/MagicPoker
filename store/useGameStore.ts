@@ -14,8 +14,8 @@ interface GameState {
   startGame: () => void;
   resetGame: () => void;
   placeCard: (cardId: string, slotIndex: number) => void;
-  passTurn: () => void;
-  opponentTurnAction: () => void;
+  passTurn: () => Promise<void>; // <--- Promesa para el timing
+  opponentTurnAction: () => Promise<void>; // <--- Promesa para el timing
   resolveCombatPhase: () => void;
   finishCombatPhase: () => void;
   drawCard: (target: 'player' | 'opponent', amount?: number) => void;
@@ -38,9 +38,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   opponent: getInitialPlayerState(),
 
   startGame: () => {
+    // CORREGIDO: Usamos argumentos 'player' y 'opponent' como en tu código original
     const playerDeckFull = createDeck('player');
     const opponentDeckFull = createDeck('opponent');
 
+    // CORREGIDO: Manual slice (sin usar drawCards que no existe)
     const playerHand = playerDeckFull.slice(0, 3).map(c => ({ ...c, isFaceUp: true }));
     const playerDeck = playerDeckFull.slice(3);
     
@@ -104,24 +106,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     if (!opponent.isPassed) {
-      setTimeout(() => get().opponentTurnAction(), 400);
+      // TIMING: Espera 1s antes de que la máquina responda
+      setTimeout(() => get().opponentTurnAction(), 1000);
     } else {
       set({ turn: 'player' });
     }
   },
 
-  passTurn: () => {
+  passTurn: async () => {
     const { opponent } = get();
     set(state => ({ player: { ...state.player, isPassed: true }, turn: 'opponent' }));
 
     if (!opponent.isPassed) {
-      setTimeout(() => get().opponentTurnAction(), 400);
+      // TIMING: Espera 1s antes de acción rival
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      get().opponentTurnAction();
     } else {
       get().resolveCombatPhase();
     }
   },
 
-  opponentTurnAction: () => {
+  opponentTurnAction: async () => {
     const { opponent, player } = get();
     const availableSlots = opponent.board.filter(slot => slot.card === null);
 
@@ -141,13 +146,22 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newBoard = [...currentOpponentState.board];
       newBoard[chosenSlotIndex] = { ...newBoard[chosenSlotIndex], card: cardToPlay };
 
+      // 1. Poner carta
       set({
         opponent: { ...currentOpponentState, hand: newHand, board: newBoard },
+      });
+      
+      // TIMING: Espera 0.5s después de jugar para devolver el turno
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 2. Cambiar turno
+      set({
         turn: player.isPassed ? 'opponent' : 'player'
       });
       
       if (player.isPassed) {
-          setTimeout(() => get().opponentTurnAction(), 400);
+         // Si el jugador ya pasó, la máquina sigue jugando con pausa de 1s
+         setTimeout(() => get().opponentTurnAction(), 1000);
       }
     } else {
       set(state => ({ opponent: { ...state.opponent, isPassed: true } }));
@@ -160,7 +174,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   resolveCombatPhase: () => {
-    // BLINDAJE: Si ya estamos combatiendo, no hacer nada.
     if (get().phase === 'combat' || get().phase === 'combat-reveal') return;
 
     set({ phase: 'combat' });
@@ -183,7 +196,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       setTimeout(() => {
         const { player, opponent } = get();
-        // CÁLCULO ÚNICO
         const result = calculateCombat(player.board, opponent.board);
 
         set({ 
@@ -228,11 +240,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     const currentState = get();
     if (currentState.phase !== 'combat-reveal') return;
 
-    // RECUPERAR RESULTADO (NO RECALCULAR)
     const result = currentState.pendingCombatResult;
     
     if (!result) {
-        // Fallback de emergencia
         set({ phase: 'placement' });
         return;
     }
@@ -246,7 +256,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     set({
         recentDamage: null,
-        pendingCombatResult: null, // Limpieza
+        pendingCombatResult: null,
         player: { ...currentState.player, lives: newPlayerLives, board: clearDead(currentState.player.board), isPassed: false },
         opponent: { ...currentState.opponent, lives: newOpponentLives, board: clearDead(currentState.opponent.board), isPassed: false },
     });
