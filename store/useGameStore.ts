@@ -10,12 +10,14 @@ interface GameState {
   roundNumber: number;
   recentDamage: DamageEvent | null;
   pendingCombatResult: CombatResult | null;
+  // NUEVO: Para controlar el resultado explícito
+  gameResult: 'win' | 'loss' | 'draw' | null;
 
   startGame: () => void;
   resetGame: () => void;
   placeCard: (cardId: string, slotIndex: number) => void;
-  passTurn: () => Promise<void>; // <--- Promesa para el timing
-  opponentTurnAction: () => Promise<void>; // <--- Promesa para el timing
+  passTurn: () => Promise<void>;
+  opponentTurnAction: () => Promise<void>;
   resolveCombatPhase: () => void;
   finishCombatPhase: () => void;
   drawCard: (target: 'player' | 'opponent', amount?: number) => void;
@@ -33,16 +35,15 @@ export const useGameStore = create<GameState>((set, get) => ({
   roundNumber: 1,
   recentDamage: null,
   pendingCombatResult: null,
+  gameResult: null,
   
   player: getInitialPlayerState(),
   opponent: getInitialPlayerState(),
 
   startGame: () => {
-    // CORREGIDO: Usamos argumentos 'player' y 'opponent' como en tu código original
     const playerDeckFull = createDeck('player');
     const opponentDeckFull = createDeck('opponent');
 
-    // CORREGIDO: Manual slice (sin usar drawCards que no existe)
     const playerHand = playerDeckFull.slice(0, 3).map(c => ({ ...c, isFaceUp: true }));
     const playerDeck = playerDeckFull.slice(3);
     
@@ -55,6 +56,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       roundNumber: 1,
       recentDamage: null,
       pendingCombatResult: null,
+      gameResult: null,
       player: { ...getInitialPlayerState(), hand: playerHand, deck: playerDeck },
       opponent: { ...getInitialPlayerState(), hand: opponentHand, deck: opponentDeck }
     });
@@ -67,6 +69,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         roundNumber: 1,
         recentDamage: null,
         pendingCombatResult: null,
+        gameResult: null,
         player: getInitialPlayerState(),
         opponent: getInitialPlayerState(),
     });
@@ -106,7 +109,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     if (!opponent.isPassed) {
-      // TIMING: Espera 1s antes de que la máquina responda
       setTimeout(() => get().opponentTurnAction(), 1000);
     } else {
       set({ turn: 'player' });
@@ -118,7 +120,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     set(state => ({ player: { ...state.player, isPassed: true }, turn: 'opponent' }));
 
     if (!opponent.isPassed) {
-      // TIMING: Espera 1s antes de acción rival
       await new Promise(resolve => setTimeout(resolve, 1000));
       get().opponentTurnAction();
     } else {
@@ -146,21 +147,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newBoard = [...currentOpponentState.board];
       newBoard[chosenSlotIndex] = { ...newBoard[chosenSlotIndex], card: cardToPlay };
 
-      // 1. Poner carta
       set({
         opponent: { ...currentOpponentState, hand: newHand, board: newBoard },
       });
       
-      // TIMING: Espera 0.5s después de jugar para devolver el turno
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 2. Cambiar turno
       set({
         turn: player.isPassed ? 'opponent' : 'player'
       });
       
       if (player.isPassed) {
-         // Si el jugador ya pasó, la máquina sigue jugando con pausa de 1s
          setTimeout(() => get().opponentTurnAction(), 1000);
       }
     } else {
@@ -254,20 +251,58 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newPlayerLives = Math.max(0, currentState.player.lives - result.playerDamageTaken);
     const newOpponentLives = Math.max(0, currentState.opponent.lives - result.opponentDamageTaken);
 
+    // Actualizamos el estado para verificar condiciones
+    const finalPlayerBoard = clearDead(currentState.player.board);
+    const finalOpponentBoard = clearDead(currentState.opponent.board);
+    const playerDeck = currentState.player.deck;
+    const playerHand = currentState.player.hand;
+    const opponentDeck = currentState.opponent.deck;
+    const opponentHand = currentState.opponent.hand;
+
+    // --- NUEVA LÓGICA DE FIN DE PARTIDA ---
+    const playerRunOut = playerDeck.length === 0 && playerHand.length === 0 && finalPlayerBoard.every(s => s.card === null);
+    const opponentRunOut = opponentDeck.length === 0 && opponentHand.length === 0 && finalOpponentBoard.every(s => s.card === null);
+    
+    // Verificamos si tienen "al menos 1 carta en juego" para la condición de victoria automática
+    const playerHasBoard = finalPlayerBoard.some(s => s.card !== null);
+    const opponentHasBoard = finalOpponentBoard.some(s => s.card !== null);
+
+    let finalPhase: GamePhase = 'placement';
+    let resultType: 'win' | 'loss' | 'draw' | null = null;
+
+    // 1. Comprobar vidas (Prioridad máxima)
+    if (newPlayerLives === 0 && newOpponentLives === 0) {
+        finalPhase = 'end'; resultType = 'draw';
+    } else if (newPlayerLives === 0) {
+        finalPhase = 'end'; resultType = 'loss';
+    } else if (newOpponentLives === 0) {
+        finalPhase = 'end'; resultType = 'win';
+    } 
+    // 2. Comprobar falta de cartas (Tu nueva casuística)
+    else if (playerRunOut && opponentRunOut) {
+        // AMBOS sin cartas -> Empate
+        finalPhase = 'end'; resultType = 'draw';
+    } else if (playerRunOut && opponentHasBoard) {
+        // Player sin nada VS Opponent con cartas -> Gana Opponent (Loss)
+        finalPhase = 'end'; resultType = 'loss';
+    } else if (opponentRunOut && playerHasBoard) {
+        // Opponent sin nada VS Player con cartas -> Gana Player (Win)
+        finalPhase = 'end'; resultType = 'win';
+    }
+
     set({
         recentDamage: null,
         pendingCombatResult: null,
-        player: { ...currentState.player, lives: newPlayerLives, board: clearDead(currentState.player.board), isPassed: false },
-        opponent: { ...currentState.opponent, lives: newOpponentLives, board: clearDead(currentState.opponent.board), isPassed: false },
+        gameResult: resultType,
+        phase: finalPhase,
+        player: { ...currentState.player, lives: newPlayerLives, board: finalPlayerBoard, isPassed: false },
+        opponent: { ...currentState.opponent, lives: newOpponentLives, board: finalOpponentBoard, isPassed: false },
     });
 
-    if (newPlayerLives === 0 || newOpponentLives === 0) {
-        set({ phase: 'end' });
-        return;
-    }
+    if (finalPhase === 'end') return;
 
     get().drawCard('player', 2);
     get().drawCard('opponent', 2);
-    set({ phase: 'placement', turn: 'player', roundNumber: currentState.roundNumber + 1 });
+    set({ turn: 'player', roundNumber: currentState.roundNumber + 1 });
   }
 }));
