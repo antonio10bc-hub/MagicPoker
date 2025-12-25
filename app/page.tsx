@@ -56,8 +56,7 @@ export default function Home() {
 
   // --- ESTILOS DE BOTONES ---
   let buttonText = "ESPERANDO...";
-  
-  // CORRECCIÓN: Definir el tipo para permitir funciones asíncronas
+  // Tipo corregido para aceptar asincronía
   let buttonAction: () => void | Promise<void> = passTurn;
   
   let buttonColorClass = "bg-gray-300 text-gray-600 border-black cursor-not-allowed pattern-diagonal-lines-sm opacity-70";
@@ -115,7 +114,8 @@ export default function Home() {
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
       {/* 1. HEADER (RIVAL - NARANJA #ff590d) */}
-      <header className="flex-none h-20 sm:h-24 p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
+      {/* CAMBIO VISUAL: Altura reducida a h-16 sm:h-20 */}
+      <header className="flex-none h-16 sm:h-20 p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
         <div className="flex gap-4 items-center relative">
             {/* Mazo Rival */}
             <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
@@ -155,9 +155,10 @@ export default function Home() {
       </header>
 
       {/* 2. TABLERO CENTRAL */}
-      <section className="flex-1 flex items-center justify-center p-4 overflow-hidden min-h-0 relative py-12">
+      <section className="flex-1 flex items-center justify-center p-4 overflow-hidden min-h-0 relative py-4 sm:py-8">
         
-        <div className="w-full max-w-xl bg-white rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col p-4 shrink-0">
+        {/* CAMBIO VISUAL: Reducido max-w-xl a max-w-lg para evitar que se vea tan grande */}
+        <div className="w-full max-w-lg bg-white rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col p-4 shrink-0">
           
           {/* LADO RIVAL */}
           <div className="flex-1 grid grid-cols-4 gap-2 sm:gap-4 items-center justify-items-center">
@@ -167,7 +168,7 @@ export default function Home() {
                   {slot.card && <Card key={slot.card.id} card={slot.card} className="z-10" />}
                 </AnimatePresence>
                 
-                {/* DAÑO FLOTANTE RIVAL */}
+                {/* DAÑO FLOTANTE RIVAL (Centrado) */}
                 {recentDamage?.opponentSlots[slot.index] !== undefined && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.5, rotate: -45 }}
@@ -175,7 +176,6 @@ export default function Home() {
                         exit={{ opacity: 0, scale: 0 }}
                         className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none"
                     >
-                        {/* CAMBIO CENTRADO: Añadido flex y justify-center al contenedor del contenido */}
                         <div className="relative flex items-center justify-center">
                             <span className="absolute inset-0 text-yellow-400 text-5xl scale-125 z-0 animate-ping">💥</span>
                             <span className="text-3xl font-black text-[#FF2222] drop-shadow-[2px_2px_0_#000] relative z-10" style={{ WebkitTextStroke: '1px black' }}>
@@ -220,7 +220,7 @@ export default function Home() {
                   )}
                 </AnimatePresence>
                  
-                 {/* DAÑO FLOTANTE JUGADOR */}
+                 {/* DAÑO FLOTANTE JUGADOR (Centrado) */}
                  {recentDamage?.playerSlots[slot.index] !== undefined && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.5, rotate: 45 }}
@@ -228,10 +228,9 @@ export default function Home() {
                         exit={{ opacity: 0, scale: 0 }}
                         className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none"
                     >
-                        {/* CAMBIO CENTRADO: Añadido flex y justify-center */}
                         <div className="relative flex items-center justify-center">
                              <span className="absolute inset-0 text-black text-5xl scale-125 z-0 animate-ping">💥</span>
-                            <span className="text-3xl font-black text-[#FF2222] drop-shadow-[2px_2px_0_#000] relative z-10" style={{ WebkitTextStroke: '1px black' }}>
+                            <span className="text-3xl font-black text-[#8e0dff] drop-shadow-[2px_2px_0_#000] relative z-10" style={{ WebkitTextStroke: '1px black' }}>
                                 -{recentDamage.playerSlots[slot.index]}
                             </span>
                         </div>
@@ -244,7 +243,8 @@ export default function Home() {
       </section>
 
       {/* 3. FOOTER (JUGADOR - MORADO #8e0dff) */}
-      <section className="flex-none h-28 sm:h-32 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
+      {/* CAMBIO VISUAL: Altura reducida a h-24 sm:h-28 */}
+      <section className="flex-none h-24 sm:h-28 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
         
         {/* Vidas Jugador */}
         <div className="flex flex-col items-start justify-center pl-2 sm:pl-4 relative">
@@ -283,7 +283,6 @@ export default function Home() {
              </div>
         </div>
 
-        {/* Botón y Mazo */}
          <div className="flex items-center justify-between pl-4 pr-2">
             <div className="ml-8">
                 <AnimatePresence mode="wait">
