@@ -18,37 +18,24 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
   const isVoided = card.isVoided;
   const isOpponent = card.owner === 'opponent';
 
-  // --- CHIVATO EN CONSOLA ---
-  // Abre la consola (F12) para ver esto
-  console.log(`🃏 Render Carta [${card.rank}] (ID: ${card.id.substring(0,4)})`, {
-    owner: card.owner,
-    isOpponent: isOpponent,
-    shouldBeRed: isOpponent,
-    shouldBeBlue: !isOpponent
-  });
-
   // --- ESTILOS BASE DOODLE ---
-  // NOTA: He quitado 'bg-white' de aquí para que no pelee con el color inline
   const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[4px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
   
-  // Determinamos el color Hexadecimal exacto
-  let debugBgColor = isOpponent ? '#FF2222' : '#0066FF'; // Rojo vs Azul Eléctrico
+  // --- COLORES NUEVOS (INVERTIDOS) ---
+  // Jugador = Morado (#8e0dff) | Rival = Naranja (#ff590d)
+  let debugBgColor = isOpponent ? '#ff590d' : '#8e0dff'; 
   let textColorClass = "text-white";
 
   // Estados especiales
   if (isVoided) {
       debugBgColor = '#000000'; // Negro
   } else if (isDamage) {
-      debugBgColor = '#FF2222'; // Rojo daño
+      debugBgColor = '#FF2222'; // El daño se queda rojo
   } else if (isJoker && !isDamage && !isVoided) {
-      debugBgColor = '#FDE047'; // Amarillo (yellow-300 aprox)
+      debugBgColor = '#FDE047'; // Amarillo Joker
       textColorClass = "text-black";
   }
 
-  // Animaciones y bordes extra
-  let animationStyles = {};
-  if (isDamage) animationStyles = { animate: "wiggle" }; // Nota: esto requiere config en tailwind, si no va, usaremos framer
-  
   const selectionStyle = isSelected ? "border-yellow-400 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] -translate-y-2 -translate-x-1" : "hover:-translate-y-1 hover:-translate-x-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]";
 
   const renderAttackIndicators = () => {
@@ -96,8 +83,8 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
           "pattern-diagonal-lines-sm text-black/20 justify-center !p-0", 
           className
         )}
-        // FUERZA BRUTA: Aplicamos el color directo al estilo
-        style={{ backgroundColor: isOpponent ? '#FF2222' : '#0066FF' }}
+        // FUERZA BRUTA: Naranja (Rival) o Morado (Jugador)
+        style={{ backgroundColor: isOpponent ? '#ff590d' : '#8e0dff' }}
       >
          <div className={clsx(
              "font-black text-5xl sm:text-6xl text-white drop-shadow-[3px_3px_0_#000]"
@@ -120,13 +107,12 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         baseCardStyle,
         textColorClass,
         selectionStyle,
-        // Eliminamos las clases de bg-[...] de aquí porque usaremos style
         isVoided && "pattern-diagonal-lines-sm",
         isJoker && !isDamage && !isVoided && "pattern-zigzag-sm",
         isDamage && "animate-[wiggle_0.2s_ease-in-out_infinite]",
         className
       )}
-      // FUERZA BRUTA: El color se aplica aquí sí o sí
+      // FUERZA BRUTA: Color aplicado
       style={{ backgroundColor: debugBgColor }}
     >
       {renderAttackIndicators()}
@@ -151,8 +137,8 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
               <div className={clsx(
                   "w-16 h-16 rounded-full border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_rgba(0,0,0,0.5)]",
               )}
-              // Color del círculo también forzado por estilo
-              style={{ backgroundColor: card.damageSource.owner === 'player' ? "#0066FF" : "#FF2222" }}
+              // Color del círculo: Si el dueño del daño es Player -> Morado, si no -> Naranja
+              style={{ backgroundColor: card.damageSource.owner === 'player' ? "#8e0dff" : "#ff590d" }}
               >
                   <span className={clsx(
                       "text-3xl font-black text-white"

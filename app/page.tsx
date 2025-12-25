@@ -71,7 +71,8 @@ export default function Home() {
   } else if (isCombatRevealPhase) {
     buttonText = `¡PELEA! (${countdown}s)`;
     buttonAction = finishCombatPhase;
-    buttonColorClass = "bg-[#0066FF] text-white border-black shadow-[4px_4px_0_#000]";
+    // Botón Pelea: Morado (Color Jugador)
+    buttonColorClass = "bg-[#8e0dff] text-white border-black shadow-[4px_4px_0_#000]";
     buttonAnimation = {
         scale: [1, 1.05, 1],
         transition: { duration: 0.8, repeat: Infinity }
@@ -82,7 +83,8 @@ export default function Home() {
   const slotStyle = "w-full h-full aspect-[2/3] relative flex items-center justify-center rounded-md transition-all border-[4px] border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
   
   const emptySlotInteractStyle = (selectedCardId && isPlacementPhase) 
-    ? "border-dashed border-[#0066FF] bg-yellow-100 animate-[wiggle_1s_ease-in-out_infinite] cursor-pointer hover:bg-yellow-200" 
+    // Hueco activo: Morado discontinuo
+    ? "border-dashed border-[#8e0dff] bg-purple-100 animate-[wiggle_1s_ease-in-out_infinite] cursor-pointer hover:bg-purple-200" 
     : "border-dashed border-black/40 bg-black/5";
 
   // --- MODAL FIN ---
@@ -91,7 +93,8 @@ export default function Home() {
     return (
         <main className="h-svh w-full flex items-center justify-center bg-[#F7F5E6] relative select-none font-comic pattern-grid-lg text-black">
             <div className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-md w-full mx-4 flex flex-col gap-6 relative overflow-hidden transform rotate-2">
-                <h1 className={clsx("text-6xl font-black drop-shadow-[3px_3px_0_#000] uppercase", playerWon ? "text-green-500" : "text-[#FF2222]")}>
+                {/* Texto: Player gana (Morado) o Rival gana (Naranja) */}
+                <h1 className={clsx("text-6xl font-black drop-shadow-[3px_3px_0_#000] uppercase", playerWon ? "text-[#8e0dff]" : "text-[#ff590d]")}>
                     {playerWon ? "¡VICTORIA! 🎉" : "💥 FIN DEL JUEGO 💥"}
                 </h1>
                 <h2 className="text-2xl font-bold border-b-4 border-black pb-4">
@@ -108,17 +111,17 @@ export default function Home() {
   return (
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
-      {/* 1. HEADER (RIVAL) */}
-      <header className="flex-none h-20 sm:h-24 p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#FF2222] shadow-[0_6px_0_#000]">
+      {/* 1. HEADER (RIVAL - NARANJA #ff590d) */}
+      <header className="flex-none h-20 sm:h-24 p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
         <div className="flex gap-4 items-center relative">
             {/* Mazo Rival */}
-            <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#FF2222] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
+            <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
                 <span className="z-10 font-black text-white text-xl drop-shadow-[2px_2px_0_#000]">{opponent.deck.length}</span>
             </div>
             {/* Mano Rival */}
             <div className="flex -space-x-5 sm:-space-x-7 pl-2">
                 {opponent.hand.map((c, i) => (
-                    <div key={c.id} className="w-8 h-11 sm:w-10 sm:h-14 bg-[#FF2222] rounded-sm border-[3px] border-black shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
+                    <div key={c.id} className="w-8 h-11 sm:w-10 sm:h-14 bg-[#ff590d] rounded-sm border-[3px] border-black shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
                 ))}
             </div>
         </div>
@@ -128,7 +131,8 @@ export default function Home() {
           <div className={clsx(
             "px-6 py-2 rounded-md text-xl sm:text-2xl font-black tracking-wider transition-all shadow-[6px_6px_0_#000] uppercase border-[4px] border-black whitespace-nowrap relative -rotate-2",
             (phase === 'combat' || phase === 'combat-reveal') ? "bg-yellow-400 text-black animate-[wiggle_0.5s_infinite]" : 
-            turn === 'player' ? "bg-[#0066FF] text-white" : "bg-white text-[#FF2222]"
+            // Turno Player (Morado) / Turno Rival (Naranja)
+            turn === 'player' ? "bg-[#8e0dff] text-white" : "bg-white text-[#ff590d]"
           )}>
                 {(phase === 'combat' || phase === 'combat-reveal') ? "💥 ¡PELEA! 💥" : turn === 'player' ? "TU TURNO" : "RIVAL..."}
           </div>
@@ -160,7 +164,7 @@ export default function Home() {
                   {slot.card && <Card key={slot.card.id} card={slot.card} className="z-10" />}
                 </AnimatePresence>
                 
-                {/* DAÑO FLOTANTE RIVAL (REDUCIDO 50%) */}
+                {/* DAÑO FLOTANTE RIVAL */}
                 {recentDamage?.opponentSlots[slot.index] !== undefined && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.5, rotate: -45 }}
@@ -204,14 +208,15 @@ export default function Home() {
                       >
                         {selectedCardId && isPlacementPhase && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-4xl text-[#0066FF] animate-bounce font-black">+</span>
+                                {/* Signo más Morado */}
+                                <span className="text-4xl text-[#8e0dff] animate-bounce font-black">+</span>
                             </div>
                         )}
                       </motion.div>
                   )}
                 </AnimatePresence>
                  
-                 {/* DAÑO FLOTANTE JUGADOR (REDUCIDO 50%) */}
+                 {/* DAÑO FLOTANTE JUGADOR */}
                  {recentDamage?.playerSlots[slot.index] !== undefined && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.5, rotate: 45 }}
@@ -233,8 +238,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. FOOTER (JUGADOR) */}
-      <section className="flex-none h-28 sm:h-32 bg-[#0066FF] border-t-[4px] border-black relative z-20 px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
+      {/* 3. FOOTER (JUGADOR - MORADO #8e0dff) */}
+      <section className="flex-none h-28 sm:h-32 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
         
         {/* Vidas Jugador */}
         <div className="flex flex-col items-start justify-center pl-2 sm:pl-4 relative">
@@ -275,7 +280,6 @@ export default function Home() {
 
         {/* Botón y Mazo */}
          <div className="flex items-center justify-between pl-4 pr-2">
-            {/* CAMBIO: Añadido ml-8 al contenedor del botón para empujarlo a la derecha */}
             <div className="ml-8">
                 <AnimatePresence mode="wait">
                 {canInteract && (
@@ -295,8 +299,8 @@ export default function Home() {
                 )}
                 </AnimatePresence>
             </div>
-            {/* Mazo Jugador */}
-            <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#0066FF] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
+            {/* Mazo Jugador - Fondo Morado */}
+            <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#8e0dff] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
                 <span className="z-10 font-black text-white text-xl drop-shadow-[2px_2px_0_#000]">{player.deck.length}</span>
             </div>
          </div>
