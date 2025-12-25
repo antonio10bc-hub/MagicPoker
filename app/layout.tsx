@@ -1,31 +1,25 @@
-import type { Metadata } from "next";
-// Usamos una fuente estilo "handwritten/comic"
-import { Amatic_SC } from "next/font/google";
-import "./globals.css";
+import './globals.css'
+import type { Metadata } from 'next'
+// import { Inter } from 'next/font/google' // O la fuente que uses
+import { clsx } from 'clsx'
 
-// Configuramos la fuente (puedes probar Patrick Hand o Gochi Hand también)
-const comicFont = Amatic_SC({ 
-  subsets: ["latin"], 
-  weight: ['400', '700'],
-  variable: '--font-comic'
-});
+// const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Card Battle Doodle",
-  description: "A webcomic style card game",
-};
+  title: 'Magic Poker',
+  description: 'Juego de cartas estratégico',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="es">
-      {/* Fondo blanco hueso y fuente de cómic */}
-      <body className={`${comicFont.variable} font-comic bg-[#F7F5E6] text-black antialiased selection:bg-yellow-300 selection:text-black`}>
+    <html lang="es" className="h-full"> {/* Asegura altura completa */}
+      <body className={clsx("h-full m-0", /* inter.className */)}> {/* Altura completa y sin margen */}
         {children}
       </body>
     </html>
-  );
+  )
 }
