@@ -1,7 +1,7 @@
 'use client';
 
 import { useGameStore } from '@/store/useGameStore';
-import { Card } from '@/components/game/CardTEMP';
+import { Card } from '@/components/game/card';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
