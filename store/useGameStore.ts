@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardSlot, PlayerState, GamePhase, DamageEvent } from '@/types';
+import { BoardSlot, PlayerState, GamePhase, DamageEvent, CombatResult } from '@/types';
 import { createDeck, calculateCombat } from '@/lib/game-utils';
 
 interface GameState {
@@ -9,6 +9,7 @@ interface GameState {
   opponent: PlayerState;
   roundNumber: number;
   recentDamage: DamageEvent | null;
+  pendingCombatResult: CombatResult | null;
 
   startGame: () => void;
   resetGame: () => void;
@@ -16,6 +17,7 @@ interface GameState {
   passTurn: () => void;
   opponentTurnAction: () => void;
   resolveCombatPhase: () => void;
+  finishCombatPhase: () => void;
   drawCard: (target: 'player' | 'opponent', amount?: number) => void;
 }
 
@@ -30,6 +32,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   turn: 'player',
   roundNumber: 1,
   recentDamage: null,
+  pendingCombatResult: null,
   
   player: getInitialPlayerState(),
   opponent: getInitialPlayerState(),
@@ -49,6 +52,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       turn: 'player',
       roundNumber: 1,
       recentDamage: null,
+      pendingCombatResult: null,
       player: { ...getInitialPlayerState(), hand: playerHand, deck: playerDeck },
       opponent: { ...getInitialPlayerState(), hand: opponentHand, deck: opponentDeck }
     });
@@ -60,6 +64,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         turn: 'player',
         roundNumber: 1,
         recentDamage: null,
+        pendingCombatResult: null,
         player: getInitialPlayerState(),
         opponent: getInitialPlayerState(),
     });
@@ -88,8 +93,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (cardIndex === -1) return;
     
     const cardToPlay = { ...player.hand[cardIndex], isFaceUp: true }; 
-    if (cardToPlay.rank === 'JOKER') get().drawCard('player', 2);
-
     const currentPlayerState = get().player; 
     const updatedHand = currentPlayerState.hand.filter(c => c.id !== cardId);
     const newBoard = [...currentPlayerState.board];
@@ -120,13 +123,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   opponentTurnAction: () => {
     const { opponent, player } = get();
-    
     const availableSlots = opponent.board.filter(slot => slot.card === null);
 
     if (opponent.hand.length > 0 && availableSlots.length > 0) {
       const cardToPlay = { ...opponent.hand[0], isFaceUp: false };
-      if (cardToPlay.rank === 'JOKER') get().drawCard('opponent', 2);
-
       let chosenSlotIndex = availableSlots[0].index;
       const defensiveSlots = availableSlots.filter(s => player.board[s.index].card !== null);
       
@@ -160,70 +160,104 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   resolveCombatPhase: () => {
+    // BLINDAJE: Si ya estamos combatiendo, no hacer nada.
+    if (get().phase === 'combat' || get().phase === 'combat-reveal') return;
+
     set({ phase: 'combat' });
 
-    // PASO 1: REVELAR
     setTimeout(() => {
-      set(state => ({
+      const currentState = get();
+      
+      set({
         opponent: {
-          ...state.opponent,
-          board: state.opponent.board.map(slot => slot.card ? { ...slot, card: { ...slot.card, isFaceUp: true } } : slot)
+          ...currentState.opponent,
+          board: currentState.opponent.board.map(slot => slot.card ? { ...slot, card: { ...slot.card, isFaceUp: true } } : slot)
         }
-      }));
+      });
 
-      // PASO 2: CALCULAR DAÑO
+      const playerJokers = currentState.player.board.filter(s => s.card?.rank === 'JOKER').length;
+      const opponentJokers = currentState.opponent.board.filter(s => s.card?.rank === 'JOKER').length;
+      
+      if (playerJokers > 0) get().drawCard('player', playerJokers * 2);
+      if (opponentJokers > 0) get().drawCard('opponent', opponentJokers * 2);
+
       setTimeout(() => {
         const { player, opponent } = get();
+        // CÁLCULO ÚNICO
         const result = calculateCombat(player.board, opponent.board);
 
-        // AHORA USAMOS LOS HITS REALES DE LA LÓGICA DE COMBATE
-        set({ recentDamage: { 
-            playerSlots: result.playerEmptySlotsHit, 
-            opponentSlots: result.opponentEmptySlotsHit 
-        }});
+        set({ 
+            recentDamage: { 
+                playerSlots: result.playerEmptySlotsHit, 
+                opponentSlots: result.opponentEmptySlotsHit 
+            },
+            pendingCombatResult: result
+        });
 
-        const markDamage = (board: BoardSlot[]) => board.map(slot => 
-            slot.card && result.deadCardIds.includes(slot.card.id) 
-                ? { ...slot, card: { ...slot.card, isTakingDamage: true } } 
-                : slot
-        );
+        const markDamage = (board: BoardSlot[]) => board.map(slot => {
+            if (slot.card && result.deadCardIds.includes(slot.card.id)) {
+                return { 
+                    ...slot, 
+                    card: { ...slot.card, isTakingDamage: true, damageSource: result.damageSources[slot.card.id] } 
+                };
+            }
+            if (slot.card && result.voidedCardIds.includes(slot.card.id)) {
+                return { 
+                    ...slot, 
+                    card: { ...slot.card, isVoided: true, damageSource: result.damageSources[slot.card.id] } 
+                };
+            }
+            return slot;
+        });
 
         set(s => ({
             player: { ...s.player, board: markDamage(s.player.board) },
             opponent: { ...s.opponent, board: markDamage(s.opponent.board) }
         }));
 
-        // PASO 3: APLICAR Y LIMPIAR
         setTimeout(() => {
-            const currentState = get();
-            
-            const clearDead = (board: BoardSlot[]) => board.map(slot => 
-                slot.card?.isTakingDamage ? { ...slot, card: null } : slot
-            );
-
-            const newPlayerLives = Math.max(0, currentState.player.lives - result.playerDamageTaken);
-            const newOpponentLives = Math.max(0, currentState.opponent.lives - result.opponentDamageTaken);
-
-            set({
-                recentDamage: null,
-                player: { ...currentState.player, lives: newPlayerLives, board: clearDead(currentState.player.board), isPassed: false },
-                opponent: { ...currentState.opponent, lives: newOpponentLives, board: clearDead(currentState.opponent.board), isPassed: false },
-            });
-
-            if (newPlayerLives === 0 || newOpponentLives === 0) {
-                set({ phase: 'end' });
-                return;
-            }
-
-            // ROBAR 2 CARTAS
-            get().drawCard('player', 2);
-            get().drawCard('opponent', 2);
-            set({ phase: 'placement', turn: 'player', roundNumber: currentState.roundNumber + 1 });
-
-        }, 800); 
+             set({ phase: 'combat-reveal' }); 
+        }, 300);
 
       }, 500);
 
     }, 300);
+  },
+
+  finishCombatPhase: () => {
+    const currentState = get();
+    if (currentState.phase !== 'combat-reveal') return;
+
+    // RECUPERAR RESULTADO (NO RECALCULAR)
+    const result = currentState.pendingCombatResult;
+    
+    if (!result) {
+        // Fallback de emergencia
+        set({ phase: 'placement' });
+        return;
+    }
+
+    const clearDead = (board: BoardSlot[]) => board.map(slot => 
+        (slot.card?.isTakingDamage || slot.card?.isVoided) ? { ...slot, card: null } : slot
+    );
+
+    const newPlayerLives = Math.max(0, currentState.player.lives - result.playerDamageTaken);
+    const newOpponentLives = Math.max(0, currentState.opponent.lives - result.opponentDamageTaken);
+
+    set({
+        recentDamage: null,
+        pendingCombatResult: null, // Limpieza
+        player: { ...currentState.player, lives: newPlayerLives, board: clearDead(currentState.player.board), isPassed: false },
+        opponent: { ...currentState.opponent, lives: newOpponentLives, board: clearDead(currentState.opponent.board), isPassed: false },
+    });
+
+    if (newPlayerLives === 0 || newOpponentLives === 0) {
+        set({ phase: 'end' });
+        return;
+    }
+
+    get().drawCard('player', 2);
+    get().drawCard('opponent', 2);
+    set({ phase: 'placement', turn: 'player', roundNumber: currentState.roundNumber + 1 });
   }
 }));

@@ -9,6 +9,8 @@ export interface Card {
   isFaceUp: boolean;
   owner: 'player' | 'opponent';
   isTakingDamage?: boolean;
+  isVoided?: boolean;
+  damageSource?: { rank: Rank; owner: 'player' | 'opponent' };
 }
 
 export type SlotIndex = 0 | 1 | 2 | 3;
@@ -26,10 +28,20 @@ export interface PlayerState {
   isPassed: boolean;
 }
 
-export type GamePhase = 'start' | 'placement' | 'combat' | 'end';
+export type GamePhase = 'start' | 'placement' | 'combat' | 'combat-reveal' | 'end';
 
-// NUEVO: Para saber qué slots han recibido daño directo y pintar el -1
 export interface DamageEvent {
-  playerSlots: number[];   // Índices donde el jugador recibió daño (huecos vacíos suyos)
-  opponentSlots: number[]; // Índices donde el rival recibió daño
+  playerSlots: Record<number, number>;
+  opponentSlots: Record<number, number>;
+}
+
+// NUEVO: Movido aquí para que el Store lo reconozca
+export interface CombatResult {
+  playerDamageTaken: number;
+  opponentDamageTaken: number;
+  deadCardIds: string[];
+  voidedCardIds: string[];
+  playerEmptySlotsHit: Record<number, number>;
+  opponentEmptySlotsHit: Record<number, number>;
+  damageSources: Record<string, { rank: Rank, owner: 'player' | 'opponent' }>;
 }

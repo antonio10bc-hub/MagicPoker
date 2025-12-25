@@ -1,4 +1,4 @@
-import { Card, BoardSlot, Rank } from "@/types";
+import { Card, BoardSlot, Rank, CombatResult } from "@/types";
 
 const RANK_VALUES: Record<Rank, number> = {
   'JOKER': 0,
@@ -33,59 +33,69 @@ export const createDeck = (owner: 'player' | 'opponent'): Card[] => {
   return deck.sort(() => Math.random() - 0.5);
 };
 
-interface CombatResult {
-  playerDamageTaken: number;
-  opponentDamageTaken: number;
-  deadCardIds: string[];
-  playerEmptySlotsHit: number[];   // <--- NUEVO: Qué huecos vacíos del jugador recibieron daño
-  opponentEmptySlotsHit: number[]; // <--- NUEVO: Qué huecos vacíos del rival recibieron daño
-}
-
 export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[]): CombatResult => {
   let playerDamage = 0;
   let opponentDamage = 0;
   const deadIds = new Set<string>();
+  const voidedIds = new Set<string>();
   
-  // Sets para guardar índices únicos de huecos golpeados
-  const playerEmptyHits = new Set<number>();
-  const opponentEmptyHits = new Set<number>();
+  const playerEmptyHits: Record<number, number> = {};
+  const opponentEmptyHits: Record<number, number> = {};
+  const damageSources: Record<string, { rank: Rank, owner: 'player' | 'opponent' }> = {};
 
-  // 1. Verificar AS (Board Wipe)
-  const hasAce = [...playerBoard, ...opponentBoard].some(s => s.card?.rank === 'A');
-  if (hasAce) {
+  // 1. REGLA DEL AS (Board Wipe)
+  const aceCard = [...playerBoard, ...opponentBoard].find(s => s.card?.rank === 'A')?.card;
+  if (aceCard) {
     const allCards = [...playerBoard, ...opponentBoard]
-      .map(s => s.card?.id)
-      .filter((id): id is string => !!id);
+      .map(s => s.card)
+      .filter((c): c is Card => !!c);
+    
+    allCards.forEach(c => {
+        voidedIds.add(c.id);
+        damageSources[c.id] = { rank: 'A', owner: aceCard.owner };
+    });
     
     return {
-      playerDamageTaken: 0,
-      opponentDamageTaken: 0,
-      deadCardIds: allCards,
-      playerEmptySlotsHit: [],
-      opponentEmptySlotsHit: []
+      playerDamageTaken: 0, opponentDamageTaken: 0,
+      deadCardIds: [], voidedCardIds: Array.from(voidedIds),
+      playerEmptySlotsHit: {}, opponentEmptySlotsHit: {}, damageSources
     };
   }
 
-  // Helper para resolver un choque individual
+  // Helper para resolver choques
   const resolveInteraction = (attacker: Card, defenderSlot: BoardSlot, isPlayerAttacking: boolean) => {
     const defender = defenderSlot.card;
 
     if (!defender) {
-      // Golpe directo a hueco vacío
+      // GOLPE A HUECO VACÍO
       if (isPlayerAttacking) {
         opponentDamage++;
-        opponentEmptyHits.add(defenderSlot.index); // Registramos el hueco vacío golpeado
+        opponentEmptyHits[defenderSlot.index] = (opponentEmptyHits[defenderSlot.index] || 0) + 1;
       } else {
         playerDamage++;
-        playerEmptyHits.add(defenderSlot.index);   // Registramos el hueco vacío golpeado
+        playerEmptyHits[defenderSlot.index] = (playerEmptyHits[defenderSlot.index] || 0) + 1;
       }
     } else {
-      // Choque de cartas
+      // GOLPE A CARTA
       if (attacker.value > defender.value) {
+        // GANA ATACANTE (Tú matas al rival o rival te mata a ti activamente)
         deadIds.add(defender.id);
+        
+        // Aquí SÍ ponemos cicatriz porque es una muerte por ataque directo
+        if (['K', 'Q', 'J'].includes(attacker.rank)) {
+            damageSources[defender.id] = { rank: attacker.rank, owner: attacker.owner };
+        }
+
       } else if (attacker.value < defender.value) {
+        // GANA DEFENSOR (El atacante se suicida contra un muro más fuerte)
         deadIds.add(attacker.id);
+        
+        // CAMBIO: ELIMINADA LA CICATRIZ EN SUICIDIO
+        // Al no asignar damageSources[attacker.id], la carta morirá (roja) 
+        // pero NO mostrará la letra gigante.
+
       } else {
+        // EMPATE (Mueren ambos)
         deadIds.add(attacker.id);
         deadIds.add(defender.id);
       }
@@ -96,26 +106,26 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     attackBoard.forEach(slot => {
       if (!slot.card) return;
       const rank = slot.card.rank;
-      const possibleTargets = getTargets(slot.index, rank);
+
+      // EL JOKER NO ATACA JAMÁS
+      if (rank === 'JOKER') return;
+
+      const targetIndices = getTargetIndices(slot.index, rank);
+      if (targetIndices.length === 0) return;
 
       if (rank === 'J') {
-        // Jota: Elige uno de los posibles
-        const targetSlots = possibleTargets.map(idx => defenseBoard.find(s => s.index === idx)!);
-        const emptySlots = targetSlots.filter(s => s.card === null);
-        const occupiedSlots = targetSlots.filter(s => s.card !== null);
-
-        let finalTarget: BoardSlot;
-        if (emptySlots.length > 0) {
-          finalTarget = emptySlots[Math.floor(Math.random() * emptySlots.length)];
-        } else {
-          finalTarget = occupiedSlots[Math.floor(Math.random() * occupiedSlots.length)];
+        // JOTA: 1 GOLPE ALEATORIO
+        const randomIndex = targetIndices[Math.floor(Math.random() * targetIndices.length)];
+        const targetSlot = defenseBoard.find(s => s.index === randomIndex);
+        
+        if (targetSlot) {
+            resolveInteraction(slot.card, targetSlot, isPlayerAttacking);
         }
-        resolveInteraction(slot.card, finalTarget, isPlayerAttacking);
 
       } else {
-        // K, Q, Normales: Atacan a TODOS
-        possibleTargets.forEach(targetIndex => {
-          const targetSlot = defenseBoard.find(s => s.index === targetIndex);
+        // RESTO: ATAQUE MÚLTIPLE
+        targetIndices.forEach(idx => {
+          const targetSlot = defenseBoard.find(s => s.index === idx);
           if (targetSlot) {
             resolveInteraction(slot.card!, targetSlot, isPlayerAttacking);
           }
@@ -124,7 +134,6 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     });
   };
 
-  // 2. Ejecutar ataques
   processAttackTurn(playerBoard, opponentBoard, true);  
   processAttackTurn(opponentBoard, playerBoard, false); 
 
@@ -132,33 +141,26 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     playerDamageTaken: playerDamage,
     opponentDamageTaken: opponentDamage,
     deadCardIds: Array.from(deadIds),
-    playerEmptySlotsHit: Array.from(playerEmptyHits),
-    opponentEmptySlotsHit: Array.from(opponentEmptyHits)
+    voidedCardIds: [],
+    playerEmptySlotsHit: playerEmptyHits,
+    opponentEmptySlotsHit: opponentEmptyHits,
+    damageSources
   };
 };
 
-const getTargets = (index: number, rank: Rank): number[] => {
+const getTargetIndices = (index: number, rank: Rank): number[] => {
   const targets: number[] = [];
-  
-  const addIfValid = (i: number) => {
-    if (i >= 0 && i <= 3) targets.push(i);
-  };
+  const add = (i: number) => { if (i >= 0 && i <= 3) targets.push(i); };
 
-  // REINA (Q): SOLO Diagonales (index -1, index + 1). NO FRONTAL.
   if (rank === 'Q') {
-    addIfValid(index - 1);
-    addIfValid(index + 1);
-  } 
-  // REY (K) y JOTA (J): Tridente (index -1, 0, +1)
-  else if (rank === 'K' || rank === 'J') {
-    addIfValid(index - 1);
-    addIfValid(index);
-    addIfValid(index + 1);
-  } 
-  // RESTO: Solo frontal
-  else {
-    addIfValid(index);
+    add(index - 1);
+    add(index + 1);
+  } else if (rank === 'K' || rank === 'J') {
+    add(index - 1);
+    add(index);
+    add(index + 1);
+  } else {
+    add(index);
   }
-
   return targets;
 };
