@@ -18,23 +18,37 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
   const isVoided = card.isVoided;
   const isOpponent = card.owner === 'opponent';
 
+  // --- CHIVATO EN CONSOLA ---
+  // Abre la consola (F12) para ver esto
+  console.log(`🃏 Render Carta [${card.rank}] (ID: ${card.id.substring(0,4)})`, {
+    owner: card.owner,
+    isOpponent: isOpponent,
+    shouldBeRed: isOpponent,
+    shouldBeBlue: !isOpponent
+  });
+
   // --- ESTILOS BASE DOODLE ---
+  // NOTA: He quitado 'bg-white' de aquí para que no pelee con el color inline
   const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[4px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
   
-  let cardStyle = isOpponent 
-    ? "bg-[#FF2222] text-white" 
-    : "bg-[#0066FF] text-white";
+  // Determinamos el color Hexadecimal exacto
+  let debugBgColor = isOpponent ? '#FF2222' : '#0066FF'; // Rojo vs Azul Eléctrico
+  let textColorClass = "text-white";
 
+  // Estados especiales
   if (isVoided) {
-      cardStyle = "bg-black text-white border-black pattern-diagonal-lines-sm";
+      debugBgColor = '#000000'; // Negro
   } else if (isDamage) {
-      cardStyle = "bg-[#FF2222] text-white border-black animate-[wiggle_0.2s_ease-in-out_infinite]";
+      debugBgColor = '#FF2222'; // Rojo daño
+  } else if (isJoker && !isDamage && !isVoided) {
+      debugBgColor = '#FDE047'; // Amarillo (yellow-300 aprox)
+      textColorClass = "text-black";
   }
 
-  if (isJoker && !isDamage && !isVoided) {
-      cardStyle = "bg-yellow-300 text-black border-black pattern-zigzag-sm";
-  }
-
+  // Animaciones y bordes extra
+  let animationStyles = {};
+  if (isDamage) animationStyles = { animate: "wiggle" }; // Nota: esto requiere config en tailwind, si no va, usaremos framer
+  
   const selectionStyle = isSelected ? "border-yellow-400 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] -translate-y-2 -translate-x-1" : "hover:-translate-y-1 hover:-translate-x-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]";
 
   const renderAttackIndicators = () => {
@@ -79,12 +93,11 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         layoutId={card.id}
         className={clsx(
           baseCardStyle,
-          isOpponent ? "bg-[#FF2222]" : "bg-[#0066FF]",
-          "pattern-diagonal-lines-sm text-black/20",
-          // CAMBIO: justify-center y !p-0 para centrar perfectamente eliminando el padding base
-          "justify-center !p-0", 
+          "pattern-diagonal-lines-sm text-black/20 justify-center !p-0", 
           className
         )}
+        // FUERZA BRUTA: Aplicamos el color directo al estilo
+        style={{ backgroundColor: isOpponent ? '#FF2222' : '#0066FF' }}
       >
          <div className={clsx(
              "font-black text-5xl sm:text-6xl text-white drop-shadow-[3px_3px_0_#000]"
@@ -105,10 +118,16 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
       transition={{ duration: 0.2 }}
       className={clsx(
         baseCardStyle,
-        cardStyle,
+        textColorClass,
         selectionStyle,
+        // Eliminamos las clases de bg-[...] de aquí porque usaremos style
+        isVoided && "pattern-diagonal-lines-sm",
+        isJoker && !isDamage && !isVoided && "pattern-zigzag-sm",
+        isDamage && "animate-[wiggle_0.2s_ease-in-out_infinite]",
         className
       )}
+      // FUERZA BRUTA: El color se aplica aquí sí o sí
+      style={{ backgroundColor: debugBgColor }}
     >
       {renderAttackIndicators()}
 
@@ -129,12 +148,12 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
                   "absolute inset-0 w-full h-full flex justify-center items-center z-30 pointer-events-none",
               )}
           >
-              {/* CAMBIO: Aumentado tamaño a w-16 h-16 (aprox 25%+ grande) */}
               <div className={clsx(
                   "w-16 h-16 rounded-full border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_rgba(0,0,0,0.5)]",
-                  card.damageSource.owner === 'player' ? "bg-[#0066FF]" : "bg-[#FF2222]"
-              )}>
-                  {/* CAMBIO: Aumentado tamaño de texto a text-3xl */}
+              )}
+              // Color del círculo también forzado por estilo
+              style={{ backgroundColor: card.damageSource.owner === 'player' ? "#0066FF" : "#FF2222" }}
+              >
                   <span className={clsx(
                       "text-3xl font-black text-white"
                   )}>
