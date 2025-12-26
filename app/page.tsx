@@ -72,7 +72,7 @@ export default function Home() {
         buttonColorClass = "bg-green-500 text-white border-black hover:bg-green-400 hover:-translate-y-1 hover:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-[2px_2px_0_#000]";
     }
   } else if (isCombatRevealPhase) {
-    buttonText = `¡PELEA! (${countdown}s)`;
+    buttonText = `Continuar (${countdown}s)`;
     buttonAction = finishCombatPhase;
     buttonColorClass = "bg-[#8e0dff] text-white border-black shadow-[4px_4px_0_#000]";
     buttonAnimation = {
