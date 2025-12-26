@@ -89,15 +89,11 @@ export default function Home() {
 
   // --- MODAL FIN ---
   if (phase === 'end') {
-    // Usamos gameResult para determinar el texto y color
-    // Si gameResult es null (no debería), usamos las vidas como fallback
     const isWin = gameResult === 'win';
     const isDraw = gameResult === 'draw';
     
     let titleText = isDraw ? "¡EMPATE! 🤝" : isWin ? "¡VICTORIA! 🎉" : "💥 FIN DEL JUEGO 💥";
     let subText = isDraw ? "¡Nadie gana esta vez!" : isWin ? "¡Has aplastado a tu rival!" : "Te han hecho puré...";
-    
-    // Colores: Win=Morado, Draw=Gris Oscuro, Loss=Naranja
     let titleColorClass = isDraw ? "text-gray-700" : isWin ? "text-[#8e0dff]" : "text-[#ff590d]";
 
     return (
@@ -182,27 +178,31 @@ export default function Home() {
         onClick={() => setShowRules(true)}
         whileHover={{ scale: 1.1, rotate: 5 }}
         whileTap={{ scale: 0.9 }}
-        className="fixed bottom-28 sm:bottom-32 left-4 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0_#000] flex items-center justify-center hover:bg-yellow-100 transition-colors"
+        // Ajustado para móvil: bottom-20 (justo encima de la barra de 16) y en PC bottom-32
+        className="fixed bottom-20 sm:bottom-32 left-4 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0_#000] flex items-center justify-center hover:bg-yellow-100 transition-colors"
       >
         <Info className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
       </motion.button>
 
-      {/* 1. HEADER (RIVAL - NARANJA) */}
-      <header className="flex-none h-16 sm:h-20 p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
-        <div className="flex gap-4 items-center relative pl-12 sm:pl-0">
-            <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
-                <span className="z-10 font-black text-white text-xl drop-shadow-[2px_2px_0_#000]">{opponent.deck.length}</span>
+      {/* 1. HEADER (RIVAL - NARANJA) - Compacto en móvil (h-12) */}
+      <header className="flex-none h-12 sm:h-20 p-2 sm:p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
+        <div className="flex gap-2 sm:gap-4 items-center relative pl-10 sm:pl-0">
+            {/* Mazo Rival (Más pequeño en móvil) */}
+            <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000]">
+                <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{opponent.deck.length}</span>
             </div>
-            <div className="flex -space-x-5 sm:-space-x-7 pl-2">
+            {/* Mano Rival (Escalada en móvil) */}
+            <div className="flex -space-x-4 sm:-space-x-7 pl-1 sm:pl-2">
                 {opponent.hand.map((c, i) => (
-                    <div key={c.id} className="w-8 h-11 sm:w-10 sm:h-14 bg-[#ff590d] rounded-sm border-[3px] border-black shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
+                    <div key={c.id} className="w-6 h-8 sm:w-10 sm:h-14 bg-[#ff590d] rounded-sm border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_#000] sm:shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
                 ))}
             </div>
         </div>
         
+        {/* Cartel Central (Oculto en móviles muy pequeños si molesta, o escalado) */}
         <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-50">
           <div className={clsx(
-            "px-6 py-2 rounded-md text-xl sm:text-2xl font-black tracking-wider transition-all shadow-[6px_6px_0_#000] uppercase border-[4px] border-black whitespace-nowrap relative -rotate-2",
+            "px-3 py-1 sm:px-6 sm:py-2 rounded-md text-sm sm:text-2xl font-black tracking-wider transition-all shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000] uppercase border-[2px] sm:border-[4px] border-black whitespace-nowrap relative -rotate-2",
             (phase === 'combat' || phase === 'combat-reveal') ? "bg-yellow-400 text-black animate-[wiggle_0.5s_infinite]" : 
             turn === 'player' ? "bg-[#8e0dff] text-white" : "bg-white text-[#ff590d]"
           )}>
@@ -210,24 +210,30 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-col items-end">
-          <span className="text-sm sm:text-base text-white font-black uppercase tracking-wider mb-1 drop-shadow-[2px_2px_0_#000]">Rival</span>
-          <div className="flex text-3xl sm:text-4xl gap-1 drop-shadow-[2px_2px_0_#000]">
-            {Array(4).fill(0).map((_, i) => (
-              <span key={i} className={i < opponent.lives ? "text-white scale-110" : "text-black/40 grayscale"}>
-                {i < opponent.lives ? '💀' : '☠️'}
-              </span>
-            ))}
-          </div>
+        {/* --- VIDAS RIVAL (Eliminación Izquierda->Derecha) --- */}
+        <div className="flex items-center gap-1 sm:gap-4">
+             {/* Corazones (Pequeños en móvil) */}
+             <div className="flex text-lg sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
+                {Array(4).fill(0).map((_, i) => (
+                // LOGICA INVERTIDA: 💔 a la izquierda
+                <span key={i} className={i < (4 - opponent.lives) ? "text-black/40 grayscale" : "text-white scale-110"}>
+                    {i < (4 - opponent.lives) ? '💔' : '❤️'}
+                </span>
+                ))}
+            </div>
+            {/* Texto RIVAL */}
+            <span className="text-lg sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
+                RIVAL
+            </span>
         </div>
       </header>
 
       {/* 2. TABLERO CENTRAL */}
-      <section className="flex-1 flex items-center justify-center p-4 overflow-hidden min-h-0 relative py-4 sm:py-8">
+      <section className="flex-1 flex items-center justify-center p-2 sm:p-4 overflow-hidden min-h-0 relative py-2 sm:py-8">
         
-        <div className="w-full max-w-lg bg-white rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col p-4 shrink-0">
+        <div className="w-full max-w-lg bg-white rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col p-2 sm:p-4 shrink-0">
           
-          <div className="flex-1 grid grid-cols-4 gap-2 sm:gap-4 items-center justify-items-center">
+          <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-4 items-center justify-items-center">
             {opponent.board.map((slot) => (
               <div key={`opp-${slot.index}`} className={slotStyle}>
                 <AnimatePresence mode="popLayout">
@@ -253,10 +259,10 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="h-4 w-full my-2 flex justify-center items-center relative border-t-[4px] border-b-[4px] border-black border-dashed bg-gray-200">
+          <div className="h-2 sm:h-4 w-full my-1 sm:my-2 flex justify-center items-center relative border-t-[3px] sm:border-t-[4px] border-b-[3px] sm:border-b-[4px] border-black border-dashed bg-gray-200">
           </div>
 
-          <div className="flex-1 grid grid-cols-4 gap-2 sm:gap-4 items-center justify-items-center">
+          <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-4 items-center justify-items-center">
             {player.board.map((slot) => (
               <div key={`player-${slot.index}`} className={slotStyle}>
                 <AnimatePresence mode="popLayout">
@@ -267,14 +273,14 @@ export default function Home() {
                         key="empty"
                         onClick={() => handleBoardSlotClick(slot.index)}
                         className={clsx(
-                          "absolute inset-0 rounded-md border-[4px] transition-all duration-300 m-1",
+                          "absolute inset-0 rounded-md border-[2px] sm:border-[4px] transition-all duration-300 m-0.5 sm:m-1",
                           emptySlotInteractStyle,
                           !isPlacementPhase && "pointer-events-none opacity-50 border-solid"
                         )}
                       >
                         {selectedCardId && isPlacementPhase && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-4xl text-[#8e0dff] animate-bounce font-black">+</span>
+                                <span className="text-2xl sm:text-4xl text-[#8e0dff] animate-bounce font-black">+</span>
                             </div>
                         )}
                       </motion.div>
@@ -302,22 +308,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. FOOTER (JUGADOR) */}
-      <section className="flex-none h-24 sm:h-28 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
+      {/* 3. FOOTER (JUGADOR) - Compacto en móvil (h-16) */}
+      <section className="flex-none h-16 sm:h-28 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-2 sm:px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
         
-        <div className="flex flex-col items-start justify-center pl-2 sm:pl-4 relative">
-             <div className="flex text-3xl sm:text-4xl gap-1 drop-shadow-[2px_2px_0_#000]">
+        {/* --- VIDAS JUGADOR --- */}
+        <div className="flex items-center gap-1 sm:gap-4 pl-1 sm:pl-4 relative">
+             <span className="text-lg sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
+                TÚ
+            </span>
+             <div className="flex text-lg sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 {Array(4).fill(0).map((_, i) => (
                 <span key={i} className={i < player.lives ? "text-white scale-110" : "text-black/40 grayscale"}>
                     {i < player.lives ? '❤️' : '💔'}
                 </span>
                 ))}
             </div>
-            <span className="text-sm sm:text-base text-white font-black uppercase mt-2 tracking-widest drop-shadow-[2px_2px_0_#000]">Tus Vidas</span>
         </div>
 
-        <div className="flex justify-center items-center h-full pb-4 z-30">
-             <div className="flex justify-center gap-2 h-20 sm:h-24 w-full items-end">
+        {/* MANO (Se ajusta al alto disponible) */}
+        <div className="flex justify-center items-center h-full pb-2 sm:pb-4 z-30">
+             <div className="flex justify-center gap-1 sm:gap-2 h-14 sm:h-24 w-full items-end">
                 <AnimatePresence>
                 {player.hand.map((card) => (
                     <motion.div 
@@ -326,7 +336,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0, rotate: (Math.random() * 6 - 3) }}
                         exit={{ opacity: 0, y: 50 }}
                         whileHover={{ y: -20, scale: 1.1, rotate: 0, transition: { duration: 0.1 } }}
-                        className="h-full aspect-[2/3] origin-bottom transition-all filter drop-shadow-[4px_4px_0_#000]"
+                        className="h-full aspect-[2/3] origin-bottom transition-all filter drop-shadow-[2px_2px_0_#000] sm:drop-shadow-[4px_4px_0_#000]"
                     >
                         <Card 
                             card={card} 
@@ -340,8 +350,8 @@ export default function Home() {
              </div>
         </div>
 
-         <div className="flex items-center justify-between pl-4 pr-2">
-            <div className="ml-8">
+         <div className="flex items-center justify-between pl-1 sm:pl-4 pr-1 sm:pr-2">
+            <div className="ml-2 sm:ml-8">
                 <AnimatePresence mode="wait">
                 {canInteract && (
                     <motion.button 
@@ -351,7 +361,7 @@ export default function Home() {
                         exit={{ opacity: 0, scale: 0.8 }}
                         onClick={buttonAction}
                         className={clsx(
-                            "px-4 py-2 rounded-md font-black tracking-wider text-base transition-all whitespace-nowrap border-[4px] border-black shadow-[4px_4px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] uppercase",
+                            "px-2 py-1 sm:px-4 sm:py-2 rounded-md font-black tracking-wider text-xs sm:text-base transition-all whitespace-nowrap border-[2px] sm:border-[4px] border-black shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000] active:translate-y-[2px] sm:active:translate-y-[4px] active:shadow-[1px_1px_0_#000] sm:active:shadow-[2px_2px_0_#000] uppercase",
                             buttonColorClass
                         )}
                     >
@@ -360,8 +370,9 @@ export default function Home() {
                 )}
                 </AnimatePresence>
             </div>
-            <div className="relative w-10 h-14 sm:w-12 sm:h-16 bg-[#8e0dff] rounded-md border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000]">
-                <span className="z-10 font-black text-white text-xl drop-shadow-[2px_2px_0_#000]">{player.deck.length}</span>
+            {/* Mazo Jugador - Fondo Morado */}
+            <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#8e0dff] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000]">
+                <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{player.deck.length}</span>
             </div>
          </div>
       </section>
