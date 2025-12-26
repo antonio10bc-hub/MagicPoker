@@ -19,7 +19,7 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
   const isOpponent = card.owner === 'opponent';
 
   // --- ESTILOS BASE DOODLE ---
-  const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[4px] border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
+  const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[3px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
   
   // --- COLORES NUEVOS (INVERTIDOS) ---
   // Jugador = Morado (#8e0dff) | Rival = Naranja (#ff590d)
@@ -87,7 +87,7 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         style={{ backgroundColor: isOpponent ? '#ff590d' : '#8e0dff' }}
       >
          <div className={clsx(
-             "font-black text-5xl sm:text-6xl text-white drop-shadow-[3px_3px_0_#000]"
+             "font-black text-5xl sm:text-6xl text-white drop-shadow-[1px_3px_0_#000]"
          )}>?</div>
       </motion.div>
     );
@@ -135,7 +135,7 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
               )}
           >
               <div className={clsx(
-                  "w-16 h-16 rounded-full border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_rgba(0,0,0,0.5)]",
+                  "w-16 h-16 rounded-full border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_rgba(0,0,0,0.5)]",
               )}
               // Color del círculo: Si el dueño del daño es Player -> Morado, si no -> Naranja
               style={{ backgroundColor: card.damageSource.owner === 'player' ? "#8e0dff" : "#ff590d" }}
