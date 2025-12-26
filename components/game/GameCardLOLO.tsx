@@ -80,11 +80,11 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         layoutId={card.id}
         className={clsx(
           baseCardStyle,
-          "pattern-diagonal-lines-sm text-black/20 justify-center !p-0", 
+          "pattern-diagonal-lines-sm text-black/20 justify-center !p-10", 
           className
         )}
         // FUERZA BRUTA: Naranja (Rival) o Morado (Jugador)
-        style={{ backgroundColor: isOpponent ? '#ff590d' : '#8e0dff' }}
+        style={{ backgroundColor: isOpponent ? '#171616' : '#8e0dff' }}
       >
          <div className={clsx(
              "font-black text-5xl sm:text-6xl text-white drop-shadow-[1px_3px_0_#000]"
