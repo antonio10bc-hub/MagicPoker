@@ -42,7 +42,7 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
     if (isJoker || isAce || !card.isFaceUp || isVoided) return null;
 
     const iconClass = clsx(
-        "w-5 h-5 sm:w-6 sm:h-6 stroke-[3px]",
+        "w-5 h-5 sm:w-4 sm:h-6 stroke-[4px]",
         (isJoker ? "text-black" : "text-white drop-shadow-[0_2px_0_#000]")
     );
     
@@ -119,7 +119,7 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
 
       {/* SÍMBOLO CENTRAL */}
       <div className={clsx("font-black flex items-center justify-center h-full z-10 drop-shadow-[2px_2px_0_#000]", 
-        isJoker ? "text-2xl sm:text-3xl -rotate-45 tracking-widest" : "text-[40px] sm:text-[50px]"
+        isJoker ? "text-2xl sm:text-1xl -rotate-90 tracking-widest" : "text-[40px] sm:text-[45px]"
       )}>
         {isJoker ? 'JOKER' : card.rank}
       </div>
