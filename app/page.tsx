@@ -5,29 +5,32 @@ import { Card } from '@/components/game/GameCardLOLO';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-// Iconos de volumen
-import { Info, X, Volume2, VolumeX } from 'lucide-react';
-// Funciones de control de mute
+// NUEVO: Icono Home
+import { Info, X, Volume2, VolumeX, Home as HomeIcon } from 'lucide-react';
 import { playSound, toggleMute, getMuteState } from '@/lib/sounds';
-// NUEVO: Importar confeti
 import Confetti from 'react-confetti';
 
 export default function Home() {
   const { 
+    screen, difficulty, setDifficulty, goToMenu, // NUEVO
     player, opponent, turn, phase, recentDamage, gameResult,
-    startGame, resetGame, placeCard, passTurn, finishCombatPhase
+    startGame, resetGame, placeCard, passTurn, finishCombatPhase, roundNumber
   } = useGameStore();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [showRules, setShowRules] = useState(false);
-  
-  // Estado local para el icono de mute
   const [isMutedUI, setIsMutedUI] = useState(getMuteState());
+  
+  // NUEVO: Estado para confirmar salida
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
-    startGame();
-  }, []);
+    // Solo iniciar automáticamente si estamos en la pantalla 'game' y es el inicio
+    if (screen === 'game' && phase === 'start') {
+        startGame();
+    }
+  }, [screen, phase]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -55,32 +58,95 @@ export default function Home() {
   const canPlay = turn === 'player' && !player.isPassed && isPlacementPhase;
   const canInteract = canPlay || isCombatRevealPhase;
 
+  // HANDLERS
   const handleHandCardClick = (id: string) => {
     if (!canPlay) return;
-    // SFX: Click al seleccionar carta
     playSound('click', 0.5);
     setSelectedCardId(prev => prev === id ? null : id);
   };
 
   const handleBoardSlotClick = (slotIndex: number) => {
     if (!selectedCardId) return;
-    // SFX: Click al colocar (placeCard ya maneja lógica, aquí solo el sonido de la acción UI)
     playSound('click', 0.5);
     placeCard(selectedCardId, slotIndex);
     setSelectedCardId(null);
   };
 
-  // Handler para el botón de Mute
   const handleToggleMute = () => {
-      const newState = toggleMute(); // Cambia variable global
-      setIsMutedUI(newState);        // Actualiza icono local
-      if (!newState) playSound('click'); // Feedback si activamos sonido
+      const newState = toggleMute();
+      setIsMutedUI(newState);
+      if (!newState) playSound('click');
   };
 
-  // --- ESTILOS DE BOTONES ---
+  // NUEVO: Handler botón Home
+  const handleHomeClick = () => {
+      playSound('click');
+      const hasCardsOnBoard = player.board.some(s => s.card !== null);
+      // Si la partida ha avanzado, pedir confirmación
+      if (roundNumber > 1 || hasCardsOnBoard) {
+          setShowExitConfirm(true);
+      } else {
+          goToMenu();
+      }
+  };
+
+  const confirmExit = () => {
+      playSound('click');
+      setShowExitConfirm(false);
+      resetGame(); // Resetea el juego
+      goToMenu();  // Vuelve al menú
+  };
+
+  // --- PANTALLA MENÚ ---
+  if (screen === 'menu') {
+      return (
+        <main className="h-svh w-full flex items-center justify-center bg-[#F7F5E6] relative select-none font-comic pattern-grid-lg text-black">
+            <div className="flex flex-col gap-6 w-full max-w-md px-4">
+                
+                {/* Título Jugar */}
+                <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => { playSound('click'); startGame(); }} // startGame cambia screen a 'game'
+                    className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center hover:bg-yellow-300 transition-colors cursor-pointer"
+                >
+                    <h1 className="text-6xl font-black text-[#8e0dff] drop-shadow-[3px_3px_0_#000] uppercase">
+                        JUGAR
+                    </h1>
+                </motion.button>
+
+                {/* Caja Dificultad */}
+                <div className="bg-white p-6 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] flex flex-col items-center gap-4">
+                    <h2 className="text-3xl font-black text-[#ff590d] uppercase drop-shadow-[2px_2px_0_#000]">
+                        DIFICULTAD
+                    </h2>
+                    
+                    <div className="flex justify-between w-full gap-2">
+                        {(['easy', 'normal', 'hard'] as const).map((d) => (
+                            <button
+                                key={d}
+                                onClick={() => { playSound('click'); setDifficulty(d); }}
+                                className={clsx(
+                                    "flex-1 py-3 rounded-md border-[4px] border-black font-black uppercase text-lg transition-all shadow-[4px_4px_0_#000] active:translate-y-[2px] active:shadow-[2px_2px_0_#000]",
+                                    difficulty === d 
+                                        ? "bg-[#8e0dff] text-white scale-105" 
+                                        : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                                )}
+                            >
+                                {d === 'easy' ? 'Fácil' : d === 'normal' ? 'Normal' : 'Difícil'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </main>
+      );
+  }
+
+  // --- PANTALLA JUEGO ---
+  
   let buttonText = "ESPERANDO...";
   let buttonAction: () => void | Promise<void> = passTurn;
-  
   let buttonColorClass = "bg-gray-300 text-gray-600 border-black cursor-not-allowed pattern-diagonal-lines-sm opacity-70";
   let buttonAnimation = {};
 
@@ -103,12 +169,10 @@ export default function Home() {
   }
 
   const slotStyle = "w-full h-full aspect-[2/3] relative flex items-center justify-center rounded-md transition-all border-[4px] border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
-  
   const emptySlotInteractStyle = (selectedCardId && isPlacementPhase) 
     ? "border-dashed border-[#8e0dff] bg-purple-100 animate-[wiggle_1s_ease-in-out_infinite] cursor-pointer hover:bg-purple-200" 
     : "border-dashed border-black/40 bg-black/5";
 
-  // --- MODAL FIN ---
   if (phase === 'end') {
     const isWin = gameResult === 'win';
     const isDraw = gameResult === 'draw';
@@ -119,7 +183,6 @@ export default function Home() {
 
     return (
         <main className="h-svh w-full flex items-center justify-center bg-[#F7F5E6] relative select-none font-comic pattern-grid-lg text-black overflow-hidden">
-            {/* NUEVO: Confeti si ganas */}
             {isWin && <Confetti numberOfPieces={300} recycle={false} />}
             
             <div className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-md w-full mx-4 flex flex-col gap-6 relative overflow-hidden transform rotate-2 z-10">
@@ -129,12 +192,20 @@ export default function Home() {
                 <h2 className="text-2xl font-bold border-b-4 border-black pb-4">
                     {subText}
                 </h2>
-                <button 
-                    onClick={() => { playSound('click'); resetGame(); }} 
-                    className="w-full py-4 px-6 bg-yellow-400 hover:bg-yellow-300 rounded-md font-black text-2xl border-[4px] border-black shadow-[6px_6px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] transition-all uppercase"
-                >
-                    ¡OTRA PARTIDA!
-                </button>
+                <div className="flex flex-col gap-3">
+                    <button 
+                        onClick={() => { playSound('click'); resetGame(); }} 
+                        className="w-full py-4 px-6 bg-yellow-400 hover:bg-yellow-300 rounded-md font-black text-2xl border-[4px] border-black shadow-[6px_6px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] transition-all uppercase"
+                    >
+                        ¡OTRA PARTIDA!
+                    </button>
+                    <button 
+                        onClick={() => { playSound('click'); resetGame(); goToMenu(); }} 
+                        className="w-full py-2 px-6 bg-gray-200 hover:bg-gray-300 rounded-md font-bold text-lg border-[4px] border-black shadow-[4px_4px_0_#000] active:translate-y-[2px] active:shadow-[2px_2px_0_#000] uppercase"
+                    >
+                        Salir al Menú
+                    </button>
+                </div>
             </div>
         </main>
     )
@@ -143,20 +214,35 @@ export default function Home() {
   return (
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
-      {/* --- MODAL DE REGLAS + MUTE --- */}
+      {/* MODAL CONFIRMAR SALIDA */}
+      <AnimatePresence>
+        {showExitConfirm && (
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            >
+                <div className="bg-white p-6 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-sm w-full">
+                    <h2 className="text-2xl font-black mb-4">¿Salir al Menú?</h2>
+                    <p className="mb-6 font-medium">Perderás el progreso de la partida actual.</p>
+                    <div className="flex gap-4 justify-center">
+                        <button onClick={confirmExit} className="bg-red-500 text-white px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">SÍ, SALIR</button>
+                        <button onClick={() => setShowExitConfirm(false)} className="bg-gray-200 px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">CANCELAR</button>
+                    </div>
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL REGLAS */}
       <AnimatePresence>
         {showRules && (
             <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                 onClick={() => { playSound('click'); setShowRules(false); }}
             >
                 <motion.div 
-                    initial={{ scale: 0.8, y: 50 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.8, y: 50 }}
+                    initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }}
                     onClick={(e) => e.stopPropagation()}
                     className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col"
                 >
@@ -164,23 +250,16 @@ export default function Home() {
                         <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider drop-shadow-[2px_2px_0_#fff]">
                             CÓMO JUGAR
                         </h2>
-                        
-                        {/* Contenedor de botones (Mute + Cerrar) */}
                         <div className="flex gap-3">
-                            {/* Botón Mute */}
                             <button 
                                 onClick={handleToggleMute}
                                 className={clsx(
                                     "p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all",
-                                    // Muteado: Negro con icono blanco / Con sonido: Blanco Hueso con icono negro
                                     isMutedUI ? "bg-black text-white" : "bg-[#F7F5E6] text-black hover:bg-[#e8e6d9]"
                                 )}
-                                title={isMutedUI ? "Activar sonido" : "Silenciar"}
                             >
                                 {isMutedUI ? <VolumeX className="w-6 h-6 stroke-[3px]" /> : <Volume2 className="w-6 h-6 stroke-[3px]" />}
                             </button>
-
-                            {/* Botón Cerrar */}
                             <button 
                                 onClick={() => { playSound('click'); setShowRules(false); }}
                                 className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"
@@ -189,19 +268,17 @@ export default function Home() {
                             </button>
                         </div>
                     </div>
-
+                    {/* ... Contenido reglas ... (Igual que antes) */}
                     <div className="p-6 space-y-6 text-lg sm:text-xl font-medium leading-relaxed">
                         <section>
                             <h3 className="font-black text-xl mb-2 bg-[#8e0dff] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">1. El Objetivo</h3>
                             <p>Gana el primero que reduzca las vidas del oponente a 0.</p>
                         </section>
-                        
                         <section>
                             <h3 className="font-black text-xl mb-2 bg-[#ff590d] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] rotate-1">2. Tu Turno</h3>
                             <p>Coloca tantas cartas como quieras en los 4 huecos que tienes disponibles.</p>
                             <p className="mt-2">Cuando termines, pulsa <span className="font-bold text-green-600">"PLANTARSE"</span>. El rival jugará después. Cuando ambos paséis, ¡comienza la fase de pelea!</p>
                         </section>
-
                         <section>
                             <h3 className="font-black text-xl mb-2 bg-yellow-400 text-black inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">3. Fase de Pelea</h3>
                             <ul className="list-disc pl-5 space-y-2 text-base sm:text-lg">
@@ -229,18 +306,25 @@ export default function Home() {
         <Info className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
       </motion.button>
 
-      {/* 1. HEADER (RIVAL - NARANJA) */}
+      {/* HEADER */}
       <header className="flex-none h-12 sm:h-20 p-2 sm:p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
-        <div className="flex gap-2 sm:gap-4 items-center relative pl-10 sm:pl-0">
-            {/* Mazo Rival */}
-            <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000]">
-                <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{opponent.deck.length}</span>
-            </div>
-            {/* Mano Rival */}
-            <div className="flex -space-x-4 sm:-space-x-7 pl-1 sm:pl-2">
-                {opponent.hand.map((c, i) => (
-                    <div key={c.id} className="w-6 h-8 sm:w-10 sm:h-14 bg-[#ff590d] rounded-sm border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_#000] sm:shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
-                ))}
+        
+        {/* LADO IZQUIERDO: HOME + DECK */}
+        <div className="flex items-center relative gap-4">
+            {/* NUEVO: Botón Home */}
+            <button onClick={handleHomeClick} className="bg-white p-2 rounded-md border-[2px] sm:border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none hover:bg-gray-100 transition-all">
+                <HomeIcon className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3px]" />
+            </button>
+
+            <div className="flex gap-2 sm:gap-4 items-center pl-2">
+                <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000]">
+                    <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{opponent.deck.length}</span>
+                </div>
+                <div className="flex -space-x-4 sm:-space-x-7 pl-1 sm:pl-2">
+                    {opponent.hand.map((c, i) => (
+                        <div key={c.id} className="w-6 h-8 sm:w-10 sm:h-14 bg-[#ff590d] rounded-sm border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_#000] sm:shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
+                    ))}
+                </div>
             </div>
         </div>
         
@@ -255,7 +339,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Vidas Rival */}
         <div className="flex items-center gap-1 sm:gap-4">
              <div className="flex text-lg sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 {Array(4).fill(0).map((_, i) => (
@@ -270,9 +353,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 2. TABLERO CENTRAL */}
+      {/* TABLERO */}
       <section className="flex-1 flex items-center justify-center p-2 sm:p-4 overflow-hidden min-h-0 relative py-2 sm:py-8">
-        
         <div className="w-full max-w-lg bg-white rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col p-2 sm:p-4 shrink-0">
           
           <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-4 items-center justify-items-center">
@@ -350,7 +432,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. FOOTER (JUGADOR) */}
+      {/* FOOTER */}
       <section className="flex-none h-16 sm:h-28 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-2 sm:px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
         
         <div className="flex items-center gap-1 sm:gap-4 pl-1 sm:pl-4 relative">

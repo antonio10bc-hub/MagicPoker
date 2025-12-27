@@ -6,6 +6,9 @@ const RANK_VALUES: Record<Rank, number> = {
   'J': 11, 'Q': 12, 'K': 13, 'A': 14
 };
 
+// NUEVO: Exportar para que la IA pueda usarlo
+export const getCardValue = (rank: Rank): number => RANK_VALUES[rank];
+
 export const createDeck = (owner: 'player' | 'opponent'): Card[] => {
   const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   let deck: Card[] = [];
@@ -67,7 +70,6 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     const defender = defenderSlot.card;
 
     if (!defender) {
-      // GOLPE A HUECO VACÍO
       if (isPlayerAttacking) {
         opponentDamage++;
         opponentEmptyHits[defenderSlot.index] = (opponentEmptyHits[defenderSlot.index] || 0) + 1;
@@ -76,26 +78,14 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
         playerEmptyHits[defenderSlot.index] = (playerEmptyHits[defenderSlot.index] || 0) + 1;
       }
     } else {
-      // GOLPE A CARTA
       if (attacker.value > defender.value) {
-        // GANA ATACANTE (Tú matas al rival o rival te mata a ti activamente)
         deadIds.add(defender.id);
-        
-        // Aquí SÍ ponemos cicatriz porque es una muerte por ataque directo
         if (['K', 'Q', 'J'].includes(attacker.rank)) {
             damageSources[defender.id] = { rank: attacker.rank, owner: attacker.owner };
         }
-
       } else if (attacker.value < defender.value) {
-        // GANA DEFENSOR (El atacante se suicida contra un muro más fuerte)
         deadIds.add(attacker.id);
-        
-        // CAMBIO: ELIMINADA LA CICATRIZ EN SUICIDIO
-        // Al no asignar damageSources[attacker.id], la carta morirá (roja) 
-        // pero NO mostrará la letra gigante.
-
       } else {
-        // EMPATE (Mueren ambos)
         deadIds.add(attacker.id);
         deadIds.add(defender.id);
       }
@@ -107,14 +97,12 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       if (!slot.card) return;
       const rank = slot.card.rank;
 
-      // EL JOKER NO ATACA JAMÁS
       if (rank === 'JOKER') return;
 
       const targetIndices = getTargetIndices(slot.index, rank);
       if (targetIndices.length === 0) return;
 
       if (rank === 'J') {
-        // JOTA: 1 GOLPE ALEATORIO
         const randomIndex = targetIndices[Math.floor(Math.random() * targetIndices.length)];
         const targetSlot = defenseBoard.find(s => s.index === randomIndex);
         
@@ -123,7 +111,6 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
         }
 
       } else {
-        // RESTO: ATAQUE MÚLTIPLE
         targetIndices.forEach(idx => {
           const targetSlot = defenseBoard.find(s => s.index === idx);
           if (targetSlot) {
