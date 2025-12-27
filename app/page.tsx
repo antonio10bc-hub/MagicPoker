@@ -6,25 +6,23 @@ import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Info, X } from 'lucide-react';
+// IMPORTE DE SONIDOS
+import { playSound } from '@/lib/sounds';
 
 export default function Home() {
-  // --- ESTADO GLOBAL ---
   const { 
     player, opponent, turn, phase, recentDamage, gameResult,
     startGame, resetGame, placeCard, passTurn, finishCombatPhase
   } = useGameStore();
 
-  // --- ESTADOS LOCALES ---
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [showRules, setShowRules] = useState(false);
 
-  // --- INICIO DEL JUEGO ---
   useEffect(() => {
     startGame();
   }, []);
 
-  // --- TIMER FASE REVELACIÓN ---
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (phase === 'combat-reveal') {
@@ -45,27 +43,28 @@ export default function Home() {
     };
   }, [phase, finishCombatPhase]);
 
-  // --- LOGICA DE INTERACCIÓN ---
   const isPlacementPhase = phase === 'placement';
   const isCombatRevealPhase = phase === 'combat-reveal';
   
   const canPlay = turn === 'player' && !player.isPassed && isPlacementPhase;
   const canInteract = canPlay || isCombatRevealPhase;
 
-  // Click en carta de la mano
   const handleHandCardClick = (id: string) => {
     if (!canPlay) return;
+    // SFX: Click al seleccionar carta
+    playSound('click', 0.5);
     setSelectedCardId(prev => prev === id ? null : id);
   };
 
-  // Click en hueco del tablero
   const handleBoardSlotClick = (slotIndex: number) => {
     if (!selectedCardId) return;
+    // SFX: Click al colocar (placeCard ya maneja lógica, aquí solo el sonido de la acción UI)
+    playSound('click', 0.5);
     placeCard(selectedCardId, slotIndex);
     setSelectedCardId(null);
   };
 
-  // --- CONFIGURACIÓN DE BOTONES ---
+  // --- ESTILOS DE BOTONES ---
   let buttonText = "ESPERANDO...";
   let buttonAction: () => void | Promise<void> = passTurn;
   
@@ -90,14 +89,13 @@ export default function Home() {
     };
   }
 
-  // --- ESTILOS CSS REUTILIZABLES ---
   const slotStyle = "w-full h-full aspect-[2/3] relative flex items-center justify-center rounded-md transition-all border-[4px] border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
   
   const emptySlotInteractStyle = (selectedCardId && isPlacementPhase) 
     ? "border-dashed border-[#8e0dff] bg-purple-100 animate-[wiggle_1s_ease-in-out_infinite] cursor-pointer hover:bg-purple-200" 
     : "border-dashed border-black/40 bg-black/5";
 
-  // --- PANTALLA DE FIN DE JUEGO ---
+  // --- MODAL FIN ---
   if (phase === 'end') {
     const isWin = gameResult === 'win';
     const isDraw = gameResult === 'draw';
@@ -115,7 +113,10 @@ export default function Home() {
                 <h2 className="text-2xl font-bold border-b-4 border-black pb-4">
                     {subText}
                 </h2>
-                <button onClick={resetGame} className="w-full py-4 px-6 bg-yellow-400 hover:bg-yellow-300 rounded-md font-black text-2xl border-[4px] border-black shadow-[6px_6px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] transition-all uppercase">
+                <button 
+                    onClick={() => { playSound('click'); resetGame(); }} 
+                    className="w-full py-4 px-6 bg-yellow-400 hover:bg-yellow-300 rounded-md font-black text-2xl border-[4px] border-black shadow-[6px_6px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] transition-all uppercase"
+                >
                     ¡OTRA PARTIDA!
                 </button>
             </div>
@@ -123,11 +124,10 @@ export default function Home() {
     )
   }
 
-  // --- RENDERIZADO PRINCIPAL ---
   return (
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
-      {/* --- MODAL DE REGLAS (POP UP) --- */}
+      {/* --- MODAL DE REGLAS --- */}
       <AnimatePresence>
         {showRules && (
             <motion.div 
@@ -135,7 +135,7 @@ export default function Home() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                onClick={() => setShowRules(false)}
+                onClick={() => { playSound('click'); setShowRules(false); }}
             >
                 <motion.div 
                     initial={{ scale: 0.8, y: 50 }}
@@ -149,7 +149,7 @@ export default function Home() {
                             CÓMO JUGAR
                         </h2>
                         <button 
-                            onClick={() => setShowRules(false)}
+                            onClick={() => { playSound('click'); setShowRules(false); }}
                             className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"
                         >
                             <X className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
@@ -173,7 +173,6 @@ export default function Home() {
                             <ul className="list-disc pl-5 space-y-2 text-base sm:text-lg">
                                 <li>Las cartas se enfrentan cara a cara. La carta con el número más alto gana y destruye a la otra.</li>
                                 <li>Si tu carta se enfrenta a un hueco vacío directamente, le haces <strong>1 punto de daño</strong> directo.</li>
-                                {/* --- AQUÍ ESTÁ EL CAMBIO SOLICITADO --- */}
                                 <li className="pt-2"><strong>🅰️ El As (A):</strong> Limpia el tablero, tanto las cartas del enemigo como las tuyas, evitando cualquier golpe.</li>
                                 <li><strong>👑 El Rey (K):</strong> Ataca a las 3 posiciones que tiene en frente a la vez.</li>
                                 <li><strong>👸 La Reina (Q):</strong> Ataca a las 2 posiciones en diagonal a la vez.</li>
@@ -187,9 +186,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* --- BOTÓN INFO FLOTANTE --- */}
       <motion.button
-        onClick={() => setShowRules(true)}
+        onClick={() => { playSound('click'); setShowRules(true); }}
         whileHover={{ scale: 1.1, rotate: 5 }}
         whileTap={{ scale: 0.9 }}
         className="fixed bottom-20 sm:bottom-32 left-4 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0_#000] flex items-center justify-center hover:bg-yellow-100 transition-colors"
@@ -197,7 +195,7 @@ export default function Home() {
         <Info className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
       </motion.button>
 
-      {/* 1. HEADER (RIVAL) */}
+      {/* 1. HEADER (RIVAL - NARANJA) */}
       <header className="flex-none h-12 sm:h-20 p-2 sm:p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
         <div className="flex gap-2 sm:gap-4 items-center relative pl-10 sm:pl-0">
             {/* Mazo Rival */}
@@ -368,7 +366,7 @@ export default function Home() {
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1, ...buttonAnimation }}
                         exit={{ opacity: 0, scale: 0.8 }}
-                        onClick={buttonAction}
+                        onClick={() => { playSound('click'); buttonAction(); }}
                         className={clsx(
                             "px-2 py-1 sm:px-4 sm:py-2 rounded-md font-black tracking-wider text-xs sm:text-base transition-all whitespace-nowrap border-[2px] sm:border-[4px] border-black shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000] active:translate-y-[2px] sm:active:translate-y-[4px] active:shadow-[1px_1px_0_#000] sm:active:shadow-[2px_2px_0_#000] uppercase",
                             buttonColorClass

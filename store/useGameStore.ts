@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { BoardSlot, PlayerState, GamePhase, DamageEvent, CombatResult } from '@/types';
 import { createDeck, calculateCombat } from '@/lib/game-utils';
+// IMPORTE DE SONIDOS
+import { playSound } from '@/lib/sounds';
 
 interface GameState {
   phase: GamePhase;
@@ -10,7 +12,6 @@ interface GameState {
   roundNumber: number;
   recentDamage: DamageEvent | null;
   pendingCombatResult: CombatResult | null;
-  // NUEVO: Para controlar el resultado explícito
   gameResult: 'win' | 'loss' | 'draw' | null;
 
   startGame: () => void;
@@ -41,6 +42,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   opponent: getInitialPlayerState(),
 
   startGame: () => {
+    // SFX: Sonido de barajar al inicio
+    playSound('shuffle', 0.6);
+
     const playerDeckFull = createDeck('player');
     const opponentDeckFull = createDeck('opponent');
 
@@ -134,6 +138,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (opponent.hand.length > 0 && availableSlots.length > 0) {
       const cardToPlay = { ...opponent.hand[0], isFaceUp: false };
       let chosenSlotIndex = availableSlots[0].index;
+      
       const defensiveSlots = availableSlots.filter(s => player.board[s.index].card !== null);
       
       if (defensiveSlots.length > 0 && Math.random() > 0.3) {
@@ -251,7 +256,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newPlayerLives = Math.max(0, currentState.player.lives - result.playerDamageTaken);
     const newOpponentLives = Math.max(0, currentState.opponent.lives - result.opponentDamageTaken);
 
-    // Actualizamos el estado para verificar condiciones
     const finalPlayerBoard = clearDead(currentState.player.board);
     const finalOpponentBoard = clearDead(currentState.opponent.board);
     const playerDeck = currentState.player.deck;
@@ -259,18 +263,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const opponentDeck = currentState.opponent.deck;
     const opponentHand = currentState.opponent.hand;
 
-    // --- NUEVA LÓGICA DE FIN DE PARTIDA ---
     const playerRunOut = playerDeck.length === 0 && playerHand.length === 0 && finalPlayerBoard.every(s => s.card === null);
     const opponentRunOut = opponentDeck.length === 0 && opponentHand.length === 0 && finalOpponentBoard.every(s => s.card === null);
-    
-    // Verificamos si tienen "al menos 1 carta en juego" para la condición de victoria automática
     const playerHasBoard = finalPlayerBoard.some(s => s.card !== null);
     const opponentHasBoard = finalOpponentBoard.some(s => s.card !== null);
 
     let finalPhase: GamePhase = 'placement';
     let resultType: 'win' | 'loss' | 'draw' | null = null;
 
-    // 1. Comprobar vidas (Prioridad máxima)
     if (newPlayerLives === 0 && newOpponentLives === 0) {
         finalPhase = 'end'; resultType = 'draw';
     } else if (newPlayerLives === 0) {
@@ -278,16 +278,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     } else if (newOpponentLives === 0) {
         finalPhase = 'end'; resultType = 'win';
     } 
-    // 2. Comprobar falta de cartas (Tu nueva casuística)
     else if (playerRunOut && opponentRunOut) {
-        // AMBOS sin cartas -> Empate
         finalPhase = 'end'; resultType = 'draw';
     } else if (playerRunOut && opponentHasBoard) {
-        // Player sin nada VS Opponent con cartas -> Gana Opponent (Loss)
         finalPhase = 'end'; resultType = 'loss';
     } else if (opponentRunOut && playerHasBoard) {
-        // Opponent sin nada VS Player con cartas -> Gana Player (Win)
         finalPhase = 'end'; resultType = 'win';
+    }
+
+    // SFX: Sonidos de final de partida
+    if (finalPhase === 'end') {
+        if (resultType === 'win') playSound('victory', 0.8);
+        if (resultType === 'loss') playSound('defeat', 0.8);
+        // Si hay empate, como no hay audio 'draw', no suena nada o podrías usar 'click'
     }
 
     set({
