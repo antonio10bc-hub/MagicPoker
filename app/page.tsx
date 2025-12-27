@@ -5,10 +5,12 @@ import { Card } from '@/components/game/GameCardLOLO';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-// AÑADIDO: Iconos de volumen
+// Iconos de volumen
 import { Info, X, Volume2, VolumeX } from 'lucide-react';
-// AÑADIDO: Funciones de control de mute
+// Funciones de control de mute
 import { playSound, toggleMute, getMuteState } from '@/lib/sounds';
+// NUEVO: Importar confeti
+import Confetti from 'react-confetti';
 
 export default function Home() {
   const { 
@@ -20,7 +22,7 @@ export default function Home() {
   const [countdown, setCountdown] = useState(5);
   const [showRules, setShowRules] = useState(false);
   
-  // AÑADIDO: Estado local para el icono de mute
+  // Estado local para el icono de mute
   const [isMutedUI, setIsMutedUI] = useState(getMuteState());
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function Home() {
     setSelectedCardId(null);
   };
 
-  // AÑADIDO: Handler para el botón de Mute
+  // Handler para el botón de Mute
   const handleToggleMute = () => {
       const newState = toggleMute(); // Cambia variable global
       setIsMutedUI(newState);        // Actualiza icono local
@@ -116,8 +118,11 @@ export default function Home() {
     let titleColorClass = isDraw ? "text-gray-700" : isWin ? "text-[#8e0dff]" : "text-[#ff590d]";
 
     return (
-        <main className="h-svh w-full flex items-center justify-center bg-[#F7F5E6] relative select-none font-comic pattern-grid-lg text-black">
-            <div className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-md w-full mx-4 flex flex-col gap-6 relative overflow-hidden transform rotate-2">
+        <main className="h-svh w-full flex items-center justify-center bg-[#F7F5E6] relative select-none font-comic pattern-grid-lg text-black overflow-hidden">
+            {/* NUEVO: Confeti si ganas */}
+            {isWin && <Confetti numberOfPieces={300} recycle={false} />}
+            
+            <div className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-md w-full mx-4 flex flex-col gap-6 relative overflow-hidden transform rotate-2 z-10">
                 <h1 className={clsx("text-5xl sm:text-6xl font-black drop-shadow-[3px_3px_0_#000] uppercase", titleColorClass)}>
                     {titleText}
                 </h1>
@@ -160,7 +165,7 @@ export default function Home() {
                             CÓMO JUGAR
                         </h2>
                         
-                        {/* AÑADIDO: Contenedor de botones (Mute + Cerrar) */}
+                        {/* Contenedor de botones (Mute + Cerrar) */}
                         <div className="flex gap-3">
                             {/* Botón Mute */}
                             <button 
