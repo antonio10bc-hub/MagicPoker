@@ -5,9 +5,10 @@ import { Card } from '@/components/game/GameCardLOLO';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, X } from 'lucide-react';
-// IMPORTE DE SONIDOS
-import { playSound } from '@/lib/sounds';
+// AÑADIDO: Iconos de volumen
+import { Info, X, Volume2, VolumeX } from 'lucide-react';
+// AÑADIDO: Funciones de control de mute
+import { playSound, toggleMute, getMuteState } from '@/lib/sounds';
 
 export default function Home() {
   const { 
@@ -18,6 +19,9 @@ export default function Home() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [showRules, setShowRules] = useState(false);
+  
+  // AÑADIDO: Estado local para el icono de mute
+  const [isMutedUI, setIsMutedUI] = useState(getMuteState());
 
   useEffect(() => {
     startGame();
@@ -62,6 +66,13 @@ export default function Home() {
     playSound('click', 0.5);
     placeCard(selectedCardId, slotIndex);
     setSelectedCardId(null);
+  };
+
+  // AÑADIDO: Handler para el botón de Mute
+  const handleToggleMute = () => {
+      const newState = toggleMute(); // Cambia variable global
+      setIsMutedUI(newState);        // Actualiza icono local
+      if (!newState) playSound('click'); // Feedback si activamos sonido
   };
 
   // --- ESTILOS DE BOTONES ---
@@ -127,7 +138,7 @@ export default function Home() {
   return (
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
-      {/* --- MODAL DE REGLAS --- */}
+      {/* --- MODAL DE REGLAS + MUTE --- */}
       <AnimatePresence>
         {showRules && (
             <motion.div 
@@ -148,12 +159,30 @@ export default function Home() {
                         <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider drop-shadow-[2px_2px_0_#fff]">
                             CÓMO JUGAR
                         </h2>
-                        <button 
-                            onClick={() => { playSound('click'); setShowRules(false); }}
-                            className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"
-                        >
-                            <X className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
-                        </button>
+                        
+                        {/* AÑADIDO: Contenedor de botones (Mute + Cerrar) */}
+                        <div className="flex gap-3">
+                            {/* Botón Mute */}
+                            <button 
+                                onClick={handleToggleMute}
+                                className={clsx(
+                                    "p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all",
+                                    // Muteado: Negro con icono blanco / Con sonido: Blanco Hueso con icono negro
+                                    isMutedUI ? "bg-black text-white" : "bg-[#F7F5E6] text-black hover:bg-[#e8e6d9]"
+                                )}
+                                title={isMutedUI ? "Activar sonido" : "Silenciar"}
+                            >
+                                {isMutedUI ? <VolumeX className="w-6 h-6 stroke-[3px]" /> : <Volume2 className="w-6 h-6 stroke-[3px]" />}
+                            </button>
+
+                            {/* Botón Cerrar */}
+                            <button 
+                                onClick={() => { playSound('click'); setShowRules(false); }}
+                                className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"
+                            >
+                                <X className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="p-6 space-y-6 text-lg sm:text-xl font-medium leading-relaxed">
