@@ -6,7 +6,6 @@ const RANK_VALUES: Record<Rank, number> = {
   'J': 11, 'Q': 12, 'K': 13, 'A': 14
 };
 
-// NUEVO: Exportar para que la IA pueda usarlo
 export const getCardValue = (rank: Rank): number => RANK_VALUES[rank];
 
 export const createDeck = (owner: 'player' | 'opponent'): Card[] => {
@@ -36,7 +35,16 @@ export const createDeck = (owner: 'player' | 'opponent'): Card[] => {
   return deck.sort(() => Math.random() - 0.5);
 };
 
-export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[]): CombatResult => {
+// EXTENSIÓN DEL TIPO: Añadimos datos extra al retorno
+interface ExtendedCombatResult extends CombatResult {
+    cardsDestroyedCount: number; // Para estadísticas
+    isRepublicanaTriggered: boolean; // Logro específico
+}
+
+// Nota: TypeScript puede quejarse si el tipo CombatResult original no tiene estos campos. 
+// En el store haremos un casting o usaremos este tipo extendido localmente.
+
+export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[]): ExtendedCombatResult => {
   let playerDamage = 0;
   let opponentDamage = 0;
   const deadIds = new Set<string>();
@@ -45,6 +53,20 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
   const playerEmptyHits: Record<number, number> = {};
   const opponentEmptyHits: Record<number, number> = {};
   const damageSources: Record<string, { rank: Rank, owner: 'player' | 'opponent' }> = {};
+
+  // Detección de logro "Republicana": Player usa AS y Opponent tiene J, Q, K en mesa
+  let republicanaTrigger = false;
+  const playerHasAce = playerBoard.some(s => s.card?.rank === 'A');
+  
+  if (playerHasAce) {
+      const oppCards = opponentBoard.map(s => s.card?.rank).filter(Boolean);
+      const hasJ = oppCards.includes('J');
+      const hasQ = oppCards.includes('Q');
+      const hasK = oppCards.includes('K');
+      if (hasJ && hasQ && hasK) {
+          republicanaTrigger = true;
+      }
+  }
 
   // 1. REGLA DEL AS (Board Wipe)
   const aceCard = [...playerBoard, ...opponentBoard].find(s => s.card?.rank === 'A')?.card;
@@ -61,7 +83,10 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     return {
       playerDamageTaken: 0, opponentDamageTaken: 0,
       deadCardIds: [], voidedCardIds: Array.from(voidedIds),
-      playerEmptySlotsHit: {}, opponentEmptySlotsHit: {}, damageSources
+      playerEmptySlotsHit: {}, opponentEmptySlotsHit: {}, damageSources,
+      // Nuevos campos
+      cardsDestroyedCount: 0, // Voided no cuenta como destruida para stats (opcional)
+      isRepublicanaTriggered: republicanaTrigger
     };
   }
 
@@ -105,17 +130,12 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       if (rank === 'J') {
         const randomIndex = targetIndices[Math.floor(Math.random() * targetIndices.length)];
         const targetSlot = defenseBoard.find(s => s.index === randomIndex);
-        
-        if (targetSlot) {
-            resolveInteraction(slot.card, targetSlot, isPlayerAttacking);
-        }
+        if (targetSlot) resolveInteraction(slot.card, targetSlot, isPlayerAttacking);
 
       } else {
         targetIndices.forEach(idx => {
           const targetSlot = defenseBoard.find(s => s.index === idx);
-          if (targetSlot) {
-            resolveInteraction(slot.card!, targetSlot, isPlayerAttacking);
-          }
+          if (targetSlot) resolveInteraction(slot.card!, targetSlot, isPlayerAttacking);
         });
       }
     });
@@ -131,7 +151,10 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     voidedCardIds: [],
     playerEmptySlotsHit: playerEmptyHits,
     opponentEmptySlotsHit: opponentEmptyHits,
-    damageSources
+    damageSources,
+    // Nuevos campos
+    cardsDestroyedCount: deadIds.size,
+    isRepublicanaTriggered: false // Solo se activa con el As, que va por otro camino
   };
 };
 
@@ -140,12 +163,9 @@ const getTargetIndices = (index: number, rank: Rank): number[] => {
   const add = (i: number) => { if (i >= 0 && i <= 3) targets.push(i); };
 
   if (rank === 'Q') {
-    add(index - 1);
-    add(index + 1);
+    add(index - 1); add(index + 1);
   } else if (rank === 'K' || rank === 'J') {
-    add(index - 1);
-    add(index);
-    add(index + 1);
+    add(index - 1); add(index); add(index + 1);
   } else {
     add(index);
   }

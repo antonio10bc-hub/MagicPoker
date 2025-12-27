@@ -1,16 +1,16 @@
 import { create } from 'zustand';
 import { BoardSlot, PlayerState, GamePhase, DamageEvent, CombatResult } from '@/types';
-// NUEVO: Importar getCardValue
 import { createDeck, calculateCombat, getCardValue } from '@/lib/game-utils';
 import { playSound } from '@/lib/sounds';
+// NUEVO: Importar gestión de stats
+import { incrementStat, saveStats, getStats } from '@/lib/stats';
 
-// NUEVO: Tipos para menú y dificultad
 type Difficulty = 'easy' | 'normal' | 'hard';
 type Screen = 'menu' | 'game';
 
 interface GameState {
-  screen: Screen;          // NUEVO
-  difficulty: Difficulty;  // NUEVO
+  screen: Screen;
+  difficulty: Difficulty;
   phase: GamePhase;
   turn: 'player' | 'opponent';
   player: PlayerState;
@@ -20,10 +20,8 @@ interface GameState {
   pendingCombatResult: CombatResult | null;
   gameResult: 'win' | 'loss' | 'draw' | null;
 
-  // Acciones nuevas
   setDifficulty: (diff: Difficulty) => void;
   goToMenu: () => void;
-  
   startGame: () => void;
   resetGame: () => void;
   placeCard: (cardId: string, slotIndex: number) => void;
@@ -41,8 +39,8 @@ const getInitialPlayerState = (): PlayerState => ({
 });
 
 export const useGameStore = create<GameState>((set, get) => ({
-  screen: 'menu',       // Empezamos en menú
-  difficulty: 'normal', // Dificultad por defecto
+  screen: 'menu',
+  difficulty: 'normal',
   phase: 'start',
   turn: 'player',
   roundNumber: 1,
@@ -53,19 +51,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   player: getInitialPlayerState(),
   opponent: getInitialPlayerState(),
 
-  // NUEVO: Actions para menú
   setDifficulty: (diff) => set({ difficulty: diff }),
   goToMenu: () => set({ screen: 'menu' }),
 
   startGame: () => {
     playSound('shuffle', 0.6);
+    // STATS: Sumar partida total
+    incrementStat('totalGames');
 
     const playerDeckFull = createDeck('player');
     const opponentDeckFull = createDeck('opponent');
 
-    // Barajar
-    // playerDeckFull.sort(() => Math.random() - 0.5); // Ya lo hace createDeck
-    // opponentDeckFull.sort(() => Math.random() - 0.5);
+    playerDeckFull.sort(() => Math.random() - 0.5);
+    opponentDeckFull.sort(() => Math.random() - 0.5);
 
     const playerHand = playerDeckFull.slice(0, 3).map(c => ({ ...c, isFaceUp: true }));
     const playerDeck = playerDeckFull.slice(3);
@@ -74,7 +72,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const opponentDeck = opponentDeckFull.slice(3);
 
     set({
-      screen: 'game', // Al iniciar, vamos al juego
+      screen: 'game',
       phase: 'placement',
       turn: 'player',
       roundNumber: 1,
@@ -97,7 +95,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         player: getInitialPlayerState(),
         opponent: getInitialPlayerState(),
     });
-    // Si estamos en pantalla de juego, reiniciamos directo. Si estamos en menú, no hacemos nada.
     if (get().screen === 'game') {
         get().startGame();
     }
@@ -124,6 +121,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cardIndex = player.hand.findIndex(c => c.id === cardId);
     if (cardIndex === -1) return;
     
+    playSound('click', 0.5);
+    
+    // STATS: Sumar carta jugada
+    incrementStat('cardsPlayed');
+
     const cardToPlay = { ...player.hand[cardIndex], isFaceUp: true }; 
     const currentPlayerState = get().player; 
     const updatedHand = currentPlayerState.hand.filter(c => c.id !== cardId);
@@ -144,6 +146,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   passTurn: async () => {
     const { opponent } = get();
+    playSound('click');
     set(state => ({ player: { ...state.player, isPassed: true }, turn: 'opponent' }));
 
     if (!opponent.isPassed) {
@@ -154,24 +157,19 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
-  // --- IA CON DIFICULTAD ---
   opponentTurnAction: async () => {
-    const { opponent, player, difficulty } = get(); // Leemos dificultad
+    const { opponent, player, difficulty } = get();
     const availableSlots = opponent.board.filter(slot => slot.card === null);
 
     if (opponent.hand.length > 0 && availableSlots.length > 0) {
       const cardToPlay = { ...opponent.hand[0], isFaceUp: false };
       let chosenSlotIndex = availableSlots[0].index;
-      
       const defensiveSlots = availableSlots.filter(s => player.board[s.index].card !== null);
-      
-      // LÓGICA POR DIFICULTAD
+
       if (difficulty === 'easy') {
-          // FÁCIL: 100% Aleatorio
           chosenSlotIndex = availableSlots[Math.floor(Math.random() * availableSlots.length)].index;
       } 
       else if (difficulty === 'normal') {
-          // NORMAL: 30% Defensivo, 70% Aleatorio
           if (defensiveSlots.length > 0 && Math.random() > 0.7) {
              chosenSlotIndex = defensiveSlots[Math.floor(Math.random() * defensiveSlots.length)].index;
           } else {
@@ -179,15 +177,12 @@ export const useGameStore = create<GameState>((set, get) => ({
           }
       } 
       else if (difficulty === 'hard') {
-          // DIFÍCIL: Busca ganar intercambios o bloquear
           let bestMoveFound = false;
-          // Busca carta rival a la que ganemos
           for (const slot of defensiveSlots) {
               const playerCard = player.board[slot.index].card;
               if (playerCard) {
                   const myVal = getCardValue(cardToPlay.rank);
                   const oppVal = getCardValue(playerCard.rank);
-                  // Si mi carta es mayor, la pongo ahí para matar
                   if (myVal > oppVal) {
                       chosenSlotIndex = slot.index;
                       bestMoveFound = true;
@@ -195,11 +190,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                   }
               }
           }
-          // Si no gano a nadie, intento al menos bloquear (empate o perder pero bloquear daño)
           if (!bestMoveFound && defensiveSlots.length > 0) {
                chosenSlotIndex = defensiveSlots[Math.floor(Math.random() * defensiveSlots.length)].index;
           } else if (!bestMoveFound) {
-               // Si no hay nada que bloquear, aleatorio
                chosenSlotIndex = availableSlots[Math.floor(Math.random() * availableSlots.length)].index;
           }
       }
@@ -209,7 +202,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newBoard = [...currentOpponentState.board];
       newBoard[chosenSlotIndex] = { ...newBoard[chosenSlotIndex], card: cardToPlay };
 
-      playSound('click', 0.4); // Sonido carta rival
+      playSound('click', 0.4);
 
       set({
         opponent: { ...currentOpponentState, hand: newHand, board: newBoard },
@@ -241,7 +234,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     setTimeout(() => {
       const currentState = get();
-      
+      playSound('shuffle', 0.5);
+
       set({
         opponent: {
           ...currentState.opponent,
@@ -257,7 +251,20 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       setTimeout(() => {
         const { player, opponent } = get();
+        // Usamos el calculateCombat modificado
         const result = calculateCombat(player.board, opponent.board);
+
+        // STATS: Guardar cartas destruidas y logro
+        if (result.cardsDestroyedCount > 0) {
+            incrementStat('cardsDestroyed', result.cardsDestroyedCount);
+        }
+        if (result.isRepublicanaTriggered) {
+            saveStats({ achievementRepublicana: true });
+        }
+
+        if (result.playerDamageTaken > 0 || result.opponentDamageTaken > 0) {
+            playSound('defeat', 0.7);
+        }
 
         set({ 
             recentDamage: { 
@@ -300,6 +307,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   finishCombatPhase: () => {
     const currentState = get();
     if (currentState.phase !== 'combat-reveal') return;
+
+    playSound('click');
 
     const result = currentState.pendingCombatResult;
     
@@ -345,10 +354,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         finalPhase = 'end'; resultType = 'win';
     }
 
-    // SFX: Sonidos de final de partida
+    // SFX y STATS de fin de partida
     if (finalPhase === 'end') {
-        if (resultType === 'win') playSound('victory', 0.8);
+        if (resultType === 'win') {
+            playSound('victory', 0.8);
+            // STATS: Sumar victoria a la dificultad actual
+            const currentStats = getStats();
+            const diff = currentState.difficulty;
+            const newWins = { ...currentStats.wins, [diff]: currentStats.wins[diff] + 1 };
+            saveStats({ wins: newWins });
+        }
         if (resultType === 'loss') playSound('defeat', 0.8);
+        if (resultType === 'draw') playSound('click', 0.5); 
     }
 
     set({
