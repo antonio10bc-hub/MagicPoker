@@ -8,19 +8,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Info, X } from 'lucide-react';
 
 export default function Home() {
+  // --- ESTADO GLOBAL ---
   const { 
     player, opponent, turn, phase, recentDamage, gameResult,
     startGame, resetGame, placeCard, passTurn, finishCombatPhase
   } = useGameStore();
 
+  // --- ESTADOS LOCALES ---
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [showRules, setShowRules] = useState(false);
 
+  // --- INICIO DEL JUEGO ---
   useEffect(() => {
     startGame();
   }, []);
 
+  // --- TIMER FASE REVELACIÓN ---
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (phase === 'combat-reveal') {
@@ -41,22 +45,27 @@ export default function Home() {
     };
   }, [phase, finishCombatPhase]);
 
+  // --- LOGICA DE INTERACCIÓN ---
+  const isPlacementPhase = phase === 'placement';
+  const isCombatRevealPhase = phase === 'combat-reveal';
+  
+  const canPlay = turn === 'player' && !player.isPassed && isPlacementPhase;
+  const canInteract = canPlay || isCombatRevealPhase;
+
+  // Click en carta de la mano
   const handleHandCardClick = (id: string) => {
-    if (turn !== 'player' || player.isPassed || phase !== 'placement') return;
+    if (!canPlay) return;
     setSelectedCardId(prev => prev === id ? null : id);
   };
 
+  // Click en hueco del tablero
   const handleBoardSlotClick = (slotIndex: number) => {
     if (!selectedCardId) return;
     placeCard(selectedCardId, slotIndex);
     setSelectedCardId(null);
   };
 
-  const isPlacementPhase = phase === 'placement';
-  const isCombatRevealPhase = phase === 'combat-reveal';
-  const canInteract = (turn === 'player' && !player.isPassed && isPlacementPhase) || isCombatRevealPhase;
-
-  // --- ESTILOS DE BOTONES ---
+  // --- CONFIGURACIÓN DE BOTONES ---
   let buttonText = "ESPERANDO...";
   let buttonAction: () => void | Promise<void> = passTurn;
   
@@ -72,7 +81,7 @@ export default function Home() {
         buttonColorClass = "bg-green-500 text-white border-black hover:bg-green-400 hover:-translate-y-1 hover:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-[2px_2px_0_#000]";
     }
   } else if (isCombatRevealPhase) {
-    buttonText = `Continuar (${countdown}s)`;
+    buttonText = `CONTINUAR (${countdown}s)`;
     buttonAction = finishCombatPhase;
     buttonColorClass = "bg-[#8e0dff] text-white border-black shadow-[4px_4px_0_#000]";
     buttonAnimation = {
@@ -81,13 +90,14 @@ export default function Home() {
     };
   }
 
+  // --- ESTILOS CSS REUTILIZABLES ---
   const slotStyle = "w-full h-full aspect-[2/3] relative flex items-center justify-center rounded-md transition-all border-[4px] border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
   
   const emptySlotInteractStyle = (selectedCardId && isPlacementPhase) 
     ? "border-dashed border-[#8e0dff] bg-purple-100 animate-[wiggle_1s_ease-in-out_infinite] cursor-pointer hover:bg-purple-200" 
     : "border-dashed border-black/40 bg-black/5";
 
-  // --- MODAL FIN ---
+  // --- PANTALLA DE FIN DE JUEGO ---
   if (phase === 'end') {
     const isWin = gameResult === 'win';
     const isDraw = gameResult === 'draw';
@@ -113,10 +123,11 @@ export default function Home() {
     )
   }
 
+  // --- RENDERIZADO PRINCIPAL ---
   return (
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
-      {/* --- MODAL DE REGLAS --- */}
+      {/* --- MODAL DE REGLAS (POP UP) --- */}
       <AnimatePresence>
         {showRules && (
             <motion.div 
@@ -162,7 +173,9 @@ export default function Home() {
                             <ul className="list-disc pl-5 space-y-2 text-base sm:text-lg">
                                 <li>Las cartas se enfrentan cara a cara. La carta con el número más alto gana y destruye a la otra.</li>
                                 <li>Si tu carta se enfrenta a un hueco vacío directamente, le haces <strong>1 punto de daño</strong> directo.</li>
-                                <li className="pt-2"><strong>👑 El Rey (K):</strong> Ataca a las 3 posiciones que tiene en frente a la vez.</li>
+                                {/* --- AQUÍ ESTÁ EL CAMBIO SOLICITADO --- */}
+                                <li className="pt-2"><strong>🅰️ El As (A):</strong> Limpia el tablero, tanto las cartas del enemigo como las tuyas, evitando cualquier golpe.</li>
+                                <li><strong>👑 El Rey (K):</strong> Ataca a las 3 posiciones que tiene en frente a la vez.</li>
                                 <li><strong>👸 La Reina (Q):</strong> Ataca a las 2 posiciones en diagonal a la vez.</li>
                                 <li><strong>🤴 El Príncipe (J):</strong> Ataca 1 posición aleatoria entre las que tiene en frente.</li>
                                 <li><strong>🃏 El Joker:</strong> No hace daño, pero te permite robar 2 cartas extra.</li>
@@ -174,24 +187,24 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+      {/* --- BOTÓN INFO FLOTANTE --- */}
       <motion.button
         onClick={() => setShowRules(true)}
         whileHover={{ scale: 1.1, rotate: 5 }}
         whileTap={{ scale: 0.9 }}
-        // Ajustado para móvil: bottom-20 (justo encima de la barra de 16) y en PC bottom-32
         className="fixed bottom-20 sm:bottom-32 left-4 z-50 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0_#000] flex items-center justify-center hover:bg-yellow-100 transition-colors"
       >
         <Info className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
       </motion.button>
 
-      {/* 1. HEADER (RIVAL - NARANJA) - Compacto en móvil (h-12) */}
+      {/* 1. HEADER (RIVAL) */}
       <header className="flex-none h-12 sm:h-20 p-2 sm:p-4 flex justify-between items-center relative z-10 border-b-[4px] border-black bg-[#ff590d] shadow-[0_6px_0_#000]">
         <div className="flex gap-2 sm:gap-4 items-center relative pl-10 sm:pl-0">
-            {/* Mazo Rival (Más pequeño en móvil) */}
+            {/* Mazo Rival */}
             <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#ff590d] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000]">
                 <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{opponent.deck.length}</span>
             </div>
-            {/* Mano Rival (Escalada en móvil) */}
+            {/* Mano Rival */}
             <div className="flex -space-x-4 sm:-space-x-7 pl-1 sm:pl-2">
                 {opponent.hand.map((c, i) => (
                     <div key={c.id} className="w-6 h-8 sm:w-10 sm:h-14 bg-[#ff590d] rounded-sm border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_#000] sm:shadow-[3px_3px_0_#000] relative pattern-diagonal-lines-sm text-black/30" style={{ zIndex: i, transform: `rotate(${(i - 1) * 8}deg)` }}></div>
@@ -199,7 +212,7 @@ export default function Home() {
             </div>
         </div>
         
-        {/* Cartel Central (Oculto en móviles muy pequeños si molesta, o escalado) */}
+        {/* Cartel Central */}
         <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-50">
           <div className={clsx(
             "px-3 py-1 sm:px-6 sm:py-2 rounded-md text-sm sm:text-2xl font-black tracking-wider transition-all shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000] uppercase border-[2px] sm:border-[4px] border-black whitespace-nowrap relative -rotate-2",
@@ -210,18 +223,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- VIDAS RIVAL (Eliminación Izquierda->Derecha) --- */}
+        {/* Vidas Rival */}
         <div className="flex items-center gap-1 sm:gap-4">
-             {/* Corazones (Pequeños en móvil) */}
              <div className="flex text-lg sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 {Array(4).fill(0).map((_, i) => (
-                // LOGICA INVERTIDA: 💔 a la izquierda
                 <span key={i} className={i < (4 - opponent.lives) ? "text-black/40 grayscale" : "text-white scale-110"}>
                     {i < (4 - opponent.lives) ? '💔' : '❤️'}
                 </span>
                 ))}
             </div>
-            {/* Texto RIVAL */}
             <span className="text-lg sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 RIVAL
             </span>
@@ -308,10 +318,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. FOOTER (JUGADOR) - Compacto en móvil (h-16) */}
+      {/* 3. FOOTER (JUGADOR) */}
       <section className="flex-none h-16 sm:h-28 bg-[#8e0dff] border-t-[4px] border-black relative z-20 px-2 sm:px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
         
-        {/* --- VIDAS JUGADOR --- */}
         <div className="flex items-center gap-1 sm:gap-4 pl-1 sm:pl-4 relative">
              <span className="text-lg sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 TÚ
@@ -325,9 +334,8 @@ export default function Home() {
             </div>
         </div>
 
-        {/* MANO (Se ajusta al alto disponible) */}
         <div className="flex justify-center items-center h-full pb-2 sm:pb-4 z-30">
-             <div className="flex justify-center gap-1 sm:gap-2 h-14 sm:h-24 w-full items-end">
+             <div className="flex justify-center gap-1 sm:gap-2 h-14 sm:h-24 w-full items-center">
                 <AnimatePresence>
                 {player.hand.map((card) => (
                     <motion.div 
@@ -335,8 +343,9 @@ export default function Home() {
                         initial={{ opacity: 0, y: 100, rotate: 15 }}
                         animate={{ opacity: 1, y: 0, rotate: (Math.random() * 6 - 3) }}
                         exit={{ opacity: 0, y: 50 }}
-                        whileHover={{ y: -20, scale: 1.1, rotate: 0, transition: { duration: 0.1 } }}
-                        className="h-full aspect-[2/3] origin-bottom transition-all filter drop-shadow-[2px_2px_0_#000] sm:drop-shadow-[4px_4px_0_#000]"
+                        transition={{ duration: 0.2 }}
+                        whileHover={canPlay ? { y: -20, scale: 1.1, rotate: 0, transition: { duration: 0.1 } } : {}}
+                        className="h-[85%] aspect-[2/3] origin-bottom transition-all filter drop-shadow-[2px_2px_0_#000] sm:drop-shadow-[4px_4px_0_#000]"
                     >
                         <Card 
                             card={card} 
@@ -370,7 +379,6 @@ export default function Home() {
                 )}
                 </AnimatePresence>
             </div>
-            {/* Mazo Jugador - Fondo Morado */}
             <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#8e0dff] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000]">
                 <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{player.deck.length}</span>
             </div>
