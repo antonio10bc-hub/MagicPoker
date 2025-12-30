@@ -19,31 +19,30 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
   const isOpponent = card.owner === 'opponent';
 
   // --- ESTILOS BASE DOODLE ---
-  const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[3px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
+  // Ajuste: scale-90 en móvil para reducir un 10% visualmente si está en tablero
+  const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[2px] sm:border-[3px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-0.5 sm:p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
   
   // --- COLORES NUEVOS (INVERTIDOS) ---
-  // Jugador = Morado (#8e0dff) | Rival = Naranja (#ff590d)
   let debugBgColor = isOpponent ? '#ff590d' : '#8e0dff'; 
   let textColorClass = "text-white";
 
-  // Estados especiales
   if (isVoided) {
-      debugBgColor = '#000000'; // Negro
+      debugBgColor = '#000000'; 
   } else if (isDamage) {
-      debugBgColor = '#FF2222'; // El daño se queda rojo
+      debugBgColor = '#FF2222'; 
   } else if (isJoker && !isDamage && !isVoided) {
-      debugBgColor = '#FDE047'; // Amarillo Joker
+      debugBgColor = '#FDE047'; 
       textColorClass = "text-black";
   }
 
-  const selectionStyle = isSelected ? "border-yellow-400 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] -translate-y-2 -translate-x-1" : "hover:-translate-y-1 hover:-translate-x-0.5 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]";
+  const selectionStyle = isSelected ? "border-yellow-400 shadow-[4px_4px_0_#000] sm:shadow-[8px_8px_0_#000] -translate-y-1 sm:-translate-y-2 -translate-x-0.5 sm:-translate-x-1" : "hover:-translate-y-1 hover:shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000]";
 
   const renderAttackIndicators = () => {
     if (isJoker || isAce || !card.isFaceUp || isVoided) return null;
 
     const iconClass = clsx(
-        "w-5 h-5 sm:w-4 sm:h-6 stroke-[4px]",
-        (isJoker ? "text-black" : "text-white drop-shadow-[0_2px_0_#000]")
+        "w-3 h-3 sm:w-5 sm:h-5 stroke-[3px] sm:stroke-[4px]",
+        (isJoker ? "text-black" : "text-white drop-shadow-[0_1px_0_#000] sm:drop-shadow-[0_2px_0_#000]")
     );
     
     let indicators;
@@ -66,7 +65,7 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
     return (
       <div className={clsx(
         "absolute left-0 w-full flex justify-center gap-0.5 pointer-events-none z-20",
-        isOpponent ? "bottom-1" : "top-1"
+        isOpponent ? "bottom-0.5 sm:bottom-1" : "top-0.5 sm:top-1"
       )}>
         {indicators}
       </div>
@@ -80,14 +79,13 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         layoutId={card.id}
         className={clsx(
           baseCardStyle,
-          "pattern-diagonal-lines-sm text-black/20 justify-center !p-10", 
+          "pattern-diagonal-lines-sm text-black/20 justify-center !p-9", 
           className
         )}
-        // FUERZA BRUTA: Naranja (Rival) o Morado (Jugador)
         style={{ backgroundColor: isOpponent ? '#171616' : '#8e0dff' }}
       >
          <div className={clsx(
-             "font-black text-5xl sm:text-6xl text-white drop-shadow-[1px_3px_0_#000]"
+             "font-black text-3xl sm:text-6xl text-white drop-shadow-[1px_2px_0_#000]"
          )}>?</div>
       </motion.div>
     );
@@ -112,19 +110,16 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         isDamage && "animate-[wiggle_0.2s_ease-in-out_infinite]",
         className
       )}
-      // FUERZA BRUTA: Color aplicado
       style={{ backgroundColor: debugBgColor }}
     >
       {renderAttackIndicators()}
 
-      {/* SÍMBOLO CENTRAL */}
-      <div className={clsx("font-black flex items-center justify-center h-full z-10 drop-shadow-[2px_2px_0_#000]", 
-        isJoker ? "text-2xl sm:text-1xl -rotate-90 tracking-widest" : "text-[40px] sm:text-[45px]"
+      <div className={clsx("font-black flex items-center justify-center h-full z-10 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]", 
+        isJoker ? "text-lg sm:text-2xl -rotate-90 tracking-widest" : "text-3xl sm:text-[45px]"
       )}>
         {isJoker ? 'JOKER' : card.rank}
       </div>
 
-      {/* MARCA DE DAÑO (CICATRIZ) */}
       {card.damageSource && (isDamage || isVoided) && (
           <motion.div 
               initial={{ opacity: 0, scale: 3, rotate: -20 }}
@@ -135,13 +130,12 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
               )}
           >
               <div className={clsx(
-                  "w-16 h-16 rounded-full border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_rgba(0,0,0,0.5)]",
+                  "w-10 h-10 sm:w-16 sm:h-16 rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[1px_1px_0_rgba(0,0,0,0.5)] sm:shadow-[2px_2px_0_rgba(0,0,0,0.5)]",
               )}
-              // Color del círculo: Si el dueño del daño es Player -> Morado, si no -> Naranja
               style={{ backgroundColor: card.damageSource.owner === 'player' ? "#8e0dff" : "#ff590d" }}
               >
                   <span className={clsx(
-                      "text-3xl font-black text-white"
+                      "text-xl sm:text-3xl font-black text-white"
                   )}>
                       {card.damageSource.rank}
                   </span>
