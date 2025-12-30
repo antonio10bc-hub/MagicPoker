@@ -18,11 +18,8 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
   const isVoided = card.isVoided;
   const isOpponent = card.owner === 'opponent';
 
-  // --- ESTILOS BASE DOODLE ---
-  // Ajuste: scale-90 en móvil para reducir un 10% visualmente si está en tablero
   const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[2px] sm:border-[3px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-0.5 sm:p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
   
-  // --- COLORES NUEVOS (INVERTIDOS) ---
   let debugBgColor = isOpponent ? '#ff590d' : '#8e0dff'; 
   let textColorClass = "text-white";
 
@@ -40,8 +37,9 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
   const renderAttackIndicators = () => {
     if (isJoker || isAce || !card.isFaceUp || isVoided) return null;
 
+    // Iconos un poco más pequeños si está en la mano para no saturar
     const iconClass = clsx(
-        "w-3 h-3 sm:w-5 sm:h-5 stroke-[3px] sm:stroke-[4px]",
+        isInHand ? "w-3 h-3 sm:w-4 sm:h-4 stroke-[2px]" : "w-3 h-3 sm:w-5 sm:h-5 stroke-[3px] sm:stroke-[4px]",
         (isJoker ? "text-black" : "text-white drop-shadow-[0_1px_0_#000] sm:drop-shadow-[0_2px_0_#000]")
     );
     
@@ -79,19 +77,29 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
         layoutId={card.id}
         className={clsx(
           baseCardStyle,
-          "pattern-diagonal-lines-sm text-black/20 justify-center !p-9", 
+          "pattern-diagonal-lines-sm text-black/20 justify-center items-center !p-0", 
           className
         )}
         style={{ backgroundColor: isOpponent ? '#171616' : '#8e0dff' }}
       >
+         {/* AJUSTE TAMAÑO ?: Si está en mano, pequeño (3xl). Si no, gigante (7xl) */}
          <div className={clsx(
-             "font-black text-3xl sm:text-6xl text-white drop-shadow-[1px_2px_0_#000]"
+             "font-black text-white drop-shadow-[1px_2px_0_#000] leading-none",
+             isInHand ? "text-3xl sm:text-4xl" : "text-7xl sm:text-6xl"
          )}>?</div>
       </motion.div>
     );
   }
 
   // --- ANVERSO (FRONT) ---
+  
+  // Lógica de tamaño de fuente
+  // JOKER: Si está en mano -> text-lg. Si está en mesa -> text-4xl
+  // NUMERO: Si está en mano -> text-2xl. Si está en mesa -> text-7xl (GIGANTE)
+  const fontSizeClass = isJoker 
+    ? (isInHand ? "text-lg sm:text-xl" : "text-4xl sm:text-2xl")
+    : (isInHand ? "text-3xl sm:text-4xl" : "text-7xl sm:text-[45px]");
+
   return (
     <motion.div
       layoutId={card.id}
@@ -115,7 +123,8 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
       {renderAttackIndicators()}
 
       <div className={clsx("font-black flex items-center justify-center h-full z-10 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]", 
-        isJoker ? "text-lg sm:text-2xl -rotate-90 tracking-widest" : "text-3xl sm:text-[45px]"
+        isJoker ? "-rotate-90 tracking-widest" : "",
+        fontSizeClass
       )}>
         {isJoker ? 'JOKER' : card.rank}
       </div>
@@ -130,12 +139,12 @@ export const Card = ({ card, onClick, isSelected, className, isInHand }: CardPro
               )}
           >
               <div className={clsx(
-                  "w-10 h-10 sm:w-16 sm:h-16 rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[1px_1px_0_rgba(0,0,0,0.5)] sm:shadow-[2px_2px_0_rgba(0,0,0,0.5)]",
+                  "w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[1px_1px_0_rgba(0,0,0,0.5)] sm:shadow-[2px_2px_0_rgba(0,0,0,0.5)]",
               )}
               style={{ backgroundColor: card.damageSource.owner === 'player' ? "#8e0dff" : "#ff590d" }}
               >
                   <span className={clsx(
-                      "text-xl sm:text-3xl font-black text-white"
+                      "text-2xl sm:text-3xl font-black text-white"
                   )}>
                       {card.damageSource.rank}
                   </span>

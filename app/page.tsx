@@ -5,7 +5,6 @@ import { Card } from '@/components/game/GameCardLOLO';
 import { useEffect, useState, useRef } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-// Iconos
 import { Info, X, Volume2, VolumeX, Home as HomeIcon, Trophy } from 'lucide-react';
 import { playSound, toggleMute, getMuteState, playMusic, stopMusic } from '@/lib/sounds';
 import Confetti from 'react-confetti';
@@ -158,17 +157,16 @@ export default function Home() {
   // --- GAME SCREEN ---
   let buttonText = "ESPERANDO...";
   let buttonAction: () => void | Promise<void> = passTurn;
-  // Botón Plantarse flotante
   let buttonColorClass = "bg-gray-300 text-gray-600 border-black cursor-not-allowed pattern-diagonal-lines-sm opacity-70";
   let buttonAnimation = {};
 
   if (isPlacementPhase) {
     if (opponent.isPassed) {
         buttonText = "¡RESOLVER!";
-        buttonColorClass = "bg-orange-500 text-white border-black hover:bg-orange-400 shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-none";
+        buttonColorClass = "bg-orange-500 text-white border-black hover:bg-orange-400 hover:-translate-y-1 hover:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-[2px_2px_0_#000]";
     } else {
         buttonText = "PLANTARSE";
-        buttonColorClass = "bg-green-500 text-white border-black hover:bg-green-400 shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-none";
+        buttonColorClass = "bg-green-500 text-white border-black hover:bg-green-400 hover:-translate-y-1 hover:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-[2px_2px_0_#000]";
     }
   } else if (isCombatRevealPhase) {
     buttonText = `CONTINUAR (${countdown}s)`;
@@ -207,7 +205,7 @@ export default function Home() {
   return (
     <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
       
-      {/* MODALES */}
+      {/* --- MODALES --- */}
       <AnimatePresence>
         {showExitConfirm && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -229,7 +227,6 @@ export default function Home() {
                         <button onClick={() => { playSound('click'); setShowStats(false); }} className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"><X className="w-6 h-6 stroke-[3px]" /></button>
                     </div>
                     <div className="p-6 space-y-4 text-lg font-bold">
-                        {/* Stats Content... (Mismo código anterior) */}
                         <div className="bg-gray-100 p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000]">
                             <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">Victorias</h3>
                             <div className="grid grid-cols-3 gap-2 text-center">
@@ -243,6 +240,9 @@ export default function Home() {
                             <div className="flex justify-between"><span>Partidas Totales:</span><span>{statsData.totalGames}</span></div>
                             <div className="flex justify-between"><span>Cartas Jugadas:</span><span>{statsData.cardsPlayed}</span></div>
                             <div className="flex justify-between"><span>Cartas Destruidas:</span><span>{statsData.cardsDestroyed}</span></div>
+                        </div>
+                        <div className={clsx("p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000] transition-colors", statsData.achievementRepublicana ? "bg-[#8e0dff] text-white" : "bg-gray-200 text-gray-400 grayscale")}>
+                            <div className="flex items-center gap-3"><span className="text-3xl">🏆</span><div><div className="uppercase font-black">La Republicana</div><div className="text-sm font-medium leading-tight opacity-80">Limpia J, Q y K enemigas con un AS.</div></div></div>
                         </div>
                     </div>
                 </motion.div>
@@ -262,13 +262,17 @@ export default function Home() {
                     </div>
                     <div className="p-6 space-y-6 text-lg sm:text-xl font-medium leading-relaxed">
                         <section><h3 className="font-black text-xl mb-2 bg-[#8e0dff] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">1. El Objetivo</h3><p>Gana el primero que reduzca las vidas del oponente a 0.</p></section>
-                        {/* Resto de reglas... */}
+                        <section><h3 className="font-black text-xl mb-2 bg-[#ff590d] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] rotate-1">2. Tu Turno</h3><p>Coloca tantas cartas como quieras en los 4 huecos que tienes disponibles.</p><p className="mt-2">Cuando termines, pulsa <span className="font-bold text-green-600">"PLANTARSE"</span>. El rival jugará después. Cuando ambos paséis, ¡comienza la fase de pelea!</p></section>
                         <section>
                             <h3 className="font-black text-xl mb-2 bg-yellow-400 text-black inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">3. Fase de Pelea</h3>
                             <ul className="list-disc pl-5 space-y-2 text-base sm:text-lg">
                                 <li>Las cartas se enfrentan cara a cara. La carta con el número más alto gana y destruye a la otra.</li>
                                 <li>Si tu carta se enfrenta a un hueco vacío directamente, le haces <strong>1 punto de daño</strong> directo.</li>
-                                <li className="pt-2"><strong>🅰️ El As (A):</strong> Limpia el tablero...</li>
+                                <li className="pt-2"><strong>🅰️ El As (A):</strong> Limpia el tablero, tanto las cartas del enemigo como las tuyas, evitando cualquier golpe.</li>
+                                <li><strong>👑 El Rey (K):</strong> Ataca a las 3 posiciones que tiene en frente a la vez.</li>
+                                <li><strong>👸 La Reina (Q):</strong> Ataca a las 2 posiciones en diagonal a la vez.</li>
+                                <li><strong>🤴 El Príncipe (J):</strong> Ataca 1 posición aleatoria entre las que tiene en frente.</li>
+                                <li><strong>🃏 El Joker:</strong> No hace daño, pero te permite robar 2 cartas extra.</li>
                             </ul>
                         </section>
                     </div>
@@ -287,7 +291,7 @@ export default function Home() {
           </motion.button>
       </div>
 
-      {/* BOTÓN PLANTARSE FLOTANTE (Solo visible si canInteract) */}
+      {/* BOTÓN PLANTARSE FLOTANTE */}
       <AnimatePresence>
         {canInteract && (
             <motion.div 
@@ -311,8 +315,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* CARTEL FLOTANTE DE "TU TURNO" */}
-      <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+      {/* CARTEL FLOTANTE DE "TU TURNO" - AJUSTADO POSICIÓN MÓVIL */}
+      <div className="fixed top-28 sm:top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
           <div className={clsx("px-4 py-1.5 sm:px-6 sm:py-2 rounded-md text-xl sm:text-2xl font-black tracking-wider transition-all shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000] uppercase border-[3px] sm:border-[4px] border-black whitespace-nowrap relative -rotate-2", (phase === 'combat' || phase === 'combat-reveal') ? "bg-yellow-400 text-black animate-[wiggle_0.5s_infinite]" : turn === 'player' ? "bg-[#8e0dff] text-white" : "bg-white text-[#ff590d]")}>
                 {(phase === 'combat' || phase === 'combat-reveal') ? "💥 ¡PELEA! 💥" : turn === 'player' ? "TU TURNO" : "RIVAL..."}
           </div>
@@ -321,7 +325,6 @@ export default function Home() {
       {/* HEADER (RIVAL) */}
       <header className="flex-none h-14 sm:h-20 p-2 sm:p-4 flex justify-between items-center relative z-10 border-b-[3px] sm:border-b-[4px] border-black bg-[#ff590d] shadow-[0_4px_0_#000] sm:shadow-[0_6px_0_#000]">
         <div className="flex items-center relative gap-3 sm:gap-4">
-            {/* Home Button + Pequeno */}
             <button onClick={handleHomeClick} className="bg-white p-1.5 sm:p-2 rounded-md border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_#000] sm:shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none hover:bg-gray-100 transition-all scale-75 sm:scale-100 origin-left">
                 <HomeIcon className="w-5 h-5 sm:w-6 sm:h-6 stroke-[3px]" />
             </button>
@@ -336,8 +339,6 @@ export default function Home() {
                 </div>
             </div>
         </div>
-        
-        {/* Vidas Rival + Pequenas */}
         <div className="flex items-center gap-1 sm:gap-4 scale-75 sm:scale-100 origin-right">
              <div className="flex text-xl sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 {Array(4).fill(0).map((_, i) => (<span key={i} className={i < (4 - opponent.lives) ? "text-black/40 grayscale" : "text-white scale-110"}>{i < (4 - opponent.lives) ? '💔' : '❤️'}</span>))}
@@ -346,7 +347,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* TABLERO (Reducido 10% en móvil) */}
+      {/* TABLERO */}
       <section className="flex-1 flex items-center justify-center p-1 sm:p-4 overflow-hidden min-h-0 relative py-2 sm:py-8">
         <div className="w-full max-w-lg bg-white rounded-lg border-[4px] sm:border-[6px] border-black shadow-[8px_8px_0_#000] sm:shadow-[12px_12px_0_#000] relative flex flex-col p-2 sm:p-4 shrink-0 scale-90 sm:scale-100 origin-center">
           <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-4 items-center justify-items-center">
@@ -407,7 +408,7 @@ export default function Home() {
              </div>
         </div>
 
-         {/* Lado Dcho: Mazo (Botón "Plantarse" ahora es flotante) */}
+         {/* Lado Dcho: Mazo */}
          <div className="flex items-center justify-end pl-1 sm:pl-4 pr-2 sm:pr-2">
             <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#8e0dff] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000] mr-1 sm:mr-0">
                 <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{player.deck.length}</span>
