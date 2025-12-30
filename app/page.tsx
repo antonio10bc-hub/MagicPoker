@@ -127,13 +127,13 @@ export default function Home() {
                 <motion.button 
                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                     onClick={() => { playSound('click'); startGame(); }}
-                    className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center hover:bg-yellow-300 transition-colors cursor-pointer"
+                    className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center hover:bg-orange-300 transition-colors cursor-pointer"
                 >
                     <h1 className="text-6xl font-black text-[#8e0dff] drop-shadow-[3px_3px_0_#000] uppercase">JUGAR</h1>
                 </motion.button>
 
                 <div className="bg-white p-6 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] flex flex-col items-center gap-4">
-                    <h2 className="text-3xl font-black text-[#ff590d] uppercase drop-shadow-[2px_2px_0_#000]">DIFICULTAD</h2>
+                    <h2 className="text-3xl font-black text-[#8e0dff] uppercase drop-shadow-[2px_2px_0_#000]">DIFICULTAD</h2>
                     <div className="flex justify-between w-full gap-2">
                         {(['easy', 'normal', 'hard'] as const).map((d) => (
                             <button
@@ -141,7 +141,7 @@ export default function Home() {
                                 onClick={() => { playSound('click'); setDifficulty(d); }}
                                 className={clsx(
                                     "flex-1 py-3 rounded-md border-[4px] border-black font-black uppercase text-lg transition-all shadow-[4px_4px_0_#000] active:translate-y-[2px] active:shadow-[2px_2px_0_#000]",
-                                    difficulty === d ? "bg-[#8e0dff] text-white scale-105" : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                                    difficulty === d ? "bg-[#FF590D] text-black scale-105" : "bg-white-200 text-black-500 hover:bg-orange-300"
                                 )}
                             >
                                 {d === 'easy' ? 'Fácil' : d === 'normal' ? 'Normal' : 'Difícil'}
