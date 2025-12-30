@@ -5,9 +5,9 @@ import { Card } from '@/components/game/GameCardLOLO';
 import { useEffect, useState, useRef } from 'react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-// Iconos
 import { Info, X, Volume2, VolumeX, Home as HomeIcon, Trophy } from 'lucide-react';
-import { playSound, toggleMute, getMuteState } from '@/lib/sounds';
+// Importamos las nuevas funciones de música
+import { playSound, toggleMute, getMuteState, playMusic, stopMusic } from '@/lib/sounds';
 import Confetti from 'react-confetti';
 import { getStats, GameStats } from '@/lib/stats';
 
@@ -29,13 +29,24 @@ export default function Home() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [showRules, setShowRules] = useState(false);
-  
-  // Stats
   const [showStats, setShowStats] = useState(false);
   const [statsData, setStatsData] = useState<GameStats | null>(null);
-
   const [isMutedUI, setIsMutedUI] = useState(getMuteState());
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // --- CONTROL DE MÚSICA SEGÚN PANTALLA ---
+  useEffect(() => {
+      if (screen === 'menu') {
+          playMusic('menu_music', 0.4);
+      } else if (screen === 'game') {
+          // Si termina la partida, paramos la música para que suene victory/defeat
+          if (phase === 'end') {
+              stopMusic();
+          } else {
+              playMusic('game_music', 0.3);
+          }
+      }
+  }, [screen, phase]); // Se ejecuta al cambiar de pantalla o de fase
 
   useEffect(() => {
     if (screen === 'game' && phase === 'start') {
@@ -111,7 +122,7 @@ export default function Home() {
       setShowStats(true);
   };
 
-  // --- MENU SCREEN ---
+  // --- PANTALLA MENÚ ---
   if (screen === 'menu') {
       return (
         <main className="h-svh w-full flex items-center justify-center bg-[#F7F5E6] relative select-none font-comic pattern-grid-lg text-black">
@@ -146,7 +157,7 @@ export default function Home() {
       );
   }
 
-  // --- GAME SCREEN ---
+  // --- PANTALLA JUEGO ---
   let buttonText = "ESPERANDO...";
   let buttonAction: () => void | Promise<void> = passTurn;
   let buttonColorClass = "bg-gray-300 text-gray-600 border-black cursor-not-allowed pattern-diagonal-lines-sm opacity-70";
@@ -275,11 +286,9 @@ export default function Home() {
 
       {/* BOTONES FLOTANTES (IZQUIERDA Y DERECHA) */}
       <div className="fixed bottom-20 sm:bottom-32 left-4 z-50 flex flex-row gap-3">
-          {/* Botón Info (Izquierda) */}
           <motion.button onClick={() => { playSound('click'); setShowRules(true); }} whileHover={{ scale: 1.1, rotate: 5 }} whileTap={{ scale: 0.9 }} className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0_#000] flex items-center justify-center hover:bg-yellow-100 transition-colors">
             <Info className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
           </motion.button>
-          {/* Botón Trofeo (Derecha, fondo blanco) */}
           <motion.button onClick={handleOpenStats} whileHover={{ scale: 1.1, rotate: -5 }} whileTap={{ scale: 0.9 }} className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0_#000] flex items-center justify-center hover:bg-yellow-100 transition-colors">
             <Trophy className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" />
           </motion.button>

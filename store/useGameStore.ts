@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { BoardSlot, PlayerState, GamePhase, DamageEvent, CombatResult } from '@/types';
 import { createDeck, calculateCombat, getCardValue } from '@/lib/game-utils';
 import { playSound } from '@/lib/sounds';
-// NUEVO: Importar gestión de stats
 import { incrementStat, saveStats, getStats } from '@/lib/stats';
 
 type Difficulty = 'easy' | 'normal' | 'hard';
@@ -55,8 +54,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   goToMenu: () => set({ screen: 'menu' }),
 
   startGame: () => {
+    // SFX: Solo suena shuffle una vez al empezar
     playSound('shuffle', 0.6);
-    // STATS: Sumar partida total
     incrementStat('totalGames');
 
     const playerDeckFull = createDeck('player');
@@ -123,7 +122,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     playSound('click', 0.5);
     
-    // STATS: Sumar carta jugada
     incrementStat('cardsPlayed');
 
     const cardToPlay = { ...player.hand[cardIndex], isFaceUp: true }; 
@@ -234,7 +232,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     setTimeout(() => {
       const currentState = get();
-      playSound('shuffle', 0.5);
+      // playSound('shuffle', 0.5);
 
       set({
         opponent: {
@@ -251,10 +249,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       setTimeout(() => {
         const { player, opponent } = get();
-        // Usamos el calculateCombat modificado
         const result = calculateCombat(player.board, opponent.board);
 
-        // STATS: Guardar cartas destruidas y logro
+        // STATS
         if (result.cardsDestroyedCount > 0) {
             incrementStat('cardsDestroyed', result.cardsDestroyedCount);
         }
@@ -262,9 +259,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             saveStats({ achievementRepublicana: true });
         }
 
-        if (result.playerDamageTaken > 0 || result.opponentDamageTaken > 0) {
-            playSound('defeat', 0.7);
-        }
+        // SFX: Solo 'mild-surprise' para el As. 
+        // CAMBIO: Eliminado el sonido 'defeat' aquí para que no suene por daño parcial.
+        const hasAceWipe = result.voidedCardIds.length > 0;
+        
+        if (hasAceWipe) {
+            playSound('as_reveal', 0.8);
+        } 
+        
+        // Antes sonaba defeat aquí si había daño -> ELIMINADO.
 
         set({ 
             recentDamage: { 
@@ -354,17 +357,19 @@ export const useGameStore = create<GameState>((set, get) => ({
         finalPhase = 'end'; resultType = 'win';
     }
 
-    // SFX y STATS de fin de partida
+    // SFX: Sonidos de final de partida
     if (finalPhase === 'end') {
         if (resultType === 'win') {
             playSound('victory', 0.8);
-            // STATS: Sumar victoria a la dificultad actual
             const currentStats = getStats();
             const diff = currentState.difficulty;
             const newWins = { ...currentStats.wins, [diff]: currentStats.wins[diff] + 1 };
             saveStats({ wins: newWins });
         }
-        if (resultType === 'loss') playSound('defeat', 0.8);
+        if (resultType === 'loss') {
+            // AQUÍ SÍ suena derrota
+            playSound('defeat', 0.8);
+        }
         if (resultType === 'draw') playSound('click', 0.5); 
     }
 
