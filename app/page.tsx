@@ -18,6 +18,112 @@ function usePrevious<T>(value: T): T | undefined {
   return ref.current;
 }
 
+// --- DICCIONARIO DE TRADUCCIONES ---
+const TRANSLATIONS = {
+  es: {
+    play: "JUGAR",
+    difficulty: "DIFICULTAD",
+    easy: "Fácil",
+    normal: "Normal",
+    hard: "Difícil",
+    waiting: "ESPERANDO...",
+    resolve: "¡RESOLVER!",
+    stand: "PLANTARSE",
+    continue: "CONTINUAR",
+    fight: "💥 ¡PELEA! 💥",
+    your_turn: "TU TURNO",
+    rival_turn: "RIVAL...",
+    rival: "RIVAL",
+    you: "TÚ",
+    win: "¡VICTORIA! 🎉",
+    draw: "¡EMPATE! 🤝",
+    loss: "💥 FIN DEL JUEGO 💥",
+    win_sub: "¡Has aplastado a tu rival!",
+    draw_sub: "¡Nadie gana esta vez!",
+    loss_sub: "Te han hecho puré...",
+    play_again: "¡OTRA PARTIDA!",
+    exit_menu: "Salir al Menú",
+    confirm_exit_title: "¿Salir al Menú?",
+    confirm_exit_desc: "Perderás el progreso de la partida actual.",
+    yes_exit: "SÍ, SALIR",
+    cancel: "CANCELAR",
+    stats_title: "ESTADÍSTICAS",
+    wins: "Victorias",
+    global: "Globales",
+    total_games: "Partidas Totales:",
+    cards_played: "Cartas Jugadas:",
+    cards_destroyed: "Cartas Destruidas:",
+    achievement_republicana: "La Republicana",
+    achievement_desc: "Limpia J, Q y K enemigas con un AS.",
+    rules_title: "CÓMO JUGAR",
+    obj_title: "1. El Objetivo",
+    obj_desc: "Gana el primero que reduzca las vidas del oponente a 0.",
+    turn_title: "2. Tu Turno",
+    turn_desc_1: "Coloca tantas cartas como quieras en los 4 huecos que tienes disponibles.",
+    turn_desc_2: "Cuando termines, pulsa \"PLANTARSE\". El rival jugará después. Cuando ambos paséis, ¡comienza la fase de pelea!",
+    fight_title: "3. Fase de Pelea",
+    fight_li_1: "Las cartas se enfrentan cara a cara. La carta con el número más alto gana y destruye a la otra.",
+    fight_li_2: "Si tu carta se enfrenta a un hueco vacío directamente, le haces 1 punto de daño directo.",
+    special_title: "4. Cartas Especiales",
+    special_ace: "🅰️ El As (A): Limpia el tablero (elimina todas las cartas de ambos jugadores).",
+    special_king: "👑 El Rey (K): Ataca a las 3 posiciones que tiene en frente a la vez.",
+    special_queen: "👸 La Reina (Q): Ataca a las 2 posiciones en diagonal a la vez.",
+    special_jack: "🤴 El Príncipe (J): Ataca 1 posición aleatoria entre las que tiene en frente.",
+    special_joker: "🃏 El Joker: No hace daño, pero te permite robar 2 cartas extra."
+  },
+  en: {
+    play: "PLAY",
+    difficulty: "DIFFICULTY",
+    easy: "Easy",
+    normal: "Normal",
+    hard: "Hard",
+    waiting: "WAITING...",
+    resolve: "RESOLVE!",
+    stand: "STAND",
+    continue: "CONTINUE",
+    fight: "💥 FIGHT! 💥",
+    your_turn: "YOUR TURN",
+    rival_turn: "RIVAL...",
+    rival: "RIVAL",
+    you: "YOU",
+    win: "VICTORY! 🎉",
+    draw: "DRAW! 🤝",
+    loss: "💥 GAME OVER 💥",
+    win_sub: "You crushed your rival!",
+    draw_sub: "Nobody wins this time!",
+    loss_sub: "You got mashed...",
+    play_again: "PLAY AGAIN!",
+    exit_menu: "Exit to Menu",
+    confirm_exit_title: "Exit to Menu?",
+    confirm_exit_desc: "You will lose current game progress.",
+    yes_exit: "YES, EXIT",
+    cancel: "CANCEL",
+    stats_title: "STATISTICS",
+    wins: "Wins",
+    global: "Globals",
+    total_games: "Total Games:",
+    cards_played: "Cards Played:",
+    cards_destroyed: "Cards Destroyed:",
+    achievement_republicana: "The Republican",
+    achievement_desc: "Wipe enemy J, Q and K with an ACE.",
+    rules_title: "HOW TO PLAY",
+    obj_title: "1. The Objective",
+    obj_desc: "The first one to reduce opponent's lives to 0 wins.",
+    turn_title: "2. Your Turn",
+    turn_desc_1: "Place as many cards as you want in your 4 available slots.",
+    turn_desc_2: "When done, press \"STAND\". The rival plays next. When both pass, the fight phase begins!",
+    fight_title: "3. Fight Phase",
+    fight_li_1: "Cards face each other. The highest number wins and destroys the other.",
+    fight_li_2: "If your card faces an empty slot, you deal 1 direct damage.",
+    special_title: "4. Special Cards",
+    special_ace: "🅰️ The Ace (A): Wipes the board (removes all cards from both players).",
+    special_king: "👑 The King (K): Attacks the 3 positions in front at once.",
+    special_queen: "👸 The Queen (Q): Attacks the 2 diagonal positions at once.",
+    special_jack: "🤴 The Jack (J): Attacks 1 random position among those in front.",
+    special_joker: "🃏 The Joker: Deals no damage, but lets you draw 2 extra cards."
+  }
+};
+
 export default function Home() {
   const { 
     screen, difficulty, setDifficulty, goToMenu,
@@ -32,7 +138,22 @@ export default function Home() {
   const [statsData, setStatsData] = useState<GameStats | null>(null);
   const [isMutedUI, setIsMutedUI] = useState(getMuteState());
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  
+  // Estado para el idioma (por defecto español hasta que se detecte)
+  const [lang, setLang] = useState<'es' | 'en'>('es');
+  const t = TRANSLATIONS[lang]; // Helper para acceder a textos
 
+  // Detectar idioma del navegador al montar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const browserLang = navigator.language.split('-')[0];
+        if (browserLang !== 'es') {
+            setLang('en');
+        }
+    }
+  }, []);
+
+  // --- CONTROL DE MÚSICA SEGÚN PANTALLA ---
   useEffect(() => {
       if (screen === 'menu') {
           playMusic('menu_music', 0.4);
@@ -40,7 +161,8 @@ export default function Home() {
           if (phase === 'end') {
               stopMusic();
           } else {
-              playMusic('game_music', 0.3);
+              // CAMBIO: Volumen reducido un 33% (de 0.3 a 0.2)
+              playMusic('game_music', 0.2);
           }
       }
   }, [screen, phase]);
@@ -119,6 +241,22 @@ export default function Home() {
       setShowStats(true);
   };
 
+  // Lógica para empezar juego + Tutorial si es primera vez
+  const handleStartGame = () => {
+      playSound('click');
+      startGame();
+      
+      // Comprobar si es la primera vez
+      if (typeof window !== 'undefined') {
+          const hasPlayed = localStorage.getItem('has_played_before');
+          if (!hasPlayed) {
+              localStorage.setItem('has_played_before', 'true');
+              // Abrir reglas automáticamente
+              setTimeout(() => setShowRules(true), 500); 
+          }
+      }
+  };
+
   // --- MENU SCREEN ---
   if (screen === 'menu') {
       return (
@@ -126,14 +264,14 @@ export default function Home() {
             <div className="flex flex-col gap-6 w-full max-w-md px-4">
                 <motion.button 
                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    onClick={() => { playSound('click'); startGame(); }}
+                    onClick={handleStartGame}
                     className="bg-white p-8 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center hover:bg-orange-300 transition-colors cursor-pointer"
                 >
-                    <h1 className="text-6xl font-black text-[#8e0dff] drop-shadow-[3px_3px_0_#000] uppercase">JUGAR</h1>
+                    <h1 className="text-6xl font-black text-[#8e0dff] drop-shadow-[3px_3px_0_#000] uppercase">{t.play}</h1>
                 </motion.button>
 
                 <div className="bg-white p-6 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] flex flex-col items-center gap-4">
-                    <h2 className="text-3xl font-black text-[#8e0dff] uppercase drop-shadow-[2px_2px_0_#000]">DIFICULTAD</h2>
+                    <h2 className="text-3xl font-black text-[#ff590d] uppercase drop-shadow-[2px_2px_0_#000]">{t.difficulty}</h2>
                     <div className="flex justify-between w-full gap-2">
                         {(['easy', 'normal', 'hard'] as const).map((d) => (
                             <button
@@ -144,7 +282,7 @@ export default function Home() {
                                     difficulty === d ? "bg-[#FF590D] text-black scale-105" : "bg-white-200 text-black-500 hover:bg-orange-300"
                                 )}
                             >
-                                {d === 'easy' ? 'Fácil' : d === 'normal' ? 'Normal' : 'Difícil'}
+                                {t[d]}
                             </button>
                         ))}
                     </div>
@@ -155,21 +293,21 @@ export default function Home() {
   }
 
   // --- GAME SCREEN ---
-  let buttonText = "ESPERANDO...";
+  let buttonText = t.waiting;
   let buttonAction: () => void | Promise<void> = passTurn;
   let buttonColorClass = "bg-gray-300 text-gray-600 border-black cursor-not-allowed pattern-diagonal-lines-sm opacity-70";
   let buttonAnimation = {};
 
   if (isPlacementPhase) {
     if (opponent.isPassed) {
-        buttonText = "¡RESOLVER!";
+        buttonText = t.resolve;
         buttonColorClass = "bg-orange-500 text-white border-black hover:bg-orange-400 hover:-translate-y-1 hover:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-[2px_2px_0_#000]";
     } else {
-        buttonText = "PLANTARSE";
+        buttonText = t.stand;
         buttonColorClass = "bg-green-500 text-white border-black hover:bg-green-400 hover:-translate-y-1 hover:shadow-[6px_6px_0_#000] active:translate-y-1 active:shadow-[2px_2px_0_#000]";
     }
   } else if (isCombatRevealPhase) {
-    buttonText = `CONTINUAR (${countdown}s)`;
+    buttonText = `${t.continue} (${countdown}s)`;
     buttonAction = finishCombatPhase;
     buttonColorClass = "bg-[#8e0dff] text-white border-black shadow-[4px_4px_0_#000]";
     buttonAnimation = { scale: [1, 1.05, 1], transition: { duration: 0.8, repeat: Infinity } };
@@ -183,8 +321,8 @@ export default function Home() {
   if (phase === 'end') {
     const isWin = gameResult === 'win';
     const isDraw = gameResult === 'draw';
-    let titleText = isDraw ? "¡EMPATE! 🤝" : isWin ? "¡VICTORIA! 🎉" : "💥 FIN DEL JUEGO 💥";
-    let subText = isDraw ? "¡Nadie gana esta vez!" : isWin ? "¡Has aplastado a tu rival!" : "Te han hecho puré...";
+    let titleText = isDraw ? t.draw : isWin ? t.win : t.loss;
+    let subText = isDraw ? t.draw_sub : isWin ? t.win_sub : t.loss_sub;
     let titleColorClass = isDraw ? "text-gray-700" : isWin ? "text-[#8e0dff]" : "text-[#ff590d]";
 
     return (
@@ -194,8 +332,8 @@ export default function Home() {
                 <h1 className={clsx("text-5xl sm:text-6xl font-black drop-shadow-[3px_3px_0_#000] uppercase", titleColorClass)}>{titleText}</h1>
                 <h2 className="text-2xl font-bold border-b-4 border-black pb-4">{subText}</h2>
                 <div className="flex flex-col gap-3">
-                    <button onClick={() => { playSound('click'); resetGame(); }} className="w-full py-4 px-6 bg-yellow-400 hover:bg-yellow-300 rounded-md font-black text-2xl border-[4px] border-black shadow-[6px_6px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] transition-all uppercase">¡OTRA PARTIDA!</button>
-                    <button onClick={() => { playSound('click'); resetGame(); goToMenu(); }} className="w-full py-2 px-6 bg-gray-200 hover:bg-gray-300 rounded-md font-bold text-lg border-[4px] border-black shadow-[4px_4px_0_#000] active:translate-y-[2px] active:shadow-[2px_2px_0_#000] uppercase">Salir al Menú</button>
+                    <button onClick={() => { playSound('click'); resetGame(); }} className="w-full py-4 px-6 bg-yellow-400 hover:bg-yellow-300 rounded-md font-black text-2xl border-[4px] border-black shadow-[6px_6px_0_#000] active:translate-y-[4px] active:shadow-[2px_2px_0_#000] transition-all uppercase">{t.play_again}</button>
+                    <button onClick={() => { playSound('click'); resetGame(); goToMenu(); }} className="w-full py-2 px-6 bg-gray-200 hover:bg-gray-300 rounded-md font-bold text-lg border-[4px] border-black shadow-[4px_4px_0_#000] active:translate-y-[2px] active:shadow-[2px_2px_0_#000] uppercase">{t.exit_menu}</button>
                 </div>
             </div>
         </main>
@@ -210,11 +348,11 @@ export default function Home() {
         {showExitConfirm && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white p-6 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-sm w-full">
-                    <h2 className="text-2xl font-black mb-4">¿Salir al Menú?</h2>
-                    <p className="mb-6 font-medium">Perderás el progreso de la partida actual.</p>
+                    <h2 className="text-2xl font-black mb-4">{t.confirm_exit_title}</h2>
+                    <p className="mb-6 font-medium">{t.confirm_exit_desc}</p>
                     <div className="flex gap-4 justify-center">
-                        <button onClick={confirmExit} className="bg-red-500 text-white px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">SÍ, SALIR</button>
-                        <button onClick={() => setShowExitConfirm(false)} className="bg-gray-200 px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">CANCELAR</button>
+                        <button onClick={confirmExit} className="bg-red-500 text-white px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">{t.yes_exit}</button>
+                        <button onClick={() => setShowExitConfirm(false)} className="bg-gray-200 px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">{t.cancel}</button>
                     </div>
                 </div>
             </motion.div>
@@ -223,26 +361,26 @@ export default function Home() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { playSound('click'); setShowStats(false); }}>
                 <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }} onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-lg overflow-y-auto rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col">
                     <div className="flex justify-between items-center p-4 border-b-[4px] border-black bg-yellow-300 sticky top-0 z-10">
-                        <h2 className="text-2xl font-black uppercase tracking-wider flex items-center gap-2"><Trophy className="w-8 h-8 stroke-[3px]" /> ESTADÍSTICAS</h2>
+                        <h2 className="text-2xl font-black uppercase tracking-wider flex items-center gap-2"><Trophy className="w-8 h-8 stroke-[3px]" /> {t.stats_title}</h2>
                         <button onClick={() => { playSound('click'); setShowStats(false); }} className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"><X className="w-6 h-6 stroke-[3px]" /></button>
                     </div>
                     <div className="p-6 space-y-4 text-lg font-bold">
                         <div className="bg-gray-100 p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000]">
-                            <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">Victorias</h3>
+                            <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">{t.wins}</h3>
                             <div className="grid grid-cols-3 gap-2 text-center">
-                                <div><div className="text-sm text-gray-500">FÁCIL</div><div className="text-2xl text-green-600">{statsData.wins.easy}</div></div>
-                                <div><div className="text-sm text-gray-500">NORMAL</div><div className="text-2xl text-yellow-600">{statsData.wins.normal}</div></div>
-                                <div><div className="text-sm text-gray-500">DIFÍCIL</div><div className="text-2xl text-red-600">{statsData.wins.hard}</div></div>
+                                <div><div className="text-sm text-gray-500 uppercase">{t.easy}</div><div className="text-2xl text-green-600">{statsData.wins.easy}</div></div>
+                                <div><div className="text-sm text-gray-500 uppercase">{t.normal}</div><div className="text-2xl text-yellow-600">{statsData.wins.normal}</div></div>
+                                <div><div className="text-sm text-gray-500 uppercase">{t.hard}</div><div className="text-2xl text-red-600">{statsData.wins.hard}</div></div>
                             </div>
                         </div>
                         <div className="bg-gray-100 p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000]">
-                            <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">Globales</h3>
-                            <div className="flex justify-between"><span>Partidas Totales:</span><span>{statsData.totalGames}</span></div>
-                            <div className="flex justify-between"><span>Cartas Jugadas:</span><span>{statsData.cardsPlayed}</span></div>
-                            <div className="flex justify-between"><span>Cartas Destruidas:</span><span>{statsData.cardsDestroyed}</span></div>
+                            <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">{t.global}</h3>
+                            <div className="flex justify-between"><span>{t.total_games}</span><span>{statsData.totalGames}</span></div>
+                            <div className="flex justify-between"><span>{t.cards_played}</span><span>{statsData.cardsPlayed}</span></div>
+                            <div className="flex justify-between"><span>{t.cards_destroyed}</span><span>{statsData.cardsDestroyed}</span></div>
                         </div>
                         <div className={clsx("p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000] transition-colors", statsData.achievementRepublicana ? "bg-[#8e0dff] text-white" : "bg-gray-200 text-gray-400 grayscale")}>
-                            <div className="flex items-center gap-3"><span className="text-3xl">🏆</span><div><div className="uppercase font-black">La Republicana</div><div className="text-sm font-medium leading-tight opacity-80">Limpia J, Q y K enemigas con un AS.</div></div></div>
+                            <div className="flex items-center gap-3"><span className="text-3xl">🏆</span><div><div className="uppercase font-black">{t.achievement_republicana}</div><div className="text-sm font-medium leading-tight opacity-80">{t.achievement_desc}</div></div></div>
                         </div>
                     </div>
                 </motion.div>
@@ -252,7 +390,7 @@ export default function Home() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { playSound('click'); setShowRules(false); }}>
                 <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }} onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] relative flex flex-col">
                     <div className="flex justify-between items-center p-4 sm:p-6 border-b-[4px] border-black bg-yellow-300 sticky top-0 z-10">
-                        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider drop-shadow-[2px_2px_0_#fff]">CÓMO JUGAR</h2>
+                        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider drop-shadow-[2px_2px_0_#fff]">{t.rules_title}</h2>
                         <div className="flex gap-3">
                             <button onClick={handleToggleMute} className={clsx("p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all", isMutedUI ? "bg-black text-white" : "bg-[#F7F5E6] text-black")}>
                                 {isMutedUI ? <VolumeX className="w-6 h-6 stroke-[3px]" /> : <Volume2 className="w-6 h-6 stroke-[3px]" />}
@@ -260,19 +398,38 @@ export default function Home() {
                             <button onClick={() => { playSound('click'); setShowRules(false); }} className="bg-white hover:bg-red-100 p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all"><X className="w-6 h-6 sm:w-8 sm:h-8 stroke-[3px]" /></button>
                         </div>
                     </div>
-                    <div className="p-6 space-y-6 text-lg sm:text-xl font-medium leading-relaxed">
-                        <section><h3 className="font-black text-xl mb-2 bg-[#8e0dff] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">1. El Objetivo</h3><p>Gana el primero que reduzca las vidas del oponente a 0.</p></section>
-                        <section><h3 className="font-black text-xl mb-2 bg-[#ff590d] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] rotate-1">2. Tu Turno</h3><p>Coloca tantas cartas como quieras en los 4 huecos que tienes disponibles.</p><p className="mt-2">Cuando termines, pulsa <span className="font-bold text-green-600">"PLANTARSE"</span>. El rival jugará después. Cuando ambos paséis, ¡comienza la fase de pelea!</p></section>
+                    
+                    {/* CAMBIO: Texto reducido (text-base sm:text-lg) y Bullet Points */}
+                    <div className="p-6 space-y-6 text-base sm:text-lg font-medium leading-relaxed">
                         <section>
-                            <h3 className="font-black text-xl mb-2 bg-yellow-400 text-black inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">3. Fase de Pelea</h3>
-                            <ul className="list-disc pl-5 space-y-2 text-base sm:text-lg">
-                                <li>Las cartas se enfrentan cara a cara. La carta con el número más alto gana y destruye a la otra.</li>
-                                <li>Si tu carta se enfrenta a un hueco vacío directamente, le haces <strong>1 punto de daño</strong> directo.</li>
-                                <li className="pt-2"><strong>🅰️ El As (A):</strong> Limpia el tablero, tanto las cartas del enemigo como las tuyas, evitando cualquier golpe.</li>
-                                <li><strong>👑 El Rey (K):</strong> Ataca a las 3 posiciones que tiene en frente a la vez.</li>
-                                <li><strong>👸 La Reina (Q):</strong> Ataca a las 2 posiciones en diagonal a la vez.</li>
-                                <li><strong>🤴 El Príncipe (J):</strong> Ataca 1 posición aleatoria entre las que tiene en frente.</li>
-                                <li><strong>🃏 El Joker:</strong> No hace daño, pero te permite robar 2 cartas extra.</li>
+                            <h3 className="font-black text-xl mb-2 bg-[#8e0dff] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">{t.obj_title}</h3>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>{t.obj_desc}</li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h3 className="font-black text-xl mb-2 bg-[#ff590d] text-white inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] rotate-1">{t.turn_title}</h3>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>{t.turn_desc_1}</li>
+                                <li>{t.turn_desc_2}</li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h3 className="font-black text-xl mb-2 bg-yellow-400 text-black inline-block px-2 border-[2px] border-black shadow-[3px_3px_0_#000] -rotate-1">{t.fight_title}</h3>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>{t.fight_li_1}</li>
+                                <li>{t.fight_li_2}</li>
+                            </ul>
+                        </section>
+                        {/* CAMBIO: Sección Cartas Especiales */}
+                        <section>
+                            <h3 className="font-black text-xl mb-2 bg-black text-white inline-block px-2 border-[2px] border-gray-500 shadow-[3px_3px_0_#888] rotate-1">{t.special_title}</h3>
+                            <ul className="list-disc pl-5 space-y-2 text-sm sm:text-base">
+                                <li>{t.special_ace}</li>
+                                <li>{t.special_king}</li>
+                                <li>{t.special_queen}</li>
+                                <li>{t.special_jack}</li>
+                                <li>{t.special_joker}</li>
                             </ul>
                         </section>
                     </div>
@@ -315,10 +472,10 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* CARTEL FLOTANTE DE "TU TURNO" - AJUSTADO POSICIÓN MÓVIL */}
+      {/* CARTEL FLOTANTE DE "TU TURNO" */}
       <div className="fixed top-28 sm:top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
           <div className={clsx("px-4 py-1.5 sm:px-6 sm:py-2 rounded-md text-xl sm:text-2xl font-black tracking-wider transition-all shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000] uppercase border-[3px] sm:border-[4px] border-black whitespace-nowrap relative -rotate-2", (phase === 'combat' || phase === 'combat-reveal') ? "bg-yellow-400 text-black animate-[wiggle_0.5s_infinite]" : turn === 'player' ? "bg-[#8e0dff] text-white" : "bg-white text-[#ff590d]")}>
-                {(phase === 'combat' || phase === 'combat-reveal') ? "💥 ¡PELEA! 💥" : turn === 'player' ? "TU TURNO" : "RIVAL..."}
+                {(phase === 'combat' || phase === 'combat-reveal') ? t.fight : turn === 'player' ? t.your_turn : t.rival_turn}
           </div>
       </div>
 
@@ -343,7 +500,7 @@ export default function Home() {
              <div className="flex text-xl sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 {Array(4).fill(0).map((_, i) => (<span key={i} className={i < (4 - opponent.lives) ? "text-black/40 grayscale" : "text-white scale-110"}>{i < (4 - opponent.lives) ? '💔' : '❤️'}</span>))}
             </div>
-            <span className="text-xl sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">RIVAL</span>
+            <span className="text-xl sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{t.rival}</span>
         </div>
       </header>
 
@@ -386,16 +543,12 @@ export default function Home() {
 
       {/* 3. FOOTER (JUGADOR) */}
       <section className="flex-none h-16 sm:h-28 bg-[#8e0dff] border-t-[3px] sm:border-t-[4px] border-black relative z-20 px-2 sm:px-4 grid grid-cols-3 items-center shadow-[0_-6px_0_#000]">
-        
-        {/* Lado Izq: Vidas + Cartel TÚ */}
         <div className="flex items-center gap-1 sm:gap-4 pl-1 sm:pl-4 relative scale-75 sm:scale-100 origin-left">
-             <span className="text-xl sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">TÚ</span>
+             <span className="text-xl sm:text-4xl text-white font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{t.you}</span>
              <div className="flex text-xl sm:text-4xl gap-0.5 sm:gap-1 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">
                 {Array(4).fill(0).map((_, i) => (<span key={i} className={i < player.lives ? "text-white scale-110" : "text-black/40 grayscale"}>{i < player.lives ? '❤️' : '💔'}</span>))}
             </div>
         </div>
-
-        {/* Centro: Mano de Cartas */}
         <div className="flex justify-center items-center h-full pb-2 sm:pb-4 z-30 col-span-1">
              <div className="flex justify-center gap-1 sm:gap-2 h-16 sm:h-24 w-full items-center">
                 <AnimatePresence>
@@ -407,8 +560,6 @@ export default function Home() {
                 </AnimatePresence>
              </div>
         </div>
-
-         {/* Lado Dcho: Mazo */}
          <div className="flex items-center justify-end pl-1 sm:pl-4 pr-2 sm:pr-2">
             <div className="relative w-8 h-10 sm:w-12 sm:h-16 bg-[#8e0dff] rounded-md border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[2px_2px_0_#000] sm:shadow-[4px_4px_0_#000] mr-1 sm:mr-0">
                 <span className="z-10 font-black text-white text-base sm:text-xl drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]">{player.deck.length}</span>
