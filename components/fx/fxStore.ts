@@ -11,12 +11,12 @@ interface Particle { dx: number; dy: number; rot: number; size: number; color: s
 
 export type Effect =
   | { id: number; kind: 'particles'; layer: FxLayer; x: number; y: number; life: number; gravity: number; particles: Particle[] }
-  | { id: number; kind: 'text'; layer: FxLayer; x: number; y: number; life: number; text: string; color: string; size: number }
+  | { id: number; kind: 'text'; layer: FxLayer; x: number; y: number; life: number; text: string; color: string; size: number; bg?: string }
   | { id: number; kind: 'ring'; layer: FxLayer; x: number; y: number; life: number; color: string; radius: number };
 
 type NewEffect =
   | { kind: 'particles'; layer?: FxLayer; x: number; y: number; colors: string[]; count?: number; speed?: number; gravity?: number; size?: [number, number]; life?: number; spread?: number; angle?: number }
-  | { kind: 'text'; layer?: FxLayer; x: number; y: number; text: string; color?: string; size?: number; life?: number }
+  | { kind: 'text'; layer?: FxLayer; x: number; y: number; text: string; color?: string; size?: number; life?: number; /** Etiqueta de color detrás del texto */ bg?: string }
   | { kind: 'ring'; layer?: FxLayer; x: number; y: number; color?: string; radius?: number; life?: number };
 
 interface CameraKick { id: number; intensity: number }
@@ -39,7 +39,7 @@ const build = (fx: NewEffect): Effect => {
   const id = nextId++;
   const layer = fx.layer ?? 'board';
   if (fx.kind === 'text') {
-    return { id, kind: 'text', layer, x: fx.x, y: fx.y, text: fx.text, color: fx.color ?? 'var(--c-white)', size: fx.size ?? 10, life: fx.life ?? 900 };
+    return { id, kind: 'text', layer, x: fx.x, y: fx.y, text: fx.text, color: fx.color ?? 'var(--c-white)', size: fx.size ?? 10, life: fx.life ?? 900, bg: fx.bg };
   }
   if (fx.kind === 'ring') {
     return { id, kind: 'ring', layer, x: fx.x, y: fx.y, color: fx.color ?? 'var(--c-white)', radius: fx.radius ?? 24, life: fx.life ?? 450 };

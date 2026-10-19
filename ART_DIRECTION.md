@@ -18,6 +18,36 @@ Los tokens viven en código en `theme/tokens.ts` (TypeScript) y en `app/globals.
 
 ---
 
+## 0. Dirección híbrida: plaza en píxel + mesa de cartas psicodélica
+
+La dirección actual mezcla dos capas:
+
+1. **El mundo y las cartas** siguen siendo nuestro píxel de portátil: sprites con
+   contorno marino, chibis, pips, diorama de la plaza y paleta fría.
+2. **El "envoltorio"** toma el lenguaje de los juegos de cartas *roguelike* modernos
+   (referencia: Balatro). **Solo el estilo**: nada de sus assets, fuentes ni logos.
+   - **Fondo en remolino** (`components/fx/Swirl.tsx`): se calcula a 1/4 de resolución,
+     se cuantiza en 4 bandas con tramado y se escala sin suavizado. En calma es azul
+     y lento; en la pelea acelera y vira a rojo.
+   - **Capa CRT** (`.crt`): líneas de barrido y viñeta sobre todo el juego.
+   - **Interfaz oscura:** paneles redondeados `--c-ui-panel` con canto inferior,
+     huecos interiores `.px-inset` y texto claro.
+   - **Botones gruesos de color plano** con canto inferior de 3 px que desaparece al
+     pulsar. Los acentos tienen significado:
+     - azul `--c-chip`: continuar y bonus;
+     - rojo `--c-mult`: daño recibido y peligro;
+     - oro `--c-gold`: daño al rival y acción principal;
+     - naranja `--c-orange`: ronda y dificultad.
+   - **Barra lateral** con la ronda en grande (horizontal) o una ficha de ronda
+     (vertical).
+   - **Cartas vivas:** se mecen suavemente en la mano y en la mesa; J, Q, K, A y Joker
+     llevan brillo holográfico (`.holo`).
+   - **Números de daño:** etiquetas de color que saltan, giran y tiemblan.
+   - **Títulos y carteles** con letras que ondulan (`WavyText`).
+
+Las esquinas de la **interfaz** son redondeadas y suaves; las de las **cartas** siguen
+siendo escalonadas en píxel.
+
 ## 1. Cámara y composición
 
 - **Vista cenital inclinada** con proyección casi ortográfica (oblicua): el suelo se ve

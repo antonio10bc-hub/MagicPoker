@@ -82,7 +82,7 @@ const DeckCount = ({ owner, count }: { owner: Owner; count: number }) => (
       <MiniBack owner={owner} style={{ position: 'absolute', left: 2, top: 0 }} />
       <MiniBack owner={owner} style={{ position: 'absolute', left: 0, top: 2 }} />
     </div>
-    <motion.span key={count} initial={{ scale: 1.7, color: 'var(--c-glass)' }} animate={{ scale: 1, color: 'var(--c-outline)' }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
+    <motion.span key={count} initial={{ scale: 1.7, color: 'var(--c-gold)' }} animate={{ scale: 1, color: 'var(--c-white)' }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
       x{count}
     </motion.span>
   </div>
@@ -233,12 +233,17 @@ const HandCard = memo(({ card, x, y, fromX, fan, enterDelay, isSelected, canPlay
       onPointerMove={onMove}
       onPointerLeave={onLeave}
     >
-      <div className={clsx(isSelected && 'anim-bob')}>
+      {/* Balanceo continuo: las cartas nunca están quietas del todo */}
+      <motion.div
+        className={clsx(isSelected && 'anim-bob')}
+        animate={{ rotate: [-1.6, 1.6, -1.6], y: [0, -1.5, 0] }}
+        transition={{ duration: 2.6 + (card.value % 4) * 0.3, repeat: Infinity, ease: 'easeInOut', delay: (card.value % 7) * -0.4 }}
+      >
         {/* Sombra proyectada abajo-derecha: se aleja cuando la carta se levanta */}
         <motion.div className="absolute" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, background: 'var(--c-shadow)' }}
           animate={{ x: lifted ? 5 : 2, y: lifted ? 9 : 3, opacity: lifted ? 0.7 : 1 }} transition={SPRING} />
         <Card card={card} onClick={handleClick} isSelected={isSelected} isDisabled={!canPlay} />
-      </div>
+      </motion.div>
     </motion.div>
   );
 });
@@ -275,5 +280,31 @@ export const Hand = ({ selectedCardId, canPlay, onSelectCard }: HandProps) => {
         />
       ))}
     </AnimatePresence>
+  );
+};
+
+// --- BARRA LATERAL (horizontal): marco oscuro que agrupa la información + contador de ronda ---
+export const Sidebar = () => {
+  const t = useTranslations();
+  const { compactPanels } = useGameLayout();
+  const round = useGameStore(s => s.roundNumber);
+  if (compactPanels) return null;
+  return (
+    <>
+      <div className="absolute px-panel-dark px-round" style={{ left: 1, top: 1, width: 68, height: 286, opacity: 0.85 }} />
+      <div className="absolute px-inset flex flex-col items-center justify-center" style={{ left: 6, top: 96, width: 58, height: 44 }}>
+        <span style={{ color: 'var(--c-ui-muted)' }}>{t.round}</span>
+        <motion.span
+          key={round}
+          className="text-title text-outline"
+          style={{ color: 'var(--c-orange)' }}
+          initial={{ scale: 2.2, rotate: -12 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 12 }}
+        >
+          {round}
+        </motion.span>
+      </div>
+    </>
   );
 };

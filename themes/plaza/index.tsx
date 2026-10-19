@@ -1,22 +1,21 @@
 import { Theme, BoardGeometry } from '../types';
-import { Platform, Prop, Railing, Strip, Surface } from '../pieces';
+import { Platform, Prop, Railing, Strip } from '../pieces';
 import { BANNER, LAMP } from '@/components/pixel/sprites';
-import { FLOOR_TILE, MEANDER_TILE, PAVEMENT_TILE, STONE_FACE_TILE, patternUri } from '@/components/pixel/patterns';
+import { FLOOR_TILE, MEANDER_TILE, STONE_FACE_TILE, patternUri } from '@/components/pixel/patterns';
+import { Swirl } from '@/components/fx/Swirl';
 
 // --- ESCENARIO: PLAZA ---
 // Una plaza de piedra vista desde arriba: suelo de rombos, greca central,
 // barandilla de madera delante, farolas en las esquinas traseras y banderolas
-// rojas (rival, al fondo) y verdes (jugador, delante).
+// rojas (rival, al fondo) y verdes (jugador, delante). Flota sobre un remolino animado.
 // Todas las posiciones son relativas a la geometría del tablero, así funciona
 // igual en horizontal (ordenador) y en vertical (móvil).
 
 /** Halo cálido-frío de la farola, centrado en el cristal */
 const LAMP_GLOW = { x: 5, y: 4, color: 'rgba(124, 200, 240, 0.7)' };
 
-const Backdrop = () => (
-  <Surface rect={{ x: 0, y: 0, w: 0, h: 0 }} texture={patternUri('pavement', PAVEMENT_TILE)} tileSize={16} color="var(--c-pavement)"
-    style={{ width: '100%', height: '100%' }} />
-);
+/** Fondo: remolino psicodélico en píxel (la plaza flota sobre él como una mesa) */
+const Backdrop = Swirl;
 
 const Diorama = ({ board }: { board: BoardGeometry }) => {
   const d = board.diorama;

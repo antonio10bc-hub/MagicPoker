@@ -12,6 +12,7 @@ import { playSfx, vibrate } from '@/lib/sounds';
 import { ACTIVE_THEME } from '@/themes';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { ICONS } from '@/components/pixel/sprites';
+import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
 import { Card } from './Card';
@@ -111,7 +112,13 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge }: PlacedCardProps) => {
           ? { duration: 0.4, times: [0, 0.3, 0.55, 1], ease: 'easeInOut' }
           : { duration: 0.62, times: [0, 0.66, 0.76, 0.88, 1] }}
       >
-        <Card card={card} />
+        {/* Flotación suave en la mesa (se detiene durante el combate) */}
+        <motion.div
+          animate={lunge || dead ? { y: 0, rotate: 0 } : { y: [0, -1, 0], rotate: [-0.8, 0.8, -0.8] }}
+          transition={lunge || dead ? { duration: 0.2 } : { duration: 3 + (card.value % 3) * 0.4, repeat: Infinity, ease: 'easeInOut', delay: (card.value % 5) * -0.5 }}
+        >
+          <Card card={card} />
+        </motion.div>
       </motion.div>
     </motion.div>
   );
@@ -133,11 +140,11 @@ const FightRibbon = ({ geo }: { geo: BoardGeometry }) => {
     >
       <motion.span
         className="text-outline"
-        style={{ color: 'var(--c-red)' }}
+        style={{ color: 'var(--c-mult)' }}
         animate={{ scale: [1, 1.08, 1] }}
         transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
       >
-        {t.fight}
+        <WavyText text={t.fight} amplitude={1.5} />
       </motion.span>
       {/* Brillo que barre la cinta */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

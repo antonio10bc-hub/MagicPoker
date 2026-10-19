@@ -4,7 +4,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { playSfx } from '@/lib/sounds';
 import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
-import { Hand, PlayerPanel, RivalPanel } from '@/components/game/Hud';
+import { Hand, PlayerPanel, RivalPanel, Sidebar } from '@/components/game/Hud';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { AmbientDust, LowHealth } from '@/components/fx/Ambient';
@@ -40,6 +40,7 @@ export const GameScreen = () => {
       <Backdrop />
       <AmbientDust />
       <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} />
+      <Sidebar />
       <RivalPanel />
       <PlayerPanel />
       <MenuButtons />

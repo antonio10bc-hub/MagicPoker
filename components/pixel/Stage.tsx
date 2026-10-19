@@ -139,6 +139,8 @@ export const Stage = ({ children }: { children: ReactNode }) => {
               {children}
             </motion.div>
             <Flash />
+            {/* Capa CRT: líneas de barrido y viñeta sobre todo el juego */}
+            <div className="crt absolute inset-0 pointer-events-none z-[998]" />
           </div>
         </div>
       </div>

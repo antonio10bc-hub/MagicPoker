@@ -135,7 +135,7 @@ export const MenuScreen = () => {
 
       <motion.div className="absolute z-20" style={{ left: cx - Math.floor(panelW / 2), top: difficultyY }}
         initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18, delay: 1 }}>
-      <Panel title={t.difficulty} band="var(--c-roof)" style={{ width: panelW, height: 44 }} bodyClassName="flex gap-[4px] p-[5px]">
+      <Panel title={t.difficulty} band="var(--c-orange)" style={{ width: panelW, height: 44 }} bodyClassName="flex gap-[4px] p-[5px]">
         {DIFFICULTIES.map(d => (
           <PxButton
             key={d}

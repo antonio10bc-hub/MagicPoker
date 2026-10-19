@@ -25,6 +25,22 @@
   --c-wood: #D07830;
   --c-wood-dark: #985020;
   --c-shadow: rgba(30, 38, 56, 0.35);
+
+  /* Híbrido "mesa de cartas psicodélica": UI oscura y acentos neón */
+  --c-ui-panel: #2A383E;
+  --c-ui-panel-light: #3D5158;
+  --c-ui-edge: #141D21;
+  --c-ui-muted: #9DB2B8;
+  --c-chip: #2E8BFF;
+  --c-chip-dark: #1C5CB0;
+  --c-mult: #FF4B3E;
+  --c-mult-dark: #B12A22;
+  --c-gold: #F5B843;
+  --c-gold-dark: #B8822A;
+  --c-orange: #FF9A1F;
+  --c-orange-dark: #C0660A;
+  --c-neutral: #5B7277;
+  --c-neutral-dark: #3A4B50;
 }
 
 html, body {
@@ -59,10 +75,9 @@ html, body {
     1px 1px 0 var(--c-outline);
 }
 
-/* Esquinas "redondeadas" de 1 px en píxel */
-.px-round {
-  clip-path: polygon(1px 0, calc(100% - 1px) 0, 100% 1px, 100% calc(100% - 1px), calc(100% - 1px) 100%, 1px 100%, 0 calc(100% - 1px), 0 1px);
-}
+/* Esquinas: la interfaz usa rectángulos redondeados suaves (estilo mesa de cartas);
+   las cartas mantienen la esquina escalonada en píxel (.px-round-2). */
+.px-round { border-radius: 4px; }
 .px-round-2 {
   clip-path: polygon(2px 0, calc(100% - 2px) 0, calc(100% - 2px) 1px, calc(100% - 1px) 1px, calc(100% - 1px) 2px, 100% 2px,
     100% calc(100% - 2px), calc(100% - 1px) calc(100% - 2px), calc(100% - 1px) calc(100% - 1px), calc(100% - 2px) calc(100% - 1px), calc(100% - 2px) 100%,
@@ -70,52 +85,71 @@ html, body {
     0 2px, 1px 2px, 1px 1px, 2px 1px);
 }
 
-/* ===== PANEL TIPO MENÚ DS: borde doble (exterior oscuro, interior claro) ===== */
+/* ===== PANEL: oscuro, redondeado, con canto inferior ===== */
 .px-panel {
-  background: var(--c-white);
-  box-shadow: inset 0 0 0 1px var(--c-outline), inset 0 0 0 2px var(--c-cyan), inset 0 0 0 3px var(--c-white);
+  background: var(--c-ui-panel);
+  color: var(--c-white);
+  box-shadow: inset 0 0 0 1px var(--c-ui-edge), inset 0 0 0 2px var(--c-ui-panel-light), 0 3px 0 0 rgba(10, 14, 18, 0.55);
 }
 .px-panel-dark {
-  background: var(--c-navy);
+  background: var(--c-ui-edge);
   color: var(--c-white);
-  box-shadow: inset 0 0 0 1px var(--c-outline), inset 0 0 0 2px var(--c-glass);
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px var(--c-ui-panel);
 }
 .px-band {
   height: 13px;
   padding: 2px 4px 0;
-  box-shadow: inset 0 -1px 0 var(--c-outline), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  border-radius: 3px 3px 0 0;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+/* Hueco interior (sub-panel) */
+.px-inset {
+  background: var(--c-ui-edge);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 0 rgba(0, 0, 0, 0.5);
 }
 
-/* ===== BOTÓN: bisel + 2 px de profundidad que se hunde al pulsar ===== */
+/* ===== BOTÓN: color plano, canto inferior grueso que desaparece al pulsar ===== */
 .px-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--btn-bg, var(--c-white));
-  color: var(--btn-fg, var(--c-outline));
-  box-shadow:
-    inset 0 0 0 1px var(--c-outline),
-    inset 1px 1px 0 1px var(--btn-light, #ffffff),
-    inset -1px -1px 0 1px var(--btn-dark, var(--c-floor)),
-    0 2px 0 0 var(--c-outline);
+  border-radius: 4px;
+  background: var(--btn-bg, var(--c-neutral));
+  color: var(--btn-fg, var(--c-white));
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 0 3px 0 0 var(--btn-dark, var(--c-neutral-dark)), inset 0 1px 0 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
   cursor: pointer;
-  transition: box-shadow 0.08s ease, background 0.15s ease;
+  transition: box-shadow 0.08s ease, background 0.15s ease, filter 0.15s ease;
 }
-.px-btn:hover { background: var(--btn-hover, var(--btn-bg, var(--c-white))); }
+.px-btn:hover { filter: brightness(1.12); }
 .px-btn:active, .px-btn[data-pressed='true'] {
-  box-shadow:
-    inset 0 0 0 1px var(--c-outline),
-    inset 1px 1px 0 1px var(--btn-dark, var(--c-floor)),
-    0 0 0 0 var(--c-outline);
+  box-shadow: 0 1px 0 0 var(--btn-dark, var(--c-neutral-dark)), inset 0 1px 0 0 rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 .px-btn:disabled { cursor: default; filter: saturate(0.3); }
 
-.px-btn-yellow { --btn-bg: var(--c-yellow); --btn-light: #FFF0A0; --btn-dark: var(--c-yellow-dark); --btn-hover: #F8D850; }
-.px-btn-green { --btn-bg: var(--c-green); --btn-light: var(--c-green-light); --btn-dark: var(--c-green-dark); --btn-fg: var(--c-white); }
-.px-btn-red { --btn-bg: var(--c-red); --btn-light: var(--c-red-light); --btn-dark: var(--c-red-dark); --btn-fg: var(--c-white); }
-.px-btn-blue { --btn-bg: var(--c-glass); --btn-light: var(--c-cyan); --btn-dark: var(--c-navy); --btn-fg: var(--c-white); }
-.px-btn-roof { --btn-bg: var(--c-roof); --btn-light: #F89060; --btn-dark: #A83810; --btn-fg: var(--c-white); }
+.px-btn-yellow { --btn-bg: var(--c-gold); --btn-dark: var(--c-gold-dark); }
+.px-btn-green { --btn-bg: var(--c-green); --btn-dark: var(--c-green-dark); }
+.px-btn-red { --btn-bg: var(--c-mult); --btn-dark: var(--c-mult-dark); }
+.px-btn-blue { --btn-bg: var(--c-chip); --btn-dark: var(--c-chip-dark); }
+.px-btn-roof { --btn-bg: var(--c-orange); --btn-dark: var(--c-orange-dark); }
+
+/* ===== BRILLO HOLOGRÁFICO de las figuras ===== */
+@keyframes holo-sweep { 0% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
+.holo {
+  background-image: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 44%, rgba(124, 200, 240, 0.45) 50%, rgba(240, 200, 48, 0.4) 56%, transparent 70%);
+  background-size: 260% 100%;
+  mix-blend-mode: screen;
+  animation: holo-sweep 3.4s ease-in-out infinite;
+}
+
+/* ===== CAPA CRT: líneas de barrido + viñeta ===== */
+.crt {
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.13) 0 1px, transparent 1px 2px),
+    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.5) 100%);
+}
 
 /* Scroll de paneles con barra en píxel */
 .px-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--c-glass) var(--c-floor-pattern); }
@@ -157,5 +191,5 @@ html, body {
 .anim-shine { animation: shine-sweep 3.2s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine { animation: none; }
+  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine, .holo { animation: none; }
 }

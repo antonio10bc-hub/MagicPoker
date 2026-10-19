@@ -119,6 +119,8 @@ const CardFace = ({ card }: { card: CardType }) => {
         {character
           ? <PixelSprite sprite={character} owner={card.owner} style={{ position: 'absolute', left: 9, top: 4 }} />
           : <Pips value={card.value} owner={card.owner} />}
+        {/* Las figuras y especiales llevan acabado holográfico */}
+        {character && <div className="holo absolute inset-0 pointer-events-none" style={{ animationDelay: `${(card.value % 5) * -0.7}s` }} />}
       </div>
       <ValueBadge value={card.value} />
       <AttackBadge card={card} />

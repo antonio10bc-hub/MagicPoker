@@ -12,8 +12,8 @@ import { Mascot, MenuBackground } from './MenuScreen';
 
 const RESULT_UI: Record<GameResult, { title: keyof Translations; sub: keyof Translations; band: string }> = {
   win: { title: 'win', sub: 'win_sub', band: 'var(--c-green)' },
-  draw: { title: 'draw', sub: 'draw_sub', band: 'var(--c-glass)' },
-  loss: { title: 'loss', sub: 'loss_sub', band: 'var(--c-red)' },
+  draw: { title: 'draw', sub: 'draw_sub', band: 'var(--c-chip)' },
+  loss: { title: 'loss', sub: 'loss_sub', band: 'var(--c-mult)' },
 };
 
 // --- CONFETI EN PÍXEL (determinista, sin Math.random en el render) ---

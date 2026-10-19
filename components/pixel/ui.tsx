@@ -93,3 +93,19 @@ export const TextBox = ({ text, suffix, showCursor = true, className, style }: T
     <TypedText key={text} text={text} showCursor={showCursor && !suffix} suffix={suffix} />
   </div>
 );
+
+// --- TEXTO ONDULANTE: cada letra flota con un pequeño desfase (títulos y carteles) ---
+export const WavyText = ({ text, amplitude = 2, className, style }: { text: string; amplitude?: number; className?: string; style?: CSSProperties }) => (
+  <span className={clsx('inline-flex', className)} style={style}>
+    {text.split('').map((ch, i) => (
+      <motion.span
+        key={i}
+        style={{ display: 'inline-block', whiteSpace: 'pre' }}
+        animate={{ y: [0, -amplitude, 0, amplitude * 0.5, 0], rotate: [0, -3, 0, 3, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+      >
+        {ch}
+      </motion.span>
+    ))}
+  </span>
+);

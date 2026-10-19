@@ -71,7 +71,7 @@ const Dialog = ({ title, width, height, actions, children }: { title: string; wi
             <span>{title}</span>
           </div>
         }
-        band="var(--c-glass)"
+        band="var(--c-chip)"
         style={{ width: w, height: h }}
         bodyClassName="flex flex-col"
       >
@@ -99,7 +99,7 @@ const ConfirmExitModal = () => {
 
   return (
     <Overlay>
-      <Panel title={t.confirm_exit_title} band="var(--c-red)" style={{ width: Math.min(200, stage.width - 16) }} bodyClassName="p-[6px] flex flex-col gap-[8px]">
+      <Panel title={t.confirm_exit_title} band="var(--c-mult)" style={{ width: Math.min(200, stage.width - 16) }} bodyClassName="p-[6px] flex flex-col gap-[8px]">
         <p className="leading-[12px]">{t.confirm_exit_desc}</p>
         <div className="flex gap-[6px] justify-center pb-[3px]">
           <PxButton tone="red" onClick={confirmExit} className="px-[6px] h-[16px]"><span className="text-outline">{t.yes_exit}</span></PxButton>
@@ -111,11 +111,11 @@ const ConfirmExitModal = () => {
 };
 
 // --- ESTADÍSTICAS ---
-const WIN_COLORS: Record<Difficulty, string> = { easy: 'var(--c-green)', normal: 'var(--c-yellow-dark)', hard: 'var(--c-red)' };
+const WIN_COLORS: Record<Difficulty, string> = { easy: 'var(--c-green-light)', normal: 'var(--c-gold)', hard: 'var(--c-mult)' };
 
 const Section = ({ title, children, className }: { title: string; children: ReactNode; className?: string }) => (
-  <div className={clsx('px-panel px-round p-[5px]', className)}>
-    <div className="mb-[4px] pb-[2px] uppercase" style={{ color: 'var(--c-glass)', boxShadow: '0 1px 0 0 var(--c-floor-pattern)' }}>{title}</div>
+  <div className={clsx('px-inset p-[5px]', className)}>
+    <div className="mb-[4px] pb-[2px] uppercase" style={{ color: 'var(--c-ui-muted)', boxShadow: '0 1px 0 0 var(--c-ui-panel-light)' }}>{title}</div>
     {children}
   </div>
 );
@@ -150,7 +150,8 @@ const StatsModal = () => {
           ))}
         </Section>
         <div className="px-round flex items-center gap-[6px] p-[5px]" style={{
-          background: stats.achievementRepublicana ? 'var(--c-yellow)' : 'var(--c-floor-pattern)',
+          color: 'var(--c-outline)',
+          background: stats.achievementRepublicana ? 'var(--c-gold)' : 'var(--c-ui-muted)',
           boxShadow: 'inset 0 0 0 1px var(--c-outline)',
           filter: stats.achievementRepublicana ? undefined : 'grayscale(1)',
           opacity: stats.achievementRepublicana ? 1 : 0.7,
@@ -175,9 +176,9 @@ interface RulesSection {
 
 const RULES: RulesSection[] = [
   { title: 'obj_title', items: ['obj_desc'], band: 'var(--c-green)' },
-  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], band: 'var(--c-glass)' },
-  { title: 'fight_title', items: ['fight_li_1', 'fight_li_2'], band: 'var(--c-red)' },
-  { title: 'special_title', items: ['special_ace', 'special_king', 'special_queen', 'special_jack', 'special_joker'], band: 'var(--c-roof)' },
+  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], band: 'var(--c-chip)' },
+  { title: 'fight_title', items: ['fight_li_1', 'fight_li_2'], band: 'var(--c-mult)' },
+  { title: 'special_title', items: ['special_ace', 'special_king', 'special_queen', 'special_jack', 'special_joker'], band: 'var(--c-orange)' },
 ];
 
 /** Retrato del personaje que acompaña a cada regla de carta especial */
@@ -211,7 +212,7 @@ const RulesModal = () => {
                   <li key={item} className="flex gap-[4px] items-start">
                     {sprite
                       ? <PixelSprite sprite={sprite} className="shrink-0" />
-                      : <span className="shrink-0" style={{ color: 'var(--c-glass)' }}>▸</span>}
+                      : <span className="shrink-0" style={{ color: 'var(--c-gold)' }}>▸</span>}
                     <span className={sprite ? 'pt-[5px]' : undefined}>{t[item]}</span>
                   </li>
                 );

@@ -44,7 +44,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         .filter(l => l.slot.card?.rank === 'JOKER')
         .forEach(l => {
           playSfx('sparkle');
-          fx.emit({ kind: 'text', x: l.x, y: l.y - 20, text: `+${JOKER_DRAW_BONUS}`, color: 'var(--c-yellow)', size: 20, life: 1100 });
+          fx.emit({ kind: 'text', x: l.x, y: l.y - 20, text: `+${JOKER_DRAW_BONUS}`, bg: 'var(--c-chip)', size: 20, life: 1100 });
           fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [PALETTE.yellow, PALETTE.white], count: 14, speed: 30, gravity: -10, size: [1, 2], life: 800 });
         });
     }, TIMINGS.combatFlip + 20);
@@ -104,7 +104,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         playSfx('zap', 0.9, h.owner === 'player' ? 0.85 : 1.1);
         fx.emit({ kind: 'particles', x, y, colors: [PALETTE.yellow, PALETTE.white, PALETTE.roof], count: 16, speed: 38, gravity: 30, life: 650 });
         fx.emit({ kind: 'ring', x, y, color: PALETTE.yellow, radius: 22, life: 400 });
-        fx.emit({ kind: 'text', x, y, text: `-${h.amount}`, color: h.owner === 'player' ? 'var(--c-red)' : 'var(--c-yellow)', size: 20, life: 1100 });
+        fx.emit({ kind: 'text', x, y, text: `-${h.amount}`, bg: h.owner === 'player' ? 'var(--c-mult)' : 'var(--c-gold)', size: 20, life: 1200 });
       }));
 
       const impact = victims.length + hits.length;

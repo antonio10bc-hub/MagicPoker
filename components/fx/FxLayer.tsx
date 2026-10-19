@@ -27,17 +27,35 @@ const Particles = ({ e }: { e: Extract<Effect, { kind: 'particles' }> }) => (
   </>
 );
 
-const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => (
-  <motion.div
-    className="absolute pointer-events-none text-outline whitespace-nowrap"
-    style={{ left: e.x, top: e.y, color: e.color, fontSize: e.size, lineHeight: `${e.size}px`, translateX: '-50%', translateY: '-50%' }}
-    initial={{ y: 4, scale: 0.3, opacity: 0 }}
-    animate={{ y: [4, -10, -22], scale: [0.3, 1.35, 1], opacity: [0, 1, 0] }}
-    transition={{ duration: e.life / 1000, times: [0, 0.25, 1], ease: 'easeOut' }}
-  >
-    {e.text}
-  </motion.div>
-);
+/**
+ * Número/texto que salta: etiqueta de color que rebota, gira un poco y tiembla,
+ * sube y se desvanece (estilo marcador de mesa de cartas).
+ */
+const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
+  const tilt = ((e.id * 37) % 17) - 8;
+  return (
+    <motion.div
+      className="absolute pointer-events-none whitespace-nowrap"
+      style={{ left: e.x, top: e.y, translateX: '-50%', translateY: '-50%' }}
+      initial={{ y: 6, scale: 0.2, rotate: tilt * 2, opacity: 0 }}
+      animate={{ y: [6, -8, -10, -26], scale: [0.2, 1.5, 1, 0.9], rotate: [tilt * 2, -tilt, tilt * 0.5, 0], opacity: [0, 1, 1, 0] }}
+      transition={{ duration: e.life / 1000, times: [0, 0.2, 0.6, 1], ease: 'easeOut' }}
+    >
+      <motion.div
+        className={e.bg ? 'text-outline px-[4px] pt-[2px] pb-[1px]' : 'text-outline'}
+        style={{
+          color: e.bg ? 'var(--c-white)' : e.color, fontSize: e.size, lineHeight: `${e.size}px`,
+          background: e.bg, borderRadius: 4,
+          boxShadow: e.bg ? '0 2px 0 0 rgba(0,0,0,0.45), inset 0 1px 0 0 rgba(255,255,255,0.3)' : undefined,
+        }}
+        animate={{ x: [0, -1, 1, -1, 0] }}
+        transition={{ duration: 0.25, repeat: 2 }}
+      >
+        {e.text}
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const Ring = ({ e }: { e: Extract<Effect, { kind: 'ring' }> }) => (
   <motion.div
