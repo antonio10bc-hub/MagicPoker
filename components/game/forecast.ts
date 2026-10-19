@@ -1,4 +1,4 @@
-import { BoardSlot, Card, Rank } from '@/types';
+import { BoardSlot, Card, Owner, Rank } from '@/types';
 import { getTargetIndices, RANKS } from '@/lib/game-utils';
 
 // --- PRONÓSTICOS CON INFORMACIÓN VISIBLE ---
@@ -60,4 +60,77 @@ export const deckSummary = (deck: Card[]): { rank: Rank; count: number }[] => {
   const counts = new Map<Rank, number>();
   deck.forEach(c => counts.set(c.rank, (counts.get(c.rank) ?? 0) + 1));
   return order.map(rank => ({ rank, count: counts.get(rank) ?? 0 }));
+};
+
+// --- FLECHAS DE ATAQUE (lógica, sin geometría) ---
+
+/** Un ataque: una carta conocida contra un hueco del bando contrario */
+export interface Attack { card: Card; index: number; owner: Owner; target: number; maybe: boolean; preview: boolean }
+
+export interface Preview { card: Card; slotIndex: number }
+
+/**
+ * Ataques de todas las cartas conocidas: las tuyas, la que estás colocando (vista
+ * previa) y las del rival destapadas. Los Ases se devuelven aparte (barren la mesa).
+ */
+export const collectAttacks = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[], preview: Preview | null) => {
+  const attackers: { card: Card; index: number; owner: Owner; preview: boolean }[] = [];
+  playerBoard.forEach(s => s.card && attackers.push({ card: s.card, index: s.index, owner: 'player', preview: false }));
+  if (preview) attackers.push({ card: preview.card, index: preview.slotIndex, owner: 'player', preview: true });
+  opponentBoard.forEach(s => s.card?.isFaceUp && attackers.push({ card: s.card, index: s.index, owner: 'opponent', preview: false }));
+
+  const attacks: Attack[] = [];
+  const wipers: { index: number; owner: Owner }[] = [];
+  attackers.forEach(({ card, index, owner, preview: isPreview }) => {
+    const def = RANKS[card.rank];
+    if (def.wipesBoard) { wipers.push({ index, owner }); return; }
+    if (!def.attack) return;
+    getTargetIndices(index, card.rank).forEach(target =>
+      attacks.push({ card, index, owner, target, maybe: def.attack!.mode === 'random-one', preview: isPreview }));
+  });
+  return { attacks, wipers };
+};
+
+/**
+ * Enfrentamientos de frente (A ataca el hueco de B y B el de A, sin azar): la flecha
+ * del que pierde se dibuja diminuta y, si empatan, ambas se quedan a mitad de camino.
+ */
+export const facingOutcomes = (attacks: Attack[]) => {
+  const losing = new Set<Attack>();
+  const clashing = new Set<Attack>();
+  attacks.forEach(a => {
+    const rival = attacks.find(b => b.owner !== a.owner && b.index === a.target && b.target === a.index && !b.maybe && !a.maybe);
+    if (!rival) return;
+    if (a.card.value < rival.card.value) losing.add(a);
+    else if (a.card.value === rival.card.value) clashing.add(a);
+  });
+  return { losing, clashing };
+};
+
+// --- DAÑO A HUECOS RIVALES VACÍOS ("-N" dorado) ---
+
+export interface Aim { sure: number; maybe: number; wipe: boolean; previewOnly: boolean }
+
+/** Objetivos de tus cartas con flechas encendidas (y la vista previa) en la fila rival */
+export const aimAtOpponent = (board: BoardSlot[], preview: Preview | null, shown: ReadonlySet<string>): Aim[] => {
+  const aims: Aim[] = [0, 1, 2, 3].map(() => ({ sure: 0, maybe: 0, wipe: false, previewOnly: true }));
+  const attackers = board
+    .filter(s => s.card && shown.has(s.card.id))
+    .map(s => ({ card: s.card!, index: s.index, isPreview: false }));
+  if (preview) attackers.push({ card: preview.card, index: preview.slotIndex, isPreview: true });
+
+  attackers.forEach(({ card, index, isPreview }) => {
+    const def = RANKS[card.rank];
+    if (def.wipesBoard) {
+      aims.forEach(a => { a.wipe = true; a.previewOnly &&= isPreview; });
+      return;
+    }
+    if (!def.attack) return;
+    getTargetIndices(index, card.rank).forEach(t => {
+      if (def.attack!.mode === 'random-one') aims[t].maybe++;
+      else aims[t].sure++;
+      aims[t].previewOnly &&= isPreview;
+    });
+  });
+  return aims;
 };

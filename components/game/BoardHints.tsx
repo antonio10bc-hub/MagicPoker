@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BoardSlot, Card as CardType, CombatResult, GamePhase } from '@/types';
 import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE, INK } from '@/theme/tokens';
-import { calculateCombat, getTargetIndices, RANKS } from '@/lib/game-utils';
+import { calculateCombat } from '@/lib/game-utils';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
 import { ALERT, CHECK, CROSS, HEART_LOST } from '@/components/pixel/sprites';
 import { useArrowsVisible } from './AttackArrows';
-import { threatsFrom } from './forecast';
+import { aimAtOpponent, threatsFrom } from './forecast';
 
 // --- AVISOS DEL TABLERO ---
 // Ayudas visuales que se calculan SOLO con información visible (sin mirar las cartas
@@ -30,32 +30,6 @@ interface BoardHintsProps {
   /** Cartas con las flechas encendidas: solo ellas marcan "-N" */
   shown: ReadonlySet<string>;
 }
-
-interface Aim { sure: number; maybe: number; wipe: boolean; previewOnly: boolean }
-
-/** Objetivos de tus cartas en la fila rival (incluida la vista previa) */
-const aimAtOpponent = (board: BoardSlot[], preview: BoardHintsProps['preview'], shown: ReadonlySet<string>): Aim[] => {
-  const aims: Aim[] = [0, 1, 2, 3].map(() => ({ sure: 0, maybe: 0, wipe: false, previewOnly: true }));
-  const attackers = board
-    .filter(s => s.card && shown.has(s.card.id))
-    .map(s => ({ card: s.card!, index: s.index, isPreview: false }));
-  if (preview) attackers.push({ card: preview.card, index: preview.slotIndex, isPreview: true });
-
-  attackers.forEach(({ card, index, isPreview }) => {
-    const def = RANKS[card.rank];
-    if (def.wipesBoard) {
-      aims.forEach(a => { a.wipe = true; a.previewOnly &&= isPreview; });
-      return;
-    }
-    if (!def.attack) return;
-    getTargetIndices(index, card.rank).forEach(t => {
-      if (def.attack!.mode === 'random-one') aims[t].maybe++;
-      else aims[t].sure++;
-      aims[t].previewOnly &&= isPreview;
-    });
-  });
-  return aims;
-};
 
 const Badge = ({ x, y, bg, children, pulse }: { x: number; y: number; bg: string; children: ReactNode; pulse?: boolean }) => (
   <motion.div

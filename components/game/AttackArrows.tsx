@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BoardSlot, Card as CardType, CombatResult, GamePhase, Owner } from '@/types';
 import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE, TEAM } from '@/theme/tokens';
-import { getTargetIndices, RANKS } from '@/lib/game-utils';
+import { Attack, collectAttacks, facingOutcomes } from './forecast';
 import { useStage } from '@/components/pixel/Stage';
 import { ARROW_HOLD_S } from './Card';
 
@@ -63,42 +63,20 @@ export const useArrowsVisible = (combat: CombatResult | null) => {
   return !combat || expired !== combat;
 };
 
-interface Attack { card: CardType; index: number; owner: Owner; target: number; maybe: boolean; preview: boolean }
-
 const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview, shown }: AttackArrowsProps) => {
-  const wipers: { x: number; y: number; owner: Owner }[] = [];
-  const attacks: Attack[] = [];
-  if (phase !== 'placement' && phase !== 'combat' && phase !== 'combat-reveal') return { arrows: [], wipers, clashes: [] };
-
-  const attackers: { card: CardType; index: number; owner: Owner; preview: boolean }[] = [];
-  playerBoard.forEach(s => s.card && attackers.push({ card: s.card, index: s.index, owner: 'player', preview: false }));
-  if (preview && phase === 'placement') attackers.push({ card: preview.card, index: preview.slotIndex, owner: 'player', preview: true });
-  // Del rival solo lo que se ve: cartas destapadas
-  opponentBoard.forEach(s => s.card?.isFaceUp && attackers.push({ card: s.card, index: s.index, owner: 'opponent', preview: false }));
-
-  attackers.forEach(({ card, index, owner, preview: isPreview }) => {
-    const def = RANKS[card.rank];
+  if (phase !== 'placement' && phase !== 'combat' && phase !== 'combat-reveal') return { arrows: [], wipers: [], clashes: [] };
+  const center = (owner: Owner, index: number) => {
     const p = geo.slots[owner][index];
-    if (def.wipesBoard) {
-      wipers.push({ x: p.x + CARD_SIZE.width / 2, y: p.y + CARD_SIZE.height / 2, owner });
-      return;
-    }
-    if (!def.attack) return;
-    getTargetIndices(index, card.rank).forEach(target =>
-      attacks.push({ card, index, owner, target, maybe: def.attack!.mode === 'random-one', preview: isPreview }));
-  });
+    return { x: p.x + CARD_SIZE.width / 2, y: p.y + CARD_SIZE.height / 2 };
+  };
 
-  // Enfrentamientos de frente (A ataca el hueco de B y B el de A), calculados con todas
-  // las cartas conocidas aunque solo se dibujen las encendidas: así la flecha de una
-  // carta que pierde sale pequeñita aunque la ganadora no esté encendida.
-  const losing = new Set<Attack>();
-  const clashing = new Set<Attack>();
-  attacks.forEach(a => {
-    const rival = attacks.find(b => b.owner !== a.owner && b.index === a.target && b.target === a.index && !b.maybe && !a.maybe);
-    if (!rival) return;
-    if (a.card.value < rival.card.value) losing.add(a);
-    else if (a.card.value === rival.card.value) clashing.add(a);
-  });
+  const known = collectAttacks(playerBoard, opponentBoard, phase === 'placement' ? preview : null);
+  const attacks = known.attacks;
+  const wipers = known.wipers.map(w => ({ ...center(w.owner, w.index), owner: w.owner }));
+  // Enfrentamientos calculados con todas las cartas conocidas aunque solo se dibujen las
+  // encendidas: así la flecha de una carta que pierde sale pequeñita aunque la
+  // ganadora no esté encendida.
+  const { losing, clashing } = facingOutcomes(attacks);
 
   // Solo se dibujan las cartas encendidas (y la vista previa al apuntar/arrastrar)
   const visible = attacks.filter(a => a.preview || shown.has(a.card.id));
