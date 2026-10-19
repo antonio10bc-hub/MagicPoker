@@ -11,7 +11,8 @@ import { getTargetIndices, RANKS } from '@/lib/game-utils';
 import { playSfx, vibrate } from '@/lib/sounds';
 import { ACTIVE_THEME } from '@/themes';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { ICONS } from '@/components/pixel/sprites';
+import { STAR } from '@/components/pixel/sprites';
+import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
@@ -44,6 +45,35 @@ const SlotTile = ({ x, y, highlight }: { x: number; y: number; highlight: boolea
     }}
   />
 );
+
+/**
+ * Patrón de ataque de la carta seleccionada, dibujado dentro de cada hueco libre: tres
+ * flechas (diagonal izquierda, frente, diagonal derecha) encendidas según golpee. Así
+ * se ve a dónde atacaría antes de soltarla, también en táctil (sin "hover").
+ */
+const PatternGlyph = ({ card }: { card: CardType }) => {
+  const def = RANKS[card.rank];
+  if (def.wipesBoard) return <PixelSprite sprite={STAR} scale={2} tint={INK.cream} />;
+  if (!def.attack) return <span className="font-display text-outline" style={{ fontSize: 16 }}>+{JOKER_DRAW_BONUS}</span>;
+  const random = def.attack.mode === 'random-one';
+  const color = random ? INK.mint : INK.cream;
+  // Flecha que sale de la base del hueco hacia arriba, inclinada según su casilla
+  const arrow = (offset: number) => {
+    const on = def.attack!.offsets.includes(offset);
+    const angle = offset * 38;
+    return (
+      <g key={offset} transform={`rotate(${angle} 14 22)`} opacity={on ? 1 : 0.18}>
+        <path d="M14 21 L14 7" stroke={on ? color : INK.teal} strokeWidth={2.4} strokeLinecap="round" strokeDasharray={on && random ? '2.5 2.5' : undefined} />
+        <path d="M9.5 10.5 L14 4 L18.5 10.5 Z" fill={on ? color : INK.teal} />
+      </g>
+    );
+  };
+  return (
+    <svg width={28} height={24} viewBox="0 0 28 24" className="bloom-cream" aria-hidden>
+      {[-1, 0, 1].map(arrow)}
+    </svg>
+  );
+};
 
 /** Polvo al aterrizar una carta */
 const landingDust = (x: number, y: number) => {
@@ -248,7 +278,7 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
                   aunque al pasar por encima cambie de cursor a vista previa */}
               {showGhost
                 ? <div className="pointer-events-none" style={{ opacity: 0.55 }}><Card card={selectedCard} /></div>
-                : <span className="anim-bob pointer-events-none bloom-cream"><PixelSprite sprite={ICONS.cursor} scale={2} tint={INK.cream} /></span>}
+                : <span className="anim-bob pointer-events-none">{selectedCard && <PatternGlyph card={selectedCard} />}</span>}
               {/* Destino confirmado: marco verde suave que late sobre la vista previa */}
               {showGhost && (
                 <motion.div

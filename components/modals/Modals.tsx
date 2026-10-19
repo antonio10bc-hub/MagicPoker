@@ -12,7 +12,7 @@ import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
-import { CHARACTERS, ICONS, STAR } from '@/components/pixel/sprites';
+import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
 
 const closeWithClick = () => {
   playSound('click');
@@ -42,7 +42,7 @@ const Overlay = ({ onClose, children }: { onClose?: () => void; children: ReactN
   <motion.div
     className="absolute inset-0 z-[200] flex items-center justify-center"
     style={{ background: 'rgba(11,13,12,0.7)' }}
-    initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(1.5px)' }} exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     transition={{ duration: 0.2 }}
     onClick={onClose}
   >
@@ -187,6 +187,33 @@ const SPECIAL_PORTRAIT: Partial<Record<keyof Translations, Rank>> = {
   special_ace: 'A', special_king: 'K', special_queen: 'Q', special_jack: 'J', special_joker: 'JOKER',
 };
 
+// --- LEYENDA: los mismos iconos que se ven en la partida ---
+const Pill = ({ children, bg = 'rgba(11,13,12,0.9)', className }: { children: ReactNode; bg?: string; className?: string }) => (
+  <span className={clsx('inline-flex items-center justify-center gap-[2px] shrink-0 h-[11px] min-w-[17px] px-[2px] rounded-[2px] font-display', className)}
+    style={{ background: bg, fontSize: 10, paddingTop: 1 }}>
+    {children}
+  </span>
+);
+const Marks = ({ on, color }: { on: boolean[]; color: string }) => (
+  <Pill>{on.map((o, i) => <span key={i} style={{ width: 3, height: 4, borderRadius: 1, background: o ? color : 'var(--ink-slate)' }} />)}</Pill>
+);
+const Badge = ({ bg, children }: { bg: string; children: ReactNode }) => (
+  <span className="inline-flex items-center justify-center shrink-0 h-[11px] min-w-[11px] px-[2px] rounded-full font-display text-ink bloom" style={{ background: bg, fontSize: 10, paddingTop: 1 }}>{children}</span>
+);
+
+const LEGEND: { icon: ReactNode; text: keyof Translations }[] = [
+  { icon: <Pill className="text-outline">9</Pill>, text: 'legend_value' },
+  { icon: <Marks on={[true, true, true]} color="var(--ink-ember)" />, text: 'legend_sure' },
+  { icon: <Marks on={[true, true, true]} color="var(--ink-mint)" />, text: 'legend_random' },
+  { icon: <Pill><PixelSprite sprite={STAR} tint={INK.cream} /></Pill>, text: 'legend_ace' },
+  { icon: <Pill className="text-outline">+2</Pill>, text: 'legend_joker' },
+  { icon: <Badge bg="var(--ink-orange)">-1</Badge>, text: 'legend_damage' },
+  { icon: <Badge bg="var(--ink-orange)"><PixelSprite sprite={ALERT} tint={INK.black} /></Badge>, text: 'legend_threat' },
+  { icon: <Badge bg="var(--ink-cream)"><PixelSprite sprite={CHECK} tint={INK.black} /></Badge>, text: 'legend_win' },
+  { icon: <Badge bg="var(--ink-orange)"><PixelSprite sprite={CROSS} tint={INK.black} /></Badge>, text: 'legend_lose' },
+  { icon: <svg width={17} height={11} viewBox="0 0 17 11" aria-hidden><path d="M2 10 Q6 9 11 4 L9 2 L16 1 L14 8 L12.5 5.5 Q7 10.5 2 10.5 Z" fill="var(--ink-cream)" /></svg>, text: 'legend_arrows' },
+];
+
 const MuteButton = () => {
   const isMuted = useMuted();
   const handleToggle = () => {
@@ -221,6 +248,19 @@ const RulesModal = () => {
             </ul>
           </section>
         ))}
+        <section>
+          <div className="inline-block px-round px-[4px] pt-[2px] h-[13px] mb-[3px] text-outline" style={{ background: 'var(--ink-slate)' }}>
+            {t.legend_title}
+          </div>
+          <ul className="flex flex-col gap-[4px]">
+            {LEGEND.map(item => (
+              <li key={item.text} className="flex gap-[5px] items-start">
+                <span className="shrink-0 w-[20px] flex justify-center">{item.icon}</span>
+                <span className="pt-[1px]">{t[item.text]}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </Dialog>
   );

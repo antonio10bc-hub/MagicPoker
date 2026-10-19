@@ -7,7 +7,7 @@ import { calculateCombat, getTargetIndices, RANKS } from '@/lib/game-utils';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
 import { ALERT, CHECK, CROSS, HEART_LOST } from '@/components/pixel/sprites';
 import { useArrowsVisible } from './AttackArrows';
-import { threatsFrom } from './threats';
+import { threatsFrom } from './forecast';
 
 // --- AVISOS DEL TABLERO ---
 // Ayudas visuales que se calculan SOLO con información visible (sin mirar las cartas

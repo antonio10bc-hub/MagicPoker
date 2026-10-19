@@ -1,4 +1,4 @@
-import { CSSProperties, memo, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { CSSProperties, memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, animate, useAnimationControls, useMotionValue } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
@@ -11,10 +11,11 @@ import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { Panel } from '@/components/pixel/ui';
 import { CARD_BACK_TILE, patternUri } from '@/components/pixel/patterns';
 import { HEART, HEART_LOST } from '@/components/pixel/sprites';
-import { useGameLayout } from '@/components/pixel/Stage';
+import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { Rect } from '@/theme/layout';
 import { Card } from './Card';
 import { cardOrigins } from './cardOrigins';
+import { deckSummary, forecastFight } from './forecast';
 import { playSfx, vibrate } from '@/lib/sounds';
 
 // --- PIEZAS DEL HUD ---
@@ -153,24 +154,97 @@ export const RivalPanel = () => {
 };
 
 // --- PANEL DEL JUGADOR ---
+/**
+ * Aviso de vida en peligro: cuántos golpes pueden llegarte a huecos vacíos con lo que
+ * se ve ahora. Si los seguros bastan para acabar contigo, late "¡PELIGRO!".
+ */
+const DangerChip = ({ lives }: { lives: number }) => {
+  const t = useTranslations();
+  const { playerBoard, opponentBoard, placement } = useGameStore(useShallow(s => ({
+    playerBoard: s.player.board, opponentBoard: s.opponent.board, placement: s.phase === 'placement',
+  })));
+  const { taken } = useMemo(() => forecastFight(playerBoard, opponentBoard), [playerBoard, opponentBoard]);
+  const total = taken.sure + taken.maybe;
+  const lethal = taken.sure >= lives || total >= lives;
+  return (
+    <AnimatePresence>
+      {placement && total > 0 && (
+        <motion.div key="danger"
+          className={clsx('flex items-center gap-[2px] px-[3px] h-[11px] rounded-[3px] font-display text-ink bloom', lethal && 'anim-throb')}
+          style={{ background: lethal ? 'var(--ink-orange)' : 'var(--ink-ember)', fontSize: 10, paddingTop: 2 }}
+          initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0, transition: { duration: 0.12 } }}
+          transition={{ type: 'spring', stiffness: 500, damping: 18 }}>
+          {lethal ? t.danger : <>{taken.sure > 0 && `-${taken.sure}`}{taken.maybe > 0 && <span style={{ opacity: taken.sure ? 0.7 : 1 }}>{taken.sure ? '+' : '-'}{taken.maybe}?</span>}</>}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/** Ficha del mazo: qué cartas te quedan, agrupadas por rango (no revela el orden) */
+const DeckPeek = ({ anchor, onClose }: { anchor: Rect; onClose: () => void }) => {
+  const t = useTranslations();
+  const { width } = useStage();
+  const deck = useGameStore(s => s.player.deck);
+  const summary = useMemo(() => deckSummary(deck), [deck]);
+  const w = Math.min(150, width - 8);
+  return (
+    <>
+      <div className="absolute inset-0 z-[94]" onClick={onClose} />
+      <motion.div className="px-panel px-round absolute z-[95] p-[5px]"
+        style={{ left: Math.min(anchor.x, width - 4 - w), top: anchor.y - 4, width: w, translateY: '-100%' }}
+        initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, transition: { duration: 0.12 } }}
+        transition={{ type: 'spring', stiffness: 500, damping: 26 }} onClick={onClose}>
+        <div className="mb-[4px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_left} · {deck.length}</div>
+        <div className="grid grid-cols-7 gap-[2px]">
+          {summary.map(({ rank, count }) => (
+            <div key={rank} className="flex flex-col items-center rounded-[2px] py-[2px]"
+              style={{ background: count ? 'var(--ink-slate)' : 'transparent', opacity: count ? 1 : 0.35 }}>
+              <span className="font-display" style={{ fontSize: rank === 'JOKER' ? 7 : 11, lineHeight: '11px', color: count ? 'var(--ink-cream)' : 'var(--ink-teal)' }}>
+                {rank === 'JOKER' ? 'JKR' : rank}
+              </span>
+              <span className="font-display" style={{ fontSize: 9, lineHeight: '9px', color: count ? 'var(--ink-ember)' : 'var(--ink-teal)' }}>{count}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </>
+  );
+};
+
 export const PlayerPanel = () => {
   const t = useTranslations();
   const { playerPanel: rect, compactPanels } = useGameLayout();
   const { lives, deckCount } = usePlayerHud('player');
+  const [peek, setPeek] = useState(false);
+  const togglePeek = () => { playSfx(peek ? 'deselect' : 'open', 0.6); setPeek(p => !p); };
+  const deck = (
+    <button className="cursor-pointer" onClick={togglePeek} aria-label="deck">
+      <DeckCount owner="player" count={deckCount} />
+    </button>
+  );
+  const peekLayer = <AnimatePresence>{peek && <DeckPeek key="peek" anchor={rect} onClose={togglePeek} />}</AnimatePresence>;
 
   if (compactPanels) {
     return (
-      <CompactPanel label={t.you} owner="player" rect={rect}>
-        <Lives lives={lives} owner="player" />
-        <div className="ml-auto"><DeckCount owner="player" count={deckCount} /></div>
-      </CompactPanel>
+      <>
+        <CompactPanel label={t.you} owner="player" rect={rect}>
+          <Lives lives={lives} owner="player" />
+          <DangerChip lives={lives} />
+          <div className="ml-auto">{deck}</div>
+        </CompactPanel>
+        {peekLayer}
+      </>
     );
   }
   return (
-    <Panel title={t.you} band={TEAM_BAND.player} titleClassName={TEAM_BAND_TEXT.player} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[4px]">
-      <Lives lives={lives} owner="player" />
-      <DeckCount owner="player" count={deckCount} />
-    </Panel>
+    <>
+      <Panel title={<div className="flex items-center justify-between"><span>{t.you}</span><DangerChip lives={lives} /></div>} band={TEAM_BAND.player} titleClassName={TEAM_BAND_TEXT.player} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[4px]">
+        <Lives lives={lives} owner="player" />
+        <div>{deck}</div>
+      </Panel>
+      {peekLayer}
+    </>
   );
 };
 

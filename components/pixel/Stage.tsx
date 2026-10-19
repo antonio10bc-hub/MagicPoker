@@ -131,12 +131,12 @@ export const Stage = ({ children }: { children: ReactNode }) => {
   return (
     <StageContext.Provider value={stage}>
       <div
-        className="fixed inset-0 flex items-center justify-center overflow-hidden"
+        className="fixed inset-0 flex items-center justify-center overflow-clip"
         style={{ background: 'var(--ink-black)' }}
       >
         <div style={{ width: width * scale, height: height * scale, position: 'relative' }}>
           <div
-            className="stage absolute left-0 top-0 overflow-hidden"
+            className="stage absolute left-0 top-0 overflow-clip"
             style={{ width, height, transform: `scale(${scale})`, transformOrigin: '0 0', background: 'var(--c-outline)' }}
           >
             {/* Los gestos (arrastrar) se miden en píxeles de pantalla: los pasamos a

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
@@ -10,6 +10,7 @@ import { COMBAT_REVEAL_SECONDS } from '@/lib/constants';
 import { IconButton, PxButton, TextBox, WavyText } from '@/components/pixel/ui';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { ICONS } from '@/components/pixel/sprites';
+import { Forecast, forecastFight } from './forecast';
 
 // --- CUADRO DE ESTADO DEL TURNO ---
 /** Puntos suspensivos animados mientras piensa el rival */
@@ -116,11 +117,60 @@ const ContinueButton = () => {
   );
 };
 
-const PassButton = ({ opponentPassed }: { opponentPassed: boolean }) => {
+/** Pronóstico visible: "-2 (+1 posible)" */
+const ForecastLine = ({ label, f, tone }: { label: string; f: Forecast; tone: string }) => {
   const t = useTranslations();
-  const passTurn = useGameStore(s => s.passTurn);
   return (
-    <PxButton tone={opponentPassed ? 'roof' : 'green'} onClick={passTurn} className="w-full h-full anim-breathe">
+    <div className="flex items-center justify-between gap-[6px]">
+      <span>{label}</span>
+      <span className="font-display whitespace-nowrap" style={{ color: tone, fontSize: 12 }}>
+        {f.sure > 0 ? `-${f.sure}` : '0'}{f.maybe > 0 && <span style={{ color: 'var(--ink-teal)', fontSize: 10 }}> (+{f.maybe} {t.forecast_maybe})</span>}
+      </span>
+    </div>
+  );
+};
+
+/**
+ * Confirmación al plantarse: cuánto daño seguro haces y a cuánto te expones con lo
+ * que se ve ahora mismo (las cartas ocultas del rival cuentan como posibles).
+ */
+const StandConfirm = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) => {
+  const t = useTranslations();
+  const { width } = useStage();
+  const { actionButton: r } = useGameLayout();
+  const { playerBoard, opponentBoard, opponentPassed } = useGameStore(useShallow(s => ({
+    playerBoard: s.player.board, opponentBoard: s.opponent.board, opponentPassed: s.opponent.isPassed,
+  })));
+  const { dealt, taken } = useMemo(() => forecastFight(playerBoard, opponentBoard), [playerBoard, opponentBoard]);
+  const w = Math.min(170, width - 8);
+  const left = Math.max(4, Math.min(r.x + r.w - w, width - 4 - w));
+  return (
+    <>
+      {/* Tocar fuera cancela */}
+      <div className="absolute inset-0 z-[84]" onClick={onCancel} />
+      <motion.div
+        className="px-panel px-round absolute z-[85] p-[6px] flex flex-col gap-[4px] leading-[11px]"
+        style={{ left, top: r.y - 6, width: w, translateY: '-100%' }}
+        initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, transition: { duration: 0.12 } }}
+        transition={{ type: 'spring', stiffness: 500, damping: 26 }}
+      >
+        <div className="text-title glow-text" style={{ color: 'var(--ink-orange)' }}>{t.stand_confirm}</div>
+        <ForecastLine label={t.forecast_dealt} f={dealt} tone="var(--ink-orange)" />
+        <ForecastLine label={t.forecast_taken} f={taken} tone="var(--ink-cream)" />
+        {!opponentPassed && <div style={{ color: 'var(--ink-teal)' }}>{t.forecast_open}</div>}
+        <div className="flex gap-[4px] mt-[2px]">
+          <PxButton onClick={onCancel} className="flex-1 h-[16px]">{t.keep_playing}</PxButton>
+          <PxButton tone="green" onClick={onConfirm} className="flex-1 h-[16px]"><span className="text-outline">{opponentPassed ? t.resolve : t.stand}</span></PxButton>
+        </div>
+      </motion.div>
+    </>
+  );
+};
+
+const PassButton = ({ opponentPassed, onPress }: { opponentPassed: boolean; onPress: () => void }) => {
+  const t = useTranslations();
+  return (
+    <PxButton tone={opponentPassed ? 'roof' : 'green'} onClick={() => { playSfx('open', 0.6); onPress(); }} className="w-full h-full anim-breathe">
       <span className="text-outline">{opponentPassed ? t.resolve : t.stand}</span>
     </PxButton>
   );
@@ -128,27 +178,38 @@ const PassButton = ({ opponentPassed }: { opponentPassed: boolean }) => {
 
 export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
   const { actionButton: r } = useGameLayout();
-  const { isReveal, opponentPassed } = useGameStore(useShallow(s => ({
+  const { isReveal, opponentPassed, passTurn } = useGameStore(useShallow(s => ({
     isReveal: s.phase === 'combat-reveal',
     opponentPassed: s.opponent.isPassed,
+    passTurn: s.passTurn,
   })));
+  const [confirming, setConfirming] = useState(false);
+  const showConfirm = confirming && canPlay;
 
   return (
-    <AnimatePresence mode="wait">
-      {(canPlay || isReveal) && (
-        <motion.div
-          key={isReveal ? 'continue' : 'pass'}
-          className="absolute z-50"
-          style={{ left: r.x, top: r.y, width: r.w, height: r.h }}
-          initial={{ x: 40, scale: 0.6, opacity: 0, rotate: 8 }}
-          animate={{ x: 0, scale: 1, opacity: 1, rotate: 0 }}
-          exit={{ x: 40, scale: 0.6, opacity: 0, transition: { duration: 0.12 } }}
-          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-        >
-          {isReveal ? <ContinueButton /> : <PassButton opponentPassed={opponentPassed} />}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        {(canPlay || isReveal) && (
+          <motion.div
+            key={isReveal ? 'continue' : 'pass'}
+            className="absolute z-50"
+            style={{ left: r.x, top: r.y, width: r.w, height: r.h }}
+            initial={{ x: 40, scale: 0.6, opacity: 0, rotate: 8 }}
+            animate={{ x: 0, scale: 1, opacity: 1, rotate: 0 }}
+            exit={{ x: 40, scale: 0.6, opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+          >
+            {isReveal ? <ContinueButton /> : <PassButton opponentPassed={opponentPassed} onPress={() => setConfirming(true)} />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showConfirm && (
+          <StandConfirm key="confirm" onCancel={() => { playSfx('deselect', 0.6); setConfirming(false); }}
+            onConfirm={() => { setConfirming(false); passTurn(); }} />
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

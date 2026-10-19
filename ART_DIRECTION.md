@@ -193,6 +193,16 @@ canales de 0,5 px → viñeta.
     flechas encendidas (daño seguro, se suma si coinciden varias);
   - **antes del golpe**, con todo destapado: ✓ crema en las cartas rivales que caerán
     y ✗ naranja en las tuyas.
+- **Ayudas de decisión** (`components/game/forecast.ts`, solo información visible):
+  - **patrón al seleccionar:** con una carta elegida, cada hueco libre dibuja sus tres
+    flechas (diagonal, frente, diagonal) encendidas según golpee; discontinuas si es al
+    azar; estrella para el As y "+2" para el Joker;
+  - **¿te plantas?:** antes de plantarte se ve el daño seguro que haces y a cuánto te
+    expones (las cartas ocultas del rival cuentan como posibles);
+  - **vida en peligro:** junto a tus vidas, "-N" con los golpes que pueden llegarte; si
+    bastan para acabar contigo, late "¡PELIGRO!";
+  - **mazo:** tocar tu mazo muestra cuántas cartas de cada rango te quedan (sin orden);
+  - **leyenda:** sección 5 de "Cómo jugar", con los mismos iconos de la partida.
 - **Carteles sin tapar la acción:** "¡PELEA!" dura 0,7 s y se va antes de que las
   cartas embistan; "RONDA" pasa en 1,1 s sobre la franja central.
 - **Ficha de carta:** mantener pulsada una carta (o dejar el ratón encima) la abre.

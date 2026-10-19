@@ -24,7 +24,7 @@ interface PanelProps {
 const HOT_BAND = /orange|mult|gold|ember|roof|red|yellow|chip/;
 
 export const Panel = ({ title, band = 'var(--ink-slate)', dark, titleClassName, className, bodyClassName, style, children }: PanelProps) => (
-  <div className={clsx(dark ? 'px-panel-dark' : 'px-panel', 'px-round relative flex flex-col', className)} style={style}>
+  <div className={clsx(dark ? 'px-panel-dark' : 'px-panel', 'px-round flex flex-col', !/\babsolute\b/.test(className ?? '') && 'relative', className)} style={style}>
     {title !== undefined && (
       <div className={clsx('px-band shrink-0 whitespace-nowrap', titleClassName ?? (HOT_BAND.test(band) ? 'text-ink' : 'text-outline'))}
         style={{ background: band, boxShadow: HOT_BAND.test(band) ? '0 -2px 6px rgba(255,74,28,0.35)' : undefined }}>{title}</div>
