@@ -11,10 +11,12 @@ export interface Settings {
   vibration: boolean;
   /** Postprocesado: grano completo, suave o apagado (modo rendimiento) */
   grain: GrainLevel;
+  /** Pedir confirmación (con el pronóstico) al plantarse */
+  confirmStand: boolean;
 }
 
 const KEY = 'magic_poker_settings';
-const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full' };
+const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full', confirmStand: true };
 
 const listeners = new Set<() => void>();
 let current: Settings = DEFAULTS;

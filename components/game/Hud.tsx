@@ -371,13 +371,14 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
 
   return (
     <motion.div
-      data-hand-card
+      data-hand-card={card.id}
       className="absolute"
       style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hinted ? 58 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
       // Robar: llega desde el mazo girando y se coloca en el abanico con un rebote
       initial={{ left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
       animate={{ left: x, y: dragY ?? arcY, rotate, scale: dragging ? 1 : isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1 }}
-      exit={{ y: -30, scale: 0.8, opacity: 0, transition: { duration: 0.15 } }}
+      // Al jugarse desaparece al instante: la carta que vuela a la mesa toma el relevo
+      exit={{ opacity: 0, transition: { duration: 0 } }}
       transition={{ ...SPRING, delay: entered ? 0 : initialDelay }}
       onAnimationComplete={() => setEntered(true)}
       onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS); }}
@@ -422,7 +423,7 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
         style={{ touchAction: 'none' }}
       >
       {/* Balanceo continuo: las cartas nunca están quietas del todo */}
-      <div ref={faceRef} style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0', width: CARD_SIZE.width, height: CARD_SIZE.height }}>
+      <div ref={faceRef} data-card-face style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0', width: CARD_SIZE.width, height: CARD_SIZE.height }}>
       <div
         className={isSelected ? 'anim-bob' : 'anim-sway'}
         style={{ animationDuration: isSelected ? undefined : `${2.6 + (card.value % 4) * 0.3}s`, animationDelay: `${(card.value % 7) * -0.4}s` }}

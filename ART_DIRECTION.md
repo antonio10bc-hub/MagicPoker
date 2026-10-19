@@ -198,7 +198,8 @@ canales de 0,5 px → viñeta.
     flechas (diagonal, frente, diagonal) encendidas según golpee; discontinuas si es al
     azar; estrella para el As y "+2" para el Joker;
   - **¿te plantas?:** antes de plantarte se ve el daño seguro que haces y a cuánto te
-    expones (las cartas ocultas del rival cuentan como posibles);
+    expones (las cartas ocultas del rival cuentan como posibles). "No volver a
+    mostrar" la apaga; se recupera en Ajustes → Confirmar al plantarse;
   - **vida en peligro:** junto a tus vidas, "-N" con los golpes que pueden llegarte; si
     bastan para acabar contigo, late "¡PELIGRO!";
   - **mazo:** tocar tu mazo muestra cuántas cartas de cada rango te quedan (sin orden);
@@ -272,51 +273,29 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **Transiciones entre pantallas:** iris circular con un leve zoom.
 - Con `prefers-reduced-motion` se desactivan los bucles CSS.
 
-### Sonido (`lib/sounds.ts`, `lib/synth.ts`)
+### Sonido (`lib/sounds.ts`, `lib/synth.ts`, `lib/music.ts`)
 
-- **Motor Web Audio:**
-  - mp3 decodificados una vez;
-  - música en bucle con fundido cruzado entre pistas;
-  - paso bajo que "ahoga" la música cuando hay un modal abierto;
-  - *ducking* (baja la música) en los golpes fuertes.
-- **Efectos sintetizados estilo chiptune**, sin archivos:
-  - interacción: `hover`, `select`, `deselect`, `open`;
-  - cartas: `draw`, `whoosh`, `place`, `flip`;
-  - pelea: `swing`, `hit`, `crush`, `zap`, `fight`, `wipe`;
-  - vidas: `hurt`, `score`, `heartbeat`;
-  - otros: `turn`, `sparkle`, `pop`.
+- **Motor Web Audio:** música generativa con fundido entre estilos; paso bajo que
+  "ahoga" la música con un modal abierto; *ducking* en los golpes fuertes; volúmenes
+  de música y efectos desde Ajustes.
+- **Efectos con la misma paleta que la música** (western nocturno en cinta), sin
+  archivos salvo barajar (`shuffle.mp3`). Todo pasa por filtros paso bajo y una sala
+  con reverb compartida; las notas están en La frigio, como la música:
+  - interfaz: roce y toque de madera (`hover`, `tick`), roce de tela (`open`);
+  - cartas: cuerda punteada que sube / baja al seleccionar (`select`, `deselect`),
+    papel (`draw`), aire (`whoosh`), golpe blando en el tapete (`place`), cartulina
+    (`flip`);
+  - pelea: dos golpes de tambor y cuerda grave con trémolo (`fight`), viento
+    (`swing`), madera hueca (`hit`), bombo y desmoronarse (`crush`), cuerda que se
+    dobla hacia abajo en el golpe directo (`zap`), aspiración + golpe + campanas
+    para el As (`wipe`, `reveal`);
+  - vidas: díada disonante La–Si♭ (`hurt`), quinta limpia con campana (`score`),
+    latido (`heartbeat`);
+  - ronda: campana lejana (`turn`); premio: campanitas y fichas (`sparkle`, `pop`);
+  - final: frase de guitarra que sube (`victory`) o la caída frigia hasta el Si♭
+    (`defeat`).
   Cada reproducción lleva una ligera variación de tono para que no canse.
-- **Vibración corta en móvil** (si el dispositivo lo permite) al colocar carta, recibir
-  golpes y perder vidas.
-
-### Meta: ajustes, sellos, estadísticas y app
-
-- **Ajustes** (rueda dentada, en el menú y en la partida; `lib/settings.ts`): sonido,
-  volumen de música y de efectos, vibración y grano (completo, suave o apagado; apagado
-  también congela la niebla del fondo: modo rendimiento).
-- **Sellos** (`lib/stamps.ts`, `components/game/Stamps.tsx`): 12 logros por hacer cosas
-  concretas. Cada uno es un círculo de tinta con un icono en silueta: conseguido, masa
-  naranja que brilla; por conseguir, anillo pizarra. Al ganarse se estampa en pantalla
-  de golpe (escala ×3 → 1, desenfoque que se enfoca, anillo de tinta, crujido, brillo y
-  vibración), esperando a que termine el choque para no tapar la acción.
-- **Estadísticas ampliadas:** victorias por dificultad, derrotas, empates, porcentaje,
-  últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
-  victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
-  favorita y la colección de sellos.
-- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): la
-  primera vez que juegas (y desde Ajustes → Repetir tutorial). Una partida guionizada
-  de 4 rondas con las reglas reales que siempre se gana: cartas normales y huecos
-  vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" → el As
-  barre la mesa → rematas. El entrenador es un cartel sobre la franja central (no tapa
-  cartas); la carta y el hueco que tocan laten con un halo; lo demás queda bloqueado.
-  No cuenta para estadísticas ni sellos. Un test juega el guion entero.
-- **Partida guardada** (`lib/savegame.ts`): se guarda en cada turno tuyo y el menú
-  ofrece "CONTINUAR PARTIDA".
-- **App instalable y sin conexión:** manifiesto, icono (carta naranja que brilla con
-  el rombo de luz sobre negro granulado) y service worker (`public/sw.js`).
-- **Pantalla de carga:** HTML puro con el logo y una barra de brasa, visible hasta que
-  cargan las fuentes.
-
+- **Vibración** con significado (ver "Movimiento y game feel").
 ---
 
 ## Cómo crear un escenario nuevo

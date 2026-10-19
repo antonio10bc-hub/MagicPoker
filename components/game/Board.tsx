@@ -17,7 +17,7 @@ import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, Card } from './Card';
-import { cardOrigins } from './cardOrigins';
+import { CardOrigin, cardOrigins } from './cardOrigins';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
 import { AttackArrows, useArrowsVisible } from './AttackArrows';
@@ -86,8 +86,8 @@ interface PlacedCardProps {
   owner: Owner;
   x: number;
   y: number;
-  /** De dónde viene volando (coordenadas del escenario) */
-  origin: { x: number; y: number };
+  /** De dónde viene volando (coordenadas del escenario) y a qué escala se veía */
+  origin: CardOrigin;
   /** Embestida hacia el objetivo durante el combate */
   lunge: { dx: number; dy: number } | null;
   /** Flechas de ataque encendidas para esta carta */
@@ -100,8 +100,10 @@ interface PlacedCardProps {
  * la cámara a mitad de vuelo, se "aplasta" al aterrizar y levanta polvo.
  */
 const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows }: PlacedCardProps) => {
-  const dx = origin.x - x;
-  const dy = origin.y - y;
+  // Se alinean los centros: la carta arranca exactamente donde se veía, a su tamaño
+  const s0 = origin.scale ?? 1.15;
+  const dx = origin.x + (CARD_SIZE.width * s0) / 2 - (x + CARD_SIZE.width / 2);
+  const dy = origin.y + (CARD_SIZE.height * s0) / 2 - (y + CARD_SIZE.height / 2);
   const spin = owner === 'player' ? -8 : 10;
   const dead = card.isTakingDamage || card.isVoided;
   const landed = useRef(false);
@@ -110,9 +112,9 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
     <motion.div
       className="absolute z-10"
       style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height, transformPerspective: 400 }}
-      initial={{ x: dx, y: dy, scale: 1.15, rotateZ: spin, rotateX: -TILT_IDLE }}
+      initial={{ x: dx, y: dy, scale: s0, rotateZ: owner === 'player' ? 0 : spin, rotateX: -TILT_IDLE }}
       // Ghosting: la carta vuela borrosa y se enfoca al aterrizar
-      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [1.15, 1.35, 1], rotateZ: [spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], filter: ['blur(1.5px)', 'blur(1px)', 'blur(0px)'], transitionEnd: { filter: 'none' } }}
+      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [s0, Math.max(s0, 1) * 1.18, 1], rotateZ: [owner === 'player' ? 0 : spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], filter: ['blur(0px)', 'blur(1.2px)', 'blur(0px)'], transitionEnd: { filter: 'none' } }}
       transition={{ duration: 0.42, times: [0, 0.5, 1], ease: [0.3, 0.1, 0.4, 1] }}
       onAnimationStart={() => { if (!landed.current) playSfx('whoosh', 0.8); }}
       onAnimationComplete={() => {

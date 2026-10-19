@@ -12,17 +12,14 @@ import { SYNTHS, SynthName } from './synth';
 import { MusicHandle, startMusic } from './music';
 import { getSettings, subscribeSettings } from './settings';
 
-const SFX_FILES = {
-  click: 'click.mp3',
-  defeat: 'defeat.mp3',
-  shuffle: 'shuffle.mp3',
-  victory: 'badassvictory.mp3',
-  as_reveal: 'mild-surprise.mp3',
-} as const;
+// Único efecto en archivo: barajar (encaja con la estética). El resto de nombres de
+// playSound se sintetizan con la misma paleta que la música.
+const SFX_FILES = { shuffle: 'shuffle.mp3' } as const;
+const SOUND_SYNTHS = { click: 'tick', defeat: 'defeat', victory: 'victory', as_reveal: 'reveal' } as const;
 
 const MUSIC_STYLES = { menu_music: 'menu', game_music: 'game' } as const;
 
-export type SoundName = keyof typeof SFX_FILES;
+export type SoundName = keyof typeof SFX_FILES | keyof typeof SOUND_SYNTHS;
 export type MusicName = keyof typeof MUSIC_STYLES;
 export type { SynthName } from './synth';
 
@@ -143,13 +140,13 @@ const jitter = (amount: number) => 1 + (Math.random() * 2 - 1) * amount;
 
 /** Efectos en mp3 (los que dispara la lógica de juego) */
 export const playSound = (name: SoundName, volume = 0.5) => {
+  if (name !== 'shuffle') { playSfx(SOUND_SYNTHS[name], volume * 2); return; }
   const e = getEngine();
   if (!e || isMuted) return;
   loadBuffer(SFX_FILES[name]).then(buffer => {
     if (!buffer) return;
     const src = e.ctx.createBufferSource();
     src.buffer = buffer;
-    src.playbackRate.value = name === 'click' ? jitter(0.06) : 1;
     const gain = e.ctx.createGain();
     gain.gain.value = volume;
     src.connect(gain).connect(e.sfxBus);

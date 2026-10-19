@@ -1,5 +1,8 @@
-// --- EFECTOS SINTETIZADOS (estilo chiptune de portátil) ---
-// Cada efecto es una pequeña receta de osciladores y ruido con envolventes cortas.
+// --- EFECTOS SINTETIZADOS: WESTERN NOCTURNO EN CINTA ---
+// La misma paleta que la música (lib/music.ts): cuerdas apagadas con trémolo, madera,
+// golpes sordos, campanas lejanas, ruido de cinta y una sala con reverb compartida.
+// Nada de ondas cuadradas brillantes: todo pasa por filtros paso bajo.
+// Notas en La frigio (La Si♭ Do Re Mi Fa Sol), como la música.
 // Se generan en tiempo real: cero archivos y cero latencia.
 
 type Synth = (ctx: AudioContext, out: AudioNode, volume: number, pitch: number) => void;
@@ -14,11 +17,46 @@ const getNoise = (ctx: AudioContext) => {
   return noiseBuffer;
 };
 
+// --- SALA: reverb compartida por salida (se crea una vez) ---
+const rooms = new WeakMap<AudioNode, AudioNode>();
+const room = (ctx: AudioContext, out: AudioNode) => {
+  let send = rooms.get(out);
+  if (!send) {
+    const len = Math.floor(ctx.sampleRate * 2.4);
+    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
+    }
+    const conv = ctx.createConvolver();
+    conv.buffer = ir;
+    const dark = ctx.createBiquadFilter();
+    dark.type = 'lowpass';
+    dark.frequency.value = 2400;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.5;
+    conv.connect(dark).connect(wet).connect(out);
+    send = conv;
+    rooms.set(out, send);
+  }
+  return send;
+};
+
 /** Envolvente: ataque rápido y caída exponencial */
-const envelope = (ctx: AudioContext, gain: GainNode, peak: number, start: number, attack: number, decay: number) => {
+const envelope = (gain: GainNode, peak: number, start: number, attack: number, decay: number) => {
   gain.gain.setValueAtTime(0.0001, start);
   gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + attack);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + attack + decay);
+};
+
+/** Conecta a la salida directa y, si se pide, a la sala */
+const route = (ctx: AudioContext, node: AudioNode, out: AudioNode, reverb: number) => {
+  node.connect(out);
+  if (reverb > 0) {
+    const send = ctx.createGain();
+    send.gain.value = reverb;
+    node.connect(send).connect(room(ctx, out));
+  }
 };
 
 interface ToneOpts {
@@ -29,19 +67,31 @@ interface ToneOpts {
   attack?: number;
   decay: number;
   peak: number;
+  /** Corte del paso bajo (por defecto, sin filtro) */
+  cutoff?: number;
+  reverb?: number;
 }
 
 const tone = (ctx: AudioContext, out: AudioNode, o: ToneOpts) => {
   const t = ctx.currentTime + (o.start ?? 0);
+  const attack = o.attack ?? 0.005;
   const osc = ctx.createOscillator();
-  osc.type = o.type ?? 'square';
+  osc.type = o.type ?? 'sine';
   osc.frequency.setValueAtTime(o.from, t);
-  if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + (o.attack ?? 0.005) + o.decay);
+  if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + attack + o.decay);
   const gain = ctx.createGain();
-  envelope(ctx, gain, o.peak, t, o.attack ?? 0.005, o.decay);
-  osc.connect(gain).connect(out);
+  envelope(gain, o.peak, t, attack, o.decay);
+  let node: AudioNode = osc;
+  if (o.cutoff) {
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = o.cutoff;
+    node = osc.connect(f);
+  }
+  node.connect(gain);
+  route(ctx, gain, out, o.reverb ?? 0);
   osc.start(t);
-  osc.stop(t + (o.attack ?? 0.005) + o.decay + 0.05);
+  osc.stop(t + attack + o.decay + 0.05);
 };
 
 interface NoiseOpts {
@@ -53,96 +103,186 @@ interface NoiseOpts {
   attack?: number;
   decay: number;
   peak: number;
+  reverb?: number;
 }
 
 const noise = (ctx: AudioContext, out: AudioNode, o: NoiseOpts) => {
   const t = ctx.currentTime + (o.start ?? 0);
+  const attack = o.attack ?? 0.005;
   const src = ctx.createBufferSource();
   src.buffer = getNoise(ctx);
   const filter = ctx.createBiquadFilter();
   filter.type = o.filter ?? 'bandpass';
   filter.Q.value = o.q ?? 1;
   filter.frequency.setValueAtTime(o.from, t);
-  if (o.to) filter.frequency.exponentialRampToValueAtTime(o.to, t + (o.attack ?? 0.005) + o.decay);
+  if (o.to) filter.frequency.exponentialRampToValueAtTime(o.to, t + attack + o.decay);
   const gain = ctx.createGain();
-  envelope(ctx, gain, o.peak, t, o.attack ?? 0.005, o.decay);
-  src.connect(filter).connect(gain).connect(out);
+  envelope(gain, o.peak, t, attack, o.decay);
+  src.connect(filter).connect(gain);
+  route(ctx, gain, out, o.reverb ?? 0);
   src.start(t, Math.random() * 0.5);
-  src.stop(t + (o.attack ?? 0.005) + o.decay + 0.05);
+  src.stop(t + attack + o.decay + 0.05);
 };
 
-/** Arpegio de notas (Hz) */
-const arpeggio = (ctx: AudioContext, out: AudioNode, notes: number[], step: number, peak: number, type: OscillatorType = 'square', decay = 0.12) =>
-  notes.forEach((f, i) => tone(ctx, out, { type, from: f, start: i * step, decay, peak }));
+/**
+ * Cuerda punteada y apagada (como la guitarra de la música): dos osciladores
+ * desafinados por un paso bajo que se cierra, con trémolo opcional.
+ */
+const pluck = (ctx: AudioContext, out: AudioNode, f: number, o: { start?: number; peak: number; decay?: number; tremolo?: boolean; reverb?: number; bright?: number }) => {
+  const t = ctx.currentTime + (o.start ?? 0);
+  const decay = o.decay ?? 0.9;
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.Q.value = 2.5;
+  filt.frequency.setValueAtTime(o.bright ?? 2600, t);
+  filt.frequency.exponentialRampToValueAtTime(380, t + decay);
+  const gain = ctx.createGain();
+  envelope(gain, o.peak, t, 0.006, decay);
+  [['triangle', 0], ['sawtooth', 8]].forEach(([type, detune]) => {
+    const osc = ctx.createOscillator();
+    osc.type = type as OscillatorType;
+    osc.frequency.value = f;
+    osc.detune.value = detune as number;
+    osc.connect(filt);
+    osc.start(t);
+    osc.stop(t + decay + 0.1);
+  });
+  let node: AudioNode = filt.connect(gain);
+  if (o.tremolo) {
+    const trem = ctx.createGain();
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 5.4;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.4;
+    lfo.connect(depth).connect(trem.gain);
+    lfo.start(t);
+    lfo.stop(t + decay + 0.1);
+    node = node.connect(trem);
+  }
+  route(ctx, node, out, o.reverb ?? 0.35);
+};
+
+/** Campana lejana: parciales inarmónicos de seno con caída larga */
+const bell = (ctx: AudioContext, out: AudioNode, f: number, o: { start?: number; peak: number; decay?: number; reverb?: number }) => {
+  [[1, 1], [2.76, 0.35], [5.4, 0.12]].forEach(([ratio, level]) =>
+    tone(ctx, out, { from: f * ratio, start: o.start, attack: 0.004, decay: (o.decay ?? 1.4) / ratio ** 0.4, peak: o.peak * level, reverb: o.reverb ?? 0.6 }));
+};
+
+/** Golpe sordo de tambor de cuero (bombo lejano) */
+const drum = (ctx: AudioContext, out: AudioNode, o: { start?: number; peak: number; from?: number; decay?: number; reverb?: number }) => {
+  tone(ctx, out, { from: o.from ?? 95, to: 42, start: o.start, attack: 0.004, decay: o.decay ?? 0.45, peak: o.peak, reverb: o.reverb ?? 0.3 });
+  noise(ctx, out, { filter: 'lowpass', from: 700, start: o.start, decay: 0.06, peak: o.peak * 0.35 });
+};
+
+/** Toque de madera (clic de interfaz, fichas) */
+const wood = (ctx: AudioContext, out: AudioNode, f: number, peak: number, start = 0) => {
+  tone(ctx, out, { from: f, to: f * 0.8, start, attack: 0.002, decay: 0.05, peak, cutoff: 2400 });
+  noise(ctx, out, { from: f * 2.2, q: 6, start, attack: 0.001, decay: 0.025, peak: peak * 0.6 });
+};
+
+// Notas (Hz) en La frigio
+const N = { A2: 110, Bb2: 116.5, C3: 130.8, D3: 146.8, E3: 164.8, F3: 174.6, G3: 196, A3: 220, Bb3: 233.1, C4: 261.6, D4: 293.7, E4: 329.6, F4: 349.2, G4: 392, A4: 440, C5: 523.3, E5: 659.3, A5: 880 };
 
 export const SYNTHS = {
-  /** Pasar el ratón por encima de algo pulsable */
-  hover: (ctx, out, v, p) => tone(ctx, out, { from: 1800 * p, decay: 0.03, peak: 0.04 * v }),
-  /** Seleccionar carta */
-  select: (ctx, out, v, p) => arpeggio(ctx, out, [660 * p, 990 * p], 0.045, 0.09 * v, 'square', 0.07),
-  /** Deseleccionar */
-  deselect: (ctx, out, v, p) => arpeggio(ctx, out, [880 * p, 587 * p], 0.045, 0.07 * v, 'square', 0.06),
-  /** Robar carta: siseo ascendente */
-  draw: (ctx, out, v, p) => noise(ctx, out, { from: 900 * p, to: 4200 * p, q: 2, attack: 0.02, decay: 0.12, peak: 0.25 * v }),
-  /** Carta en vuelo */
-  whoosh: (ctx, out, v, p) => noise(ctx, out, { from: 3000 * p, to: 600 * p, q: 1.5, attack: 0.04, decay: 0.16, peak: 0.22 * v }),
-  /** Carta aterriza en la mesa */
+  /** Pasar por encima de algo pulsable: roce de madera casi inaudible */
+  hover: (ctx, out, v, p) => noise(ctx, out, { from: 2600 * p, q: 5, attack: 0.002, decay: 0.03, peak: 0.05 * v }),
+  /** Clic de interfaz: toque de madera */
+  tick: (ctx, out, v, p) => wood(ctx, out, 900 * p, 0.22 * v),
+  /** Seleccionar carta: cuerda punteada que sube (La → Mi) */
+  select: (ctx, out, v, p) => {
+    pluck(ctx, out, N.A3 * p, { peak: 0.13 * v, decay: 0.5 });
+    pluck(ctx, out, N.E4 * p, { start: 0.05, peak: 0.1 * v, decay: 0.6 });
+  },
+  /** Deseleccionar: la misma cuerda que baja (Mi → Si♭, la segunda frigia) */
+  deselect: (ctx, out, v, p) => {
+    pluck(ctx, out, N.E4 * p, { peak: 0.1 * v, decay: 0.4 });
+    pluck(ctx, out, N.Bb3 * p, { start: 0.05, peak: 0.08 * v, decay: 0.5 });
+  },
+  /** Robar carta: roce de papel */
+  draw: (ctx, out, v, p) => noise(ctx, out, { filter: 'lowpass', from: 1200 * p, to: 3400 * p, q: 0.8, attack: 0.03, decay: 0.12, peak: 0.16 * v }),
+  /** Carta en vuelo: aire */
+  whoosh: (ctx, out, v, p) => noise(ctx, out, { filter: 'lowpass', from: 1800 * p, to: 400 * p, q: 0.7, attack: 0.05, decay: 0.18, peak: 0.16 * v, reverb: 0.2 }),
+  /** Carta aterriza en el tapete: golpe blando y roce */
   place: (ctx, out, v, p) => {
-    tone(ctx, out, { type: 'sine', from: 180 * p, to: 55, decay: 0.16, peak: 0.55 * v });
-    noise(ctx, out, { filter: 'lowpass', from: 2400, decay: 0.05, peak: 0.25 * v });
+    tone(ctx, out, { from: 120 * p, to: 58, attack: 0.003, decay: 0.16, peak: 0.45 * v, reverb: 0.15 });
+    noise(ctx, out, { filter: 'lowpass', from: 900, decay: 0.07, peak: 0.22 * v });
   },
-  /** Voltear carta */
-  flip: (ctx, out, v, p) => {
-    noise(ctx, out, { from: 2500 * p, to: 5000 * p, q: 3, decay: 0.05, peak: 0.18 * v });
-    tone(ctx, out, { from: 1200 * p, to: 1600 * p, start: 0.02, decay: 0.04, peak: 0.05 * v });
-  },
-  /** Embestida de ataque */
-  swing: (ctx, out, v, p) => noise(ctx, out, { from: 5000 * p, to: 500 * p, q: 0.8, attack: 0.03, decay: 0.12, peak: 0.2 * v }),
-  /** Golpe entre cartas */
+  /** Voltear carta: chasquido seco de cartulina */
+  flip: (ctx, out, v, p) => noise(ctx, out, { from: 1800 * p, q: 2.5, attack: 0.002, decay: 0.05, peak: 0.2 * v, reverb: 0.15 }),
+  /** Embestida: ráfaga de viento */
+  swing: (ctx, out, v, p) => noise(ctx, out, { filter: 'lowpass', from: 2400 * p, to: 300 * p, q: 0.8, attack: 0.04, decay: 0.2, peak: 0.18 * v, reverb: 0.25 }),
+  /** Choque sin bajas: golpe de madera hueca */
   hit: (ctx, out, v, p) => {
-    noise(ctx, out, { filter: 'lowpass', from: 3000 * p, to: 300, decay: 0.12, peak: 0.45 * v });
-    tone(ctx, out, { from: 220 * p, to: 70, decay: 0.12, peak: 0.25 * v });
+    tone(ctx, out, { from: 170 * p, to: 90, attack: 0.002, decay: 0.12, peak: 0.35 * v, reverb: 0.2 });
+    wood(ctx, out, 420 * p, 0.12 * v);
   },
-  /** Carta destruida: crujido + boom */
+  /** Carta destruida: bombo y un desmoronarse de grano */
   crush: (ctx, out, v, p) => {
-    noise(ctx, out, { filter: 'highpass', from: 1500 * p, decay: 0.18, peak: 0.35 * v });
-    tone(ctx, out, { type: 'sine', from: 140 * p, to: 40, decay: 0.3, peak: 0.6 * v });
-    tone(ctx, out, { type: 'sawtooth', from: 400 * p, to: 90, start: 0.02, decay: 0.15, peak: 0.12 * v });
+    drum(ctx, out, { peak: 0.6 * v, from: 110 * p, decay: 0.4, reverb: 0.35 });
+    noise(ctx, out, { filter: 'lowpass', from: 2200 * p, to: 300, q: 0.6, start: 0.01, decay: 0.32, peak: 0.22 * v, reverb: 0.3 });
   },
-  /** Daño directo a un hueco vacío */
-  zap: (ctx, out, v, p) => tone(ctx, out, { type: 'sawtooth', from: 1400 * p, to: 180 * p, decay: 0.2, peak: 0.16 * v }),
-  /** Pierdes una vida */
+  /** Golpe directo a un hueco vacío: cuerda grave que se dobla hacia abajo */
+  zap: (ctx, out, v, p) => {
+    tone(ctx, out, { type: 'sawtooth', from: N.A3 * p, to: N.A2 * p, attack: 0.004, decay: 0.35, peak: 0.12 * v, cutoff: 900, reverb: 0.4 });
+    drum(ctx, out, { peak: 0.3 * v, decay: 0.25 });
+  },
+  /** Pierdes una vida: díada disonante grave (La + Si♭) y golpe */
   hurt: (ctx, out, v, p) => {
-    arpeggio(ctx, out, [523 * p, 415 * p, 311 * p], 0.07, 0.14 * v, 'square', 0.12);
-    tone(ctx, out, { type: 'sine', from: 90, to: 40, decay: 0.35, peak: 0.5 * v });
+    pluck(ctx, out, N.A2 * p, { peak: 0.2 * v, decay: 1.3, tremolo: true, reverb: 0.5, bright: 1400 });
+    pluck(ctx, out, N.Bb2 * p, { peak: 0.16 * v, decay: 1.3, tremolo: true, reverb: 0.5, bright: 1400 });
+    drum(ctx, out, { peak: 0.55 * v, decay: 0.5 });
   },
-  /** Le quitas una vida al rival */
-  score: (ctx, out, v, p) => arpeggio(ctx, out, [523 * p, 659 * p, 784 * p, 1047 * p], 0.055, 0.12 * v, 'square', 0.1),
-  /** Empieza tu turno / nueva ronda */
-  turn: (ctx, out, v, p) => arpeggio(ctx, out, [392 * p, 523 * p, 659 * p], 0.07, 0.1 * v, 'triangle', 0.16),
-  /** Comienza la pelea: tambor + barrido */
+  /** Le quitas una vida al rival: quinta que suena limpia y brilla */
+  score: (ctx, out, v, p) => {
+    pluck(ctx, out, N.A3 * p, { peak: 0.13 * v, decay: 1.1, tremolo: true, reverb: 0.5 });
+    pluck(ctx, out, N.E4 * p, { start: 0.08, peak: 0.12 * v, decay: 1.2, tremolo: true, reverb: 0.5 });
+    bell(ctx, out, N.A5 * p, { start: 0.12, peak: 0.04 * v, decay: 1.2 });
+  },
+  /** Empieza tu turno / nueva ronda: campana lejana */
+  turn: (ctx, out, v, p) => bell(ctx, out, N.E5 * p, { peak: 0.07 * v, decay: 1.8, reverb: 0.8 }),
+  /** Comienza la pelea: dos golpes de tambor y la cuerda grave con trémolo */
   fight: (ctx, out, v, p) => {
-    tone(ctx, out, { type: 'sine', from: 160 * p, to: 45, decay: 0.4, peak: 0.8 * v });
-    noise(ctx, out, { from: 300, to: 6000, q: 1.2, attack: 0.15, decay: 0.2, peak: 0.25 * v });
-    arpeggio(ctx, out, [196 * p, 262 * p, 392 * p], 0.08, 0.1 * v, 'sawtooth', 0.18);
+    drum(ctx, out, { peak: 0.7 * v, from: 100, decay: 0.55, reverb: 0.4 });
+    drum(ctx, out, { start: 0.16, peak: 0.5 * v, from: 90, decay: 0.5, reverb: 0.4 });
+    noise(ctx, out, { filter: 'lowpass', from: 300, to: 2600, q: 0.7, attack: 0.18, decay: 0.2, peak: 0.12 * v, reverb: 0.4 });
+    pluck(ctx, out, N.A2 * p, { start: 0.05, peak: 0.2 * v, decay: 1.6, tremolo: true, reverb: 0.6, bright: 1800 });
   },
-  /** El As limpia el tablero */
+  /** El As limpia la mesa: aspiración de viento, golpe profundo y campanas */
   wipe: (ctx, out, v, p) => {
-    noise(ctx, out, { from: 200, to: 8000, q: 0.7, attack: 0.25, decay: 0.35, peak: 0.35 * v });
-    tone(ctx, out, { type: 'sine', from: 70, to: 30, start: 0.25, decay: 0.6, peak: 0.8 * v });
-    arpeggio(ctx, out, [1047 * p, 1319 * p, 1568 * p, 2093 * p], 0.04, 0.06 * v, 'triangle', 0.25);
+    noise(ctx, out, { filter: 'lowpass', from: 200, to: 5000, q: 0.6, attack: 0.3, decay: 0.3, peak: 0.28 * v, reverb: 0.5 });
+    drum(ctx, out, { start: 0.28, peak: 0.85 * v, from: 70, decay: 0.9, reverb: 0.6 });
+    [N.A4, N.C5, N.E5].forEach((f, i) => bell(ctx, out, f * p, { start: 0.32 + i * 0.07, peak: 0.05 * v, decay: 2 }));
   },
-  /** Brillo (Joker, logro) */
-  sparkle: (ctx, out, v, p) => arpeggio(ctx, out, [1568 * p, 2093 * p, 2637 * p, 3136 * p], 0.035, 0.05 * v, 'triangle', 0.14),
+  /** Brillo (Joker, sello): campanitas en la escala */
+  sparkle: (ctx, out, v, p) => [N.E5, N.A5, N.C5 * 2].forEach((f, i) => bell(ctx, out, f * p, { start: i * 0.06, peak: 0.035 * v, decay: 1.1 })),
   /** Latido (te queda una vida) */
   heartbeat: (ctx, out, v) => {
-    tone(ctx, out, { type: 'sine', from: 70, to: 45, decay: 0.12, peak: 0.6 * v });
-    tone(ctx, out, { type: 'sine', from: 65, to: 40, start: 0.16, decay: 0.14, peak: 0.45 * v });
+    tone(ctx, out, { from: 70, to: 45, decay: 0.12, peak: 0.6 * v });
+    tone(ctx, out, { from: 65, to: 40, start: 0.16, decay: 0.14, peak: 0.45 * v });
   },
-  /** Abrir panel / modal */
-  open: (ctx, out, v, p) => noise(ctx, out, { from: 800 * p, to: 3000 * p, q: 4, attack: 0.02, decay: 0.08, peak: 0.12 * v }),
-  /** Confeti / premio */
-  pop: (ctx, out, v, p) => tone(ctx, out, { type: 'triangle', from: 900 * p, to: 1800 * p, decay: 0.06, peak: 0.08 * v }),
+  /** Abrir panel / ventana: roce de tela */
+  open: (ctx, out, v, p) => noise(ctx, out, { filter: 'lowpass', from: 700 * p, to: 2000 * p, q: 0.8, attack: 0.03, decay: 0.09, peak: 0.12 * v }),
+  /** Confeti / premio: ficha de madera */
+  pop: (ctx, out, v, p) => wood(ctx, out, 700 * p, 0.12 * v),
+  /** Victoria: frase de guitarra con trémolo que sube y una campana */
+  victory: (ctx, out, v, p) => {
+    [N.A3, N.C4, N.E4, N.A4].forEach((f, i) => pluck(ctx, out, f * p, { start: i * 0.18, peak: 0.14 * v, decay: 1.6, tremolo: true, reverb: 0.6 }));
+    pluck(ctx, out, N.E3 * p, { start: 0.72, peak: 0.1 * v, decay: 2.2, tremolo: true, reverb: 0.6 });
+    bell(ctx, out, N.A5 * p, { start: 0.75, peak: 0.06 * v, decay: 2.4 });
+    drum(ctx, out, { start: 0.72, peak: 0.4 * v, decay: 0.6 });
+  },
+  /** Derrota: la frase frigia que baja hasta el Si♭ y se queda colgando */
+  defeat: (ctx, out, v, p) => {
+    [N.E4, N.D4, N.C4, N.Bb3].forEach((f, i) => pluck(ctx, out, f * p, { start: i * 0.28, peak: 0.13 * v, decay: 1.5, tremolo: true, reverb: 0.65, bright: 1600 }));
+    pluck(ctx, out, N.A2 * p, { start: 1.1, peak: 0.16 * v, decay: 2.6, tremolo: true, reverb: 0.7, bright: 1000 });
+    drum(ctx, out, { start: 1.1, peak: 0.45 * v, decay: 0.8 });
+  },
+  /** Se revela un As: campana grave que se abre */
+  reveal: (ctx, out, v, p) => {
+    noise(ctx, out, { filter: 'lowpass', from: 300, to: 3000, q: 0.7, attack: 0.25, decay: 0.15, peak: 0.12 * v, reverb: 0.5 });
+    bell(ctx, out, N.A4 * p, { start: 0.2, peak: 0.08 * v, decay: 2.2 });
+    bell(ctx, out, N.E4 * p, { start: 0.2, peak: 0.06 * v, decay: 2.2 });
+  },
 } satisfies Record<string, Synth>;
 
 export type SynthName = keyof typeof SYNTHS;

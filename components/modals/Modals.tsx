@@ -247,7 +247,7 @@ const SettingsModal = () => {
   const settings = useSettings();
   const isMuted = useMuted();
   return (
-    <Dialog title={t.settings_title} width={236} height={176}>
+    <Dialog title={t.settings_title} width={236} height={196}>
       <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[12px]">
         <Row label={t.set_sound}>
           <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
@@ -257,6 +257,9 @@ const SettingsModal = () => {
         <Row label={t.set_vibration}>
           <Choice value={settings.vibration} options={[[true, t.on], [false, t.off]]}
             onChange={vibration => { updateSettings({ vibration }); if (vibration) haptic('select'); }} />
+        </Row>
+        <Row label={t.set_confirm_stand}>
+          <Choice value={settings.confirmStand} options={[[true, t.on], [false, t.off]]} onChange={confirmStand => updateSettings({ confirmStand })} />
         </Row>
         <div className="flex flex-col gap-[3px]">
           <span>{t.set_grain}</span>

@@ -11,6 +11,7 @@ import { IconButton, PxButton, TextBox, WavyText } from '@/components/pixel/ui';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { ICONS } from '@/components/pixel/sprites';
 import { Forecast, forecastFight } from './forecast';
+import { getSettings, updateSettings } from '@/lib/settings';
 
 // --- CUADRO DE ESTADO DEL TURNO ---
 /** Puntos suspensivos animados mientras piensa el rival */
@@ -160,6 +161,11 @@ const StandConfirm = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
         <ForecastLine label={t.forecast_dealt} f={dealt} tone="var(--ink-orange)" />
         <ForecastLine label={t.forecast_taken} f={taken} tone="var(--ink-cream)" />
         {!opponentPassed && <div style={{ color: 'var(--ink-teal)' }}>{t.forecast_open}</div>}
+        <button className="self-start flex items-center gap-[3px] cursor-pointer" style={{ color: 'var(--ink-teal)' }}
+          onClick={() => { playSfx('select', 0.5); updateSettings({ confirmStand: false }); onConfirm(); }}>
+          <span className="inline-block rounded-[1px]" style={{ width: 6, height: 6, boxShadow: 'inset 0 0 0 1px var(--ink-teal)' }} />
+          {t.dont_show}
+        </button>
         <div className="flex gap-[4px] mt-[2px]">
           <PxButton onClick={onCancel} className="flex-1 h-[16px]">{t.keep_playing}</PxButton>
           <PxButton tone="green" onClick={onConfirm} className="flex-1 h-[16px]"><span className="text-outline">{opponentPassed ? t.resolve : t.stand}</span></PxButton>
@@ -202,7 +208,8 @@ export const ActionButton = ({ canPlay, tutorial }: { canPlay: boolean; tutorial
             exit={{ x: 40, scale: 0.6, opacity: 0, transition: { duration: 0.12 } }}
             transition={{ type: 'spring', stiffness: 420, damping: 18 }}
           >
-            {isReveal ? <ContinueButton /> : <PassButton opponentPassed={opponentPassed} onPress={() => setConfirming(true)} />}
+            {isReveal ? <ContinueButton /> : <PassButton opponentPassed={opponentPassed}
+              onPress={() => (getSettings().confirmStand ? setConfirming(true) : passTurn())} />}
           </motion.div>
         )}
       </AnimatePresence>

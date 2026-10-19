@@ -3,9 +3,9 @@
 // · Recursos con huella (/_next/static, fuentes, sonidos, iconos): primero la caché.
 // · Página: primero la red (para recibir versiones nuevas) y, sin conexión, la caché.
 // Al cambiar VERSION se descartan las cachés antiguas.
-const VERSION = 'mp-v1';
+const VERSION = 'mp-v2';
 const CORE = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png',
-  '/sounds/click.mp3', '/sounds/shuffle.mp3', '/sounds/badassvictory.mp3', '/sounds/defeat.mp3', '/sounds/mild-surprise.mp3'];
+  '/sounds/shuffle.mp3'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
