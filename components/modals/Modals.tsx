@@ -11,6 +11,7 @@ import { Difficulty, Rank } from '@/types';
 import { steps } from '@/theme/tokens';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { useStage } from '@/components/pixel/Stage';
 import { CHARACTERS, ICONS, STAR } from '@/components/pixel/sprites';
 
 const closeWithClick = () => {
@@ -49,31 +50,38 @@ const Overlay = ({ onClose, children }: { onClose?: () => void; children: ReactN
   </motion.div>
 );
 
-const Dialog = ({ title, width, height, actions, children }: { title: string; width: number; height: number; actions?: ReactNode; children: ReactNode }) => (
-  <Overlay onClose={closeWithClick}>
-    <Panel
-      title={
-        <div className="flex items-center justify-between">
-          <span>{title}</span>
+/** Ventana con cabecera. En móvil vertical se ensancha y alarga para aprovechar la pantalla. */
+const Dialog = ({ title, width, height, actions, children }: { title: string; width: number; height: number; actions?: ReactNode; children: ReactNode }) => {
+  const stage = useStage();
+  const w = Math.min(width, stage.width - 12);
+  const h = stage.mode === 'portrait' ? Math.min(stage.height - 40, Math.max(height, 360)) : Math.min(height, stage.height - 16);
+  return (
+    <Overlay onClose={closeWithClick}>
+      <Panel
+        title={
+          <div className="flex items-center justify-between">
+            <span>{title}</span>
+          </div>
+        }
+        band="var(--c-glass)"
+        style={{ width: w, height: h }}
+        bodyClassName="flex flex-col"
+      >
+        <div className="absolute flex gap-[3px] z-10" style={{ right: 3, top: -14 }}>
+          {actions}
+          <IconButton icon={ICONS.close} onClick={closeWithClick} aria-label="close" className="!w-[13px] !h-[12px]" />
         </div>
-      }
-      band="var(--c-glass)"
-      style={{ width, height }}
-      bodyClassName="flex flex-col"
-    >
-      <div className="absolute flex gap-[3px] z-10" style={{ right: 3, top: -14 }}>
-        {actions}
-        <IconButton icon={ICONS.close} onClick={closeWithClick} aria-label="close" className="!w-[13px] !h-[12px]" />
-      </div>
-      {children}
-    </Panel>
-  </Overlay>
-);
+        {children}
+      </Panel>
+    </Overlay>
+  );
+};
 
 // --- CONFIRMAR SALIDA ---
 const ConfirmExitModal = () => {
   const t = useTranslations();
   const exitToMenu = useGameStore(s => s.exitToMenu);
+  const stage = useStage();
 
   const confirmExit = () => {
     playSound('click');
@@ -83,7 +91,7 @@ const ConfirmExitModal = () => {
 
   return (
     <Overlay>
-      <Panel title={t.confirm_exit_title} band="var(--c-red)" style={{ width: 200 }} bodyClassName="p-[6px] flex flex-col gap-[8px]">
+      <Panel title={t.confirm_exit_title} band="var(--c-red)" style={{ width: Math.min(200, stage.width - 16) }} bodyClassName="p-[6px] flex flex-col gap-[8px]">
         <p className="leading-[12px]">{t.confirm_exit_desc}</p>
         <div className="flex gap-[6px] justify-center pb-[3px]">
           <PxButton tone="red" onClick={confirmExit} className="px-[6px] h-[16px]"><span className="text-outline">{t.yes_exit}</span></PxButton>

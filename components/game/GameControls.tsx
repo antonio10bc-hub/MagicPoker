@@ -9,9 +9,8 @@ import { isBoardEmpty } from '@/lib/game-utils';
 import { COMBAT_REVEAL_SECONDS } from '@/lib/constants';
 import { steps } from '@/theme/tokens';
 import { IconButton, PxButton, TextBox } from '@/components/pixel/ui';
+import { useGameLayout } from '@/components/pixel/Stage';
 import { ICONS } from '@/components/pixel/sprites';
-
-const RIGHT_COLUMN = { x: 314, w: 66 };
 
 // --- CUADRO DE ESTADO DEL TURNO (arriba a la derecha) ---
 export const TurnBox = () => {
@@ -20,19 +19,18 @@ export const TurnBox = () => {
     isFighting: s.phase === 'combat' || s.phase === 'combat-reveal',
     isPlayerTurn: s.turn === 'player',
   })));
+  const { turnBox: box } = useGameLayout();
   const text = isFighting ? t.fight : isPlayerTurn ? t.your_turn : t.rival_turn;
   return (
     <TextBox
       text={text}
       className="absolute"
-      style={{ left: RIGHT_COLUMN.x, top: 4, width: RIGHT_COLUMN.w, minHeight: 36, color: isFighting ? 'var(--c-red)' : isPlayerTurn ? 'var(--c-green-dark)' : 'var(--c-navy)' }}
+      style={{ left: box.x, top: box.y, width: box.w, minHeight: box.h, color: isFighting ? 'var(--c-red)' : isPlayerTurn ? 'var(--c-green-dark)' : 'var(--c-navy)' }}
     />
   );
 };
 
 // --- BOTÓN DE ACCIÓN (PLANTARSE / RESOLVER / CONTINUAR) ---
-const buttonBox = { left: RIGHT_COLUMN.x, top: 196, width: RIGHT_COLUMN.w, height: 22 };
-
 /** Cuenta atrás que avanza sola al terminar. Se reinicia en cada montaje. */
 const ContinueButton = () => {
   const t = useTranslations();
@@ -67,6 +65,7 @@ const PassButton = ({ opponentPassed }: { opponentPassed: boolean }) => {
 };
 
 export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
+  const { actionButton: r } = useGameLayout();
   const { isReveal, opponentPassed } = useGameStore(useShallow(s => ({
     isReveal: s.phase === 'combat-reveal',
     opponentPassed: s.opponent.isPassed,
@@ -78,7 +77,7 @@ export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
         <motion.div
           key={isReveal ? 'continue' : 'pass'}
           className="absolute z-50"
-          style={buttonBox}
+          style={{ left: r.x, top: r.y, width: r.w, height: r.h }}
           initial={{ x: 72 }}
           animate={{ x: 0 }}
           exit={{ x: 72 }}
@@ -94,6 +93,7 @@ export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
 // --- BOTONES DE MENÚ (inicio, reglas, estadísticas) ---
 export const MenuButtons = () => {
   const openModal = useUiStore(s => s.openModal);
+  const { menuButtons: pos } = useGameLayout();
 
   const handleHome = () => {
     playSound('click');
@@ -104,7 +104,7 @@ export const MenuButtons = () => {
   };
 
   return (
-    <div className="absolute flex gap-[3px]" style={{ left: 4, top: 70 }}>
+    <div className="absolute flex gap-[3px]" style={{ left: pos.x, top: pos.y }}>
       <IconButton icon={ICONS.home} onClick={handleHome} aria-label="home" />
       <IconButton icon={ICONS.info} onClick={() => { playSound('click'); openModal('rules'); }} aria-label="rules" />
       <IconButton icon={ICONS.trophy} onClick={() => { playSound('click'); openModal('stats'); }} aria-label="stats" />

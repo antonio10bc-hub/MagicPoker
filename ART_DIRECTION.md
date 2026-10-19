@@ -30,11 +30,19 @@ Los tokens viven en código en `theme/tokens.ts` (TypeScript) y en `app/globals.
 
 ## 2. Resolución y nitidez
 
-- **Resolución interna: 384×288** (`STAGE` en `theme/tokens.ts`). Todo se maqueta en
-  píxeles de esta pantalla.
+- **Dos modos de pantalla** (`theme/layout.ts`, `components/pixel/Stage.tsx`):
+  - **Horizontal** (ordenador y móvil en horizontal): escenario fijo de **384×288**
+    (`STAGE` en `theme/tokens.ts`).
+  - **Vertical** (móvil): ancho interno de ~200–260 px, elegido para que la escala sea
+    entera sobre los píxeles físicos, y alto variable que llena la pantalla. Rival
+    arriba, tablero en el centro, y la mano y el botón de acción abajo, en la zona del
+    pulgar.
 - **Escala entera** sobre píxeles físicos (`devicePixelRatio`). Si el entero deja el
   juego por debajo del 80 % del hueco disponible, se usa el ajuste exacto. El sobrante
-  se rellena con un letterbox de patrón navy (`components/pixel/Stage.tsx`).
+  se rellena con un letterbox de patrón navy.
+- **Ninguna posición está fija en los componentes.** Todo sale de
+  `computeGameLayout` / `computeMenuLayout` / `computeBoard` según el tamaño del
+  escenario.
 - **Sprites en SVG** con `shape-rendering: crispEdges` e `image-rendering: pixelated`.
   Nada de suavizado.
 - **Texturas pequeñas (4–16 px)** en mosaico y con bordes duros.
@@ -189,10 +197,12 @@ interacción y estados.
    - `Railing`: barandillas;
    - `Prop`: objetos con su sombra;
    - `Surface`: cualquier superficie con textura.
-5. **Exporta un `Theme`** (`themes/types.ts`) con `Backdrop`, `Diorama`,
-   `MenuBackground` y `layout`. Puedes reutilizar las posiciones de huecos de `plaza`
-   si no cambia la distribución; si cambian, ajusta `layout.slots`. Siempre hay 4
-   huecos por bando, en orden de índice lógico.
+5. **Exporta un `Theme`** (`themes/types.ts`) con `Backdrop` (que ocupe el 100 % del
+   escenario) y `Diorama({ board })`. El diorama recibe la geometría ya calculada
+   (`BoardGeometry`: caja, huecos, franja central y barandilla). Coloca la decoración
+   **relativa a esa geometría**, nunca con coordenadas fijas, así sirve tanto en
+   horizontal como en vertical. Siempre hay 4 huecos por bando, en orden de índice
+   lógico.
 6. **Actívalo** cambiando `ACTIVE_THEME` en `themes/index.ts`. No hay que tocar nada más:
    la lógica, las cartas y la interfaz son independientes del escenario.
 7. **Comprueba los pilares:**

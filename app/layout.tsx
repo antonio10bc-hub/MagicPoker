@@ -10,8 +10,13 @@ export const metadata: Metadata = {
   description: 'Juego de cartas estratégico',
 }
 
+// Juego a pantalla completa en móvil: sin zoom por gestos ni doble toque
 export const viewport: Viewport = {
   themeColor: '#1E2638',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({

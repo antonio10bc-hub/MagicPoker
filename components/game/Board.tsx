@@ -3,14 +3,12 @@ import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Owner } from '@/types';
-import { ACTIVE_THEME } from '@/themes';
+import { useGameLayout } from '@/components/pixel/Stage';
 import { CARD_SIZE, SNAP_EASE, steps } from '@/theme/tokens';
 import { useTranslations } from '@/lib/i18n';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { BURST, ICONS } from '@/components/pixel/sprites';
 import { Card } from './Card';
-
-const { layout } = ACTIVE_THEME;
 
 /** Losa encastrada en el suelo: sombra interior arriba-izquierda, brillo abajo-derecha */
 const SlotTile = ({ x, y, highlight }: { x: number; y: number; highlight: boolean }) => (
@@ -72,6 +70,7 @@ interface BoardProps {
 
 export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
   const t = useTranslations();
+  const { board: geo } = useGameLayout();
   const { playerBoard, opponentBoard, combat, isPlacementPhase, isFighting } = useGameStore(useShallow(s => ({
     playerBoard: s.player.board,
     opponentBoard: s.opponent.board,
@@ -85,7 +84,7 @@ export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
   const renderSide = (board: BoardSlot[], owner: Owner) => {
     const hits = owner === 'player' ? combat?.playerEmptySlotsHit : combat?.opponentEmptySlotsHit;
     return board.map(slot => {
-      const { x, y } = layout.slots[owner][slot.index];
+      const { x, y } = geo.slots[owner][slot.index];
       const canTarget = owner === 'player' && !slot.card && isTargeting;
       return (
         <div key={`${owner}-${slot.index}`}>
@@ -111,7 +110,7 @@ export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
     });
   };
 
-  const c = layout.centerLine;
+  const c = geo.centerLine;
   return (
     <>
       {renderSide(opponentBoard, 'opponent')}

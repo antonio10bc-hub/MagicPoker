@@ -10,9 +10,21 @@ import { ACTIVE_THEME } from '@/themes';
 import { Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS } from '@/components/pixel/sprites';
+import { useMenuLayout } from '@/components/pixel/Stage';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
-const { MenuBackground } = ACTIVE_THEME;
+const { Backdrop, Diorama } = ACTIVE_THEME;
+
+/** Fondo de menú y final: la plaza vacía */
+export const MenuBackground = () => {
+  const { board } = useMenuLayout();
+  return (
+    <>
+      <Backdrop />
+      <Diorama board={board} />
+    </>
+  );
+};
 
 /** Contorno de 2 px para texto grande */
 const bigOutline = [-2, -1, 0, 1, 2]
@@ -53,18 +65,20 @@ export const MenuScreen = () => {
     }
   };
 
+  const { cx, logoY, playY, difficultyY, panelW } = useMenuLayout();
+
   return (
     <div className="absolute inset-0">
       <MenuBackground />
-      <Logo y={34} />
-      <Mascot rank="J" owner="player" x={92} y={118} />
-      <Mascot rank="K" owner="opponent" x={260} y={118} delay={0.3} />
+      <Logo y={logoY} />
+      <Mascot rank="J" owner="player" x={cx - 100} y={playY - 8} />
+      <Mascot rank="K" owner="opponent" x={cx + 68} y={playY - 8} delay={0.3} />
 
-      <PxButton tone="yellow" onClick={handleStartGame} className="absolute text-title" style={{ left: 142, top: 126, width: 100, height: 28 }}>
+      <PxButton tone="yellow" onClick={handleStartGame} className="absolute text-title" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}>
         {t.play}
       </PxButton>
 
-      <Panel title={t.difficulty} band="var(--c-roof)" className="absolute" style={{ left: 102, top: 176, width: 180, height: 44 }} bodyClassName="flex gap-[4px] p-[5px]">
+      <Panel title={t.difficulty} band="var(--c-roof)" className="absolute" style={{ left: cx - Math.floor(panelW / 2), top: difficultyY, width: panelW, height: 44 }} bodyClassName="flex gap-[4px] p-[5px]">
         {DIFFICULTIES.map(d => (
           <PxButton
             key={d}

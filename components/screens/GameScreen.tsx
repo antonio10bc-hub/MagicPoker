@@ -7,11 +7,13 @@ import { Board } from '@/components/game/Board';
 import { Hand, PlayerPanel, RivalPanel } from '@/components/game/Hud';
 import { ActionButton, MenuButtons, TurnBox } from '@/components/game/GameControls';
 import { Modals } from '@/components/modals/Modals';
+import { useGameLayout } from '@/components/pixel/Stage';
 
 const { Backdrop, Diorama } = ACTIVE_THEME;
 
 export const GameScreen = () => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const { board } = useGameLayout();
 
   const { canPlay, placeCard } = useGameStore(useShallow(s => ({
     canPlay: s.phase === 'placement' && s.turn === 'player' && !s.player.isPassed,
@@ -34,7 +36,7 @@ export const GameScreen = () => {
   return (
     <div className="absolute inset-0">
       <Backdrop />
-      <Diorama />
+      <Diorama board={board} />
       <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} />
       <RivalPanel />
       <PlayerPanel />
