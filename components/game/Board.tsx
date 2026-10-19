@@ -112,9 +112,10 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
     <motion.div
       className="absolute z-10"
       style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height, transformPerspective: 400 }}
-      initial={{ x: dx, y: dy, scale: s0, rotateZ: owner === 'player' ? 0 : spin, rotateX: -TILT_IDLE }}
+      // El rival no "vuela" desde su panel: su carta cae en su hueco apareciendo
+      initial={{ x: dx, y: dy, scale: s0, rotateZ: owner === 'player' ? 0 : spin, rotateX: -TILT_IDLE, opacity: owner === 'player' ? 1 : 0 }}
       // Ghosting: la carta vuela borrosa y se enfoca al aterrizar
-      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [s0, Math.max(s0, 1) * 1.18, 1], rotateZ: [owner === 'player' ? 0 : spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], filter: ['blur(0px)', 'blur(1.2px)', 'blur(0px)'], transitionEnd: { filter: 'none' } }}
+      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [s0, Math.max(s0, 1) * 1.18, 1], rotateZ: [owner === 'player' ? 0 : spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], opacity: owner === 'player' ? 1 : [0, 1, 1], filter: ['blur(0px)', 'blur(1.2px)', 'blur(0px)'], transitionEnd: { filter: 'none' } }}
       transition={{ duration: 0.42, times: [0, 0.5, 1], ease: [0.3, 0.1, 0.4, 1] }}
       onAnimationStart={() => { if (!landed.current) playSfx('whoosh', 0.8); }}
       onAnimationComplete={() => {
@@ -209,7 +210,7 @@ interface BoardProps {
 }
 
 export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: BoardProps) => {
-  const { board: geo, rivalPanel, hand: handArea } = useGameLayout();
+  const { board: geo, hand: handArea } = useGameLayout();
   const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
   // Cartas de la mesa con las flechas encendidas (se enciende/apaga tocándolas)
   const [arrowCards, setArrowCards] = useState<ReadonlySet<string>>(() => new Set());
@@ -247,7 +248,8 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
 
   const d = geo.diorama;
   const origin = `${d.x + d.w / 2}px ${d.y + d.h / 2}px`;
-  const rivalOrigin = { x: rivalPanel.x + rivalPanel.w / 2 - CARD_SIZE.width / 2, y: rivalPanel.y };
+  // Carta del rival: cae sobre su propio hueco desde un poco más arriba
+  const rivalOrigin = (x: number, y: number): CardOrigin => ({ x: x - 2, y: y - 26, scale: 1.1 });
   const handOrigin = { x: handArea.x + handArea.w / 2 - CARD_SIZE.width / 2, y: handArea.y };
   const pitch = geo.slots.player[1].x - geo.slots.player[0].x;
 
@@ -311,7 +313,7 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
                 owner={owner}
                 x={x}
                 y={y}
-                origin={owner === 'player' ? cardOrigins.get(slot.card.id) ?? handOrigin : rivalOrigin}
+                origin={owner === 'player' ? cardOrigins.get(slot.card.id) ?? handOrigin : rivalOrigin(x, y)}
                 lunge={lungeFor(slot, owner)}
                 arrowsOn={arrowCards.has(slot.card.id) && arrowsVisible}
                 onToggleArrows={id => { playSfx(arrowCards.has(id) ? 'deselect' : 'select', 0.7); toggleArrows(id); }}
