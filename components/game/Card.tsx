@@ -4,7 +4,7 @@ import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { RANKS } from '@/lib/game-utils';
 import { JOKER_DRAW_BONUS } from '@/lib/constants';
-import { CARD_SIZE, TEAM, steps } from '@/theme/tokens';
+import { CARD_SIZE, TEAM } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, EMBLEM_OPPONENT, EMBLEM_PLAYER, PIP, STAR } from '@/components/pixel/sprites';
 import { CARD_BACK_TILE, WINDOW_TILE, patternUri } from '@/components/pixel/patterns';
@@ -129,9 +129,9 @@ const CardFace = ({ card }: { card: CardType }) => {
 /** Sello del atacante sobre la carta destruida (K/Q/J o el As) */
 const DamageStamp = ({ source }: { source: NonNullable<CardType['damageSource']> }) => (
   <motion.div
-    initial={{ scale: 2.5, opacity: 0 }}
-    animate={{ scale: 1, opacity: 1 }}
-    transition={{ duration: 0.15, ease: steps(3) }}
+    initial={{ scale: 3, opacity: 0, rotate: -30 }}
+    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+    transition={{ type: 'spring', stiffness: 500, damping: 14, delay: IMPACT_DELAY_S + 0.08 }}
     className="absolute z-30 flex items-center justify-center text-outline"
     style={{
       left: 10, top: 18, width: 20, height: 20, borderRadius: '50%', background: TEAM[source.owner].base,
@@ -142,6 +142,11 @@ const DamageStamp = ({ source }: { source: NonNullable<CardType['damageSource']>
   </motion.div>
 );
 
+/** Retraso del daño: primero llega la embestida del atacante, luego el golpe */
+export const IMPACT_DELAY_S = 0.22;
+
+const faceStyle = { backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as const;
+
 const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: CardProps) => {
   const isDamage = !!card.isTakingDamage;
   const isVoided = !!card.isVoided;
@@ -150,35 +155,64 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
     <motion.div
       onClick={onClick}
       animate={
-        isDamage ? { x: [0, -1, 1, -1, 0] } :
-        isVoided ? { scale: [1, 0.95, 0.9] } :
-        { x: 0, scale: 1 }
+        isDamage ? { x: [0, -2, 2, -2, 1, 0], rotate: [0, -3, 3, -2, 0] } :
+        isVoided ? { scale: [1, 1.08, 0.9], rotate: [0, -4, 6] } :
+        { x: 0, scale: 1, rotate: 0 }
       }
-      transition={{ duration: 0.2, ease: steps(4) }}
-      className={clsx('relative', onClick && 'cursor-pointer', isSelected && 'anim-pulse-outline', className)}
+      transition={{ duration: 0.35, delay: isDamage || isVoided ? IMPACT_DELAY_S : 0, ease: 'easeOut' }}
+      className={clsx('relative', onClick && 'cursor-pointer', isSelected && 'card-glow', className)}
       style={{
         width: CARD_SIZE.width,
         height: CARD_SIZE.height,
-        filter: isVoided ? 'grayscale(1) brightness(0.7)' : isDisabled ? 'saturate(0.45)' : undefined,
+        perspective: 220,
+        filter: isVoided ? 'grayscale(1) brightness(0.7)' : isDisabled ? 'saturate(0.45) brightness(0.92)' : undefined,
+        transition: 'filter 0.3s ease',
       }}
     >
-      {/* Volteo en escalones al revelarse */}
+      {/* Volteo real en 3D: anverso y dorso son las dos caras de un mismo plano */}
       <motion.div
-        key={card.isFaceUp ? 'face' : 'back'}
-        className={clsx('absolute inset-0', isDamage && 'anim-damage')}
-        initial={{ scaleX: 0.2 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: 0.1, ease: steps(3) }}
+        className="absolute inset-0"
+        style={{ transformStyle: 'preserve-3d' }}
+        initial={false}
+        animate={{ rotateY: card.isFaceUp ? 0 : 180 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       >
-        {card.isFaceUp ? <CardFace card={card} /> : <CardBack owner={card.owner} />}
+        <div className="absolute inset-0" style={faceStyle}><CardFace card={card} /></div>
+        <div className="absolute inset-0" style={{ ...faceStyle, transform: 'rotateY(180deg)' }}><CardBack owner={card.owner} /></div>
       </motion.div>
 
-      {isDamage && <div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(192,40,28,0.45)', boxShadow: 'inset 0 0 0 1px var(--c-red)' }} />}
-      {isVoided && <div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(46,58,92,0.5)' }} />}
+      {/* Golpe: destello blanco y velo rojo que late */}
+      {isDamage && (
+        <>
+          <motion.div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'var(--c-white)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 0.25, delay: IMPACT_DELAY_S }} />
+          <motion.div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(192,40,28,0.5)', boxShadow: 'inset 0 0 0 1px var(--c-red)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.55, 1] }} transition={{ duration: 0.9, delay: IMPACT_DELAY_S + 0.1, repeat: Infinity, repeatType: 'reverse' }} />
+          <Cracks />
+        </>
+      )}
+      {isVoided && (
+        <motion.div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(46,58,92,0.55)' }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: IMPACT_DELAY_S }} />
+      )}
       {card.damageSource && (isDamage || isVoided) && <DamageStamp source={card.damageSource} />}
     </motion.div>
   );
 };
+
+/** Grietas que se dibujan sobre la carta destruida */
+const Cracks = () => (
+  <motion.svg
+    className="absolute inset-0 pointer-events-none" width={CARD_SIZE.width} height={CARD_SIZE.height}
+    viewBox={`0 0 ${CARD_SIZE.width} ${CARD_SIZE.height}`} shapeRendering="crispEdges"
+  >
+    <motion.path
+      d="M20 0 L17 12 L23 20 L15 31 L22 40 L18 56 M23 20 L33 24 M15 31 L6 34"
+      fill="none" stroke="var(--c-outline)" strokeWidth={1.5}
+      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.2, delay: IMPACT_DELAY_S + 0.05 }}
+    />
+  </motion.svg>
+);
 
 // memo: las cartas solo se re-renderizan si cambian sus props
 export const Card = memo(CardComponent);

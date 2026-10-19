@@ -10,6 +10,9 @@ import { FLOOR_TILE, MEANDER_TILE, PAVEMENT_TILE, STONE_FACE_TILE, patternUri } 
 // Todas las posiciones son relativas a la geometría del tablero, así funciona
 // igual en horizontal (ordenador) y en vertical (móvil).
 
+/** Halo cálido-frío de la farola, centrado en el cristal */
+const LAMP_GLOW = { x: 5, y: 4, color: 'rgba(124, 200, 240, 0.7)' };
+
 const Backdrop = () => (
   <Surface rect={{ x: 0, y: 0, w: 0, h: 0 }} texture={patternUri('pavement', PAVEMENT_TILE)} tileSize={16} color="var(--c-pavement)"
     style={{ width: '100%', height: '100%' }} />
@@ -32,15 +35,15 @@ const Diorama = ({ board }: { board: BoardGeometry }) => {
       <Strip rect={board.strip} texture={patternUri('meander', MEANDER_TILE)} />
 
       {/* Fondo: banderolas del rival y farolas */}
-      <Prop sprite={BANNER} owner="opponent" x={d.x + Math.round(d.w * 0.18)} y={back} />
-      <Prop sprite={BANNER} owner="opponent" x={d.x + Math.round(d.w * 0.78)} y={back} />
-      <Prop sprite={LAMP} x={d.x - 4} y={back + 1} />
-      <Prop sprite={LAMP} x={d.x + d.w - 6} y={back + 1} />
+      <Prop sprite={BANNER} owner="opponent" x={d.x + Math.round(d.w * 0.18)} y={back} sway />
+      <Prop sprite={BANNER} owner="opponent" x={d.x + Math.round(d.w * 0.78)} y={back} sway />
+      <Prop sprite={LAMP} x={d.x - 4} y={back + 1} glow={LAMP_GLOW} />
+      <Prop sprite={LAMP} x={d.x + d.w - 6} y={back + 1} glow={LAMP_GLOW} />
 
       {/* Delante: barandilla y banderolas del jugador */}
       <Railing x={board.railing.x} y={board.railing.y} w={board.railing.w} h={board.railing.h} />
-      <Prop sprite={BANNER} owner="player" x={d.x + 4} y={front} shadow={false} />
-      <Prop sprite={BANNER} owner="player" x={d.x + d.w - 16} y={front} shadow={false} />
+      <Prop sprite={BANNER} owner="player" x={d.x + 4} y={front} shadow={false} sway />
+      <Prop sprite={BANNER} owner="player" x={d.x + d.w - 16} y={front} shadow={false} sway />
     </>
   );
 };

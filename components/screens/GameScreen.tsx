@@ -1,30 +1,32 @@
 import { useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
-import { playSound } from '@/lib/sounds';
+import { playSfx } from '@/lib/sounds';
 import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
 import { Hand, PlayerPanel, RivalPanel } from '@/components/game/Hud';
-import { ActionButton, MenuButtons, TurnBox } from '@/components/game/GameControls';
+import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
+import { FxLayer } from '@/components/fx/FxLayer';
+import { AmbientDust, LowHealth } from '@/components/fx/Ambient';
 import { Modals } from '@/components/modals/Modals';
-import { useGameLayout } from '@/components/pixel/Stage';
 
-const { Backdrop, Diorama } = ACTIVE_THEME;
+const { Backdrop } = ACTIVE_THEME;
 
 export const GameScreen = () => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const { board } = useGameLayout();
 
-  const { canPlay, placeCard } = useGameStore(useShallow(s => ({
+  const { canPlay, placeCard, lowHealth } = useGameStore(useShallow(s => ({
     canPlay: s.phase === 'placement' && s.turn === 'player' && !s.player.isPassed,
     placeCard: s.placeCard,
+    lowHealth: s.player.lives === 1 && s.phase !== 'end',
   })));
 
   const handleSelectCard = useCallback((id: string) => {
     if (!canPlay) return;
-    playSound('click', 0.5);
-    setSelectedCardId(prev => (prev === id ? null : id));
-  }, [canPlay]);
+    const deselect = selectedCardId === id;
+    playSfx(deselect ? 'deselect' : 'select');
+    setSelectedCardId(deselect ? null : id);
+  }, [canPlay, selectedCardId]);
 
   const handleSlotClick = useCallback((slotIndex: number) => {
     if (!selectedCardId) return;
@@ -32,11 +34,11 @@ export const GameScreen = () => {
     setSelectedCardId(null);
   }, [selectedCardId, placeCard]);
 
-  // Capas: fondo → diorama → cartas → interfaz → modales
+  // Capas: fondo → tablero 3D (diorama + cartas + efectos) → interfaz → efectos de UI → modales
   return (
     <div className="absolute inset-0">
       <Backdrop />
-      <Diorama board={board} />
+      <AmbientDust />
       <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} />
       <RivalPanel />
       <PlayerPanel />
@@ -44,6 +46,9 @@ export const GameScreen = () => {
       <TurnBox />
       <ActionButton canPlay={canPlay} />
       <Hand selectedCardId={selectedCardId} canPlay={canPlay} onSelectCard={handleSelectCard} />
+      <FxLayer layer="ui" />
+      <RoundAnnouncer />
+      <LowHealth active={lowHealth} />
       <Modals />
     </div>
   );

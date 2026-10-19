@@ -1,4 +1,6 @@
-import { ButtonHTMLAttributes, CSSProperties, ReactNode, useEffect, useState } from 'react';
+import { CSSProperties, ReactNode, useEffect, useState } from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
+import { playSfx } from '@/lib/sounds';
 import { clsx } from 'clsx';
 import { PixelSprite, Sprite } from './PixelSprite';
 import { ICONS } from './sprites';
@@ -27,14 +29,22 @@ export const Panel = ({ title, band = 'var(--c-glass)', dark, className, bodyCla
 // --- BOTONES ---
 type Tone = 'white' | 'yellow' | 'green' | 'red' | 'blue' | 'roof';
 
-interface PxButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface PxButtonProps extends HTMLMotionProps<'button'> {
   tone?: Tone;
 }
 
-export const PxButton = ({ tone = 'white', className, children, ...rest }: PxButtonProps) => (
-  <button className={clsx('px-btn px-round uppercase', tone !== 'white' && `px-btn-${tone}`, className)} {...rest}>
+/** Botón con muelle: crece al pasar por encima, se hunde y aplasta al pulsar */
+export const PxButton = ({ tone = 'white', className, children, onPointerEnter, ...rest }: PxButtonProps) => (
+  <motion.button
+    className={clsx('px-btn px-round uppercase', tone !== 'white' && `px-btn-${tone}`, className)}
+    whileHover={{ scale: 1.06, y: -1 }}
+    whileTap={{ scale: 0.9, y: 2 }}
+    transition={{ type: 'spring', stiffness: 600, damping: 18 }}
+    onPointerEnter={e => { playSfx('hover'); onPointerEnter?.(e); }}
+    {...rest}
+  >
     {children}
-  </button>
+  </motion.button>
 );
 
 export const IconButton = ({ icon, className, ...rest }: PxButtonProps & { icon: Sprite }) => (
@@ -56,11 +66,12 @@ const useTypewriter = (text: string) => {
   return { shown: text.slice(0, count), done: count >= text.length };
 };
 
-const TypedText = ({ text, showCursor }: { text: string; showCursor: boolean }) => {
+const TypedText = ({ text, showCursor, suffix }: { text: string; showCursor: boolean; suffix?: ReactNode }) => {
   const { shown, done } = useTypewriter(text);
   return (
     <>
       <span>{shown}</span>
+      {done && suffix}
       {showCursor && done && (
         <span className="absolute right-[4px] bottom-[3px] anim-blink"><PixelSprite sprite={ICONS.cursor} /></span>
       )}
@@ -70,13 +81,15 @@ const TypedText = ({ text, showCursor }: { text: string; showCursor: boolean }) 
 
 interface TextBoxProps {
   text: string;
+  /** Contenido extra que aparece al terminar de escribir (p. ej. puntos animados) */
+  suffix?: ReactNode;
   showCursor?: boolean;
   className?: string;
   style?: CSSProperties;
 }
 
-export const TextBox = ({ text, showCursor = true, className, style }: TextBoxProps) => (
+export const TextBox = ({ text, suffix, showCursor = true, className, style }: TextBoxProps) => (
   <div className={clsx('px-panel px-round relative px-[5px] pt-[5px] pb-[8px] leading-[12px]', className)} style={style}>
-    <TypedText key={text} text={text} showCursor={showCursor} />
+    <TypedText key={text} text={text} showCursor={showCursor && !suffix} suffix={suffix} />
   </div>
 );

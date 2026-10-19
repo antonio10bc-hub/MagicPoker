@@ -100,11 +100,10 @@ html, body {
     inset -1px -1px 0 1px var(--btn-dark, var(--c-floor)),
     0 2px 0 0 var(--c-outline);
   cursor: pointer;
-  transform: translateY(0);
+  transition: box-shadow 0.08s ease, background 0.15s ease;
 }
 .px-btn:hover { background: var(--btn-hover, var(--btn-bg, var(--c-white))); }
 .px-btn:active, .px-btn[data-pressed='true'] {
-  transform: translateY(2px);
   box-shadow:
     inset 0 0 0 1px var(--c-outline),
     inset 1px 1px 0 1px var(--btn-dark, var(--c-floor)),
@@ -124,20 +123,39 @@ html, body {
 .px-scroll::-webkit-scrollbar-track { background: var(--c-floor-pattern); }
 .px-scroll::-webkit-scrollbar-thumb { background: var(--c-glass); }
 
-/* ===== ANIMACIONES EN ESCALONES ===== */
+/* ===== ANIMACIONES =====
+   Movimiento suave (ease / springs); los píxeles siguen siendo nítidos.
+   Los parpadeos de texto y cursores mantienen el corte duro tipo DS. */
 @keyframes px-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes px-bob { 0%, 49% { transform: translateY(0); } 50%, 100% { transform: translateY(-1px); } }
-@keyframes px-pulse-outline {
-  0%, 49% { box-shadow: 0 0 0 1px var(--c-yellow); }
-  50%, 100% { box-shadow: 0 0 0 1px var(--c-white); }
+@keyframes float-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, 0.97); } }
+@keyframes card-glow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--c-yellow), 0 0 6px 1px rgba(240, 200, 48, 0.55); }
+  50% { box-shadow: 0 0 0 1px var(--c-white), 0 0 10px 3px rgba(240, 200, 48, 0.85); }
 }
-@keyframes px-damage-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.35; } }
+@keyframes slot-glow {
+  0%, 100% { box-shadow: inset 0 0 0 1px var(--c-outline), 0 0 0 1px var(--c-yellow), 0 0 6px 1px rgba(124, 200, 240, 0.6); filter: brightness(1); }
+  50% { box-shadow: inset 0 0 0 1px var(--c-outline), 0 0 0 1px var(--c-white), 0 0 12px 3px rgba(124, 200, 240, 0.9); filter: brightness(1.12); }
+}
+@keyframes banner-wave { 0%, 100% { transform: skewY(0deg) scaleX(1); } 50% { transform: skewY(4deg) scaleX(0.94); } }
+@keyframes lamp-glow { 0%, 100% { opacity: 0.55; transform: scale(1); } 45% { opacity: 0.85; transform: scale(1.08); } 55% { opacity: 0.7; } }
+@keyframes dust-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translate(var(--drift, 12px), -120px); opacity: 0; }
+}
+@keyframes shine-sweep { 0% { transform: translateX(-120%) skewX(-20deg); } 60%, 100% { transform: translateX(220%) skewX(-20deg); } }
+@keyframes vignette-pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.6; } }
 
 .anim-blink { animation: px-blink 0.8s steps(1) infinite; }
-.anim-bob { animation: px-bob 0.6s steps(1) infinite; }
-.anim-pulse-outline { animation: px-pulse-outline 0.5s steps(1) infinite; }
-.anim-damage { animation: px-damage-blink 0.2s steps(1) infinite; }
+.anim-bob { animation: float-bob 1.2s ease-in-out infinite; }
+.anim-breathe { animation: breathe 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.card-glow { animation: card-glow 0.9s ease-in-out infinite; }
+.anim-slot-glow { animation: slot-glow 1s ease-in-out infinite; }
+.anim-banner { animation: banner-wave 2.4s ease-in-out infinite; transform-origin: 0 0; }
+.anim-lamp { animation: lamp-glow 2.8s ease-in-out infinite; }
+.anim-shine { animation: shine-sweep 3.2s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-blink, .anim-bob, .anim-pulse-outline, .anim-damage { animation: none; }
+  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine { animation: none; }
 }

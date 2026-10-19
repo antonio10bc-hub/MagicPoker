@@ -4,15 +4,23 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { useTranslations } from '@/lib/i18n';
-import { playSound } from '@/lib/sounds';
+import { playSfx, playSound } from '@/lib/sounds';
 import { isBoardEmpty } from '@/lib/game-utils';
 import { COMBAT_REVEAL_SECONDS } from '@/lib/constants';
-import { steps } from '@/theme/tokens';
 import { IconButton, PxButton, TextBox } from '@/components/pixel/ui';
-import { useGameLayout } from '@/components/pixel/Stage';
+import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { ICONS } from '@/components/pixel/sprites';
 
-// --- CUADRO DE ESTADO DEL TURNO (arriba a la derecha) ---
+// --- CUADRO DE ESTADO DEL TURNO ---
+/** Puntos suspensivos animados mientras piensa el rival */
+const ThinkingDots = () => (
+  <span className="inline-flex ml-[2px]">
+    {[0, 1, 2].map(i => (
+      <motion.span key={i} animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.12 }}>.</motion.span>
+    ))}
+  </span>
+);
+
 export const TurnBox = () => {
   const t = useTranslations();
   const { isFighting, isPlayerTurn } = useGameStore(useShallow(s => ({
@@ -20,14 +28,53 @@ export const TurnBox = () => {
     isPlayerTurn: s.turn === 'player',
   })));
   const { turnBox: box } = useGameLayout();
-  const text = isFighting ? t.fight : isPlayerTurn ? t.your_turn : t.rival_turn;
+  const rivalThinking = !isFighting && !isPlayerTurn;
+  const text = isFighting ? t.fight : isPlayerTurn ? t.your_turn : t.rival_turn.replace(/\.+$/, '');
   return (
-    <TextBox
-      text={text}
+    <motion.div
+      key={text}
       className="absolute"
-      style={{ left: box.x, top: box.y, width: box.w, minHeight: box.h, color: isFighting ? 'var(--c-red)' : isPlayerTurn ? 'var(--c-green-dark)' : 'var(--c-navy)' }}
-    />
+      style={{ left: box.x, top: box.y, width: box.w }}
+      initial={{ scale: 0.9, y: -4 }}
+      animate={{ scale: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 16 }}
+    >
+      <TextBox
+        text={text}
+        style={{ minHeight: box.h, color: isFighting ? 'var(--c-red)' : isPlayerTurn ? 'var(--c-green-dark)' : 'var(--c-navy)' }}
+        suffix={rivalThinking ? <ThinkingDots /> : undefined}
+      />
+    </motion.div>
   );
+};
+
+// --- CARTEL DE RONDA ---
+/** Barre la pantalla al empezar cada ronda. Se monta con key={ronda}. */
+const RoundBanner = ({ round }: { round: number }) => {
+  const t = useTranslations();
+  const { width, height } = useStage();
+  useEffect(() => {
+    const id = setTimeout(() => playSfx('turn'), 120);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <motion.div
+      className="absolute left-0 z-[80] pointer-events-none flex items-center justify-center gap-[8px]"
+      style={{ top: Math.round(height * 0.42), width, height: 30, background: 'var(--c-navy)',
+        boxShadow: 'inset 0 1px 0 0 var(--c-glass), inset 0 -1px 0 0 var(--c-glass), 0 0 0 1px var(--c-outline), 0 3px 0 1px var(--c-shadow)' }}
+      initial={{ x: -width, skewX: -20 }}
+      animate={{ x: [-width, 0, 0, width], skewX: [-20, 0, 0, 20] }}
+      transition={{ duration: 1.5, times: [0, 0.22, 0.75, 1], ease: 'easeInOut' }}
+    >
+      <span className="text-title text-outline" style={{ color: 'var(--c-yellow)' }}>{t.round} {round}</span>
+      <span className="text-outline" style={{ color: 'var(--c-cyan)' }}>{t.your_turn}</span>
+    </motion.div>
+  );
+};
+
+export const RoundAnnouncer = () => {
+  const { round, phase } = useGameStore(useShallow(s => ({ round: s.roundNumber, phase: s.phase })));
+  return phase === 'placement' ? <RoundBanner key={round} round={round} /> : null;
 };
 
 // --- BOTÓN DE ACCIÓN (PLANTARSE / RESOLVER / CONTINUAR) ---
@@ -44,12 +91,15 @@ const ContinueButton = () => {
 
   useEffect(() => {
     if (remaining === 0) finishCombatPhase();
+    else if (remaining < COMBAT_REVEAL_SECONDS) playSfx('hover', 0.6, 0.7);
   }, [remaining, finishCombatPhase]);
 
   return (
     <PxButton tone="blue" onClick={finishCombatPhase} className="w-full h-full gap-[3px]">
       <span className="text-outline">{t.continue}</span>
-      <span className="text-outline">{remaining}</span>
+      <motion.span key={remaining} className="text-outline" initial={{ scale: 1.8 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }}>
+        {remaining}
+      </motion.span>
     </PxButton>
   );
 };
@@ -58,7 +108,7 @@ const PassButton = ({ opponentPassed }: { opponentPassed: boolean }) => {
   const t = useTranslations();
   const passTurn = useGameStore(s => s.passTurn);
   return (
-    <PxButton tone={opponentPassed ? 'roof' : 'green'} onClick={passTurn} className="w-full h-full">
+    <PxButton tone={opponentPassed ? 'roof' : 'green'} onClick={passTurn} className="w-full h-full anim-breathe">
       <span className="text-outline">{opponentPassed ? t.resolve : t.stand}</span>
     </PxButton>
   );
@@ -72,16 +122,16 @@ export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
   })));
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {(canPlay || isReveal) && (
         <motion.div
           key={isReveal ? 'continue' : 'pass'}
           className="absolute z-50"
           style={{ left: r.x, top: r.y, width: r.w, height: r.h }}
-          initial={{ x: 72 }}
-          animate={{ x: 0 }}
-          exit={{ x: 72 }}
-          transition={{ duration: 0.12, ease: steps(4) }}
+          initial={{ x: 40, scale: 0.6, opacity: 0, rotate: 8 }}
+          animate={{ x: 0, scale: 1, opacity: 1, rotate: 0 }}
+          exit={{ x: 40, scale: 0.6, opacity: 0, transition: { duration: 0.12 } }}
+          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
         >
           {isReveal ? <ContinueButton /> : <PassButton opponentPassed={opponentPassed} />}
         </motion.div>

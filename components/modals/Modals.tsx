@@ -1,14 +1,13 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { getStats } from '@/lib/stats';
-import { playSound, toggleMute } from '@/lib/sounds';
+import { playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/sounds';
 import { useMuted } from '@/hooks/useMuted';
 import { Difficulty, Rank } from '@/types';
-import { steps } from '@/theme/tokens';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { useStage } from '@/components/pixel/Stage';
@@ -22,6 +21,12 @@ const closeWithClick = () => {
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
   const modal = useUiStore(s => s.modal);
+  // Con un modal abierto la música suena "a través de la pared"
+  useEffect(() => {
+    setMusicMuffled(!!modal);
+    if (modal) playSfx('open');
+    return () => setMusicMuffled(false);
+  }, [modal]);
   return (
     <AnimatePresence>
       {modal === 'exit' && <ConfirmExitModal key="exit" />}
@@ -36,14 +41,17 @@ const Overlay = ({ onClose, children }: { onClose?: () => void; children: ReactN
   <motion.div
     className="absolute inset-0 z-[200] flex items-center justify-center"
     style={{ background: 'rgba(30,38,56,0.6)' }}
-    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    transition={{ duration: 0.12, ease: steps(3) }}
+    initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(1.5px)' }} exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+    transition={{ duration: 0.2 }}
     onClick={onClose}
   >
     <motion.div
       onClick={e => e.stopPropagation()}
-      initial={{ scaleY: 0.1 }} animate={{ scaleY: 1 }} exit={{ scaleY: 0.1 }}
-      transition={{ duration: 0.12, ease: steps(3) }}
+      initial={{ scale: 0.6, y: 30, rotateX: 40, opacity: 0 }}
+      animate={{ scale: 1, y: 0, rotateX: 0, opacity: 1 }}
+      exit={{ scale: 0.8, y: 20, opacity: 0, transition: { duration: 0.15 } }}
+      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+      style={{ transformPerspective: 500 }}
     >
       {children}
     </motion.div>

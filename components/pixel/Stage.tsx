@@ -1,8 +1,8 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
-import { STAGE, steps } from '@/theme/tokens';
+import { STAGE } from '@/theme/tokens';
 import { computeGameLayout, computeMenuLayout, LANDSCAPE_STAGE, StageSize } from '@/theme/layout';
-import { useGameStore } from '@/store/useGameStore';
+import { useFxStore } from '@/components/fx/fxStore';
 import { LETTERBOX_TILE, patternUri } from './patterns';
 
 // --- ESCALADO ENTERO ---
@@ -76,29 +76,53 @@ export const useMenuLayout = () => {
   return useMemo(() => computeMenuLayout(stage), [stage]);
 };
 
-/** Flash blanco + sacudida de pantalla cuando se resuelve un combate */
-const useImpactFx = () => {
-  const shake = useAnimationControls();
-  const [flashKey, setFlashKey] = useState(0);
-  const combat = useGameStore(s => s.pendingCombatResult);
+/**
+ * Cámara: sacudida con amortiguación (decae suave), "punch" de zoom y flash.
+ * Lo disparan los efectos de juego a través de fxStore.
+ */
+const useCamera = () => {
+  const camera = useAnimationControls();
+  const shake = useFxStore(s => s.shake);
+  const punch = useFxStore(s => s.punch);
 
   useEffect(() => {
-    if (!combat) return;
-    const hasImpact = combat.deadCardIds.length + combat.voidedCardIds.length + combat.playerDamageTaken + combat.opponentDamageTaken > 0;
-    if (!hasImpact) return;
-    // El flash y la sacudida se disparan desde el efecto (no en el render)
-    const id = requestAnimationFrame(() => setFlashKey(k => k + 1));
-    shake.start({ x: [0, -2, 2, -1, 1, 0], y: [0, 1, -1, 1, 0, 0], transition: { duration: 0.2, ease: 'linear' } });
-    return () => cancelAnimationFrame(id);
-  }, [combat, shake]);
+    if (!shake) return;
+    const i = shake.intensity;
+    camera.start({
+      x: [0, -i, i * 0.8, -i * 0.55, i * 0.35, -i * 0.15, 0],
+      y: [0, i * 0.6, -i * 0.5, i * 0.35, -i * 0.2, 0, 0],
+      rotate: [0, -i * 0.12, i * 0.1, -i * 0.05, 0, 0, 0],
+      transition: { duration: 0.08 + i * 0.05, ease: 'easeOut' },
+    });
+  }, [shake, camera]);
 
-  return { shake, flashKey };
+  useEffect(() => {
+    if (!punch) return;
+    camera.start({ scale: [1, 1 + punch.intensity, 1], transition: { duration: 0.35, times: [0, 0.2, 1], ease: 'easeOut' } });
+  }, [punch, camera]);
+
+  return camera;
+};
+
+const Flash = () => {
+  const flash = useFxStore(s => s.flash);
+  if (!flash) return null;
+  return (
+    <motion.div
+      key={flash.id}
+      className="absolute inset-0 pointer-events-none z-[999]"
+      style={{ background: 'var(--c-white)' }}
+      initial={{ opacity: flash.intensity }}
+      animate={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
+    />
+  );
 };
 
 export const Stage = ({ children }: { children: ReactNode }) => {
   const stage = useSyncExternalStore(subscribeResize, computeStage, getServerStage);
   const { width, height, scale } = stage;
-  const { shake, flashKey } = useImpactFx();
+  const camera = useCamera();
 
   return (
     <StageContext.Provider value={stage}>
@@ -111,19 +135,10 @@ export const Stage = ({ children }: { children: ReactNode }) => {
             className="stage absolute left-0 top-0 overflow-hidden"
             style={{ width, height, transform: `scale(${scale})`, transformOrigin: '0 0', background: 'var(--c-outline)' }}
           >
-            <motion.div animate={shake} className="absolute inset-0">
+            <motion.div animate={camera} className="absolute inset-0">
               {children}
             </motion.div>
-            {flashKey > 0 && (
-              <motion.div
-                key={flashKey}
-                className="absolute inset-0 pointer-events-none z-[999]"
-                style={{ background: 'var(--c-white)' }}
-                initial={{ opacity: 0.9 }}
-                animate={{ opacity: 0 }}
-                transition={{ duration: 0.1, ease: steps(2) }}
-              />
-            )}
+            <Flash />
           </div>
         </div>
       </div>

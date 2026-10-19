@@ -93,8 +93,18 @@ export const Railing = ({ x, y, w, h = 13 }: { x: number; y: number; w: number; 
   </div>
 );
 
-/** Objeto del entorno con su sombra elíptica a los pies. (x, y) = base del objeto */
-export const Prop = ({ sprite, x, y, owner, shadow = true }: { sprite: Sprite; x: number; y: number; owner?: Owner; shadow?: boolean }) => {
+/**
+ * Objeto del entorno con su sombra elíptica a los pies. (x, y) = base del objeto.
+ * Si el tablero está inclinado en 3D (variable CSS --tilt), el objeto se "pone de pie"
+ * girando en sentido contrario sobre su base: así farolas y banderolas no se tumban.
+ */
+export const Prop = ({ sprite, x, y, owner, shadow = true, sway, glow }: {
+  sprite: Sprite; x: number; y: number; owner?: Owner; shadow?: boolean;
+  /** Ondea con el viento (banderolas) */
+  sway?: boolean;
+  /** Halo de luz centrado en este punto relativo al sprite (farolas) */
+  glow?: { x: number; y: number; color: string };
+}) => {
   const { width, height } = spriteSize(sprite);
   return (
     <>
@@ -104,7 +114,20 @@ export const Prop = ({ sprite, x, y, owner, shadow = true }: { sprite: Sprite; x
           background: 'var(--c-shadow)', borderRadius: '50%',
         }} />
       )}
-      <PixelSprite sprite={sprite} owner={owner} style={{ position: 'absolute', left: x, top: y - height }} />
+      <div style={{
+        position: 'absolute', left: x, top: y - height, width, height,
+        transform: 'rotateX(calc(-1 * var(--tilt, 0deg)))', transformOrigin: '50% 100%',
+      }}>
+        {glow && (
+          <div className="anim-lamp" style={{
+            position: 'absolute', left: glow.x - 14, top: glow.y - 14, width: 28, height: 28, borderRadius: '50%',
+            background: `radial-gradient(circle, ${glow.color} 0%, transparent 70%)`, pointerEvents: 'none',
+          }} />
+        )}
+        <div className={sway ? 'anim-banner' : undefined} style={{ animationDelay: `${(x % 7) * -0.3}s` }}>
+          <PixelSprite sprite={sprite} owner={owner} />
+        </div>
+      </div>
     </>
   );
 };

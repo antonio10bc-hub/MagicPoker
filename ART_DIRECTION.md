@@ -163,22 +163,64 @@ interacción y estados.
 - **Iconos:** sprites de 9×9 en navy (`ICONS`). No se usan librerías de iconos
   vectoriales.
 
-### Movimiento — `theme/tokens.ts` (`steps`, `SNAP_EASE`)
+### Movimiento y game feel
 
-- **Animaciones cortas con "snap":** `ease: steps(n)` o ease-out rápido.
-- **Idle:** bob de 1 px en 2 frames (`.anim-bob`); parpadeos con `steps(1)`.
-- **Jugar carta:** arco corto (desde abajo el jugador y desde arriba el rival), rebote
-  al aterrizar y sombra que crece (250 ms).
-- **Robar carta:** entra desde el lado del mazo (derecha) en 5 escalones.
-- **Revelar:** volteo horizontal en 3 escalones (100 ms).
-- **Impacto:** flash blanco de 2 frames y sacudida de pantalla de 1–2 px (200 ms) al
-  resolver el combate.
-- **Transición entre pantallas:** persiana en escalones (200 ms al entrar, 150 ms al
-  salir).
-- **Respeta los tiempos de la lógica** (`TIMINGS` en `lib/constants.ts`): revelar
-  300 ms, calcular el combate 500 ms, mostrar el resultado 300 ms y cuenta atrás de
-  5 s. Ninguna animación bloquea ni retrasa un evento de juego.
-- Con `prefers-reduced-motion` se desactivan los bucles (parpadeos y bob).
+Los **píxeles son nítidos, pero el movimiento es suave**: muelles (`type: 'spring'`) y
+curvas ease. Las transiciones duras con cortes (`steps`) solo se usan en parpadeos de
+texto y cursores, como homenaje a la DS.
+
+- **Cámara 3D** (`components/game/Board.tsx`):
+  - el tablero es un único plano inclinado en perspectiva (14°, 20° durante la pelea);
+  - **no se usa `preserve-3d` dentro del tablero**, porque rompe el orden de clic entre
+    elementos coplanarios;
+  - las farolas y banderolas compensan la inclinación con `--tilt`.
+- **Cámara de impacto** (`components/fx/fxStore.ts`): sacudida con amortiguación,
+  "punch" de zoom y flash blanco. La intensidad escala con lo que pasa en pantalla.
+- **Cartas:**
+  - volteo real en 3D (rotateY, dos caras con `backface-visibility`);
+  - al jugarse vuelan en arco desde su posición en la mano (o desde el rival), se
+    acercan a la cámara a mitad de vuelo, se aplastan al aterrizar y levantan polvo;
+  - en la pelea embisten hacia su objetivo y el golpe llega `IMPACT_DELAY_S` después;
+  - al morir se agrietan, sueltan esquirlas y caen al retirarse.
+- **Mano:**
+  - abanico con rotación y arco;
+  - al pasar el ratón la carta se eleva y se inclina en 3D siguiendo el puntero;
+  - las cartas robadas llegan una tras otra desde el mazo.
+- **Partículas, textos flotantes y ondas de choque** (`components/fx/FxLayer.tsx`), en
+  la capa del tablero o de la interfaz.
+- **Coreografía** (`components/game/CombatDirector.tsx`): escucha los estados de la
+  lógica (fase y resultado del combate) y dispara sonido, partículas y cámara. **Nunca
+  cambia tiempos ni el orden de los eventos de juego.**
+- **Ambiente:**
+  - motas de polvo que suben;
+  - banderolas ondeando y halo en las farolas;
+  - personajes que respiran y saltan;
+  - cámara del menú que se mece.
+- **Interfaz:**
+  - botones con muelle (crecen al pasar, se aplastan al pulsar);
+  - cartel "RONDA N" que barre la pantalla al empezar cada ronda;
+  - cinta "¡PELEA!" que entra de golpe;
+  - corazones que salen despedidos al perder una vida, y viñeta roja con latido cuando
+    te queda una.
+- **Transiciones entre pantallas:** iris circular con un leve zoom.
+- Con `prefers-reduced-motion` se desactivan los bucles CSS.
+
+### Sonido (`lib/sounds.ts`, `lib/synth.ts`)
+
+- **Motor Web Audio:**
+  - mp3 decodificados una vez;
+  - música en bucle con fundido cruzado entre pistas;
+  - paso bajo que "ahoga" la música cuando hay un modal abierto;
+  - *ducking* (baja la música) en los golpes fuertes.
+- **Efectos sintetizados estilo chiptune**, sin archivos:
+  - interacción: `hover`, `select`, `deselect`, `open`;
+  - cartas: `draw`, `whoosh`, `place`, `flip`;
+  - pelea: `swing`, `hit`, `crush`, `zap`, `fight`, `wipe`;
+  - vidas: `hurt`, `score`, `heartbeat`;
+  - otros: `turn`, `sparkle`, `pop`.
+  Cada reproducción lleva una ligera variación de tono para que no canse.
+- **Vibración corta en móvil** (si el dispositivo lo permite) al colocar carta, recibir
+  golpes y perder vidas.
 
 ---
 

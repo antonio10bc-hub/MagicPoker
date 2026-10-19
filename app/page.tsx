@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
 import { playMusic, preloadSounds, stopMusic } from '@/lib/sounds';
-import { steps } from '@/theme/tokens';
 import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
@@ -12,11 +11,11 @@ import { EndScreen } from '@/components/screens/EndScreen';
 
 const SCREENS = { menu: MenuScreen, game: GameScreen, end: EndScreen };
 
-/** Transición entre pantallas: persiana en escalones de arriba a abajo */
-const WIPE = {
-  initial: { clipPath: 'inset(0 0 100% 0)' },
-  animate: { clipPath: 'inset(0 0 0% 0)', transition: { duration: 0.2, ease: steps(6) } },
-  exit: { clipPath: 'inset(100% 0 0 0)', transition: { duration: 0.15, ease: steps(4) } },
+/** Transición entre pantallas: iris circular que se abre, con un leve zoom */
+const IRIS = {
+  initial: { clipPath: 'circle(0% at 50% 50%)', scale: 1.08 },
+  animate: { clipPath: 'circle(150% at 50% 50%)', scale: 1, transition: { duration: 0.55, ease: [0.65, 0, 0.35, 1] as [number, number, number, number] } },
+  exit: { clipPath: 'circle(0% at 50% 50%)', scale: 0.96, transition: { duration: 0.35, ease: [0.65, 0, 0.35, 1] as [number, number, number, number] } },
 };
 
 export default function Home() {
@@ -37,7 +36,7 @@ export default function Home() {
   return (
     <Stage>
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={current} className="absolute inset-0" {...WIPE}>
+        <motion.div key={current} className="absolute inset-0" {...IRIS}>
           <Screen />
         </motion.div>
       </AnimatePresence>
