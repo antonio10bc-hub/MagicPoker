@@ -1,97 +1,119 @@
 // --- SISTEMA DE SONIDO ---
 
-const SOUNDS = {
+const SFX = {
   click: 'click.mp3',
   defeat: 'defeat.mp3',
   shuffle: 'shuffle.mp3',
-  victory: 'badassvictory.mp3', // CAMBIO: Usar badassvictory
-  as_reveal: 'mild-surprise.mp3', // CAMBIO: Nuevo sonido para AS
-  
-  // Música de fondo (Loops)
+  victory: 'badassvictory.mp3',
+  as_reveal: 'mild-surprise.mp3',
+} as const;
+
+// Música de fondo (Loops)
+const MUSIC = {
   menu_music: 'menuloop.mp3',
   game_music: 'loopsong.mp3',
+} as const;
+
+export type SoundName = keyof typeof SFX;
+export type MusicName = keyof typeof MUSIC;
+
+const isBrowser = () => typeof window !== 'undefined';
+
+// Estado global de silencio + suscriptores (para que la UI reaccione)
+let isMuted = false;
+const muteListeners = new Set<() => void>();
+
+// Música que debería sonar (se recuerda aunque esté silenciado)
+let desiredMusic: { name: MusicName; volume: number } | null = null;
+let currentMusic: HTMLAudioElement | null = null;
+let currentMusicName: MusicName | null = null;
+
+// Cada efecto se descarga una vez; luego se clona para poder solaparse
+const sfxCache = new Map<SoundName, HTMLAudioElement>();
+
+const getSfx = (name: SoundName): HTMLAudioElement => {
+  let audio = sfxCache.get(name);
+  if (!audio) {
+    audio = new Audio(`/sounds/${SFX[name]}`);
+    audio.preload = 'auto';
+    sfxCache.set(name, audio);
+  }
+  return audio;
 };
 
-export type SoundName = keyof typeof SOUNDS;
+/** Precarga los efectos para que el primer clic no tenga retardo. */
+export const preloadSounds = () => {
+  if (!isBrowser()) return;
+  (Object.keys(SFX) as SoundName[]).forEach(getSfx);
+};
 
-// Estado global de silencio
-let isMuted = false;
-
-// Referencia global para la música actual (para poder pararla al cambiar de pantalla)
-let currentMusic: HTMLAudioElement | null = null;
-let currentMusicName: string | null = null;
-
-export const toggleMute = (): boolean => {
-    isMuted = !isMuted;
-    // Si muteamos, paramos la música actual inmediatamente
-    if (isMuted && currentMusic) {
-        currentMusic.pause();
-    } else if (!isMuted && currentMusic) {
-        // Si desmuteamos, intentamos reanudar
-        currentMusic.play().catch(() => {});
-    }
-    return isMuted;
+export const subscribeMute = (listener: () => void) => {
+  muteListeners.add(listener);
+  return () => { muteListeners.delete(listener); };
 };
 
 export const getMuteState = (): boolean => isMuted;
 
-// Función para reproducir efectos de sonido (SFX) puntuales
-export const playSound = (name: SoundName, volume: number = 0.5) => {
-  if (typeof window === 'undefined' || isMuted) return;
+export const toggleMute = (): boolean => {
+  isMuted = !isMuted;
+  if (isMuted) {
+    currentMusic?.pause();
+  } else if (desiredMusic) {
+    // Al desmutear, retomamos (o arrancamos) la música que toca
+    if (currentMusic && currentMusicName === desiredMusic.name) {
+      currentMusic.play().catch(() => {});
+    } else {
+      playMusic(desiredMusic.name, desiredMusic.volume);
+    }
+  }
+  muteListeners.forEach(l => l());
+  return isMuted;
+};
 
-  // Ignoramos si es música, esto se maneja con playMusic
-  if (name === 'menu_music' || name === 'game_music') return;
-
+// Efectos de sonido (SFX) puntuales
+export const playSound = (name: SoundName, volume = 0.5) => {
+  if (!isBrowser() || isMuted) return;
   try {
-    const fileName = SOUNDS[name];
-    const audio = new Audio(`/sounds/${fileName}`);
+    const audio = getSfx(name).cloneNode() as HTMLAudioElement;
     audio.volume = volume;
-    audio.play().catch((err) => {
-      console.warn('Audio blocked or not found:', err);
-    });
+    audio.play().catch(err => console.warn('Audio blocked or not found:', err));
   } catch (error) {
     console.error('Error playing sound:', error);
   }
 };
 
-// Función específica para manejar música de fondo en bucle
-export const playMusic = (name: 'menu_music' | 'game_music', volume: number = 0.3) => {
-    if (typeof window === 'undefined') return;
+// Música de fondo en bucle
+export const playMusic = (name: MusicName, volume = 0.3) => {
+  if (!isBrowser()) return;
+  desiredMusic = { name, volume };
 
-    // Si ya está sonando esa misma canción, no hacemos nada
-    if (currentMusicName === name && currentMusic && !currentMusic.paused) return;
+  // Si ya está sonando esa misma canción, no hacemos nada
+  if (currentMusicName === name && currentMusic && !currentMusic.paused) return;
 
-    // Parar música anterior si existe
-    stopMusic();
+  stopCurrentMusic();
+  if (isMuted) return;
 
-    if (isMuted) {
-        // Si está muteado, solo guardamos qué debería sonar para cuando se desmutee
-        currentMusicName = name;
-        return;
-    }
+  try {
+    const audio = new Audio(`/sounds/${MUSIC[name]}`);
+    audio.loop = true;
+    audio.volume = volume;
+    audio.play().catch(err => console.warn('Music autoplay blocked:', err));
+    currentMusic = audio;
+    currentMusicName = name;
+  } catch (error) {
+    console.error('Error playing music:', error);
+  }
+};
 
-    try {
-        const fileName = SOUNDS[name];
-        const audio = new Audio(`/sounds/${fileName}`);
-        audio.loop = true; // Importante: Bucle infinito
-        audio.volume = volume;
-        
-        audio.play().catch((err) => {
-             console.warn('Music autoplay blocked:', err);
-        });
-
-        currentMusic = audio;
-        currentMusicName = name;
-    } catch (error) {
-        console.error('Error playing music:', error);
-    }
+const stopCurrentMusic = () => {
+  if (!currentMusic) return;
+  currentMusic.pause();
+  currentMusic.currentTime = 0;
+  currentMusic = null;
+  currentMusicName = null;
 };
 
 export const stopMusic = () => {
-    if (currentMusic) {
-        currentMusic.pause();
-        currentMusic.currentTime = 0;
-        currentMusic = null;
-        currentMusicName = null;
-    }
+  desiredMusic = null;
+  stopCurrentMusic();
 };

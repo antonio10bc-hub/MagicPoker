@@ -1,173 +1,243 @@
-import { Card, BoardSlot, Rank, CombatResult } from "@/types";
+import { BoardSlot, Card, CombatResult, DamageSource, GameResult, Owner, PlayerState, Rank, Rng } from '@/types';
+import { BOARD_SIZE, STARTING_LIVES } from '@/lib/constants';
 
-const RANK_VALUES: Record<Rank, number> = {
-  'JOKER': 0,
-  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
-  'J': 11, 'Q': 12, 'K': 13, 'A': 14
-};
+// --- DEFINICIÓN DE CARTAS ---
+// Única fuente de verdad del comportamiento de cada rango: la usan el combate,
+// la IA y las flechas de ataque de la carta.
 
-export const getCardValue = (rank: Rank): number => RANK_VALUES[rank];
-
-export const createDeck = (owner: 'player' | 'opponent'): Card[] => {
-  const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  let deck: Card[] = [];
-
-  ranks.forEach(rank => {
-    deck.push({
-      id: Math.random().toString(36).substr(2, 9),
-      rank,
-      suit: 'standard',
-      value: RANK_VALUES[rank],
-      isFaceUp: false,
-      owner
-    });
-  });
-
-  deck.push({
-    id: Math.random().toString(36).substr(2, 9),
-    rank: 'JOKER',
-    suit: 'joker',
-    value: RANK_VALUES['JOKER'],
-    isFaceUp: false,
-    owner
-  });
-
-  return deck.sort(() => Math.random() - 0.5);
-};
-
-// EXTENSIÓN DEL TIPO: Añadimos datos extra al retorno
-interface ExtendedCombatResult extends CombatResult {
-    cardsDestroyedCount: number; // Para estadísticas
-    isRepublicanaTriggered: boolean; // Logro específico
+export interface AttackPattern {
+  /** Desplazamientos respecto a la columna propia (-1 izquierda, 0 frente, +1 derecha) */
+  offsets: number[];
+  /** 'all' golpea todos los objetivos; 'random-one' elige uno al azar */
+  mode: 'all' | 'random-one';
 }
 
-// Nota: TypeScript puede quejarse si el tipo CombatResult original no tiene estos campos. 
-// En el store haremos un casting o usaremos este tipo extendido localmente.
+interface RankDefinition {
+  value: number;
+  attack: AttackPattern | null;
+  /** El As limpia el tablero entero */
+  wipesBoard?: boolean;
+  /** Las figuras muestran su sello sobre las cartas que destruyen */
+  marksVictims?: boolean;
+}
 
-export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[]): ExtendedCombatResult => {
-  let playerDamage = 0;
-  let opponentDamage = 0;
-  const deadIds = new Set<string>();
-  const voidedIds = new Set<string>();
-  
-  const playerEmptyHits: Record<number, number> = {};
-  const opponentEmptyHits: Record<number, number> = {};
-  const damageSources: Record<string, { rank: Rank, owner: 'player' | 'opponent' }> = {};
+const FRONT: AttackPattern = { offsets: [0], mode: 'all' };
 
-  // Detección de logro "Republicana": Player usa AS y Opponent tiene J, Q, K en mesa
-  let republicanaTrigger = false;
-  const playerHasAce = playerBoard.some(s => s.card?.rank === 'A');
-  
-  if (playerHasAce) {
-      const oppCards = opponentBoard.map(s => s.card?.rank).filter(Boolean);
-      const hasJ = oppCards.includes('J');
-      const hasQ = oppCards.includes('Q');
-      const hasK = oppCards.includes('K');
-      if (hasJ && hasQ && hasK) {
-          republicanaTrigger = true;
-      }
+export const RANKS: Record<Rank, RankDefinition> = {
+  '2': { value: 2, attack: FRONT },
+  '3': { value: 3, attack: FRONT },
+  '4': { value: 4, attack: FRONT },
+  '5': { value: 5, attack: FRONT },
+  '6': { value: 6, attack: FRONT },
+  '7': { value: 7, attack: FRONT },
+  '8': { value: 8, attack: FRONT },
+  '9': { value: 9, attack: FRONT },
+  '10': { value: 10, attack: FRONT },
+  'J': { value: 11, attack: { offsets: [-1, 0, 1], mode: 'random-one' }, marksVictims: true },
+  'Q': { value: 12, attack: { offsets: [-1, 1], mode: 'all' }, marksVictims: true },
+  'K': { value: 13, attack: { offsets: [-1, 0, 1], mode: 'all' }, marksVictims: true },
+  'A': { value: 14, attack: null, wipesBoard: true },
+  'JOKER': { value: 0, attack: null },
+};
+
+const DECK_RANKS = Object.keys(RANKS) as Rank[];
+
+export const getCardValue = (rank: Rank): number => RANKS[rank].value;
+
+// --- MAZO ---
+
+let nextCardId = 0;
+
+/** Fisher–Yates: barajado uniforme (sort con random está sesgado). */
+export const shuffle = <T,>(items: T[], rng: Rng = Math.random): T[] => {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
   }
+  return result;
+};
 
-  // 1. REGLA DEL AS (Board Wipe)
-  const aceCard = [...playerBoard, ...opponentBoard].find(s => s.card?.rank === 'A')?.card;
-  if (aceCard) {
-    const allCards = [...playerBoard, ...opponentBoard]
-      .map(s => s.card)
-      .filter((c): c is Card => !!c);
-    
-    allCards.forEach(c => {
-        voidedIds.add(c.id);
-        damageSources[c.id] = { rank: 'A', owner: aceCard.owner };
-    });
-    
+export const createDeck = (owner: Owner, rng: Rng = Math.random): Card[] =>
+  shuffle(
+    DECK_RANKS.map(rank => ({
+      id: `${owner}-${rank}-${++nextCardId}`,
+      rank,
+      suit: rank === 'JOKER' ? 'joker' : 'standard',
+      value: RANKS[rank].value,
+      isFaceUp: false,
+      owner,
+    })),
+    rng
+  );
+
+// --- ESTADO DE JUGADOR (helpers puros) ---
+
+export const createEmptyBoard = (): BoardSlot[] =>
+  Array.from({ length: BOARD_SIZE }, (_, index) => ({ index, card: null }));
+
+export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = false): PlayerState => ({
+  lives: STARTING_LIVES,
+  hand: deck.slice(0, handSize).map(c => ({ ...c, isFaceUp: handFaceUp })),
+  deck: deck.slice(handSize),
+  board: createEmptyBoard(),
+  isPassed: false,
+});
+
+export const drawCards = (state: PlayerState, amount: number, faceUp: boolean): PlayerState => {
+  if (amount <= 0 || state.deck.length === 0) return state;
+  const drawn = state.deck.slice(0, amount).map(c => ({ ...c, isFaceUp: faceUp }));
+  return { ...state, hand: [...state.hand, ...drawn], deck: state.deck.slice(amount) };
+};
+
+/** Mueve una carta de la mano al hueco indicado. Devuelve null si no es posible. */
+export const playCardToSlot = (state: PlayerState, cardId: string, slotIndex: number, faceUp: boolean): PlayerState | null => {
+  const card = state.hand.find(c => c.id === cardId);
+  const slot = state.board[slotIndex];
+  if (!card || !slot || slot.card) return null;
+
+  const board = [...state.board];
+  board[slotIndex] = { ...slot, card: { ...card, isFaceUp: faceUp } };
+  return { ...state, hand: state.hand.filter(c => c.id !== cardId), board };
+};
+
+export const countRankOnBoard = (board: BoardSlot[], rank: Rank): number =>
+  board.reduce((n, s) => (s.card?.rank === rank ? n + 1 : n), 0);
+
+export const getAvailableSlots = (board: BoardSlot[]): number[] =>
+  board.filter(s => s.card === null).map(s => s.index);
+
+export const isBoardEmpty = (board: BoardSlot[]): boolean => board.every(s => s.card === null);
+
+// --- COMBATE ---
+
+export const getTargetIndices = (index: number, rank: Rank): number[] =>
+  (RANKS[rank].attack?.offsets ?? [])
+    .map(offset => index + offset)
+    .filter(i => i >= 0 && i < BOARD_SIZE);
+
+const boardCards = (board: BoardSlot[]): Card[] =>
+  board.flatMap(s => (s.card ? [s.card] : []));
+
+export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[], rng: Rng = Math.random): CombatResult => {
+  const damageSources: Record<string, DamageSource> = {};
+  const playerCards = boardCards(playerBoard);
+  const opponentCards = boardCards(opponentBoard);
+
+  // Logro "Republicana": el jugador usa un AS y el rival tiene J, Q y K en mesa
+  const opponentRanks = new Set(opponentCards.map(c => c.rank));
+  const isRepublicanaTriggered =
+    playerCards.some(c => c.rank === 'A') && ['J', 'Q', 'K'].every(r => opponentRanks.has(r as Rank));
+
+  // 1. REGLA DEL AS (Board Wipe): anula todas las cartas de ambos lados
+  const allCards = [...playerCards, ...opponentCards];
+  const wiper = allCards.find(c => RANKS[c.rank].wipesBoard);
+  if (wiper) {
+    allCards.forEach(c => { damageSources[c.id] = { rank: wiper.rank, owner: wiper.owner }; });
     return {
-      playerDamageTaken: 0, opponentDamageTaken: 0,
-      deadCardIds: [], voidedCardIds: Array.from(voidedIds),
-      playerEmptySlotsHit: {}, opponentEmptySlotsHit: {}, damageSources,
-      // Nuevos campos
-      cardsDestroyedCount: 0, // Voided no cuenta como destruida para stats (opcional)
-      isRepublicanaTriggered: republicanaTrigger
+      playerDamageTaken: 0,
+      opponentDamageTaken: 0,
+      deadCardIds: [],
+      voidedCardIds: allCards.map(c => c.id),
+      playerEmptySlotsHit: {},
+      opponentEmptySlotsHit: {},
+      damageSources,
+      cardsDestroyedCount: 0,
+      isRepublicanaTriggered,
     };
   }
 
-  // Helper para resolver choques
-  const resolveInteraction = (attacker: Card, defenderSlot: BoardSlot, isPlayerAttacking: boolean) => {
-    const defender = defenderSlot.card;
+  // 2. CHOQUES: cada carta ataca a sus objetivos en el tablero contrario
+  const deadIds = new Set<string>();
+  const emptyHits: Record<Owner, Record<number, number>> = { player: {}, opponent: {} };
+  const damageTaken: Record<Owner, number> = { player: 0, opponent: 0 };
 
+  const resolveHit = (attacker: Card, target: BoardSlot, defenderOwner: Owner) => {
+    const defender = target.card;
     if (!defender) {
-      if (isPlayerAttacking) {
-        opponentDamage++;
-        opponentEmptyHits[defenderSlot.index] = (opponentEmptyHits[defenderSlot.index] || 0) + 1;
-      } else {
-        playerDamage++;
-        playerEmptyHits[defenderSlot.index] = (playerEmptyHits[defenderSlot.index] || 0) + 1;
-      }
-    } else {
-      if (attacker.value > defender.value) {
-        deadIds.add(defender.id);
-        if (['K', 'Q', 'J'].includes(attacker.rank)) {
-            damageSources[defender.id] = { rank: attacker.rank, owner: attacker.owner };
-        }
-      } else if (attacker.value < defender.value) {
-        deadIds.add(attacker.id);
-      } else {
-        deadIds.add(attacker.id);
-        deadIds.add(defender.id);
+      damageTaken[defenderOwner]++;
+      emptyHits[defenderOwner][target.index] = (emptyHits[defenderOwner][target.index] ?? 0) + 1;
+      return;
+    }
+    if (attacker.value >= defender.value) {
+      deadIds.add(defender.id);
+      if (attacker.value > defender.value && RANKS[attacker.rank].marksVictims) {
+        damageSources[defender.id] = { rank: attacker.rank, owner: attacker.owner };
       }
     }
+    if (attacker.value <= defender.value) deadIds.add(attacker.id);
   };
 
-  const processAttackTurn = (attackBoard: BoardSlot[], defenseBoard: BoardSlot[], isPlayerAttacking: boolean) => {
+  const attack = (attackBoard: BoardSlot[], defenseBoard: BoardSlot[], defenderOwner: Owner) => {
     attackBoard.forEach(slot => {
-      if (!slot.card) return;
-      const rank = slot.card.rank;
+      const attacker = slot.card;
+      const pattern = attacker && RANKS[attacker.rank].attack;
+      if (!attacker || !pattern) return;
 
-      if (rank === 'JOKER') return;
+      const targets = getTargetIndices(slot.index, attacker.rank);
+      if (targets.length === 0) return;
 
-      const targetIndices = getTargetIndices(slot.index, rank);
-      if (targetIndices.length === 0) return;
-
-      if (rank === 'J') {
-        const randomIndex = targetIndices[Math.floor(Math.random() * targetIndices.length)];
-        const targetSlot = defenseBoard.find(s => s.index === randomIndex);
-        if (targetSlot) resolveInteraction(slot.card, targetSlot, isPlayerAttacking);
-
-      } else {
-        targetIndices.forEach(idx => {
-          const targetSlot = defenseBoard.find(s => s.index === idx);
-          if (targetSlot) resolveInteraction(slot.card!, targetSlot, isPlayerAttacking);
-        });
-      }
+      const chosen = pattern.mode === 'random-one'
+        ? [targets[Math.floor(rng() * targets.length)]]
+        : targets;
+      chosen.forEach(i => resolveHit(attacker, defenseBoard[i], defenderOwner));
     });
   };
 
-  processAttackTurn(playerBoard, opponentBoard, true);  
-  processAttackTurn(opponentBoard, playerBoard, false); 
+  attack(playerBoard, opponentBoard, 'opponent');
+  attack(opponentBoard, playerBoard, 'player');
 
   return {
-    playerDamageTaken: playerDamage,
-    opponentDamageTaken: opponentDamage,
+    playerDamageTaken: damageTaken.player,
+    opponentDamageTaken: damageTaken.opponent,
     deadCardIds: Array.from(deadIds),
     voidedCardIds: [],
-    playerEmptySlotsHit: playerEmptyHits,
-    opponentEmptySlotsHit: opponentEmptyHits,
+    playerEmptySlotsHit: emptyHits.player,
+    opponentEmptySlotsHit: emptyHits.opponent,
     damageSources,
-    // Nuevos campos
     cardsDestroyedCount: deadIds.size,
-    isRepublicanaTriggered: false // Solo se activa con el As, que va por otro camino
+    isRepublicanaTriggered,
   };
 };
 
-const getTargetIndices = (index: number, rank: Rank): number[] => {
-  const targets: number[] = [];
-  const add = (i: number) => { if (i >= 0 && i <= 3) targets.push(i); };
+/** Marca en el tablero las cartas que mueren o se anulan para animarlas. */
+export const markCombatResult = (board: BoardSlot[], result: CombatResult): BoardSlot[] => {
+  const dead = new Set(result.deadCardIds);
+  const voided = new Set(result.voidedCardIds);
+  return board.map(slot => {
+    const card = slot.card;
+    if (!card || (!dead.has(card.id) && !voided.has(card.id))) return slot;
+    return {
+      ...slot,
+      card: {
+        ...card,
+        ...(dead.has(card.id) ? { isTakingDamage: true } : { isVoided: true }),
+        damageSource: result.damageSources[card.id],
+      },
+    };
+  });
+};
 
-  if (rank === 'Q') {
-    add(index - 1); add(index + 1);
-  } else if (rank === 'K' || rank === 'J') {
-    add(index - 1); add(index); add(index + 1);
-  } else {
-    add(index);
-  }
-  return targets;
+export const clearDefeatedCards = (board: BoardSlot[]): BoardSlot[] =>
+  board.map(slot => (slot.card?.isTakingDamage || slot.card?.isVoided ? { ...slot, card: null } : slot));
+
+export const revealBoard = (board: BoardSlot[]): BoardSlot[] =>
+  board.map(slot => (slot.card && !slot.card.isFaceUp ? { ...slot, card: { ...slot.card, isFaceUp: true } } : slot));
+
+// --- FIN DE PARTIDA ---
+
+const hasRunOut = (s: PlayerState) => s.deck.length === 0 && s.hand.length === 0 && isBoardEmpty(s.board);
+
+/** Devuelve el resultado si la partida ha terminado, o null si sigue. */
+export const getGameResult = (player: PlayerState, opponent: PlayerState): GameResult | null => {
+  if (player.lives === 0 && opponent.lives === 0) return 'draw';
+  if (player.lives === 0) return 'loss';
+  if (opponent.lives === 0) return 'win';
+
+  const playerOut = hasRunOut(player);
+  const opponentOut = hasRunOut(opponent);
+  if (playerOut && opponentOut) return 'draw';
+  if (playerOut && !isBoardEmpty(opponent.board)) return 'loss';
+  if (opponentOut && !isBoardEmpty(player.board)) return 'win';
+  return null;
 };
