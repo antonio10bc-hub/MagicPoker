@@ -20,16 +20,20 @@ type NewEffect =
   | { kind: 'ring'; layer?: FxLayer; x: number; y: number; color?: string; radius?: number; life?: number };
 
 interface CameraKick { id: number; intensity: number }
+/** Encuadre de la cámara: acercarse a un punto (coordenadas del escenario) un rato */
+export interface CameraFocus { id: number; x: number; y: number; zoom: number; seconds: number }
 
 interface FxState {
   effects: Effect[];
   shake: CameraKick | null;
   punch: CameraKick | null;
   flash: CameraKick | null;
+  focus: CameraFocus | null;
   emit: (fx: NewEffect) => void;
   shakeCamera: (intensity?: number) => void;
   punchCamera: (amount?: number) => void;
   flashScreen: (opacity?: number) => void;
+  focusCamera: (x: number, y: number, zoom: number, seconds: number) => void;
 }
 
 let nextId = 1;
@@ -67,6 +71,7 @@ export const useFxStore = create<FxState>((set, get) => ({
   shake: null,
   punch: null,
   flash: null,
+  focus: null,
   emit: fx => {
     const effect = build(fx);
     set({ effects: [...get().effects, effect] });
@@ -75,6 +80,7 @@ export const useFxStore = create<FxState>((set, get) => ({
   shakeCamera: (intensity = 2) => set({ shake: { id: nextId++, intensity } }),
   punchCamera: (amount = 0.03) => set({ punch: { id: nextId++, intensity: amount } }),
   flashScreen: (opacity = 0.8) => set({ flash: { id: nextId++, intensity: opacity } }),
+  focusCamera: (x, y, zoom, seconds) => set({ focus: { id: nextId++, x, y, zoom, seconds } }),
 }));
 
 /** Atajo para usar fuera de React (efectos de animación, callbacks) */
@@ -83,4 +89,5 @@ export const fx = {
   shake: (intensity?: number) => useFxStore.getState().shakeCamera(intensity),
   punch: (amount?: number) => useFxStore.getState().punchCamera(amount),
   flash: (opacity?: number) => useFxStore.getState().flashScreen(opacity),
+  focus: (x: number, y: number, zoom: number, seconds: number) => useFxStore.getState().focusCamera(x, y, zoom, seconds),
 };

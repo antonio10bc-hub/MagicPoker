@@ -8,7 +8,7 @@ import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE, INK, PALETTE } from '@/theme/tokens';
 import { useTranslations } from '@/lib/i18n';
 import { getTargetIndices, RANKS } from '@/lib/game-utils';
-import { playSfx, vibrate } from '@/lib/sounds';
+import { haptic, playSfx } from '@/lib/sounds';
 import { ACTIVE_THEME } from '@/themes';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { STAR } from '@/components/pixel/sprites';
@@ -121,7 +121,7 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
         playSfx('place');
         landingDust(x, y);
         fx.shake(owner === 'player' ? 1.2 : 0.8);
-        if (owner === 'player') vibrate(12);
+        if (owner === 'player') haptic('place');
       }}
       exit={
         card.isVoided

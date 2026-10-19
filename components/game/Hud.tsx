@@ -16,7 +16,7 @@ import { Rect } from '@/theme/layout';
 import { Card } from './Card';
 import { cardOrigins } from './cardOrigins';
 import { deckSummary, forecastFight } from './forecast';
-import { playSfx, vibrate } from '@/lib/sounds';
+import { haptic, playSfx } from '@/lib/sounds';
 
 // --- PIEZAS DEL HUD ---
 
@@ -44,7 +44,7 @@ const Lives = ({ lives, owner }: { lives: number; owner: Owner }) => {
     if (lives >= prev) return;
     // Golpe: sonido, vibración, sacudida del panel y corazones que salen volando
     playSfx(owner === 'player' ? 'hurt' : 'score');
-    if (owner === 'player') vibrate([40, 30, 40]);
+    if (owner === 'player') haptic('lifeLost');
     shake.start({ x: [0, -3, 3, -2, 2, 0], transition: { duration: 0.4 } });
     const raf = requestAnimationFrame(() =>
       setLost({ id: Date.now(), indices: Array.from({ length: prev - lives }, (_, k) => lives + k) }));
@@ -166,6 +166,8 @@ const DangerChip = ({ lives }: { lives: number }) => {
   const { taken } = useMemo(() => forecastFight(playerBoard, opponentBoard), [playerBoard, opponentBoard]);
   const total = taken.sure + taken.maybe;
   const lethal = taken.sure >= lives || total >= lives;
+  const warn = placement && total > 0 && lethal;
+  useEffect(() => { if (warn) haptic('danger'); }, [warn]);
   return (
     <AnimatePresence>
       {placement && total > 0 && (
@@ -191,7 +193,7 @@ const DeckPeek = ({ anchor, onClose }: { anchor: Rect; onClose: () => void }) =>
   return (
     <>
       <div className="absolute inset-0 z-[94]" onClick={onClose} />
-      <motion.div className="px-panel px-round absolute z-[95] p-[5px]"
+      <motion.div className="px-panel px-round absolute z-[95] p-[5px]" data-popover
         style={{ left: Math.min(anchor.x, width - 4 - w), top: anchor.y - 4, width: w, translateY: '-100%' }}
         initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, transition: { duration: 0.12 } }}
         transition={{ type: 'spring', stiffness: 500, damping: 26 }} onClick={onClose}>
@@ -403,7 +405,7 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
           if (slot === overSlot.current) return;
           overSlot.current = slot;
           // Pequeño "clic" al entrar en un hueco: confirma dónde caerá al soltar
-          if (slot !== null) { playSfx('hover'); vibrate(8); }
+          if (slot !== null) { playSfx('hover'); haptic('tick'); }
           handlers.onDragOverSlot(slot);
         }}
         onDragEnd={e => {

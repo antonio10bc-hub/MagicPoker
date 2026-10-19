@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations, Translations } from '@/lib/i18n';
-import { playSfx, playSound } from '@/lib/sounds';
+import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { useEffect } from 'react';
 import { GameResult } from '@/types';
 import { PALETTE } from '@/theme/tokens';
@@ -88,6 +88,8 @@ export const EndScreen = () => {
 
   const isWin = gameResult === 'win';
   const isLoss = gameResult === 'loss';
+
+  useEffect(() => { if (gameResult !== 'draw') haptic(gameResult === 'win' ? 'win' : 'loss'); }, [gameResult]);
 
   useEffect(() => {
     if (!isWin) return;

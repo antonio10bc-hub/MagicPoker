@@ -108,6 +108,32 @@ const useCamera = () => {
   return camera;
 };
 
+/**
+ * Cámara de pelea: se acerca suavemente a un punto, aguanta y vuelve. Va en su propia
+ * capa para no pisarse con la sacudida y el "punch" de la cámara de impacto.
+ */
+const useFocus = () => {
+  const controls = useAnimationControls();
+  const focus = useFxStore(s => s.focus);
+  const { width, height } = useContext(StageContext);
+  useEffect(() => {
+    if (!focus) return;
+    const ox = Math.max(0.2, Math.min(0.8, focus.x / width));
+    const oy = Math.max(0.2, Math.min(0.8, focus.y / height));
+    controls.set({ originX: ox, originY: oy });
+    controls.start({
+      scale: [1, focus.zoom, focus.zoom, 1],
+      transition: { duration: focus.seconds, times: [0, 0.3, 0.72, 1], ease: 'easeInOut' },
+    });
+  }, [focus, controls, width, height]);
+  return controls;
+};
+
+const FocusLayer = ({ children }: { children: ReactNode }) => {
+  const focus = useFocus();
+  return <motion.div animate={focus} className="absolute inset-0">{children}</motion.div>;
+};
+
 const Flash = () => {
   const flash = useFxStore(s => s.flash);
   if (!flash) return null;
@@ -143,7 +169,7 @@ export const Stage = ({ children }: { children: ReactNode }) => {
                 píxeles internos dividiendo por la escala del escenario */}
             <MotionConfig transformPagePoint={p => ({ x: p.x / scale, y: p.y / scale })}>
               <motion.div animate={camera} className="absolute inset-0">
-                {children}
+                <FocusLayer>{children}</FocusLayer>
               </motion.div>
             </MotionConfig>
             <Flash />

@@ -243,6 +243,18 @@ se mueve rápido y una vibración leve a las masas naranjas.
   la capa del tablero o de la interfaz. Las partículas son polvo granulado (motas
   redondas y blandas), las ondas son halos difusos y los números de golpe, masas
   naranjas con la cifra en silueta.
+- **Cámara de pelea** (`fx.focus`, capa propia en `Stage`): mientras se ven las
+  flechas se acerca (×1,08–1,14) a donde va a pasar algo —cartas que caen, golpes
+  directos o el As— y se suelta tras el impacto.
+- **Vibración con significado** (`haptic()` en `lib/sounds.ts`): toque seco al
+  seleccionar o pasar por un hueco, golpe al colocar, doble golpe al ganar un choque,
+  golpe largo al perder carta o vida, redoble en el barrido del As, aviso de peligro,
+  fanfarria al ganar. Respeta el ajuste de vibración.
+- **Música generativa** (`lib/music.ts`): western nocturno en cinta, sin archivos.
+  Bordón grave que respira y sigue una progresión lenta (La–Fa–Sol–Mi), guitarra con
+  trémolo y reverb en escala frigia con silencios largos, pulso sordo en partida y
+  siseo, saturación y temblor de cinta. En la pelea se tensa: pulso más rápido,
+  segunda menor en el bordón y filtro más abierto.
 - **Coreografía** (`components/game/CombatDirector.tsx`): escucha los estados de la
   lógica (fase y resultado del combate) y dispara sonido, partículas y cámara. **Nunca
   cambia tiempos ni el orden de los eventos de juego.**

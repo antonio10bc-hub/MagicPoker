@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
-import { playMusic, preloadSounds, stopMusic } from '@/lib/sounds';
+import { playMusic, preloadSounds, setMusicHeat, stopMusic } from '@/lib/sounds';
 import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
@@ -21,6 +21,7 @@ const IRIS = {
 export default function Home() {
   const screen = useGameStore(s => s.screen);
   const isEnd = useGameStore(s => s.phase === 'end');
+  const isFight = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
   const current = screen === 'menu' ? 'menu' : isEnd ? 'end' : 'game';
   const Screen = SCREENS[current];
 
@@ -28,10 +29,13 @@ export default function Home() {
 
   // --- CONTROL DE MÚSICA SEGÚN PANTALLA ---
   useEffect(() => {
-    if (screen === 'menu') playMusic('menu_music', 0.4);
+    if (screen === 'menu') playMusic('menu_music', 0.55);
     else if (isEnd) stopMusic();
-    else playMusic('game_music', 0.2);
+    else playMusic('game_music', 0.4);
   }, [screen, isEnd]);
+
+  // La música se tensa durante la pelea
+  useEffect(() => { setMusicHeat(isFight ? 1 : 0); }, [isFight]);
 
   return (
     <Stage>

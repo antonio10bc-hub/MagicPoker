@@ -4,7 +4,7 @@ import { BoardSlot, Owner } from '@/types';
 import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
 import { JOKER_DRAW_BONUS, TIMINGS } from '@/lib/constants';
-import { duckMusic, playSfx, vibrate } from '@/lib/sounds';
+import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, IMPACT_DELAY_S } from './Card';
 
@@ -63,13 +63,14 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     // El As: onda expansiva que barre el tablero
     if (combat.voidedCardIds.length > 0) {
       const ace = cards.find(l => l.slot.card?.rank === 'A') ?? cards[0];
+      if (ace) fx.focus(ace.x, ace.y, 1.08, HOLD_MS / 1000 + 0.9);
       later(HOLD_MS, () => playSfx('wipe'));
       later(HOLD_MS + 250, () => {
         fx.flash(0.9);
         fx.shake(4);
         fx.punch(0.07);
         duckMusic(0.6, 0.9);
-        vibrate([30, 40, 60]);
+        haptic('wipe');
         if (ace) {
           fx.emit({ kind: 'ring', x: ace.x, y: ace.y, color: PALETTE.cyan, radius: 160, life: 700 });
           fx.emit({ kind: 'ring', x: ace.x, y: ace.y, color: PALETTE.white, radius: 110, life: 550 });
@@ -83,8 +84,23 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     const attackers = cards.filter(l => l.slot.card && l.slot.card.rank !== 'JOKER');
     if (attackers.length > 0) later(HOLD_MS, () => playSfx('swing'));
 
+    // Cámara de pelea: se acerca a donde va a pasar algo (cartas que caen y golpes
+    // directos) mientras se ven las flechas, y se suelta tras el impacto
+    const dead = new Set(combat.deadCardIds);
+    const spots = [
+      ...cards.filter(l => l.slot.card && dead.has(l.slot.card.id)),
+      ...Object.keys(combat.playerEmptySlotsHit).map(i => cards.find(l => l.owner === 'player' && l.slot.index === +i)!),
+      ...Object.keys(combat.opponentEmptySlotsHit).map(i => cards.find(l => l.owner === 'opponent' && l.slot.index === +i)!),
+    ].filter(Boolean);
+    if (spots.length > 0) {
+      const cx = spots.reduce((a, l) => a + l.x, 0) / spots.length;
+      const cy = spots.reduce((a, l) => a + l.y, 0) / spots.length;
+      // Más cerca cuanto más concentrada está la acción
+      const zoom = spots.length <= 2 ? 1.14 : 1.08;
+      fx.focus(cx, cy, zoom, IMPACT_DELAY_S + 0.9);
+    }
+
     later(IMPACT_MS, () => {
-      const dead = new Set(combat.deadCardIds);
       const victims = cards.filter(l => l.slot.card && dead.has(l.slot.card.id));
       victims.forEach((l, i) => later(i * 55, () => {
         playSfx('crush', 0.9, 1 - i * 0.04);
@@ -113,7 +129,9 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         fx.shake(Math.min(4.5, 1.5 + impact * 0.6));
         fx.punch(0.025);
         duckMusic(0.45, 0.4);
-        vibrate(victims.length > 0 ? 35 : 20);
+        // Vibración con significado: pierdes cartas, ganas el choque o solo hay daño
+        const lostMine = victims.some(l => l.owner === 'player');
+        haptic(lostMine ? 'clashLose' : victims.length > 0 ? 'clashWin' : 'hitRival');
         if (victims.length > 0) fx.flash(0.35);
       } else {
         playSfx('hit', 0.6);

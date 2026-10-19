@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
-import { playSfx } from '@/lib/sounds';
+import { haptic, playSfx } from '@/lib/sounds';
 import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
 import { Hand, HandHandlers, PlayerPanel, RivalPanel, Sidebar } from '@/components/game/Hud';
@@ -28,6 +28,7 @@ export const GameScreen = () => {
     if (!canPlay) return;
     const deselect = selectedCardId === id;
     playSfx(deselect ? 'deselect' : 'select');
+    if (!deselect) haptic('select');
     setSelectedCardId(deselect ? null : id);
   }, [canPlay, selectedCardId]);
 

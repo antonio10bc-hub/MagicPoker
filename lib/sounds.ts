@@ -1,13 +1,16 @@
 // --- MOTOR DE AUDIO (Web Audio) ---
-// Grafo:  sfx ──────────────┐
-//         música → filtro ─→ duck ─→ master → altavoces
-// - Los mp3 se decodifican una vez a buffers y se reproducen sin latencia.
-// - Los efectos de juego se sintetizan (lib/synth.ts): sin assets nuevos.
-// - La música se funde entre pistas, se "ahoga" con un paso bajo cuando hay un
+// Grafo:  sfx ─────────────────────────────┐
+//         música → filtro → nivel ─→ duck ─→ master → altavoces
+// - Los mp3 de efectos se decodifican una vez a buffers y se reproducen sin latencia.
+// - Los efectos de juego se sintetizan (lib/synth.ts) y la música es generativa
+//   (lib/music.ts): no hay pistas en archivo.
+// - La música se funde entre estilos, se "ahoga" con un paso bajo cuando hay un
 //   modal abierto y baja de volumen un instante en los golpes fuertes (ducking).
-// La API pública (playSound, playMusic, stopMusic, toggleMute...) no cambia.
+// - Los volúmenes de música y efectos y la vibración salen de los ajustes.
 
 import { SYNTHS, SynthName } from './synth';
+import { MusicHandle, startMusic } from './music';
+import { getSettings, subscribeSettings } from './settings';
 
 const SFX_FILES = {
   click: 'click.mp3',
@@ -17,13 +20,10 @@ const SFX_FILES = {
   as_reveal: 'mild-surprise.mp3',
 } as const;
 
-const MUSIC_FILES = {
-  menu_music: 'menuloop.mp3',
-  game_music: 'loopsong.mp3',
-} as const;
+const MUSIC_STYLES = { menu_music: 'menu', game_music: 'game' } as const;
 
 export type SoundName = keyof typeof SFX_FILES;
-export type MusicName = keyof typeof MUSIC_FILES;
+export type MusicName = keyof typeof MUSIC_STYLES;
 export type { SynthName } from './synth';
 
 const isBrowser = () => typeof window !== 'undefined';
@@ -37,12 +37,13 @@ interface Engine {
   master: GainNode;
   sfxBus: GainNode;
   musicFilter: BiquadFilterNode;
+  musicLevel: GainNode;
   musicDuck: GainNode;
 }
 let engine: Engine | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 
-interface MusicTrack { name: MusicName; source: AudioBufferSourceNode; gain: GainNode }
+interface MusicTrack { name: MusicName; handle: MusicHandle }
 let currentTrack: MusicTrack | null = null;
 let desiredMusic: { name: MusicName; volume: number } | null = null;
 
@@ -60,16 +61,20 @@ const getEngine = (): Engine | null => {
   master.connect(ctx.destination);
 
   const sfxBus = ctx.createGain();
+  sfxBus.gain.value = getSettings().sfx;
   sfxBus.connect(master);
 
   const musicDuck = ctx.createGain();
   musicDuck.connect(master);
+  const musicLevel = ctx.createGain();
+  musicLevel.gain.value = getSettings().music;
+  musicLevel.connect(musicDuck);
   const musicFilter = ctx.createBiquadFilter();
   musicFilter.type = 'lowpass';
   musicFilter.frequency.value = 20000;
-  musicFilter.connect(musicDuck);
+  musicFilter.connect(musicLevel);
 
-  engine = { ctx, master, sfxBus, musicFilter, musicDuck };
+  engine = { ctx, master, sfxBus, musicFilter, musicLevel, musicDuck };
   return engine;
 };
 
@@ -101,8 +106,19 @@ const loadBuffer = (file: string): Promise<AudioBuffer | null> => {
 /** Precarga los mp3 para que el primer sonido no tenga retardo. */
 export const preloadSounds = () => {
   if (!isBrowser()) return;
-  [...Object.values(SFX_FILES), ...Object.values(MUSIC_FILES)].forEach(loadBuffer);
+  Object.values(SFX_FILES).forEach(loadBuffer);
 };
+
+// Los ajustes de volumen se aplican al momento
+if (isBrowser()) {
+  subscribeSettings(() => {
+    if (!engine) return;
+    const { music, sfx } = getSettings();
+    const t = engine.ctx.currentTime;
+    engine.musicLevel.gain.setTargetAtTime(music, t, 0.05);
+    engine.sfxBus.gain.setTargetAtTime(sfx, t, 0.05);
+  });
+}
 
 // --- SILENCIO ---
 export const subscribeMute = (listener: () => void) => {
@@ -166,22 +182,35 @@ export const setMusicMuffled = (muffled: boolean) => {
   e.musicFilter.frequency.setTargetAtTime(muffled ? 700 : 20000, e.ctx.currentTime, 0.12);
 };
 
-/** Vibración corta en móviles compatibles */
+/** Vibración en móviles compatibles (respeta el ajuste y el silencio) */
 export const vibrate = (pattern: number | number[]) => {
-  if (!isBrowser() || isMuted) return;
+  if (!isBrowser() || isMuted || !getSettings().vibration) return;
   try { navigator.vibrate?.(pattern); } catch { /* sin soporte */ }
 };
 
-// --- MÚSICA (bucles con fundido cruzado) ---
-const fadeOutTrack = (track: MusicTrack, seconds = MUSIC_FADE_S) => {
-  const e = getEngine();
-  if (!e) return;
-  const t = e.ctx.currentTime;
-  track.gain.gain.cancelScheduledValues(t);
-  track.gain.gain.setValueAtTime(track.gain.gain.value, t);
-  track.gain.gain.linearRampToValueAtTime(0, t + seconds);
-  track.source.stop(t + seconds + 0.05);
-};
+/**
+ * Vibraciones con significado: cada momento tiene su "textura" para que se distinga
+ * sin mirar (un toque seco, un golpe doble, un redoble...).
+ */
+export const HAPTICS = {
+  tick: 6,
+  select: 8,
+  place: 14,
+  clashWin: [12, 30, 22],
+  clashLose: [45, 25, 70],
+  hitRival: [10, 20, 10, 20, 30],
+  lifeLost: [70, 40, 110],
+  wipe: [25, 35, 25, 35, 160],
+  danger: [15, 90, 15],
+  win: [30, 60, 30, 60, 40, 60, 180],
+  loss: [260, 80, 120],
+  stamp: [20, 40, 60],
+} satisfies Record<string, number | number[]>;
+
+export const haptic = (name: keyof typeof HAPTICS) => vibrate(HAPTICS[name]);
+
+// --- MÚSICA (generativa, con fundido cruzado entre estilos) ---
+let musicHeat = 0;
 
 export const playMusic = (name: MusicName, volume = 0.3) => {
   if (!isBrowser()) return;
@@ -191,28 +220,20 @@ export const playMusic = (name: MusicName, volume = 0.3) => {
   const e = getEngine();
   if (!e || e.ctx.state !== 'running') return; // arrancará al desbloquear el audio
 
-  const previous = currentTrack;
-  currentTrack = null;
-  if (previous) fadeOutTrack(previous);
-
-  loadBuffer(MUSIC_FILES[name]).then(buffer => {
-    // Si mientras cargaba se pidió otra pista o silencio, no hacemos nada
-    if (!buffer || desiredMusic?.name !== name || currentTrack) return;
-    const source = e.ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
-    const gain = e.ctx.createGain();
-    const t = e.ctx.currentTime;
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(volume, t + MUSIC_FADE_S);
-    source.connect(gain).connect(e.musicFilter);
-    source.start();
-    currentTrack = { name, source, gain };
-  });
+  currentTrack?.handle.stop(MUSIC_FADE_S * 2);
+  const handle = startMusic(e.ctx, e.musicFilter, MUSIC_STYLES[name], volume);
+  handle.setHeat(musicHeat);
+  currentTrack = { name, handle };
 };
 
 export const stopMusic = (fadeSeconds = 0.8) => {
   desiredMusic = null;
-  if (currentTrack) fadeOutTrack(currentTrack, fadeSeconds);
+  currentTrack?.handle.stop(fadeSeconds);
   currentTrack = null;
+};
+
+/** Tensión de la música: 0 calma, 1 pelea */
+export const setMusicHeat = (heat: number) => {
+  musicHeat = heat;
+  currentTrack?.handle.setHeat(heat);
 };

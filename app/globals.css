@@ -97,6 +97,8 @@ html, body {
   color: var(--ink-cream);
   box-shadow: inset 0 0 0 1px var(--c-ui-panel-light), 0 4px 10px rgba(0, 0, 0, 0.45);
 }
+/* Paneles emergentes (pronóstico, mazo): casi opacos para leerse encima de las cartas */
+.px-panel[data-popover] { background: rgba(11, 13, 12, 0.95); }
 .px-panel-dark {
   background: var(--c-ui-edge);
   color: var(--ink-cream);
