@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
 import { loadGame } from '@/lib/savegame';
-import { TIMINGS } from '@/lib/constants';
+import { isTutorialDone } from '@/lib/tutorial';
 import { Difficulty, Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
@@ -113,10 +113,10 @@ export const MenuScreen = () => {
   // Empieza la partida y, si es la primera vez, abre el tutorial
   const handleStartGame = () => {
     playSound('click');
-    startGame();
-    if (consumeFirstPlay()) {
-      setTimeout(() => useUiStore.getState().openModal('rules'), TIMINGS.rulesOnFirstGame);
-    }
+    // La primera vez se juega el tutorial guiado (si no se completó antes)
+    const first = consumeFirstPlay();
+    if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
+    else startGame();
   };
 
   const { cx, logoY, playY, difficultyY, panelW } = useMenuLayout();

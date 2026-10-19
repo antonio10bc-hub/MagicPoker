@@ -10,6 +10,7 @@ import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStam
 import { endStamps, newMatchTrack, roundStamps, StampId } from '@/lib/stamps';
 import { clearGame, loadGame, saveGame } from '@/lib/savegame';
 import { useUiStore } from '@/store/useUiStore';
+import { applyRivalMoves, markTutorialDone, stepCard, TUTORIAL_OPENINGS, TUTORIAL_STEPS, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
 import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS, STARTING_HAND_SIZE, STARTING_LIVES, TIMINGS } from '@/lib/constants';
 
 interface GameState {
@@ -23,11 +24,17 @@ interface GameState {
   /** Resultado del combate en curso (se muestra durante 'combat-reveal') */
   pendingCombatResult: CombatResult | null;
   gameResult: GameResult | null;
+  /** Paso del tutorial guiado (null = partida normal) */
+  tutorialStep: number | null;
 
   setDifficulty: (diff: Difficulty) => void;
   startGame: () => void;
   /** Retoma la partida guardada (si la hay) */
   resumeGame: () => boolean;
+  /** Partida guionizada que enseña a jugar */
+  startTutorial: () => void;
+  /** Pasa al siguiente paso (explicaciones) */
+  advanceTutorial: () => void;
   exitToMenu: () => void;
   placeCard: (cardId: string, slotIndex: number) => void;
   passTurn: () => void;
@@ -67,6 +74,7 @@ const initialMatchState = () => ({
   roundNumber: 1,
   pendingCombatResult: null,
   gameResult: null,
+  tutorialStep: null,
   player: createPlayerState(),
   opponent: createPlayerState(),
 });
@@ -99,6 +107,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
+  startTutorial: () => {
+    cancelScheduled();
+    playSound('shuffle', 0.6);
+    set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, ...tutorialPlayers() });
+  },
+
+  advanceTutorial: () => {
+    const { tutorialStep } = get();
+    if (tutorialStep === null) return;
+    set({ tutorialStep: tutorialStep + 1 });
+  },
+
   resumeGame: () => {
     const saved = loadGame();
     if (!saved) return false;
@@ -128,11 +148,30 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   placeCard: (cardId, slotIndex) => {
-    const { player, opponent, turn, phase } = get();
+    const { player, opponent, turn, phase, tutorialStep } = get();
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
+
+    // Tutorial: solo vale la carta y el hueco que pide el paso
+    const step = tutorialStep !== null ? TUTORIAL_STEPS[tutorialStep] : undefined;
+    if (tutorialStep !== null && (step?.kind !== 'play' || step.slot !== slotIndex || stepCard(player.hand, step)?.id !== cardId)) return;
 
     const nextPlayer = playCardToSlot(player, cardId, slotIndex, true);
     if (!nextPlayer) return;
+
+    if (step?.kind === 'play') {
+      playSound('click', 0.5);
+      // El rival responde lo que diga el guion (o nada)
+      if (step.rival?.length) {
+        set({ player: nextPlayer, turn: 'opponent', tutorialStep: tutorialStep! + 1 });
+        schedule(() => {
+          playSound('click', 0.4);
+          set({ opponent: applyRivalMoves(get().opponent, step.rival), turn: 'player' });
+        }, TIMINGS.opponentThink);
+      } else {
+        set({ player: nextPlayer, tutorialStep: tutorialStep! + 1 });
+      }
+      return;
+    }
 
     playSound('click', 0.5);
     const played = player.hand.find(c => c.id === cardId);
@@ -147,8 +186,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   passTurn: () => {
-    const { phase, turn, player, opponent } = get();
+    const { phase, turn, player, opponent, tutorialStep } = get();
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
+
+    if (tutorialStep !== null) {
+      const step = TUTORIAL_STEPS[tutorialStep];
+      if (step?.kind !== 'stand') return;
+      playSound('click');
+      set({ player: { ...player, isPassed: true }, turn: 'opponent', tutorialStep: tutorialStep + 1 });
+      // El rival juega lo que le quede en el guion y empieza la pelea
+      schedule(() => {
+        if (step.rival?.length) playSound('click', 0.4);
+        set({ opponent: { ...applyRivalMoves(get().opponent, step.rival), isPassed: true } });
+        schedule(get().resolveCombatPhase, step.rival?.length ? TIMINGS.opponentAfterPlay : 0);
+      }, step.rival?.length ? TIMINGS.opponentThink : 200);
+      return;
+    }
 
     playSound('click');
     set({ player: { ...player, isPassed: true }, turn: 'opponent' });
@@ -158,8 +211,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   opponentTurnAction: () => {
-    const { opponent, player, difficulty, phase } = get();
-    if (phase !== 'placement') return;
+    const { opponent, player, difficulty, phase, tutorialStep } = get();
+    if (phase !== 'placement' || tutorialStep !== null) return;
 
     const move = chooseOpponentMove(opponent.hand, opponent.board, player.board, difficulty);
     const nextOpponent = move && playCardToSlot(opponent, move.cardId, move.slotIndex, false);
@@ -195,11 +248,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       // 2. Se calcula el choque y se marcan las cartas afectadas
       schedule(() => {
-        const { player, opponent } = get();
-        const result = calculateCombat(player.board, opponent.board);
+        const { player, opponent, tutorialStep, roundNumber } = get();
+        const tutorial = tutorialStep !== null;
+        const result = calculateCombat(player.board, opponent.board, tutorial ? tutorialRng(player.board, roundNumber) : undefined);
 
-        recordRound(result.cardsDestroyedCount, result.opponentDamageTaken, result.playerDamageTaken);
-        award(roundStamps(result));
+        if (!tutorial) {
+          recordRound(result.cardsDestroyedCount, result.opponentDamageTaken, result.playerDamageTaken);
+          award(roundStamps(result));
+        }
         if (result.voidedCardIds.length > 0) playSound('as_reveal', 0.8);
 
         set({
@@ -215,8 +271,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   finishCombatPhase: () => {
-    const { phase, pendingCombatResult: result, player, opponent, difficulty, roundNumber } = get();
+    const { phase, pendingCombatResult: result, player, opponent, difficulty, roundNumber, tutorialStep } = get();
     if (phase !== 'combat-reveal') return;
+    const tutorial = tutorialStep !== null;
+    // En el tutorial, "Continuar" cierra el repaso de la pelea
+    if (tutorial && TUTORIAL_STEPS[tutorialStep]?.kind === 'review') set({ tutorialStep: tutorialStep + 1 });
 
     playSound('click');
 
@@ -242,6 +301,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (gameResult) {
       playSound(...END_SOUNDS[gameResult]);
+      if (tutorial) {
+        markTutorialDone();
+        set({ pendingCombatResult: null, gameResult, phase: 'end', player: nextPlayer, opponent: nextOpponent });
+        return;
+      }
       const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
       award(endStamps({
         result: gameResult, difficulty, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
@@ -257,7 +321,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       turn: 'player',
       roundNumber: roundNumber + 1,
       player: drawCards(nextPlayer, CARDS_DRAWN_PER_ROUND, true),
-      opponent: drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
+      // En el tutorial el rival puede abrir la ronda (Rey y Reina a la vista)
+      opponent: tutorial
+        ? applyRivalMoves(drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false), TUTORIAL_OPENINGS[roundNumber + 1])
+        : drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
     });
   },
 }));
@@ -267,7 +334,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 // volver al menú desde una partida, se borra.
 if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
-    if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player'
+    if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
       saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, player: state.player, opponent: state.opponent });
     }

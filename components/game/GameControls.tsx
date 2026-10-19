@@ -151,6 +151,7 @@ const StandConfirm = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
       <motion.div
         className="px-panel px-round absolute z-[85] p-[6px] flex flex-col gap-[4px] leading-[11px]"
         data-popover
+        data-confirm
         style={{ left, top: r.y - 6, width: w, translateY: '-100%' }}
         initial={{ opacity: 0, y: 8, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, transition: { duration: 0.12 } }}
         transition={{ type: 'spring', stiffness: 500, damping: 26 }}
@@ -177,7 +178,7 @@ const PassButton = ({ opponentPassed, onPress }: { opponentPassed: boolean; onPr
   );
 };
 
-export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
+export const ActionButton = ({ canPlay, tutorial }: { canPlay: boolean; tutorial?: boolean }) => {
   const { actionButton: r } = useGameLayout();
   const { isReveal, opponentPassed, passTurn } = useGameStore(useShallow(s => ({
     isReveal: s.phase === 'combat-reveal',
@@ -190,7 +191,8 @@ export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
   return (
     <>
       <AnimatePresence mode="wait">
-        {(canPlay || isReveal) && (
+        {/* En el tutorial "Continuar" lo pone el entrenador (sin cuenta atrás) */}
+        {(canPlay || (isReveal && !tutorial)) && (
           <motion.div
             key={isReveal ? 'continue' : 'pass'}
             className="absolute z-50"

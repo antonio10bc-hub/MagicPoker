@@ -303,6 +303,13 @@ se mueve rápido y una vibración leve a las masas naranjas.
   últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
   victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
   favorita y la colección de sellos.
+- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): la
+  primera vez que juegas (y desde Ajustes → Repetir tutorial). Una partida guionizada
+  de 4 rondas con las reglas reales que siempre se gana: cartas normales y huecos
+  vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" → el As
+  barre la mesa → rematas. El entrenador es un cartel sobre la franja central (no tapa
+  cartas); la carta y el hueco que tocan laten con un halo; lo demás queda bloqueado.
+  No cuenta para estadísticas ni sellos. Un test juega el guion entero.
 - **Partida guardada** (`lib/savegame.ts`): se guarda en cada turno tuyo y el menú
   ofrece "CONTINUAR PARTIDA".
 - **App instalable y sin conexión:** manifiesto, icono (carta naranja que brilla con

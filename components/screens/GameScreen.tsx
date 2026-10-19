@@ -6,6 +6,7 @@ import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
 import { Hand, HandHandlers, PlayerPanel, RivalPanel, Sidebar } from '@/components/game/Hud';
 import { CardInfo } from '@/components/game/CardInfo';
+import { TutorialCoach, useTutorialGate } from '@/components/game/TutorialCoach';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { AmbientDust, LowHealth } from '@/components/fx/Ambient';
@@ -17,19 +18,23 @@ export const GameScreen = () => {
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [infoCardId, setInfoCardId] = useState<string | null>(null);
 
-  const { canPlay, placeCard, lowHealth } = useGameStore(useShallow(s => ({
-    canPlay: s.phase === 'placement' && s.turn === 'player' && !s.player.isPassed,
+  const { yourTurn, placeCard, lowHealth } = useGameStore(useShallow(s => ({
+    yourTurn: s.phase === 'placement' && s.turn === 'player' && !s.player.isPassed,
     placeCard: s.placeCard,
     lowHealth: s.player.lives === 1 && s.phase !== 'end',
   })));
+  // Tutorial: solo se juega en los pasos "play" (y solo la carta y el hueco que piden)
+  const tutorial = useTutorialGate();
+  const canPlay = yourTurn && (!tutorial.active || tutorial.step?.kind === 'play');
+  const canStand = yourTurn && (!tutorial.active || tutorial.step?.kind === 'stand');
 
   const handleSelectCard = useCallback((id: string) => {
-    if (!canPlay) return;
+    if (!canPlay || (tutorial.cardId && id !== tutorial.cardId)) return;
     const deselect = selectedCardId === id;
     playSfx(deselect ? 'deselect' : 'select');
     if (!deselect) haptic('select');
     setSelectedCardId(deselect ? null : id);
-  }, [canPlay, selectedCardId]);
+  }, [canPlay, selectedCardId, tutorial.cardId]);
 
   const handleSlotClick = useCallback((slotIndex: number) => {
     if (!selectedCardId) return;
@@ -59,14 +64,15 @@ export const GameScreen = () => {
     <div className="absolute inset-0">
       <Backdrop />
       <AmbientDust />
-      <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} dragOverSlot={dragOverSlot} />
+      <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} dragOverSlot={dragOverSlot} onlySlot={tutorial.slot} />
       <Sidebar />
       <RivalPanel />
       <PlayerPanel />
       <MenuButtons />
       <TurnBox />
-      <ActionButton canPlay={canPlay} />
-      <Hand selectedCardId={selectedCardId} canPlay={canPlay} handlers={handHandlers} />
+      <ActionButton canPlay={canStand} tutorial={tutorial.active} />
+      <Hand selectedCardId={selectedCardId} canPlay={canPlay} onlyCardId={tutorial.cardId} handlers={handHandlers} />
+      <TutorialCoach />
       <CardInfo cardId={infoCardId} />
       <FxLayer layer="ui" />
       <RoundAnnouncer />

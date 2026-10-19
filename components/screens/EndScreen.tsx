@@ -77,6 +77,7 @@ const TitleLetters = ({ text }: { text: string }) => (
 
 export const EndScreen = () => {
   const t = useTranslations();
+  const wasTutorial = useGameStore(s => s.tutorialStep !== null);
   const { gameResult, startGame, exitToMenu } = useGameStore(useShallow(s => ({
     gameResult: s.gameResult ?? 'loss',
     startGame: s.startGame,
@@ -114,7 +115,7 @@ export const EndScreen = () => {
         transition={{ type: 'spring', stiffness: isLoss ? 500 : 260, damping: isLoss ? 20 : 12, delay: 0.25 }}
       >
       <Panel title={<TitleLetters text={t[ui.title]} />} band={ui.band} style={{ width: panelWidth, height: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
-        <p className="text-center leading-[12px]">{t[ui.sub]}</p>
+        <p className="text-center leading-[12px]">{wasTutorial ? t.tut_done : t[ui.sub]}</p>
         <PxButton tone="yellow" onClick={() => { playSound('click'); startGame(); }} className="h-[20px]">{t.play_again}</PxButton>
         <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
       </Panel>

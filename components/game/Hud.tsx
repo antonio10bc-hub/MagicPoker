@@ -267,6 +267,8 @@ interface HandCardProps {
   enterDelay: number;
   isSelected: boolean;
   canPlay: boolean;
+  /** Halo que late: "juega esta" (tutorial) */
+  hinted?: boolean;
   handlers: HandHandlers;
 }
 
@@ -310,7 +312,7 @@ const HOVER_INFO_MS = 650;
 
 const SPRING = { type: 'spring', stiffness: 380, damping: 24 } as const;
 
-const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, canPlay, handlers }: HandCardProps) => {
+const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, canPlay, hinted, handlers }: HandCardProps) => {
   const [hovered, setHovered] = useState(false);
   const [dragging, setDragging] = useState(false);
   const faceRef = useRef<HTMLDivElement>(null);
@@ -349,7 +351,8 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
     return () => clearTimeout(t);
   }, [initialDelay]);
 
-  const lifted = isSelected || (hovered && canPlay);
+  // La carta señalada por el tutorial se levanta y pasa al frente del abanico
+  const lifted = isSelected || hinted || (hovered && canPlay);
   const rotate = lifted ? 0 : fan * 9;
   const arcY = lifted ? (isSelected ? -14 : -10) : Math.round(fan * fan * 5);
 
@@ -370,7 +373,7 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
     <motion.div
       data-hand-card
       className="absolute"
-      style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
+      style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hinted ? 58 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
       // Robar: llega desde el mazo girando y se coloca en el abanico con un rebote
       initial={{ left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
       animate={{ left: x, y: dragY ?? arcY, rotate, scale: dragging ? 1 : isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1 }}
@@ -428,6 +431,8 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
         <motion.div className="absolute" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, background: 'var(--c-shadow)' }}
           animate={{ x: lifted ? 5 : 2, y: lifted ? 9 : 3, opacity: lifted ? 0.7 : 1 }} transition={SPRING} />
         <Card card={card} onClick={handleClick} isSelected={isSelected} isDisabled={!canPlay} />
+        {hinted && <div className="absolute inset-0 rounded-[3px] pointer-events-none anim-pulse"
+          style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, boxShadow: '0 0 0 1px var(--ink-cream), 0 0 10px 3px rgba(255,74,28,0.7)' }} />}
       </div>
       </div>
       </motion.div>
@@ -439,10 +444,12 @@ HandCard.displayName = 'HandCard';
 interface HandProps {
   selectedCardId: string | null;
   canPlay: boolean;
+  /** Tutorial: la única carta que se puede jugar (se señala con un halo) */
+  onlyCardId?: string;
   handlers: HandHandlers;
 }
 
-export const Hand = ({ selectedCardId, canPlay, handlers }: HandProps) => {
+export const Hand = ({ selectedCardId, canPlay, onlyCardId, handlers }: HandProps) => {
   const hand = useGameStore(s => s.player.hand);
   const area = useGameLayout().hand;
   const cardW = Math.round(CARD_SIZE.width * area.scale);
@@ -464,7 +471,8 @@ export const Hand = ({ selectedCardId, canPlay, handlers }: HandProps) => {
           fan={hand.length > 1 ? (i - (hand.length - 1) / 2) / ((hand.length - 1) / 2) : 0}
           enterDelay={(i % 4) * 0.08}
           isSelected={selectedCardId === card.id}
-          canPlay={canPlay}
+          canPlay={canPlay && (!onlyCardId || card.id === onlyCardId)}
+          hinted={onlyCardId === card.id && selectedCardId !== card.id}
           handlers={handlers}
         />
       ))}

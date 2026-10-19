@@ -247,7 +247,7 @@ const SettingsModal = () => {
   const settings = useSettings();
   const isMuted = useMuted();
   return (
-    <Dialog title={t.settings_title} width={236} height={150}>
+    <Dialog title={t.settings_title} width={236} height={176}>
       <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[12px]">
         <Row label={t.set_sound}>
           <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
@@ -266,6 +266,11 @@ const SettingsModal = () => {
           </div>
         </div>
         <div style={{ color: 'var(--ink-teal)' }}>{t.grain_hint}</div>
+        <PxButton className="h-[16px] mt-[2px]" onClick={() => {
+          playSound('click');
+          useUiStore.getState().closeModal();
+          useGameStore.getState().startTutorial();
+        }}>{t.replay_tutorial}</PxButton>
       </div>
     </Dialog>
   );

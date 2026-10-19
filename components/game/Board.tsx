@@ -202,9 +202,11 @@ interface BoardProps {
   onSlotClick: (slotIndex: number) => void;
   /** Hueco sobre el que se está arrastrando una carta (vista previa) */
   dragOverSlot: number | null;
+  /** Tutorial: el único hueco válido (se señala aunque no haya carta elegida) */
+  onlySlot?: number;
 }
 
-export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps) => {
+export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: BoardProps) => {
   const { board: geo, rivalPanel, hand: handArea } = useGameLayout();
   const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
   // Cartas de la mesa con las flechas encendidas (se enciende/apaga tocándolas)
@@ -259,11 +261,18 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
   const renderSide = (cards: BoardSlot[], owner: Owner) =>
     cards.map(slot => {
       const { x, y } = geo.slots[owner][slot.index];
-      const canTarget = owner === 'player' && !slot.card && isTargeting;
+      const canTarget = owner === 'player' && !slot.card && isTargeting && (onlySlot === undefined || onlySlot === slot.index);
+      const tutorialHint = owner === 'player' && onlySlot === slot.index && !slot.card && isPlacementPhase;
       const showGhost = canTarget && activeSlot === slot.index && selectedCard;
       return (
         <div key={`${owner}-${slot.index}`}>
           <SlotTile x={x} y={y} highlight={canTarget} />
+          {/* Tutorial: "aquí" — marco que late sobre el hueco que pide el paso */}
+          {tutorialHint && (
+            <div className="absolute pointer-events-none px-round anim-pulse z-[19]"
+              style={{ left: x - 3, top: y - 3, width: CARD_SIZE.width + 6, height: CARD_SIZE.height + 6,
+                boxShadow: '0 0 0 1px var(--ink-cream), 0 0 12px 3px rgba(255,74,28,0.65)' }} />
+          )}
           {canTarget && (
             <button
               aria-label={`slot ${slot.index + 1}`}
