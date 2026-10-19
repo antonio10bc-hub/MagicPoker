@@ -296,6 +296,39 @@ se mueve rápido y una vibración leve a las masas naranjas.
     (`defeat`).
   Cada reproducción lleva una ligera variación de tono para que no canse.
 - **Vibración** con significado (ver "Movimiento y game feel").
+
+### Meta: ajustes, sellos, estadísticas y app
+
+- **Ajustes** (rueda dentada, en el menú y en la partida; `lib/settings.ts`): sonido,
+  volumen de música y de efectos, vibración, confirmar al plantarse y grano (completo, suave o apagado; apagado
+  también congela la niebla del fondo: modo rendimiento).
+- **Sellos** (`lib/stamps.ts`, `components/game/Stamps.tsx`): 12 logros por hacer cosas
+  concretas. Cada uno es un círculo de tinta con un icono en silueta: conseguido, masa
+  naranja que brilla; por conseguir, anillo pizarra. Al ganarse se estampa en pantalla
+  de golpe (escala ×3 → 1, desenfoque que se enfoca, anillo de tinta, crujido, brillo y
+  vibración), esperando a que termine el choque para no tapar la acción.
+- **Estadísticas ampliadas:** victorias por dificultad, derrotas, empates, porcentaje,
+  últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
+  victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
+  favorita y la colección de sellos.
+- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): la
+  primera vez que juegas (y desde Ajustes → Repetir tutorial). Una partida guionizada
+  de 4 rondas y 13 pasos con las reglas reales que siempre se gana: cartas normales y
+  huecos vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" →
+  el As barre la mesa → un golpe directo y ganas. Cada explicación va dentro del paso
+  que la usa (sin pantallas de "Entendido"); solo los repasos de pelea esperan a
+  "Continuar". Mientras juegas, el entrenador es un cartel sobre la franja central con
+  textos de ~60 caracteres y letra de 10, 9 u 8 px elegida para caber en el hueco entre
+  filas de cada móvil; los repasos van abajo, sobre la mano. La carta y el hueco que
+  tocan laten con un halo; lo demás queda bloqueado.
+  No cuenta para estadísticas ni sellos. Un test juega el guion entero.
+- **Partida guardada** (`lib/savegame.ts`): se guarda en cada turno tuyo y el menú
+  ofrece "CONTINUAR PARTIDA".
+- **App instalable y sin conexión:** manifiesto, icono (carta naranja que brilla con
+  el rombo de luz sobre negro granulado) y service worker (`public/sw.js`).
+- **Pantalla de carga:** HTML puro con el logo y una barra de brasa, visible hasta que
+  cargan las fuentes.
+
 ---
 
 ## Cómo crear un escenario nuevo
