@@ -196,10 +196,30 @@ export interface HandHandlers {
   onInfo: (id: string | null) => void;
 }
 
-/** Hueco del tablero bajo el puntero (los botones de hueco llevan data-slot) */
-const slotUnderPointer = (x: number, y: number): number | null => {
-  const el = document.elementsFromPoint(x, y).find(e => e instanceof HTMLElement && e.dataset.slot !== undefined) as HTMLElement | undefined;
-  return el ? Number(el.dataset.slot) : null;
+/**
+ * Hueco de destino para una carta arrastrada: el hueco libre (los botones llevan
+ * data-slot) más cercano al centro de la carta, con un margen generoso alrededor de
+ * cada hueco para no exigir puntería. Usa los rectángulos reales en pantalla, así
+ * tiene en cuenta la inclinación 3D del tablero.
+ */
+const slotNear = (x: number, y: number): number | null => {
+  let best: number | null = null;
+  let bestD = Infinity;
+  document.querySelectorAll<HTMLElement>('[data-slot]').forEach(el => {
+    const r = el.getBoundingClientRect();
+    const dx = Math.max(r.left - x, 0, x - r.right);
+    const dy = Math.max(r.top - y, 0, y - r.bottom);
+    const d = Math.hypot(dx, dy);
+    if (d <= r.width * 0.75 && d < bestD) { best = Number(el.dataset.slot); bestD = d; }
+  });
+  return best;
+};
+
+/** Centro visible de la carta arrastrada (o el puntero si aún no hay caja) */
+const dragPoint = (el: HTMLElement | null, e: PointerEvent) => {
+  if (!el) return { x: e.clientX, y: e.clientY };
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 };
 
 const LONG_PRESS_MS = 420;
@@ -210,6 +230,10 @@ const SPRING = { type: 'spring', stiffness: 380, damping: 24 } as const;
 const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, canPlay, handlers }: HandCardProps) => {
   const [hovered, setHovered] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const faceRef = useRef<HTMLDivElement>(null);
+  const overSlot = useRef<number | null>(null);
+  // Altura de la carta al empezar a arrastrar: se congela para que siga al dedo 1:1
+  const [dragY, setDragY] = useState<number | null>(null);
   // Mantener pulsado (táctil) o dejar el ratón encima muestra la ficha de la carta
   const infoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoShown = useRef(false);
@@ -261,11 +285,12 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
 
   return (
     <motion.div
+      data-hand-card
       className="absolute"
       style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
       // Robar: llega desde el mazo girando y se coloca en el abanico con un rebote
       initial={{ left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
-      animate={{ left: x, y: arcY, rotate, scale: isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1 }}
+      animate={{ left: x, y: dragY ?? arcY, rotate, scale: dragging ? 1 : isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1 }}
       exit={{ y: -30, scale: 0.8, opacity: 0, transition: { duration: 0.15 } }}
       transition={{ ...SPRING, delay: entered ? 0 : initialDelay }}
       onAnimationComplete={() => setEntered(true)}
@@ -287,22 +312,31 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
           stopInfo();
           infoShown.current = false;
           setDragging(true);
+          setDragY(arcY);
           rx.set(0); ry.set(0);
           handlers.onDragStart(card.id);
         }}
         onDrag={e => {
-          const p = e as PointerEvent;
-          handlers.onDragOverSlot(slotUnderPointer(p.clientX, p.clientY));
+          const p = dragPoint(faceRef.current, e as PointerEvent);
+          const slot = slotNear(p.x, p.y);
+          if (slot === overSlot.current) return;
+          overSlot.current = slot;
+          // Pequeño "clic" al entrar en un hueco: confirma dónde caerá al soltar
+          if (slot !== null) { playSfx('hover'); vibrate(8); }
+          handlers.onDragOverSlot(slot);
         }}
         onDragEnd={e => {
-          const p = e as PointerEvent;
+          const p = dragPoint(faceRef.current, e as PointerEvent);
+          const slot = slotNear(p.x, p.y) ?? overSlot.current;
+          overSlot.current = null;
           setDragging(false);
-          handlers.onDrop(card.id, slotUnderPointer(p.clientX, p.clientY));
+          setDragY(null);
+          handlers.onDrop(card.id, slot);
         }}
         style={{ touchAction: 'none' }}
       >
       {/* Balanceo continuo: las cartas nunca están quietas del todo */}
-      <div style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0' }}>
+      <div ref={faceRef} style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0', width: CARD_SIZE.width, height: CARD_SIZE.height }}>
       <motion.div
         className={clsx(isSelected && 'anim-bob')}
         animate={{ rotate: [-1.6, 1.6, -1.6], y: [0, -1.5, 0] }}

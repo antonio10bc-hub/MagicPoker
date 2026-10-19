@@ -26,15 +26,17 @@ interface BoardHintsProps {
   combat: CombatResult | null;
   /** Carta seleccionada y hueco sobre el que está el puntero (vista previa) */
   preview: { card: CardType; slotIndex: number } | null;
+  /** Cartas con las flechas encendidas: solo ellas marcan "-N" */
+  shown: ReadonlySet<string>;
 }
 
 interface Aim { sure: number; maybe: number; wipe: boolean; previewOnly: boolean }
 
 /** Objetivos de tus cartas en la fila rival (incluida la vista previa) */
-const aimAtOpponent = (board: BoardSlot[], preview: BoardHintsProps['preview']): Aim[] => {
+const aimAtOpponent = (board: BoardSlot[], preview: BoardHintsProps['preview'], shown: ReadonlySet<string>): Aim[] => {
   const aims: Aim[] = [0, 1, 2, 3].map(() => ({ sure: 0, maybe: 0, wipe: false, previewOnly: true }));
   const attackers = board
-    .filter(s => s.card)
+    .filter(s => s.card && shown.has(s.card.id))
     .map(s => ({ card: s.card!, index: s.index, isPreview: false }));
   if (preview) attackers.push({ card: preview.card, index: preview.slotIndex, isPreview: true });
 
@@ -73,11 +75,11 @@ const SpriteBadge = ({ sprite, ...rest }: { sprite: Sprite; x: number; y: number
   <Badge {...rest}><PixelSprite sprite={sprite} /></Badge>
 );
 
-export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, preview }: BoardHintsProps) => {
+export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, preview, shown }: BoardHintsProps) => {
   const placement = phase === 'placement';
   const opponentRevealed = opponentBoard.some(s => s.card?.isFaceUp);
 
-  const aims = useMemo(() => aimAtOpponent(playerBoard, preview), [playerBoard, preview]);
+  const aims = useMemo(() => aimAtOpponent(playerBoard, preview, shown), [playerBoard, preview, shown]);
 
   // Predicción justo antes del golpe (cartas ya destapadas, resultado aún no llegado).
   // El Príncipe elige al azar: se usa su objetivo central solo para avisar.

@@ -12,9 +12,13 @@ import { ARROW_HOLD_S } from './Card';
 // (verde tú, rojo el rival). Forma de cuña: fina al salir y ancha en la punta, con un
 // leve arco; translúcida para no tapar el tablero.
 //
+// Las flechas se encienden y apagan tocando cartas de la mesa (tuyas o rivales
+// destapadas), una o varias a la vez; además se ve la de la carta que estás colocando.
+//
 // Lectura de la pelea:
-//  · Dos cartas que se atacan de frente: si una gana, solo queda su flecha; si
-//    empatan, las dos se quedan a mitad de camino y chocan con un destello.
+//  · Dos cartas que se atacan de frente: la flecha de la que pierde se queda muy
+//    pequeña y fina (se ve que compiten, pero quién gana); si empatan, las dos se
+//    quedan a mitad de camino y chocan con un destello.
 //  · Varias flechas al mismo hueco abren sus puntas en abanico.
 //  · Cada flecha se curva siempre hacia su derecha: dos flechas que se cruzan dibujan
 //    una "X" clara en lugar de solaparse.
@@ -33,6 +37,8 @@ interface Arrow {
   preview: boolean;
   /** Empate de frente: la flecha se queda a mitad de camino */
   clash: boolean;
+  /** Pierde un enfrentamiento de frente: flecha muy pequeña y fina */
+  losing: boolean;
 }
 
 interface AttackArrowsProps {
@@ -42,6 +48,8 @@ interface AttackArrowsProps {
   phase: GamePhase;
   combat: CombatResult | null;
   preview: { card: CardType; slotIndex: number } | null;
+  /** Cartas de la mesa con las flechas encendidas (tocar una carta las enciende/apaga) */
+  shown: ReadonlySet<string>;
 }
 
 /** ¿Siguen visibles las flechas? Hasta ARROW_HOLD_S después de resolverse la pelea */
@@ -57,7 +65,7 @@ export const useArrowsVisible = (combat: CombatResult | null) => {
 
 interface Attack { card: CardType; index: number; owner: Owner; target: number; maybe: boolean; preview: boolean }
 
-const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview }: AttackArrowsProps) => {
+const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview, shown }: AttackArrowsProps) => {
   const wipers: { x: number; y: number; owner: Owner }[] = [];
   const attacks: Attack[] = [];
   if (phase !== 'placement' && phase !== 'combat' && phase !== 'combat-reveal') return { arrows: [], wipers, clashes: [] };
@@ -80,18 +88,21 @@ const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview }: Attack
       attacks.push({ card, index, owner, target, maybe: def.attack!.mode === 'random-one', preview: isPreview }));
   });
 
-  // Enfrentamientos de frente: A ataca el hueco de B y B ataca el de A
-  const hidden = new Set<Attack>();
+  // Enfrentamientos de frente (A ataca el hueco de B y B el de A), calculados con todas
+  // las cartas conocidas aunque solo se dibujen las encendidas: así la flecha de una
+  // carta que pierde sale pequeñita aunque la ganadora no esté encendida.
+  const losing = new Set<Attack>();
   const clashing = new Set<Attack>();
   attacks.forEach(a => {
     const rival = attacks.find(b => b.owner !== a.owner && b.index === a.target && b.target === a.index && !b.maybe && !a.maybe);
     if (!rival) return;
-    if (a.card.value < rival.card.value) hidden.add(a);
+    if (a.card.value < rival.card.value) losing.add(a);
     else if (a.card.value === rival.card.value) clashing.add(a);
   });
 
+  // Solo se dibujan las cartas encendidas (y la vista previa al apuntar/arrastrar)
+  const visible = attacks.filter(a => a.preview || shown.has(a.card.id));
   // Varias flechas al mismo hueco: abrimos las puntas en abanico
-  const visible = attacks.filter(a => !hidden.has(a));
   const byTarget = new Map<string, Attack[]>();
   visible.forEach(a => {
     const k = `${a.owner}-${a.target}`;
@@ -108,13 +119,18 @@ const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview }: Attack
     const from = { x: p.x + CARD_SIZE.width / 2, y: a.owner === 'player' ? p.y + 14 : p.y + CARD_SIZE.height - 14 };
     let to = { x: q.x + CARD_SIZE.width / 2 + spread, y: q.y + CARD_SIZE.height / 2 };
     const clash = clashing.has(a);
+    const isLosing = losing.has(a);
     if (clash) {
       to = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 + (a.owner === 'player' ? 4 : -4) };
-      if (a.owner === 'player') clashes.push({ x: to.x, y: to.y - 4 });
+      clashes.push({ x: to.x, y: to.y + (a.owner === 'player' ? -4 : 4) });
+    } else if (isLosing) {
+      // Se queda corta frente a la ganadora: se ve que compiten, pero quién gana
+      to = { x: from.x + (to.x - from.x) * 0.38, y: from.y + (to.y - from.y) * 0.38 };
     }
-    return { key: `${a.card.id}-${a.target}`, owner: a.owner, from, to, maybe: a.maybe, preview: a.preview, clash };
+    return { key: `${a.card.id}-${a.target}`, owner: a.owner, from, to, maybe: a.maybe, preview: a.preview, clash, losing: isLosing };
   });
-  return { arrows, wipers, clashes };
+  const seen = new Set<string>();
+  return { arrows, wipers, clashes: clashes.filter(c => { const k = `${Math.round(c.x)}-${Math.round(c.y / 8)}`; if (seen.has(k)) return false; seen.add(k); return true; }) };
 };
 
 /**
@@ -122,14 +138,15 @@ const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview }: Attack
  * con grosor creciente (2 → 10 px) y una punta ancha al final.
  */
 const wedge = (a: Arrow) => {
+  const k = a.losing ? 0.45 : 1; // las perdedoras, más finas
   const dx = a.to.x - a.from.x;
   const dy = a.to.y - a.from.y;
   const len = Math.hypot(dx, dy) || 1;
   const nx = -dy / len; // normal (derecha de la dirección)
   const ny = dx / len;
-  const bend = Math.min(10, len * 0.18);
+  const bend = Math.min(10, len * 0.18) * k;
   const c = { x: (a.from.x + a.to.x) / 2 + nx * bend, y: (a.from.y + a.to.y) / 2 + ny * bend };
-  const head = Math.min(13, len * 0.42);
+  const head = Math.min(13 * k, len * 0.42);
 
   // Punto y tangente de la curva en t
   const at = (t: number) => {
@@ -150,13 +167,13 @@ const wedge = (a: Arrow) => {
     const t = (i / STEPS) * tHead;
     const pt = at(t);
     const tl = Math.hypot(pt.tx, pt.ty) || 1;
-    const w = 1 + 3.8 * (t / tHead); // medio grosor: fino → ancho
+    const w = (1 + 3.8 * (t / tHead)) * k; // medio grosor: fino → ancho
     left.push(`${pt.x + (-pt.ty / tl) * w},${pt.y + (pt.tx / tl) * w}`);
     right.unshift(`${pt.x - (-pt.ty / tl) * w},${pt.y - (pt.tx / tl) * w}`);
   }
   const base = at(tHead);
   const bl = Math.hypot(base.tx, base.ty) || 1;
-  const hw = 9; // medio ancho de la punta
+  const hw = 9 * k; // medio ancho de la punta
   const headL = `${base.x + (-base.ty / bl) * hw},${base.y + (base.tx / bl) * hw}`;
   const headR = `${base.x - (-base.ty / bl) * hw},${base.y - (base.tx / bl) * hw}`;
   return `M ${left.join(' L ')} L ${headL} L ${a.to.x},${a.to.y} L ${headR} L ${right.join(' L ')} Z`;
@@ -166,7 +183,7 @@ const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
   const team = TEAM[a.owner];
   const d = wedge(a);
   const gradId = `arrow-grad-${a.key}`;
-  const peak = a.preview ? 0.5 : a.maybe ? 0.45 : 0.72;
+  const peak = a.preview ? 0.5 : a.losing ? 0.55 : a.maybe ? 0.45 : 0.75;
   return (
     <motion.g
       initial={{ opacity: 0 }}

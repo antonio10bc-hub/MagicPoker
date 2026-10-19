@@ -203,32 +203,42 @@ interacción y estados.
   - **hueco tuyo vacío:** corazón tenue (si lo golpean pierdes una vida); con una
     carta rival justo delante, "!" rojo que late;
   - **flechas de ataque** (`components/game/AttackArrows.tsx`):
+    - **a demanda:** tocar una carta de la mesa enciende sus flechas (brilla en el
+      color de su bando) y volver a tocarla las apaga; se pueden encender varias a la
+      vez, tuyas o rivales destapadas. La carta que estás colocando siempre muestra las
+      suyas como vista previa;
     - **forma:** cada carta dibuja una cuña translúcida (fina al salir, ancha en la
       punta) con un leve arco hacia cada hueco que golpeará, del **color de su bando**:
       verde tú, rojo el rival;
     - **cruces:** cada flecha se curva siempre hacia su derecha, así que dos flechas que
       se cruzan forman una "X" clara;
     - **mismo hueco:** si varias apuntan al mismo, sus puntas se abren en abanico;
-    - **de frente:** si dos cartas se atacan cara a cara, solo queda la flecha de la que
-      gana; si empatan, ambas se quedan a mitad de camino y chocan con un destello;
+    - **de frente:** si dos cartas se atacan cara a cara, la que pierde dibuja una
+      flecha diminuta (corta y estrecha) frente a la grande de la que gana; si empatan,
+      ambas se quedan a mitad de camino y chocan con un destello;
     - **el rival:** muestra flechas solo con las cartas destapadas;
     - **casos especiales:** el Príncipe dibuja flechas discontinuas y tenues; el As, una
       onda;
     - **al resolverse la pelea:** las flechas se ven `ARROW_HOLD_S` (0,6 s) y
       desaparecen antes de las embestidas. El choque visual se retrasa ese tiempo, pero
       la lógica no cambia;
-  - **"-N" dorado** en los huecos rivales vacíos a los que apuntas (daño seguro, se
-    suma si coinciden varias cartas);
+  - **"-N" dorado** en los huecos rivales vacíos a los que apuntan tus cartas con las
+    flechas encendidas (daño seguro, se suma si coinciden varias);
   - **antes del golpe**, con todo destapado: ✓ en las cartas rivales que caerán y ✗
     en las tuyas.
 - **Carteles sin tapar la acción:** "¡PELEA!" dura 0,7 s y se va antes de que las
   cartas embistan; "RONDA" pasa en 1,1 s sobre la franja central.
 - **Ficha de carta:** mantener pulsada una carta (o dejar el ratón encima) la abre.
-- **Arrastrar y soltar:** al arrastrar, la carta se ajusta al tamaño de la mesa y el
-  hueco de destino muestra la vista previa.
+- **Arrastrar y soltar:** al arrastrar, la carta sigue al dedo 1:1 y se ajusta al
+  tamaño de la mesa. El destino es el hueco libre más cercano al centro de la carta
+  (con margen generoso alrededor de cada hueco); se confirma con la vista previa, un
+  marco verde que late, un clic y una vibración breve.
 - **Móvil en vertical:**
   - escala ×6 en los móviles habituales (ancho interno ~180–195 px);
-  - diorama compacto;
+  - diorama compacto que crece hasta 40 px para llenar el hueco libre, siempre
+    ensanchando el centro (entre bandos), donde pasan los carteles;
+  - si no hay margen lateral, la barandilla baja para que las banderolas verdes no
+    queden tapadas por tus cartas;
   - mano a ×1,5 si cabe (sigue cayendo en píxeles enteros).
 
 ### Movimiento y game feel

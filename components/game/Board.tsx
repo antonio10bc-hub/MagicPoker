@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, animate, MotionStyle, useMotionValue, useTransform } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Card as CardType, Owner } from '@/types';
 import { useGameLayout } from '@/components/pixel/Stage';
 import { BoardGeometry } from '@/theme/layout';
-import { CARD_SIZE, PALETTE } from '@/theme/tokens';
+import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
 import { useTranslations } from '@/lib/i18n';
 import { getTargetIndices, RANKS } from '@/lib/game-utils';
 import { playSfx, vibrate } from '@/lib/sounds';
@@ -19,7 +19,7 @@ import { ARROW_HOLD_S, Card } from './Card';
 import { cardOrigins } from './cardOrigins';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
-import { AttackArrows } from './AttackArrows';
+import { AttackArrows, useArrowsVisible } from './AttackArrows';
 
 const { Diorama } = ACTIVE_THEME;
 
@@ -58,13 +58,16 @@ interface PlacedCardProps {
   origin: { x: number; y: number };
   /** Embestida hacia el objetivo durante el combate */
   lunge: { dx: number; dy: number } | null;
+  /** Flechas de ataque encendidas para esta carta */
+  arrowsOn: boolean;
+  onToggleArrows: (cardId: string) => void;
 }
 
 /**
  * Carta en mesa: llega volando en arco desde la mano (o desde el rival), se acerca a
  * la cámara a mitad de vuelo, se "aplasta" al aterrizar y levanta polvo.
  */
-const PlacedCard = ({ card, owner, x, y, origin, lunge }: PlacedCardProps) => {
+const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows }: PlacedCardProps) => {
   const dx = origin.x - x;
   const dy = origin.y - y;
   const spin = owner === 'player' ? -8 : 10;
@@ -119,7 +122,17 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge }: PlacedCardProps) => {
           animate={lunge || dead ? { y: 0, rotate: 0 } : { y: [0, -1, 0], rotate: [-0.8, 0.8, -0.8] }}
           transition={lunge || dead ? { duration: 0.2 } : { duration: 3 + (card.value % 3) * 0.4, repeat: Infinity, ease: 'easeInOut', delay: (card.value % 5) * -0.5 }}
         >
-          <Card card={card} />
+          {/* Boca abajo no se sabe a dónde ataca: solo se pueden encender las cartas visibles */}
+          <Card card={card} onClick={owner === 'player' || card.isFaceUp ? () => onToggleArrows(card.id) : undefined} />
+          {/* Brillo del color del bando mientras sus flechas están encendidas */}
+          <AnimatePresence>
+            {arrowsOn && (
+              <motion.div className="absolute inset-0 pointer-events-none rounded-[3px]"
+                style={{ boxShadow: `0 0 0 1px ${TEAM[owner].light}, 0 0 8px 2px ${TEAM[owner].base}` }}
+                initial={{ opacity: 0 }} animate={{ opacity: [0.6, 1, 0.6] }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={{ duration: 1.6, repeat: Infinity }} />
+            )}
+          </AnimatePresence>
         </motion.div>
       </motion.div>
     </motion.div>
@@ -169,6 +182,15 @@ interface BoardProps {
 export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps) => {
   const { board: geo, rivalPanel, hand: handArea } = useGameLayout();
   const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
+  // Cartas de la mesa con las flechas encendidas (se enciende/apaga tocándolas)
+  const [arrowCards, setArrowCards] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleArrows = useCallback((cardId: string) => {
+    setArrowCards(prev => {
+      const next = new Set(prev);
+      if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
+      return next;
+    });
+  }, []);
   const { playerBoard, opponentBoard, combat, phase, selectedCard } = useGameStore(useShallow(s => ({
     playerBoard: s.player.board,
     opponentBoard: s.opponent.board,
@@ -178,6 +200,7 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
   })));
 
   const isPlacementPhase = phase === 'placement';
+  const arrowsVisible = useArrowsVisible(combat);
   const isFighting = phase === 'combat' || phase === 'combat-reveal';
   const isTargeting = !!selectedCard && isPlacementPhase;
   const activeSlot = dragOverSlot ?? hoveredSlot;
@@ -232,6 +255,17 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
               {showGhost
                 ? <div className="pointer-events-none" style={{ opacity: 0.55 }}><Card card={selectedCard} /></div>
                 : <span className="anim-bob pointer-events-none"><PixelSprite sprite={ICONS.cursor} scale={2} /></span>}
+              {/* Destino confirmado: marco verde suave que late sobre la vista previa */}
+              {showGhost && (
+                <motion.div
+                  className="absolute pointer-events-none px-round"
+                  style={{ inset: -2, boxShadow: `0 0 0 1px ${PALETTE.outline}, 0 0 0 2px ${TEAM.player.light}, 0 0 8px 2px ${TEAM.player.base}`,
+                    background: 'rgba(92, 200, 96, 0.18)' }}
+                  initial={{ opacity: 0, scale: 1.12 }}
+                  animate={{ opacity: [0.75, 1, 0.75], scale: 1 }}
+                  transition={{ opacity: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }, scale: { type: 'spring', stiffness: 500, damping: 22 } }}
+                />
+              )}
             </button>
           )}
           <AnimatePresence>
@@ -244,6 +278,8 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
                 y={y}
                 origin={owner === 'player' ? cardOrigins.get(slot.card.id) ?? handOrigin : rivalOrigin}
                 lunge={lungeFor(slot, owner)}
+                arrowsOn={arrowCards.has(slot.card.id) && arrowsVisible}
+                onToggleArrows={id => { playSfx(arrowCards.has(id) ? 'deselect' : 'select', 0.7); toggleArrows(id); }}
               />
             )}
           </AnimatePresence>
@@ -260,8 +296,8 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
         <Diorama board={geo} />
         {renderSide(opponentBoard, 'opponent')}
         {renderSide(playerBoard, 'player')}
-        <AttackArrows geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} />
-        <BoardHints geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} />
+        <AttackArrows geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} shown={arrowCards} />
+        <BoardHints geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} shown={arrowCards} />
         <AnimatePresence>{isFighting && <FightRibbon geo={geo} />}</AnimatePresence>
         <FxLayer layer="board" />
         <CombatDirector geo={geo} />
