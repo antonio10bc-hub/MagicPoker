@@ -59,6 +59,8 @@ describe('tutorial', () => {
 
   it('the review steps match the fights and every play step is reachable', () => {
     expect(TUTORIAL_STEPS.filter(s => s.kind === 'stand')).toHaveLength(4);
-    expect(TUTORIAL_STEPS.filter(s => s.kind === 'review')).toHaveLength(4);
+    // La última pelea no tiene repaso: la cuenta la pantalla final
+    expect(TUTORIAL_STEPS.filter(s => s.kind === 'review')).toHaveLength(3);
+    expect(TUTORIAL_STEPS).toHaveLength(13);
   });
 });

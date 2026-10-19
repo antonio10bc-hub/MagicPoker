@@ -7,7 +7,8 @@
 //            daño directo. El rival castiga tus huecos vacíos.
 //  Ronda 2 · el Joker (no ataca, roba 2) y el Príncipe (golpea uno al azar).
 //  Ronda 3 · el rival enseña Rey y Reina: parece que pierdes… y el As lo anula todo.
-//  Ronda 4 · rematas al rival y ganas.
+//  Ronda 4 · un golpe directo y ganas.
+// Cada explicación va dentro del paso en el que se usa: 13 pasos en total.
 import { BoardSlot, Card, Owner, PlayerState, Rank, Rng } from '@/types';
 import { getTargetIndices, playCardToSlot, RANKS } from '@/lib/game-utils';
 import { STARTING_LIVES } from '@/lib/constants';
@@ -18,8 +19,6 @@ export interface TutorialMove { rank: Rank; slot: number; faceUp?: boolean }
 type Text = keyof Translations;
 
 export type TutorialStep =
-  /** Explicación: espera a que pulses "Entendido" */
-  | { kind: 'info'; text: Text }
   /** Juega esta carta en este hueco (lo demás queda bloqueado); luego responde el rival */
   | { kind: 'play'; rank: Rank; slot: number; text: Text; rival?: TutorialMove[] }
   /** Plántate; el rival juega lo que le quede */
@@ -28,30 +27,23 @@ export type TutorialStep =
   | { kind: 'review'; text: Text };
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
-  // Ronda 1
-  { kind: 'info', text: 'tut_welcome' },
+  // Ronda 1: choque cara a cara, golpe directo y huecos amenazados
   { kind: 'play', rank: '9', slot: 1, text: 'tut_play_9', rival: [{ rank: '6', slot: 1 }] },
-  { kind: 'info', text: 'tut_facedown' },
   { kind: 'play', rank: '7', slot: 3, text: 'tut_play_7', rival: [{ rank: '4', slot: 0 }] },
-  { kind: 'info', text: 'tut_threat' },
   { kind: 'stand', text: 'tut_stand', rival: [{ rank: '3', slot: 2 }] },
   { kind: 'review', text: 'tut_review_1' },
-  // Ronda 2
-  { kind: 'info', text: 'tut_specials' },
+  // Ronda 2: Joker y Príncipe
   { kind: 'play', rank: 'JOKER', slot: 0, text: 'tut_play_joker' },
   { kind: 'play', rank: 'J', slot: 2, text: 'tut_play_jack' },
   { kind: 'stand', text: 'tut_stand_2' },
   { kind: 'review', text: 'tut_review_2' },
-  // Ronda 3 (el rival abre con Rey y Reina a la vista)
-  { kind: 'info', text: 'tut_danger' },
+  // Ronda 3: el rival abre con Rey y Reina a la vista… y el As lo anula todo
   { kind: 'play', rank: 'A', slot: 0, text: 'tut_play_ace' },
   { kind: 'stand', text: 'tut_stand_3' },
   { kind: 'review', text: 'tut_review_3' },
-  // Ronda 4
-  { kind: 'play', rank: '10', slot: 0, text: 'tut_play_10', rival: [{ rank: '5', slot: 0 }] },
+  // Ronda 4: un golpe directo para ganar (el cierre lo cuenta la pantalla final)
   { kind: 'play', rank: '6', slot: 2, text: 'tut_play_6' },
   { kind: 'stand', text: 'tut_stand_4' },
-  { kind: 'review', text: 'tut_review_4' },
 ];
 
 /** Jugadas del rival al empezar cada ronda (antes de tu turno), por número de ronda */

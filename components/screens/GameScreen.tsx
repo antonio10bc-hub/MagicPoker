@@ -73,7 +73,7 @@ export const GameScreen = () => {
       <PlayerPanel />
       <MenuButtons />
       <TurnBox />
-      <ActionButton canPlay={canStand} tutorial={tutorial.active} />
+      <ActionButton canPlay={canStand} tutorial={tutorial.step?.kind === 'review'} />
       <Hand selectedCardId={selectedCardId} canPlay={canPlay} onlyCardId={tutorial.cardId} handlers={handHandlers} />
       <TutorialCoach />
       <CardInfo cardId={infoCardId} />

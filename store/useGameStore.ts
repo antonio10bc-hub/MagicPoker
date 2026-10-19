@@ -33,8 +33,7 @@ interface GameState {
   resumeGame: () => boolean;
   /** Partida guionizada que enseña a jugar */
   startTutorial: () => void;
-  /** Pasa al siguiente paso (explicaciones) */
-  advanceTutorial: () => void;
+
   exitToMenu: () => void;
   placeCard: (cardId: string, slotIndex: number) => void;
   passTurn: () => void;
@@ -111,12 +110,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     cancelScheduled();
     playSound('shuffle', 0.6);
     set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, ...tutorialPlayers() });
-  },
-
-  advanceTutorial: () => {
-    const { tutorialStep } = get();
-    if (tutorialStep === null) return;
-    set({ tutorialStep: tutorialStep + 1 });
   },
 
   resumeGame: () => {
