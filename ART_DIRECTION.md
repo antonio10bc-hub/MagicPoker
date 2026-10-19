@@ -203,8 +203,10 @@ interacción y estados.
   - **hueco tuyo vacío:** corazón tenue (si lo golpean pierdes una vida); con una
     carta rival justo delante, "!" rojo que late;
   - **flechas de ataque** (`components/game/AttackArrows.tsx`): cada carta dibuja
-    una flecha animada (trazo que avanza, contorno oscuro, punta) hacia cada hueco
-    que golpeará. Las diagonales se curvan;
+    una flecha recta, de centro a centro, hacia cada hueco que golpeará. Estilo casi
+    holograma: trazo grueso y translúcido que se enciende hacia la punta, halo difuso,
+    franjas de luz que avanzan, leve parpadeo, fusión en modo *screen* y sin contorno
+    oscuro;
     - tus cartas: doradas (también la vista previa al apuntar o arrastrar);
     - el rival: rojas, solo cuando sus cartas están destapadas;
     - el Príncipe: punteadas en cian (objetivo aleatorio);

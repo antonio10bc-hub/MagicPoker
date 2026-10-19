@@ -8,9 +8,12 @@ import { useStage } from '@/components/pixel/Stage';
 
 // --- FLECHAS DE ATAQUE ---
 // Cada carta dibuja una flecha animada hacia cada hueco que golpeará:
+//  · Estilo casi holograma: gruesas, translúcidas, con halo y franjas de luz.
+//  · Salen del centro de la carta y van en línea recta al centro del hueco objetivo,
+//    para que las diagonales (Reina, Rey, Príncipe) se lean sin ambigüedad.
 //  · Tus cartas: doradas (durante la colocación y la pelea; también la vista previa).
 //  · Cartas del rival: rojas, SOLO cuando están destapadas (al empezar la pelea).
-//  · Príncipe (objetivo aleatorio): flechas tenues en cian, "puede ir a cualquiera".
+//  · Príncipe (objetivo aleatorio): cian más tenue, "puede ir a cualquiera".
 //  · Tras el golpe, las flechas que hicieron daño o destruyeron una carta brillan y
 //    las demás se apagan: así se ve quién le hizo qué a quién.
 //  · El As no dibuja flechas: una onda alrededor indica que barre todo el tablero.
@@ -27,7 +30,9 @@ interface Arrow {
   effective: boolean | null;
 }
 
-const COLOR: Record<Owner, string> = { player: 'var(--c-gold)', opponent: 'var(--c-mult)' };
+/** Tonos holográficos: claros y algo translúcidos para no tapar las cartas */
+const COLOR: Record<Owner, string> = { player: '#FFD96A', opponent: '#FF6B66' };
+const MAYBE_COLOR = '#8FE3FF';
 
 interface AttackArrowsProps {
   geo: BoardGeometry;
@@ -66,13 +71,10 @@ const buildArrows = ({ geo, playerBoard, opponentBoard, phase, combat, preview }
     targets.forEach(t => {
       const q = geo.slots[enemy][t];
       const targetCard = boards[enemy][t].card;
-      const side = Math.sign(t - index);
-      // Sale del borde de la carta que mira al rival; las diagonales, un poco desplazadas
-      const from = { x: p.x + CARD_SIZE.width / 2 + side * 9, y: owner === 'player' ? p.y + 2 : p.y + CARD_SIZE.height - 2 };
-      // Llega al borde cercano de la carta objetivo, o al centro si el hueco está vacío
-      const to = targetCard
-        ? { x: q.x + CARD_SIZE.width / 2 - side * 6, y: owner === 'player' ? q.y + CARD_SIZE.height - 4 : q.y + 4 }
-        : { x: q.x + CARD_SIZE.width / 2, y: q.y + CARD_SIZE.height / 2 };
+      // De centro a centro y en línea recta: así las diagonales (Reina, Rey, Príncipe)
+      // se leen sin ambigüedad. Salen del borde que mira al rival.
+      const from = { x: p.x + CARD_SIZE.width / 2, y: owner === 'player' ? p.y + 10 : p.y + CARD_SIZE.height - 10 };
+      const to = { x: q.x + CARD_SIZE.width / 2, y: q.y + CARD_SIZE.height / 2 };
 
       let effective: boolean | null = null;
       if (combat && phase === 'combat-reveal') {
@@ -85,57 +87,55 @@ const buildArrows = ({ geo, playerBoard, opponentBoard, phase, combat, preview }
   return { arrows, wipers };
 };
 
-/** Curva suave (las diagonales se arquean) y punta orientada según la tangente final */
+/** Línea recta que termina en la base de la punta, y punta orientada hacia el objetivo */
 const geometry = (a: Arrow) => {
-  const mx = (a.from.x + a.to.x) / 2;
-  const my = (a.from.y + a.to.y) / 2;
   const dx = a.to.x - a.from.x;
   const dy = a.to.y - a.from.y;
   const len = Math.hypot(dx, dy) || 1;
-  const bend = Math.abs(dx) > 4 ? 10 : 0;
-  const cx = mx + (-dy / len) * bend * Math.sign(dx);
-  const cy = my + (dx / len) * bend * Math.sign(dx);
-  const tx = a.to.x - cx;
-  const ty = a.to.y - cy;
-  const tl = Math.hypot(tx, ty) || 1;
-  const ux = tx / tl;
-  const uy = ty / tl;
-  const head = 6;
+  const ux = dx / len;
+  const uy = dy / len;
+  const head = 9;
   const base = { x: a.to.x - ux * head, y: a.to.y - uy * head };
-  const left = { x: base.x - uy * 4, y: base.y + ux * 4 };
-  const right = { x: base.x + uy * 4, y: base.y - ux * 4 };
+  const left = { x: base.x - uy * 6, y: base.y + ux * 6 };
+  const right = { x: base.x + uy * 6, y: base.y - ux * 6 };
   return {
-    // La línea termina en la base de la punta para que no la atraviese
-    d: `M ${a.from.x} ${a.from.y} Q ${cx} ${cy} ${base.x} ${base.y}`,
+    d: `M ${a.from.x} ${a.from.y} L ${base.x} ${base.y}`,
     head: `${a.to.x},${a.to.y} ${left.x},${left.y} ${right.x},${right.y}`,
   };
 };
 
+/**
+ * Flecha "casi holograma": trazo grueso y translúcido que se enciende hacia la punta,
+ * halo difuso, franjas de luz que avanzan y un leve parpadeo. Sin contorno oscuro.
+ */
 const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
   const { d, head } = geometry(a);
-  const color = a.maybe ? 'var(--c-cyan)' : COLOR[a.owner];
-  const opacity = a.effective === false ? 0.22 : a.preview ? 0.7 : a.maybe ? 0.75 : 1;
-  const strong = a.effective === true;
+  const color = a.maybe ? MAYBE_COLOR : COLOR[a.owner];
+  const gradId = `arrow-grad-${a.key}`;
+  const base = a.effective === false ? 0.14 : a.effective === true ? 0.95 : a.preview ? 0.5 : a.maybe ? 0.5 : 0.7;
   return (
     <motion.g
       initial={{ opacity: 0 }}
-      animate={{ opacity }}
+      animate={{ opacity: [base * 0.85, base, base * 0.9] }}
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
-      transition={{ duration: 0.25, delay: index * 0.03 }}
-      style={strong ? { filter: `drop-shadow(0 0 2px ${color})` } : undefined}
+      transition={{ duration: 1.6, repeat: Infinity, repeatType: 'mirror', delay: index * 0.04 }}
+      style={{ mixBlendMode: 'screen' }}
     >
-      {/* Contorno oscuro para que se lea sobre cualquier fondo */}
-      <path d={d} fill="none" stroke="var(--c-outline)" strokeWidth={strong ? 5.5 : 4.5} strokeLinecap="round" />
-      <path
-        d={d}
-        fill="none"
-        stroke={color}
-        strokeWidth={strong ? 3 : 2.2}
-        strokeLinecap="round"
-        strokeDasharray={a.maybe ? '2 4' : '5 4'}
-        className="arrow-march"
-      />
-      <polygon points={head} fill={color} stroke="var(--c-outline)" strokeWidth={1.2} strokeLinejoin="round" />
+      <defs>
+        <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y}>
+          <stop offset="0" stopColor={color} stopOpacity={0.05} />
+          <stop offset="0.5" stopColor={color} stopOpacity={0.55} />
+          <stop offset="1" stopColor={color} stopOpacity={0.95} />
+        </linearGradient>
+      </defs>
+      {/* Halo difuso */}
+      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={9} strokeLinecap="round" filter="url(#arrow-glow)" opacity={0.6} />
+      {/* Cuerpo grueso translúcido */}
+      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={a.effective ? 6 : 5} strokeLinecap="round" />
+      {/* Franjas de luz que avanzan hacia el objetivo */}
+      <path d={d} fill="none" stroke="#ffffff" strokeOpacity={0.55} strokeWidth={a.maybe ? 1.5 : 2} strokeLinecap="round"
+        strokeDasharray={a.maybe ? '1 6' : '2 7'} className="arrow-march" />
+      <polygon points={head} fill={color} fillOpacity={0.85} stroke="#ffffff" strokeOpacity={0.7} strokeWidth={1} strokeLinejoin="round" filter="url(#arrow-glow)" />
     </motion.g>
   );
 };
@@ -146,6 +146,11 @@ export const AttackArrows = (props: AttackArrowsProps) => {
 
   return (
     <svg className="absolute left-0 top-0 pointer-events-none z-[12]" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
+      <defs>
+        <filter id="arrow-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.6" />
+        </filter>
+      </defs>
       <AnimatePresence>
         {arrows.map((a, i) => <ArrowView key={a.key} a={a} index={i} />)}
         {/* El As: onda que late alrededor (barre todo el tablero) */}
