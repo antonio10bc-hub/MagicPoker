@@ -81,6 +81,8 @@ const TypedText = ({ text, showCursor, suffix }: { text: string; showCursor: boo
 
 interface TextBoxProps {
   text: string;
+  /** Una sola línea baja (móvil) */
+  compact?: boolean;
   /** Contenido extra que aparece al terminar de escribir (p. ej. puntos animados) */
   suffix?: ReactNode;
   showCursor?: boolean;
@@ -88,9 +90,9 @@ interface TextBoxProps {
   style?: CSSProperties;
 }
 
-export const TextBox = ({ text, suffix, showCursor = true, className, style }: TextBoxProps) => (
-  <div className={clsx('px-panel px-round relative px-[5px] pt-[5px] pb-[8px] leading-[12px]', className)} style={style}>
-    <TypedText key={text} text={text} showCursor={showCursor && !suffix} suffix={suffix} />
+export const TextBox = ({ text, suffix, compact, showCursor = true, className, style }: TextBoxProps) => (
+  <div className={clsx('px-panel px-round relative leading-[12px] whitespace-nowrap overflow-hidden', compact ? 'px-[5px] pt-[3px] pb-[1px]' : 'px-[5px] pt-[5px] pb-[8px]', className)} style={style}>
+    <TypedText key={text} text={text} showCursor={showCursor && !suffix && !compact} suffix={suffix} />
   </div>
 );
 

@@ -33,14 +33,14 @@ const PIP_LAYOUT: Record<number, [number, number][]> = {
   10: [[0, 0], [2, 0], [1, 2 / 3], [0, 4 / 3], [2, 4 / 3], [0, 8 / 3], [2, 8 / 3], [1, 10 / 3], [0, 4], [2, 4]],
 };
 const PIP_COLS = [6, 14, 23];
-const pipRow = (r: number) => Math.floor(1 + r * 5.25);
+const pipRow = (r: number) => Math.floor(3 + r * 7.5);
 
 const Pips = ({ value, owner }: { value: number; owner: Owner }) => (
-  <>
+  <div style={{ opacity: 0.45 }}>
     {(PIP_LAYOUT[value] ?? []).map(([c, r], i) => (
       <PixelSprite key={i} sprite={PIP} owner={owner} style={{ position: 'absolute', left: PIP_COLS[c], top: pipRow(r) }} />
     ))}
-  </>
+  </div>
 );
 
 // --- INSIGNIA DE ATAQUE: 3 casillas (izquierda, frente, derecha) ---
@@ -71,10 +71,11 @@ const AttackBadge = ({ card }: { card: CardType }) => {
   );
 };
 
+/** Insignia de valor: fondo oscuro y número blanco en negrita (máximo contraste) */
 const ValueBadge = ({ value }: { value: number }) => (
-  <div className="px-round absolute flex items-center justify-center"
-    style={{ left: 3, top: 44, width: 17, height: 10, background: 'var(--c-yellow)', boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px #FFF0A0' }}>
-    <span className="leading-[10px] pt-[1px]" style={{ color: 'var(--c-outline)' }}>{value}</span>
+  <div className="absolute flex items-center justify-center font-bold text-outline"
+    style={{ left: 3, top: 44, width: 17, height: 10, borderRadius: 2, background: 'var(--c-outline)', boxShadow: 'inset 0 0 0 1px #000, inset 0 1px 0 1px rgba(255,255,255,0.15)' }}>
+    <span className="leading-[10px] pt-[1px]">{value}</span>
   </div>
 );
 
@@ -97,31 +98,49 @@ const CardBack = ({ owner }: { owner: Owner }) => (
 );
 
 // --- ANVERSO ---
+/** Contorno de 2 px para números grandes */
+const BIG_OUTLINE = [-2, -1, 0, 1, 2].flatMap(x => [-2, -1, 0, 1, 2].map(y => `${x}px ${y}px 0 var(--c-outline)`)).join(', ');
+
 const CardFace = ({ card }: { card: CardType }) => {
   const team = TEAM[card.owner];
   const character = CHARACTERS[card.rank];
   return (
     <div className="px-round-2 absolute inset-0" style={{ background: 'var(--c-outline)' }}>
-      {/* Marco con bisel */}
-      <div className="absolute" style={{ inset: 1, background: 'var(--c-white)', boxShadow: 'inset 1px 1px 0 0 #ffffff, inset -1px -1px 0 0 var(--c-floor)' }} />
-      {/* Banda de nombre */}
-      <div className="absolute text-outline whitespace-nowrap" style={{
-        left: 2, top: 2, width: 36, height: 12, padding: '2px 0 0 3px', background: team.base,
-        boxShadow: `inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px ${team.light}`,
-      }}>
-        {card.rank}
-      </div>
-      {/* Ventana de ilustración */}
+      {/* Marco del color del bando, con bisel */}
+      <div className="absolute" style={{ inset: 1, background: team.base, boxShadow: `inset 1px 1px 0 0 ${team.light}, inset -1px -1px 0 0 ${team.dark}` }} />
+      {/* Ventana de ilustración (ocupa casi toda la carta) */}
       <div className="absolute overflow-hidden" style={{
-        left: 3, top: 15, width: 34, height: 28, backgroundImage: patternUri('window', WINDOW_TILE), backgroundSize: '4px',
+        left: 3, top: 3, width: 34, height: 39, backgroundImage: patternUri('window', WINDOW_TILE), backgroundSize: '4px',
         boxShadow: 'inset 0 0 0 1px var(--c-outline)',
       }}>
-        {character
-          ? <PixelSprite sprite={character} owner={card.owner} style={{ position: 'absolute', left: 9, top: 4 }} />
-          : <Pips value={card.value} owner={card.owner} />}
-        {/* Las figuras y especiales llevan acabado holográfico */}
-        {character && <div className="holo absolute inset-0 pointer-events-none" style={{ animationDelay: `${(card.value % 5) * -0.7}s` }} />}
+        {character ? (
+          <>
+            <PixelSprite sprite={character} owner={card.owner} style={{ position: 'absolute', left: 14, bottom: 1 }} />
+            <div className="holo absolute inset-0 pointer-events-none" style={{ animationDelay: `${(card.value % 5) * -0.7}s` }} />
+          </>
+        ) : (
+          <>
+            <Pips value={card.value} owner={card.owner} />
+            {/* Número grande en el centro: se lee de un vistazo */}
+            <div className="absolute inset-0 flex items-center justify-center font-bold"
+              style={{ fontSize: 30, lineHeight: '30px', paddingTop: 3, color: 'var(--c-white)', textShadow: `${BIG_OUTLINE}, 2px 3px 0 ${team.dark}` }}>
+              {card.rank}
+            </div>
+          </>
+        )}
       </div>
+      {/* Pestaña de rango de las figuras (esquina superior izquierda) */}
+      {character && (
+        <div className="absolute font-bold text-outline flex items-center justify-center"
+          style={{
+            left: 2, top: 2, height: card.rank === 'JOKER' ? 12 : 18, padding: '0 3px',
+            fontSize: card.rank === 'JOKER' ? 10 : 20, lineHeight: card.rank === 'JOKER' ? '10px' : '18px',
+            background: team.base, borderRadius: '0 0 4px 0',
+            boxShadow: `inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px ${team.light}`,
+          }}>
+          {card.rank}
+        </div>
+      )}
       <ValueBadge value={card.value} />
       <AttackBadge card={card} />
     </div>

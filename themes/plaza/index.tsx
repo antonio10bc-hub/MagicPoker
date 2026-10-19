@@ -20,7 +20,7 @@ const Backdrop = Swirl;
 const Diorama = ({ board }: { board: BoardGeometry }) => {
   const d = board.diorama;
   const back = d.y + 5;
-  const front = board.railing.y + 18;
+  const front = board.railing.y + board.railing.h + 5;
   return (
     <>
       <Platform

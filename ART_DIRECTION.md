@@ -193,6 +193,31 @@ interacción y estados.
 - **Iconos:** sprites de 9×9 en navy (`ICONS`). No se usan librerías de iconos
   vectoriales.
 
+### Lectura de la partida (claridad ante todo)
+
+- **Cartas:** las numéricas muestran la cifra grande en el centro (30 px, negrita,
+  contorno de 2 px). Las figuras llevan una pestaña de rango (20 px) sobre la
+  ilustración, y la insignia de valor es oscura con el número en blanco.
+- **Avisos del tablero** (`components/game/BoardHints.tsx`). Solo usan información
+  visible, nunca las cartas boca abajo del rival:
+  - **hueco tuyo vacío:** corazón tenue (si lo golpean pierdes una vida); con una
+    carta rival justo delante, "!" rojo que late;
+  - **objetivos de tus cartas en la fila rival:** "-N" dorado en huecos vacíos (daño
+    seguro, se suma si coinciden varias cartas) o una mira (con "xN" si son varias)
+    sobre cartas boca abajo. El Príncipe cuenta como "posible" ("+" o "?") y el As
+    marca todo;
+  - **antes del golpe**, con todo destapado: ✓ en las cartas rivales que caerán y ✗
+    en las tuyas.
+- **Carteles sin tapar la acción:** "¡PELEA!" dura 0,7 s y se va antes de que las
+  cartas embistan; "RONDA" pasa en 1,1 s sobre la franja central.
+- **Ficha de carta:** mantener pulsada una carta (o dejar el ratón encima) la abre.
+- **Arrastrar y soltar:** al arrastrar, la carta se ajusta al tamaño de la mesa y el
+  hueco de destino muestra la vista previa.
+- **Móvil en vertical:**
+  - escala ×6 en los móviles habituales (ancho interno ~180–195 px);
+  - diorama compacto;
+  - mano a ×1,5 si cabe (sigue cayendo en píxeles enteros).
+
 ### Movimiento y game feel
 
 Los **píxeles son nítidos, pero el movimiento es suave**: muelles (`type: 'spring'`) y

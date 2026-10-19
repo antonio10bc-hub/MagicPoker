@@ -1,0 +1,159 @@
+import { ReactNode, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BoardSlot, Card as CardType, CombatResult, GamePhase } from '@/types';
+import { BoardGeometry } from '@/theme/layout';
+import { CARD_SIZE } from '@/theme/tokens';
+import { calculateCombat, getTargetIndices, RANKS } from '@/lib/game-utils';
+import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
+import { ALERT, CHECK, CROSS, HEART_LOST, TARGET } from '@/components/pixel/sprites';
+
+// --- AVISOS DEL TABLERO ---
+// Ayudas visuales que se calculan SOLO con información visible (sin mirar las cartas
+// boca abajo del rival) y con las mismas reglas de lib/game-utils (solo lectura):
+//  · Tus huecos vacíos muestran un corazón tenue: si los golpean, pierdes una vida.
+//    Si hay una carta rival justo delante, el aviso se vuelve un "!" rojo que late.
+//  · Tus cartas marcan sus objetivos en la fila rival: "-N" dorado si el hueco está
+//    vacío (daño seguro al rival, sumado si varias cartas coinciden) o una mira si hay
+//    una carta boca abajo. El Príncipe (objetivo aleatorio) cuenta como "posible".
+//  · Al destaparse todo, justo antes del golpe: ✓ en las cartas rivales que vas a
+//    destruir y ✗ en las tuyas que van a caer.
+
+interface BoardHintsProps {
+  geo: BoardGeometry;
+  playerBoard: BoardSlot[];
+  opponentBoard: BoardSlot[];
+  phase: GamePhase;
+  combat: CombatResult | null;
+  /** Carta seleccionada y hueco sobre el que está el puntero (vista previa) */
+  preview: { card: CardType; slotIndex: number } | null;
+}
+
+interface Aim { sure: number; maybe: number; wipe: boolean; previewOnly: boolean }
+
+/** Objetivos de tus cartas en la fila rival (incluida la vista previa) */
+const aimAtOpponent = (board: BoardSlot[], preview: BoardHintsProps['preview']): Aim[] => {
+  const aims: Aim[] = [0, 1, 2, 3].map(() => ({ sure: 0, maybe: 0, wipe: false, previewOnly: true }));
+  const attackers = board
+    .filter(s => s.card)
+    .map(s => ({ card: s.card!, index: s.index, isPreview: false }));
+  if (preview) attackers.push({ card: preview.card, index: preview.slotIndex, isPreview: true });
+
+  attackers.forEach(({ card, index, isPreview }) => {
+    const def = RANKS[card.rank];
+    if (def.wipesBoard) {
+      aims.forEach(a => { a.wipe = true; a.previewOnly &&= isPreview; });
+      return;
+    }
+    if (!def.attack) return;
+    getTargetIndices(index, card.rank).forEach(t => {
+      if (def.attack!.mode === 'random-one') aims[t].maybe++;
+      else aims[t].sure++;
+      aims[t].previewOnly &&= isPreview;
+    });
+  });
+  return aims;
+};
+
+const Badge = ({ x, y, bg, children, pulse }: { x: number; y: number; bg: string; children: ReactNode; pulse?: boolean }) => (
+  <motion.div
+    className="absolute flex items-center justify-center pointer-events-none z-[25] text-outline"
+    style={{ left: x, top: y, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: bg,
+      boxShadow: '0 0 0 1px var(--c-outline), 0 2px 0 0 rgba(0,0,0,0.4)' }}
+    initial={{ scale: 0 }}
+    animate={pulse ? { scale: [1, 1.18, 1] } : { scale: 1 }}
+    // Transición propia en la salida: si heredase el latido infinito, nunca terminaría
+    exit={{ scale: 0, transition: { duration: 0.15 } }}
+    transition={pulse ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : { type: 'spring', stiffness: 500, damping: 18 }}
+  >
+    {children}
+  </motion.div>
+);
+
+const SpriteBadge = ({ sprite, ...rest }: { sprite: Sprite; x: number; y: number; bg: string; pulse?: boolean }) => (
+  <Badge {...rest}><PixelSprite sprite={sprite} /></Badge>
+);
+
+export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, preview }: BoardHintsProps) => {
+  const placement = phase === 'placement';
+  const opponentRevealed = opponentBoard.some(s => s.card?.isFaceUp);
+
+  const aims = useMemo(() => aimAtOpponent(playerBoard, preview), [playerBoard, preview]);
+
+  // Predicción justo antes del golpe (cartas ya destapadas, resultado aún no llegado).
+  // El Príncipe elige al azar: se usa su objetivo central solo para avisar.
+  const prediction = useMemo(
+    () => (phase === 'combat' && opponentRevealed && !combat ? calculateCombat(playerBoard, opponentBoard, () => 0.5) : null),
+    [phase, opponentRevealed, combat, playerBoard, opponentBoard]
+  );
+
+  const badgeAt = (p: { x: number; y: number }) => ({ x: p.x + CARD_SIZE.width - 10, y: p.y - 5 });
+
+  return (
+    <AnimatePresence>
+      {/* Tus huecos vacíos: vida expuesta / amenazada */}
+      {placement && playerBoard.map(slot => {
+        if (slot.card) return null;
+        const p = geo.slots.player[slot.index];
+        const threatened = !!opponentBoard[slot.index].card;
+        return (
+          <motion.div key={`life-${slot.index}`} className="absolute pointer-events-none z-[15]"
+            style={{ left: p.x, top: p.y, width: CARD_SIZE.width, height: CARD_SIZE.height }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}>
+            {threatened && (
+              <motion.div className="absolute inset-0 rounded-[3px]"
+                style={{ background: 'rgba(255, 75, 62, 0.22)', boxShadow: 'inset 0 0 0 1px var(--c-mult)' }}
+                animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.1, repeat: Infinity }} />
+            )}
+            <div className="absolute" style={{ left: 15, top: CARD_SIZE.height - 14, opacity: threatened ? 0.9 : 0.45 }}>
+              <PixelSprite sprite={HEART_LOST} />
+            </div>
+          </motion.div>
+        );
+      })}
+      {placement && playerBoard.map(slot => {
+        if (slot.card || !opponentBoard[slot.index].card) return null;
+        const b = badgeAt(geo.slots.player[slot.index]);
+        return <SpriteBadge key={`threat-${slot.index}`} sprite={ALERT} x={b.x + 2} y={b.y} bg="var(--c-mult)" pulse />;
+      })}
+
+      {/* Tus objetivos en la fila rival */}
+      {placement && aims.map((aim, i) => {
+        const hits = aim.sure + aim.maybe;
+        if (!hits && !aim.wipe) return null;
+        const p = geo.slots.opponent[i];
+        const b = badgeAt(p);
+        const occupied = !!opponentBoard[i].card;
+        const faded = aim.previewOnly ? 0.75 : 1;
+        if (aim.wipe) {
+          return <Badge key={`aim-${i}`} x={b.x} y={b.y} bg="var(--c-chip)"><span style={{ opacity: faded }}>A</span></Badge>;
+        }
+        if (occupied) {
+          return (
+            <motion.div key={`aim-${i}`} className="absolute pointer-events-none z-[25] flex items-center gap-[1px]"
+              style={{ left: p.x + CARD_SIZE.width / 2 - 5, top: p.y + CARD_SIZE.height / 2 - 5, opacity: faded }}
+              initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0, transition: { duration: 0.15 } }}
+              transition={{ type: 'spring', stiffness: 400, damping: 16 }}>
+              <PixelSprite sprite={TARGET} />
+              {hits > 1 && <span className="text-outline">x{hits}</span>}
+            </motion.div>
+          );
+        }
+        return (
+          <Badge key={`aim-${i}`} x={b.x - 2} y={p.y + CARD_SIZE.height / 2 - 6} bg="var(--c-gold)" pulse>
+            <span style={{ opacity: faded }}>{aim.sure > 0 ? `-${aim.sure}${aim.maybe > 0 ? '+' : ''}` : '-?'}</span>
+          </Badge>
+        );
+      })}
+
+      {/* Justo antes del golpe: quién cae */}
+      {prediction && [...playerBoard, ...opponentBoard].map(slot => {
+        if (!slot.card || !prediction.deadCardIds.includes(slot.card.id)) return null;
+        const owner = slot.card.owner;
+        const b = badgeAt(geo.slots[owner][slot.index]);
+        return owner === 'opponent'
+          ? <SpriteBadge key={`win-${slot.card.id}`} sprite={CHECK} x={b.x} y={b.y} bg="var(--c-green)" />
+          : <SpriteBadge key={`lose-${slot.card.id}`} sprite={CROSS} x={b.x} y={b.y} bg="var(--c-mult)" />;
+      })}
+    </AnimatePresence>
+  );
+};

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, animate, MotionStyle, useMotionValue, useTransform } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
@@ -18,6 +18,7 @@ import { fx } from '@/components/fx/fxStore';
 import { Card } from './Card';
 import { cardOrigins } from './cardOrigins';
 import { CombatDirector } from './CombatDirector';
+import { BoardHints } from './BoardHints';
 
 const { Diorama } = ACTIVE_THEME;
 
@@ -124,7 +125,10 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge }: PlacedCardProps) => {
   );
 };
 
-/** Cinta "¡PELEA!": entra de golpe desde la cámara y se queda vibrando */
+/**
+ * Cinta "¡PELEA!": entra de golpe, se mantiene un instante y se va ANTES de que las
+ * cartas embistan (la lógica resuelve a los 800 ms), para no tapar la acción.
+ */
 const FightRibbon = ({ geo }: { geo: BoardGeometry }) => {
   const t = useTranslations();
   const c = geo.centerLine;
@@ -134,9 +138,9 @@ const FightRibbon = ({ geo }: { geo: BoardGeometry }) => {
       style={{ left: c.x, top: c.y - 4, width: c.w, height: c.h + 8, background: 'var(--c-yellow)',
         boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 0 2px 0 0 #FFF0A0, inset 0 -2px 0 0 var(--c-yellow-dark), 0 3px 0 0 var(--c-shadow)' }}
       initial={{ scaleX: 0.2, scaleY: 3, opacity: 0, rotateZ: -6 }}
-      animate={{ scaleX: 1, scaleY: 1, opacity: 1, rotateZ: [-6, 2, 0] }}
-      exit={{ scaleY: 0, opacity: 0, transition: { duration: 0.15 } }}
-      transition={{ type: 'spring', stiffness: 420, damping: 16 }}
+      animate={{ scaleX: [0.2, 1.05, 1, 1.4], scaleY: [3, 1, 1, 0], opacity: [0, 1, 1, 0], rotateZ: [-6, 2, 0, 0] }}
+      exit={{ opacity: 0, transition: { duration: 0.1 } }}
+      transition={{ duration: 0.7, times: [0, 0.18, 0.78, 1], ease: 'easeOut' }}
     >
       <motion.span
         className="text-outline"
@@ -157,9 +161,11 @@ const FightRibbon = ({ geo }: { geo: BoardGeometry }) => {
 interface BoardProps {
   selectedCardId: string | null;
   onSlotClick: (slotIndex: number) => void;
+  /** Hueco sobre el que se está arrastrando una carta (vista previa) */
+  dragOverSlot: number | null;
 }
 
-export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
+export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps) => {
   const { board: geo, rivalPanel, hand: handArea } = useGameLayout();
   const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
   const { playerBoard, opponentBoard, combat, phase, selectedCard } = useGameStore(useShallow(s => ({
@@ -173,6 +179,11 @@ export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
   const isPlacementPhase = phase === 'placement';
   const isFighting = phase === 'combat' || phase === 'combat-reveal';
   const isTargeting = !!selectedCard && isPlacementPhase;
+  const activeSlot = dragOverSlot ?? hoveredSlot;
+  const preview = useMemo(
+    () => (isTargeting && selectedCard && activeSlot !== null && !playerBoard[activeSlot].card ? { card: selectedCard, slotIndex: activeSlot } : null),
+    [isTargeting, selectedCard, activeSlot, playerBoard]
+  );
 
   // Cámara: se inclina más durante la pelea (spring suave)
   const tilt = useMotionValue(TILT_IDLE);
@@ -201,13 +212,14 @@ export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
     cards.map(slot => {
       const { x, y } = geo.slots[owner][slot.index];
       const canTarget = owner === 'player' && !slot.card && isTargeting;
-      const showGhost = canTarget && hoveredSlot === slot.index && selectedCard;
+      const showGhost = canTarget && activeSlot === slot.index && selectedCard;
       return (
         <div key={`${owner}-${slot.index}`}>
           <SlotTile x={x} y={y} highlight={canTarget} />
           {canTarget && (
             <button
               aria-label={`slot ${slot.index + 1}`}
+              data-slot={slot.index}
               onClick={() => { setHoveredSlot(null); onSlotClick(slot.index); }}
               onPointerEnter={() => { setHoveredSlot(slot.index); playSfx('hover'); }}
               onPointerLeave={() => setHoveredSlot(h => (h === slot.index ? null : h))}
@@ -247,6 +259,7 @@ export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
         <Diorama board={geo} />
         {renderSide(opponentBoard, 'opponent')}
         {renderSide(playerBoard, 'player')}
+        <BoardHints geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} />
         <AnimatePresence>{isFighting && <FightRibbon geo={geo} />}</AnimatePresence>
         <FxLayer layer="board" />
         <CombatDirector geo={geo} />

@@ -44,12 +44,13 @@ export const TurnBox = () => {
         text={text}
         style={{ minHeight: box.h, color: isFighting ? 'var(--c-mult)' : isPlayerTurn ? 'var(--c-green-light)' : 'var(--c-cyan)' }}
         suffix={rivalThinking ? <ThinkingDots /> : undefined}
+        compact={compactPanels}
       />
       {/* En vertical no hay barra lateral: la ronda va en una ficha dentro del cuadro */}
       {compactPanels && (
-        <div className="absolute px-round text-outline flex items-center px-[5px]"
-          style={{ right: 5, top: 5, height: 14, background: 'var(--c-orange)', boxShadow: '0 2px 0 0 var(--c-orange-dark)' }}>
-          {t.round} {round}
+        <div className="absolute px-round text-outline flex items-center px-[4px]"
+          style={{ right: 3, top: 2, height: 12, background: 'var(--c-orange)', boxShadow: '0 1px 0 0 var(--c-orange-dark)' }}>
+          {t.round.charAt(0)}{round}
         </div>
       )}
     </motion.div>
@@ -60,7 +61,9 @@ export const TurnBox = () => {
 /** Barre la pantalla al empezar cada ronda. Se monta con key={ronda}. */
 const RoundBanner = ({ round }: { round: number }) => {
   const t = useTranslations();
-  const { width, height } = useStage();
+  const { width } = useStage();
+  // Pasa sobre la franja central del tablero, entre las dos filas de cartas
+  const { board } = useGameLayout();
   useEffect(() => {
     const id = setTimeout(() => playSfx('turn'), 120);
     return () => clearTimeout(id);
@@ -68,11 +71,11 @@ const RoundBanner = ({ round }: { round: number }) => {
   return (
     <motion.div
       className="absolute left-0 z-[80] pointer-events-none flex items-center justify-center gap-[8px]"
-      style={{ top: Math.round(height * 0.42), width, height: 30, background: 'var(--c-ui-panel)',
+      style={{ top: board.centerLine.y + Math.round(board.centerLine.h / 2) - 13, width, height: 26, background: 'var(--c-ui-panel)',
         boxShadow: 'inset 0 2px 0 0 var(--c-orange), inset 0 -2px 0 0 var(--c-orange), 0 0 0 1px var(--c-ui-edge), 0 4px 0 1px rgba(0,0,0,0.45)' }}
       initial={{ x: -width, skewX: -20 }}
       animate={{ x: [-width, 0, 0, width], skewX: [-20, 0, 0, 20] }}
-      transition={{ duration: 1.5, times: [0, 0.22, 0.75, 1], ease: 'easeInOut' }}
+      transition={{ duration: 1.1, times: [0, 0.22, 0.72, 1], ease: 'easeInOut' }}
     >
       <WavyText text={`${t.round} ${round}`} className="text-title text-outline" style={{ color: 'var(--c-gold)' }} />
       <WavyText text={t.your_turn} className="text-outline" style={{ color: 'var(--c-cyan)' }} />

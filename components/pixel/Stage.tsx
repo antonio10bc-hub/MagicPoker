@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { motion, useAnimationControls } from 'framer-motion';
+import { motion, MotionConfig, useAnimationControls } from 'framer-motion';
 import { STAGE } from '@/theme/tokens';
 import { computeGameLayout, computeMenuLayout, LANDSCAPE_STAGE, StageSize } from '@/theme/layout';
 import { useFxStore } from '@/components/fx/fxStore';
@@ -13,9 +13,11 @@ import { LETTERBOX_TILE, patternUri } from './patterns';
 //  - Vertical (móvil): se elige el entero n que deja un ancho interno ≤ 260 px y el
 //    alto interno se adapta a la pantalla, así el juego la llena entera.
 const MIN_FILL = 0.8;
-const PORTRAIT_MAX_W = 260;
-const PORTRAIT_MIN_W = 200;
-const PORTRAIT_MIN_H = 380;
+// Ancho interno mínimo en vertical: el tablero de 4 cartas cabe justo. Cuanto más
+// estrecho, más grande se ve todo en el móvil.
+const PORTRAIT_MIN_W = 180;
+const PORTRAIT_MAX_W = 300;
+const PORTRAIT_MIN_H = 330;
 const PORTRAIT_RATIO = 1.15; // alto / ancho a partir del cual se considera vertical
 
 const landscape = (vw: number, vh: number, dpr: number): StageSize => {
@@ -25,18 +27,20 @@ const landscape = (vw: number, vh: number, dpr: number): StageSize => {
   return { width: STAGE.width, height: STAGE.height, scale, mode: 'landscape' };
 };
 
+/** Elige el mayor factor entero n que deja al menos PORTRAIT_MIN_W × PORTRAIT_MIN_H internos */
 const portrait = (vw: number, vh: number, dpr: number): StageSize | null => {
   const devW = vw * dpr;
-  const n = Math.max(1, Math.ceil(devW / PORTRAIT_MAX_W));
-  let width = Math.floor(devW / n);
-  let scale = n / dpr;
-  if (width < PORTRAIT_MIN_W) {
-    // Pantalla muy estrecha: ajuste exacto en lugar de entero
-    width = PORTRAIT_MIN_W;
-    scale = vw / width;
+  const devH = vh * dpr;
+  for (let n = Math.floor(devW / PORTRAIT_MIN_W); n >= 1; n--) {
+    const width = Math.floor(devW / n);
+    const height = Math.floor(devH / n);
+    if (width > PORTRAIT_MAX_W) break;
+    if (height >= PORTRAIT_MIN_H) return { width, height, scale: n / dpr, mode: 'portrait' };
   }
+  // Pantalla rara: ajuste exacto en lugar de entero
+  const scale = vw / PORTRAIT_MIN_W;
   const height = Math.floor(vh / scale);
-  return height >= PORTRAIT_MIN_H ? { width, height, scale, mode: 'portrait' } : null;
+  return height >= PORTRAIT_MIN_H ? { width: PORTRAIT_MIN_W, height, scale, mode: 'portrait' } : null;
 };
 
 let cached: StageSize = LANDSCAPE_STAGE;
@@ -135,9 +139,13 @@ export const Stage = ({ children }: { children: ReactNode }) => {
             className="stage absolute left-0 top-0 overflow-hidden"
             style={{ width, height, transform: `scale(${scale})`, transformOrigin: '0 0', background: 'var(--c-outline)' }}
           >
-            <motion.div animate={camera} className="absolute inset-0">
-              {children}
-            </motion.div>
+            {/* Los gestos (arrastrar) se miden en píxeles de pantalla: los pasamos a
+                píxeles internos dividiendo por la escala del escenario */}
+            <MotionConfig transformPagePoint={p => ({ x: p.x / scale, y: p.y / scale })}>
+              <motion.div animate={camera} className="absolute inset-0">
+                {children}
+              </motion.div>
+            </MotionConfig>
             <Flash />
             {/* Capa CRT: líneas de barrido y viñeta sobre todo el juego */}
             <div className="crt absolute inset-0 pointer-events-none z-[998]" />

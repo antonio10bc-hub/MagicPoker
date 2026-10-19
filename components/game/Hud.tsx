@@ -176,20 +176,59 @@ interface HandCardProps {
   /** Fila de la mano y punto desde el que llegan las cartas robadas */
   y: number;
   fromX: number;
+  /** Escala de dibujo de la carta en la mano */
+  scale: number;
   /** Posición en el abanico: -1 (izquierda) … 0 (centro) … 1 (derecha) */
   fan: number;
   /** Retraso de entrada (cartas robadas a la vez llegan una tras otra) */
   enterDelay: number;
   isSelected: boolean;
   canPlay: boolean;
-  onSelect: (id: string) => void;
+  handlers: HandHandlers;
 }
+
+/** Interacciones de la mano: tocar, arrastrar a un hueco y mantener para ver la ficha */
+export interface HandHandlers {
+  onSelect: (id: string) => void;
+  onDragStart: (id: string) => void;
+  onDragOverSlot: (slotIndex: number | null) => void;
+  onDrop: (id: string, slotIndex: number | null) => void;
+  onInfo: (id: string | null) => void;
+}
+
+/** Hueco del tablero bajo el puntero (los botones de hueco llevan data-slot) */
+const slotUnderPointer = (x: number, y: number): number | null => {
+  const el = document.elementsFromPoint(x, y).find(e => e instanceof HTMLElement && e.dataset.slot !== undefined) as HTMLElement | undefined;
+  return el ? Number(el.dataset.slot) : null;
+};
+
+const LONG_PRESS_MS = 420;
+const HOVER_INFO_MS = 650;
 
 const SPRING = { type: 'spring', stiffness: 380, damping: 24 } as const;
 
-const HandCard = memo(({ card, x, y, fromX, fan, enterDelay, isSelected, canPlay, onSelect }: HandCardProps) => {
-  const handleClick = useCallback(() => onSelect(card.id), [onSelect, card.id]);
+const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, canPlay, handlers }: HandCardProps) => {
   const [hovered, setHovered] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  // Mantener pulsado (táctil) o dejar el ratón encima muestra la ficha de la carta
+  const infoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const infoShown = useRef(false);
+  const startInfo = (ms: number) => {
+    if (infoTimer.current) clearTimeout(infoTimer.current);
+    infoTimer.current = setTimeout(() => { infoShown.current = true; handlers.onInfo(card.id); }, ms);
+  };
+  const stopInfo = () => {
+    if (infoTimer.current) clearTimeout(infoTimer.current);
+    infoTimer.current = null;
+    if (infoShown.current) handlers.onInfo(null);
+  };
+  useEffect(() => () => { if (infoTimer.current) clearTimeout(infoTimer.current); }, []);
+
+  const handleClick = useCallback(() => {
+    // Tras una pulsación larga no seleccionamos: solo se quería leer la ficha
+    if (infoShown.current) { infoShown.current = false; return; }
+    handlers.onSelect(card.id);
+  }, [handlers, card.id]);
   const [entered, setEntered] = useState(false);
   // Inclinación 3D que sigue al puntero
   const rx = useMotionValue(0);
@@ -208,13 +247,14 @@ const HandCard = memo(({ card, x, y, fromX, fan, enterDelay, isSelected, canPlay
   const arcY = lifted ? (isSelected ? -14 : -10) : Math.round(fan * fan * 5);
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!canPlay) return;
+    if (!canPlay || dragging) return;
     const r = e.currentTarget.getBoundingClientRect();
     ry.set(((e.clientX - r.left) / r.width - 0.5) * 28);
     rx.set(-((e.clientY - r.top) / r.height - 0.5) * 28);
   };
   const onLeave = () => {
     setHovered(false);
+    stopInfo();
     animate(rx, 0, SPRING);
     animate(ry, 0, SPRING);
   };
@@ -222,18 +262,47 @@ const HandCard = memo(({ card, x, y, fromX, fan, enterDelay, isSelected, canPlay
   return (
     <motion.div
       className="absolute"
-      style={{ top: y, zIndex: isSelected ? 60 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
+      style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
       // Robar: llega desde el mazo girando y se coloca en el abanico con un rebote
       initial={{ left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
       animate={{ left: x, y: arcY, rotate, scale: isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1 }}
       exit={{ y: -30, scale: 0.8, opacity: 0, transition: { duration: 0.15 } }}
       transition={{ ...SPRING, delay: entered ? 0 : initialDelay }}
       onAnimationComplete={() => setEntered(true)}
-      onPointerEnter={() => { setHovered(true); if (canPlay) playSfx('hover'); }}
+      onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS); }}
+      onPointerDown={e => { if (e.pointerType !== 'mouse') startInfo(LONG_PRESS_MS); }}
+      onPointerUp={() => { if (infoTimer.current) clearTimeout(infoTimer.current); if (infoShown.current) handlers.onInfo(null); }}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
     >
+      {/* Arrastrar: la carta sigue al dedo y, al soltarla sobre un hueco, se juega */}
+      <motion.div
+        drag={canPlay}
+        dragSnapToOrigin
+        dragMomentum={false}
+        dragElastic={1}
+        // Al arrastrar se ajusta al tamaño de la mesa para ver bien el hueco de destino
+        whileDrag={{ scale: 1.05 / scale, rotate: 0 }}
+        onDragStart={() => {
+          stopInfo();
+          infoShown.current = false;
+          setDragging(true);
+          rx.set(0); ry.set(0);
+          handlers.onDragStart(card.id);
+        }}
+        onDrag={e => {
+          const p = e as PointerEvent;
+          handlers.onDragOverSlot(slotUnderPointer(p.clientX, p.clientY));
+        }}
+        onDragEnd={e => {
+          const p = e as PointerEvent;
+          setDragging(false);
+          handlers.onDrop(card.id, slotUnderPointer(p.clientX, p.clientY));
+        }}
+        style={{ touchAction: 'none' }}
+      >
       {/* Balanceo continuo: las cartas nunca están quietas del todo */}
+      <div style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0' }}>
       <motion.div
         className={clsx(isSelected && 'anim-bob')}
         animate={{ rotate: [-1.6, 1.6, -1.6], y: [0, -1.5, 0] }}
@@ -244,6 +313,8 @@ const HandCard = memo(({ card, x, y, fromX, fan, enterDelay, isSelected, canPlay
           animate={{ x: lifted ? 5 : 2, y: lifted ? 9 : 3, opacity: lifted ? 0.7 : 1 }} transition={SPRING} />
         <Card card={card} onClick={handleClick} isSelected={isSelected} isDisabled={!canPlay} />
       </motion.div>
+      </div>
+      </motion.div>
     </motion.div>
   );
 });
@@ -252,15 +323,16 @@ HandCard.displayName = 'HandCard';
 interface HandProps {
   selectedCardId: string | null;
   canPlay: boolean;
-  onSelectCard: (id: string) => void;
+  handlers: HandHandlers;
 }
 
-export const Hand = ({ selectedCardId, canPlay, onSelectCard }: HandProps) => {
+export const Hand = ({ selectedCardId, canPlay, handlers }: HandProps) => {
   const hand = useGameStore(s => s.player.hand);
   const area = useGameLayout().hand;
+  const cardW = Math.round(CARD_SIZE.width * area.scale);
   // Las cartas se solapan si no caben en el hueco
-  const step = hand.length > 1 ? Math.min(CARD_SIZE.width + HAND_GAP, Math.floor((area.w - CARD_SIZE.width) / (hand.length - 1))) : 0;
-  const total = CARD_SIZE.width + step * Math.max(0, hand.length - 1);
+  const step = hand.length > 1 ? Math.min(cardW + HAND_GAP, Math.floor((area.w - cardW) / (hand.length - 1))) : 0;
+  const total = cardW + step * Math.max(0, hand.length - 1);
   const startX = area.x + Math.floor((area.w - total) / 2);
 
   return (
@@ -272,11 +344,12 @@ export const Hand = ({ selectedCardId, canPlay, onSelectCard }: HandProps) => {
           x={startX + i * step}
           y={area.y}
           fromX={area.x + area.w}
+          scale={area.scale}
           fan={hand.length > 1 ? (i - (hand.length - 1) / 2) / ((hand.length - 1) / 2) : 0}
           enterDelay={(i % 4) * 0.08}
           isSelected={selectedCardId === card.id}
           canPlay={canPlay}
-          onSelect={onSelectCard}
+          handlers={handlers}
         />
       ))}
     </AnimatePresence>
