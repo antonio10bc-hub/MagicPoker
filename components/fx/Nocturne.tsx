@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { useStage } from '@/components/pixel/Stage';
+import { useSettings } from '@/hooks/useSettings';
 
 // --- FONDO: NOCHE CON NIEBLA ---
 // Negro como espacio negativo y una banda de niebla crema que se arrastra despacio
@@ -35,6 +36,8 @@ export const Nocturne = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fighting = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
   const fightRef = useRef(fighting);
+  // Modo rendimiento (grano apagado): la niebla se pinta una vez y queda quieta
+  const still = useSettings().grain === 'off';
 
   useEffect(() => { fightRef.current = fighting; }, [fighting]);
 
@@ -64,7 +67,7 @@ export const Nocturne = () => {
       }
     }
     for (let i = 3; i < n * 4; i += 4) data[i] = 255;
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduced = still || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     let raf = 0;
     let last = 0;
@@ -109,7 +112,7 @@ export const Nocturne = () => {
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [width, height]);
+  }, [width, height, still]);
 
   return (
     <canvas

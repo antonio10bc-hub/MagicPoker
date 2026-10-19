@@ -6,8 +6,11 @@ import {
 } from '@/lib/game-utils';
 import { chooseOpponentMove } from '@/lib/ai';
 import { playSound } from '@/lib/sounds';
-import { incrementStat, recordWin, unlockRepublicana } from '@/lib/stats';
-import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS, STARTING_HAND_SIZE, TIMINGS } from '@/lib/constants';
+import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStamp } from '@/lib/stats';
+import { endStamps, newMatchTrack, roundStamps, StampId } from '@/lib/stamps';
+import { clearGame, loadGame, saveGame } from '@/lib/savegame';
+import { useUiStore } from '@/store/useUiStore';
+import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS, STARTING_HAND_SIZE, STARTING_LIVES, TIMINGS } from '@/lib/constants';
 
 interface GameState {
   screen: Screen;
@@ -23,6 +26,8 @@ interface GameState {
 
   setDifficulty: (diff: Difficulty) => void;
   startGame: () => void;
+  /** Retoma la partida guardada (si la hay) */
+  resumeGame: () => boolean;
   exitToMenu: () => void;
   placeCard: (cardId: string, slotIndex: number) => void;
   passTurn: () => void;
@@ -49,6 +54,12 @@ const cancelScheduled = () => {
   pendingTimers.forEach(clearTimeout);
   pendingTimers = new Set();
 };
+
+// --- SEGUIMIENTO DE LA PARTIDA (para sellos) ---
+let track = newMatchTrack();
+
+/** Concede un sello y, si es nuevo, lo pone en la cola para celebrarlo */
+const award = (ids: StampId[]) => ids.forEach(id => { if (unlockStamp(id)) useUiStore.getState().pushStamp(id); });
 
 const initialMatchState = () => ({
   phase: 'start' as GamePhase,
@@ -77,6 +88,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     cancelScheduled();
     playSound('shuffle', 0.6);
     incrementStat('totalGames');
+    track = newMatchTrack();
 
     set({
       ...initialMatchState(),
@@ -85,6 +97,25 @@ export const useGameStore = create<GameState>((set, get) => ({
       player: createPlayerState(createDeck('player'), STARTING_HAND_SIZE, true),
       opponent: createPlayerState(createDeck('opponent'), STARTING_HAND_SIZE, false),
     });
+  },
+
+  resumeGame: () => {
+    const saved = loadGame();
+    if (!saved) return false;
+    cancelScheduled();
+    track = newMatchTrack();
+    playSound('shuffle', 0.5);
+    set({
+      ...initialMatchState(),
+      screen: 'game',
+      phase: 'placement',
+      turn: 'player',
+      difficulty: saved.difficulty,
+      roundNumber: saved.roundNumber,
+      player: saved.player,
+      opponent: saved.opponent,
+    });
+    return true;
   },
 
   exitToMenu: () => {
@@ -104,7 +135,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!nextPlayer) return;
 
     playSound('click', 0.5);
-    incrementStat('cardsPlayed');
+    const played = player.hand.find(c => c.id === cardId);
+    if (played) {
+      recordCardPlayed(played.rank);
+      track.ranksPlayed.push(played.rank);
+    }
 
     // Si el rival ya se plantó, sigues jugando tú
     set({ player: nextPlayer, turn: opponent.isPassed ? 'player' : 'opponent' });
@@ -163,8 +198,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         const { player, opponent } = get();
         const result = calculateCombat(player.board, opponent.board);
 
-        if (result.cardsDestroyedCount > 0) incrementStat('cardsDestroyed', result.cardsDestroyedCount);
-        if (result.isRepublicanaTriggered) unlockRepublicana();
+        recordRound(result.cardsDestroyedCount, result.opponentDamageTaken, result.playerDamageTaken);
+        award(roundStamps(result));
         if (result.voidedCardIds.length > 0) playSound('as_reveal', 0.8);
 
         set({
@@ -207,7 +242,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (gameResult) {
       playSound(...END_SOUNDS[gameResult]);
-      if (gameResult === 'win') recordWin(difficulty);
+      const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
+      award(endStamps({
+        result: gameResult, difficulty, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
+        streak: stats.currentStreak, totalGames: stats.totalGames, track,
+      }));
       set({ pendingCombatResult: null, gameResult, phase: 'end', player: nextPlayer, opponent: nextOpponent });
       return;
     }
@@ -222,3 +261,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 }));
+
+// --- GUARDADO AUTOMÁTICO ---
+// En tu turno de colocar el estado es estable: se guarda. Al terminar la partida o
+// volver al menú desde una partida, se borra.
+if (typeof window !== 'undefined') {
+  useGameStore.subscribe((state, prev) => {
+    if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player'
+      && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, player: state.player, opponent: state.opponent });
+    }
+    if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
+  });
+}

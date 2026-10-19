@@ -9,7 +9,6 @@ import { CardInfo } from '@/components/game/CardInfo';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { AmbientDust, LowHealth } from '@/components/fx/Ambient';
-import { Modals } from '@/components/modals/Modals';
 
 const { Backdrop } = ACTIVE_THEME;
 
@@ -72,7 +71,6 @@ export const GameScreen = () => {
       <FxLayer layer="ui" />
       <RoundAnnouncer />
       <LowHealth active={lowHealth} />
-      <Modals />
     </div>
   );
 };

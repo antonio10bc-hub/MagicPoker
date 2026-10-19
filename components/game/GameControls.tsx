@@ -217,7 +217,8 @@ export const ActionButton = ({ canPlay }: { canPlay: boolean }) => {
 // --- BOTONES DE MENÚ (inicio, reglas, estadísticas) ---
 export const MenuButtons = () => {
   const openModal = useUiStore(s => s.openModal);
-  const { menuButtons: pos } = useGameLayout();
+  const { menuButtons: pos, menuButtonSize: size } = useGameLayout();
+  const sized = { width: size, height: size };
 
   const handleHome = () => {
     playSound('click');
@@ -229,9 +230,10 @@ export const MenuButtons = () => {
 
   return (
     <div className="absolute flex gap-[3px]" style={{ left: pos.x, top: pos.y }}>
-      <IconButton icon={ICONS.home} onClick={handleHome} aria-label="home" />
-      <IconButton icon={ICONS.info} onClick={() => { playSound('click'); openModal('rules'); }} aria-label="rules" />
-      <IconButton icon={ICONS.trophy} onClick={() => { playSound('click'); openModal('stats'); }} aria-label="stats" />
+      <IconButton icon={ICONS.home} onClick={handleHome} aria-label="home" style={sized} />
+      <IconButton icon={ICONS.info} onClick={() => { playSound('click'); openModal('rules'); }} aria-label="rules" style={sized} />
+      <IconButton icon={ICONS.trophy} onClick={() => { playSound('click'); openModal('stats'); }} aria-label="stats" style={sized} />
+      <IconButton icon={ICONS.gear} onClick={() => { playSound('click'); openModal('settings'); }} aria-label="settings" style={sized} />
     </div>
   );
 };

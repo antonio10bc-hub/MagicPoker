@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
@@ -7,16 +7,19 @@ import { playSfx, playSound } from '@/lib/sounds';
 import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
+import { loadGame } from '@/lib/savegame';
 import { TIMINGS } from '@/lib/constants';
 import { Difficulty, Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
-import { Panel, PxButton } from '@/components/pixel/ui';
+import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS } from '@/components/pixel/sprites';
+import { CHARACTERS, ICONS } from '@/components/pixel/sprites';
 import { INK } from '@/theme/tokens';
 import { useMenuLayout } from '@/components/pixel/Stage';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
+const noSubscribe = () => () => {};
+const hasSavedGame = () => loadGame() !== null;
 const { Backdrop, Diorama } = ACTIVE_THEME;
 
 /** Fondo de menú y final: la plaza vacía */
@@ -117,10 +120,19 @@ export const MenuScreen = () => {
   };
 
   const { cx, logoY, playY, difficultyY, panelW } = useMenuLayout();
+  // ¿Hay una partida a medias? (solo en el navegador)
+  const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
+  const resumeGame = useGameStore(s => s.resumeGame);
 
   return (
     <div className="absolute inset-0">
       <MenuBackground />
+      {/* Reglas, estadísticas y ajustes también desde el menú */}
+      <div className="absolute z-30 flex gap-[3px]" style={{ right: 4, top: 4 }}>
+        <IconButton icon={ICONS.info} aria-label="rules" onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
+        <IconButton icon={ICONS.trophy} aria-label="stats" onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
+        <IconButton icon={ICONS.gear} aria-label="settings" onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
+      </div>
       <Logo y={logoY} />
       <Mascot rank="J" owner="player" x={cx - 92} y={playY - 8} />
       <Mascot rank="K" owner="opponent" x={cx + 56} y={playY - 8} delay={0.3} />
@@ -132,6 +144,13 @@ export const MenuScreen = () => {
           {t.play}
         </PxButton>
       </motion.div>
+
+      {hasSave && (
+        <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY + 32, width: 100, height: 16 }}
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }}>
+          <PxButton onClick={() => { playSound('click'); resumeGame(); }} className="w-full h-full">{t.continue_game}</PxButton>
+        </motion.div>
+      )}
 
       <motion.div className="absolute z-20" style={{ left: cx - Math.floor(panelW / 2), top: difficultyY }}
         initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18, delay: 1 }}>

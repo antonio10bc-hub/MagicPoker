@@ -10,6 +10,8 @@ const displayFont = Bebas_Neue({ subsets: ['latin'], weight: '400', variable: '-
 export const metadata: Metadata = {
   title: 'Magic Poker',
   description: 'Juego de cartas estratégico',
+  // Instalable en iOS: pantalla completa y barra de estado sobre el negro del juego
+  appleWebApp: { capable: true, title: 'Magic Poker', statusBarStyle: 'black-translucent' },
 }
 
 // Juego a pantalla completa en móvil: sin zoom por gestos ni doble toque
@@ -29,6 +31,14 @@ export default function RootLayout({
   return (
     <html lang="es" className={`h-full ${typeFont.variable} ${displayFont.variable}`}>
       <body className="h-full m-0 overflow-hidden">
+        {/* Pantalla de carga: HTML puro, visible antes de que arranque React */}
+        <div id="splash" aria-hidden>
+          <div className="splash-logo">
+            <span className="splash-magic">MAGIC</span>
+            <span className="splash-poker">POKER</span>
+          </div>
+          <div className="splash-bar"><span /></div>
+        </div>
         {children}
       </body>
     </html>

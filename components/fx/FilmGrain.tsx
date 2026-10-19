@@ -1,4 +1,5 @@
 import { CSSProperties, useSyncExternalStore } from 'react';
+import { useSettings } from '@/hooks/useSettings';
 
 // --- POSTPROCESADO: GRANO DE PELÍCULA ---
 // Un mosaico de ruido a resolución de pantalla (1 punto = 1 px CSS, no un píxel
@@ -54,7 +55,10 @@ const noSubscribe = () => () => {};
 
 export const FilmGrain = ({ scale }: { scale: number }) => {
   const grain = useSyncExternalStore(noSubscribe, getGrain, () => null);
-  if (!grain) return null;
+  // Ajuste del jugador: grano completo, suave o apagado (modo rendimiento)
+  const level = useSettings().grain;
+  if (!grain || level === 'off') return null;
+  const k = level === 'soft' ? 0.5 : 1;
 
   // El escenario se escala por `scale`: dividimos para que 1 punto de ruido = 1 px CSS.
   // La capa es un mosaico más grande que la pantalla para poder desplazarla.
@@ -78,10 +82,10 @@ export const FilmGrain = ({ scale }: { scale: number }) => {
   return (
     <>
       <style>{keyframes}</style>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[997]" style={wrap('overlay', 0.6)}>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[997]" style={wrap('overlay', 0.6 * k)}>
         <div className="grain absolute" style={layer(grain.luma, 0.5)} />
       </div>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[997]" style={wrap('normal', 1)}>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[997]" style={wrap('normal', k)}>
         <div className="grain absolute" style={layer(grain.specks, 0.62)} />
       </div>
     </>

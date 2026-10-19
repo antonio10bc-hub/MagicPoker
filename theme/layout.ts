@@ -101,6 +101,8 @@ export interface GameLayout {
   rivalPanel: Rect;
   playerPanel: Rect;
   menuButtons: Point;
+  /** Lado de los botones de menú (4 botones en fila) */
+  menuButtonSize: number;
   turnBox: Rect;
   actionButton: Rect;
   /** Zona de la mano: cartas alineadas en y, centradas en [x, x + w], a la escala indicada */
@@ -121,6 +123,7 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
       rivalPanel: { x: M, y: M, w: 62, h: 62 },
       playerPanel: { x: M, y: 230, w: 62, h: 54 },
       menuButtons: { x: M, y: 70 },
+      menuButtonSize: 14,
       turnBox: { x: 314, y: M, w: 66, h: 36 },
       actionButton: { x: 314, y: 196, w: 66, h: 22 },
       hand: { x: 72, y: 226, w: 236, scale: 1 },
@@ -144,13 +147,14 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
   const boardH = Math.max(boardMin, Math.min(boardMin + BOARD_GROW_MAX, available - DIORAMA_SHADOW));
   const boardY = top + Math.max(0, Math.floor((available - boardH - DIORAMA_SHADOW) / 2));
   const actionW = Math.min(78, Math.floor(W * 0.4));
-  const buttonsW = 3 * 18 + 2 * 3;
+  const buttonsW = 4 * 18 + 3 * 3;
 
   return {
     mode,
     board: computeBoard(M, boardY, boardW, true, boardH),
     rivalPanel: { x: M, y: M, w: W - 2 * M, h: 28 },
     menuButtons: { x: W - M - buttonsW, y: statusY },
+    menuButtonSize: 18,
     turnBox: { x: M, y: statusY, w: W - 2 * M - buttonsW - 4, h: 16 },
     playerPanel: { x: M, y: playerRowY, w: W - 2 * M - actionW - 4, h: 28 },
     actionButton: { x: W - M - actionW, y: playerRowY + 3, w: actionW, h: 22 },

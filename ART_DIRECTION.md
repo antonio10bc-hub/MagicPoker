@@ -289,6 +289,27 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **Vibración corta en móvil** (si el dispositivo lo permite) al colocar carta, recibir
   golpes y perder vidas.
 
+### Meta: ajustes, sellos, estadísticas y app
+
+- **Ajustes** (rueda dentada, en el menú y en la partida; `lib/settings.ts`): sonido,
+  volumen de música y de efectos, vibración y grano (completo, suave o apagado; apagado
+  también congela la niebla del fondo: modo rendimiento).
+- **Sellos** (`lib/stamps.ts`, `components/game/Stamps.tsx`): 12 logros por hacer cosas
+  concretas. Cada uno es un círculo de tinta con un icono en silueta: conseguido, masa
+  naranja que brilla; por conseguir, anillo pizarra. Al ganarse se estampa en pantalla
+  de golpe (escala ×3 → 1, desenfoque que se enfoca, anillo de tinta, crujido, brillo y
+  vibración), esperando a que termine el choque para no tapar la acción.
+- **Estadísticas ampliadas:** victorias por dificultad, derrotas, empates, porcentaje,
+  últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
+  victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
+  favorita y la colección de sellos.
+- **Partida guardada** (`lib/savegame.ts`): se guarda en cada turno tuyo y el menú
+  ofrece "CONTINUAR PARTIDA".
+- **App instalable y sin conexión:** manifiesto, icono (carta naranja que brilla con
+  el rombo de luz sobre negro granulado) y service worker (`public/sw.js`).
+- **Pantalla de carga:** HTML puro con el logo y una barra de brasa, visible hasta que
+  cargan las fuentes.
+
 ---
 
 ## Cómo crear un escenario nuevo

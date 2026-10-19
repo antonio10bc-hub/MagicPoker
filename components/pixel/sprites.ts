@@ -64,6 +64,17 @@ export const ICONS = {
     '..nn.....',
     '...n.....',
   ),
+  gear: s(
+    '...n.n...',
+    '.nnnnnnn.',
+    '.nn...nn.',
+    'nn.....nn',
+    '.n..n..n.',
+    'nn.....nn',
+    '.nn...nn.',
+    '.nnnnnnn.',
+    '...n.n...',
+  ),
   close: s(
     'nn...nn',
     'nnn.nnn',

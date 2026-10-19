@@ -5,13 +5,17 @@ import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { getStats } from '@/lib/stats';
-import { playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/sounds';
+import { haptic, playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/sounds';
+import { GrainLevel, updateSettings } from '@/lib/settings';
+import { useSettings } from '@/hooks/useSettings';
 import { useMuted } from '@/hooks/useMuted';
 import { Difficulty, Rank } from '@/types';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
+import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
+import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
 
 const closeWithClick = () => {
@@ -33,6 +37,7 @@ export const Modals = () => {
       {modal === 'exit' && <ConfirmExitModal key="exit" />}
       {modal === 'stats' && <StatsModal key="stats" />}
       {modal === 'rules' && <RulesModal key="rules" />}
+      {modal === 'settings' && <SettingsModal key="settings" />}
     </AnimatePresence>
   );
 };
@@ -125,15 +130,34 @@ const StatsModal = () => {
   const t = useTranslations();
   // Se leen una sola vez al abrir
   const [stats] = useState(getStats);
+  const [picked, setPicked] = useState<StampId | null>(null);
 
-  const globals: [string, number][] = [
+  const totalWins = stats.wins.easy + stats.wins.normal + stats.wins.hard;
+  const finished = totalWins + stats.losses + stats.draws;
+  const favorite = (Object.entries(stats.rankPlayed) as [Rank, number][]).sort((a, b) => b[1] - a[1])[0];
+  const earnedCount = STAMP_IDS.filter(id => stats.stamps[id] !== undefined).length;
+
+  const records: [string, string | number][] = [
+    [t.streak, stats.currentStreak],
+    [t.best_streak, stats.bestStreak],
+    [t.fastest_win, stats.fastestWin ? `${stats.fastestWin} ${t.rounds_unit}` : '—'],
+    [t.perfect_wins, stats.perfectWins],
+  ];
+  const globals: [string, string | number][] = [
     [t.total_games, stats.totalGames],
+    [t.rounds_played, stats.roundsPlayed],
     [t.cards_played, stats.cardsPlayed],
     [t.cards_destroyed, stats.cardsDestroyed],
+    [t.lives_taken, stats.livesTaken],
+    [t.lives_lost, stats.livesLost],
+    [t.favorite_card, favorite ? `${favorite[0] === 'JOKER' ? 'Joker' : favorite[0]} ×${favorite[1]}` : '—'],
   ];
+  const rows = (items: [string, string | number][]) => items.map(([label, value]) => (
+    <div key={label} className="flex justify-between"><span>{label}</span><span className="font-display" style={{ fontSize: 11 }}>{value}</span></div>
+  ));
 
   return (
-    <Dialog title={t.stats_title} width={236} height={196}>
+    <Dialog title={t.stats_title} width={250} height={232}>
       <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[12px]">
         <Section title={t.wins}>
           <div className="grid grid-cols-3 text-center">
@@ -144,25 +168,104 @@ const StatsModal = () => {
               </div>
             ))}
           </div>
+          <div className="flex justify-between mt-[3px]" style={{ color: 'var(--ink-mint)' }}>
+            <span>{t.losses} {stats.losses}</span><span>{t.draws} {stats.draws}</span>
+            <span>{t.winrate} {finished ? Math.round((totalWins / finished) * 100) : 0}%</span>
+          </div>
+          {/* Últimas partidas: punto naranja = victoria, pizarra = derrota, teal = empate */}
+          {stats.history.length > 0 && (
+            <div className="flex items-center gap-[3px] mt-[4px]">
+              <span style={{ color: 'var(--ink-teal)' }}>{t.recent}</span>
+              {stats.history.map((h, i) => (
+                <span key={i} className="rounded-full" style={{
+                  width: 6, height: 6,
+                  background: h.r === 'win' ? 'var(--ink-orange)' : h.r === 'draw' ? 'var(--ink-teal)' : 'var(--ink-slate)',
+                  boxShadow: h.r === 'win' ? '0 0 3px rgba(255,74,28,0.8)' : 'inset 0 0 0 1px rgba(185,207,200,0.3)',
+                }} />
+              ))}
+            </div>
+          )}
         </Section>
-        <Section title={t.global}>
-          {globals.map(([label, value]) => (
-            <div key={label} className="flex justify-between"><span>{label}</span><span>{value}</span></div>
-          ))}
+        <Section title={`${t.stamps_title} · ${earnedCount}/${STAMP_IDS.length}`}>
+          <div className="grid grid-cols-6 gap-y-[4px] justify-items-center">
+            {STAMP_IDS.map((id, i) => (
+              <button key={id} aria-label={id} className="cursor-pointer" onClick={() => { playSfx('select', 0.5); setPicked(p => (p === id ? null : id)); }}
+                style={{ outline: picked === id ? '1px solid var(--ink-cream)' : undefined, borderRadius: '50%' }}>
+                <StampSeal id={id} earned={stats.stamps[id] !== undefined} size={26} tilt={((i * 37) % 17) - 8} />
+              </button>
+            ))}
+          </div>
+          <div className="mt-[4px] min-h-[24px]">
+            {picked ? (
+              <>
+                <div className={stats.stamps[picked] !== undefined ? 'glow-text' : undefined} style={{ color: stats.stamps[picked] !== undefined ? 'var(--ink-orange)' : 'var(--ink-mint)' }}>
+                  {stampName(t, picked)}{stats.stamps[picked] === undefined && ` · ${t.stamp_locked}`}
+                </div>
+                <div style={{ color: 'var(--ink-mint)' }}>{stampDesc(t, picked)}</div>
+              </>
+            ) : <div style={{ color: 'var(--ink-teal)' }}>{t.stamp_hint}</div>}
+          </div>
         </Section>
-        <div className="px-round flex items-center gap-[6px] p-[5px]" style={{
-          color: 'var(--c-outline)',
-          background: stats.achievementRepublicana ? 'var(--c-gold)' : 'var(--c-ui-muted)',
-          boxShadow: stats.achievementRepublicana ? '0 0 8px 1px rgba(255,74,28,0.5)' : undefined,
-          filter: stats.achievementRepublicana ? undefined : 'grayscale(1)',
-          opacity: stats.achievementRepublicana ? 1 : 0.7,
-        }}>
-          <PixelSprite sprite={STAR} scale={2} tint={INK.black} />
-          <div>
-            <div className="uppercase">{t.achievement_republicana}</div>
-            <div>{t.achievement_desc}</div>
+        <Section title={t.records}>{rows(records)}</Section>
+        <Section title={t.global}>{rows(globals)}</Section>
+      </div>
+    </Dialog>
+  );
+};
+
+// --- AJUSTES ---
+const Row = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex items-center justify-between gap-[6px] min-h-[18px]">
+    <span>{label}</span>
+    <div className="flex items-center gap-[3px]">{children}</div>
+  </div>
+);
+
+const Choice = <T extends string | boolean>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) => (
+  <>
+    {options.map(([v, label]) => (
+      <PxButton key={String(v)} tone={v === value ? 'roof' : 'white'} data-pressed={v === value}
+        onClick={() => { playSfx('select', 0.6); onChange(v); }} className="h-[15px] px-[5px]">
+        <span className={v === value ? 'text-outline' : undefined}>{label}</span>
+      </PxButton>
+    ))}
+  </>
+);
+
+const Slider = ({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) => (
+  <>
+    <input type="range" min={0} max={100} step={5} value={Math.round(value * 100)} aria-label={label}
+      onChange={e => onChange(Number(e.target.value) / 100)}
+      onPointerUp={() => playSfx('hover', 1)}
+      className="px-range" style={{ width: 84 }} />
+    <span className="font-display w-[18px] text-right" style={{ color: 'var(--ink-ember)' }}>{Math.round(value * 100)}</span>
+  </>
+);
+
+const SettingsModal = () => {
+  const t = useTranslations();
+  const settings = useSettings();
+  const isMuted = useMuted();
+  return (
+    <Dialog title={t.settings_title} width={236} height={150}>
+      <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[12px]">
+        <Row label={t.set_sound}>
+          <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
+        </Row>
+        <Row label={t.set_music}><Slider label={t.set_music} value={settings.music} onChange={music => updateSettings({ music })} /></Row>
+        <Row label={t.set_sfx}><Slider label={t.set_sfx} value={settings.sfx} onChange={sfx => updateSettings({ sfx })} /></Row>
+        <Row label={t.set_vibration}>
+          <Choice value={settings.vibration} options={[[true, t.on], [false, t.off]]}
+            onChange={vibration => { updateSettings({ vibration }); if (vibration) haptic('select'); }} />
+        </Row>
+        <div className="flex flex-col gap-[3px]">
+          <span>{t.set_grain}</span>
+          <div className="flex gap-[3px]">
+            <Choice<GrainLevel> value={settings.grain} options={[['full', t.grain_full], ['soft', t.grain_soft], ['off', t.grain_off]]}
+              onChange={grain => updateSettings({ grain })} />
           </div>
         </div>
+        <div style={{ color: 'var(--ink-teal)' }}>{t.grain_hint}</div>
       </div>
     </Dialog>
   );
