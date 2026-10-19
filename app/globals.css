@@ -2,184 +2,196 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== TOKENS (espejo de theme/tokens.ts) ===== */
+/* ===== TINTAS (espejo de theme/tokens.ts) =====
+   Impresión analógica nocturna: 8 tintas y nada más. Los nombres antiguos (--c-*) se
+   mantienen como roles y apuntan a la tinta que les toca. */
 :root {
-  --c-outline: #1E2638;
-  --c-stone-dark: #4A4E58;
-  --c-floor: #9AA6AE;
-  --c-floor-pattern: #B8C4CC;
-  --c-pavement: #D8D4CC;
-  --c-white: #F4F4F0;
-  --c-glass: #4C8CD8;
-  --c-cyan: #7CC8F0;
-  --c-navy: #2E3A5C;
-  --c-roof: #E85A28;
-  --c-red: #C0281C;
-  --c-red-light: #E8584A;
-  --c-red-dark: #801810;
-  --c-green: #2E9A3A;
-  --c-green-light: #5CC860;
-  --c-green-dark: #1E6A2A;
-  --c-yellow: #F0C830;
-  --c-yellow-dark: #B89010;
-  --c-wood: #D07830;
-  --c-wood-dark: #985020;
-  --c-shadow: rgba(30, 38, 56, 0.35);
+  --ink-black: #0B0D0C;
+  --ink-slate: #1E2A28;
+  --ink-teal: #5E7A76;
+  --ink-mint: #B9CFC8;
+  --ink-cream: #EDEBE0;
+  --ink-orange: #FF4A1C;
+  --ink-ember: #F2652A;
+  --ink-moss: #6F8F5A;
 
-  /* Híbrido "mesa de cartas psicodélica": UI oscura y acentos neón */
-  --c-ui-panel: #2A383E;
-  --c-ui-panel-light: #3D5158;
-  --c-ui-edge: #141D21;
-  --c-ui-muted: #9DB2B8;
-  --c-chip: #2E8BFF;
-  --c-chip-dark: #1C5CB0;
-  --c-mult: #FF4B3E;
-  --c-mult-dark: #B12A22;
-  --c-gold: #F5B843;
-  --c-gold-dark: #B8822A;
-  --c-orange: #FF9A1F;
-  --c-orange-dark: #C0660A;
-  --c-neutral: #5B7277;
-  --c-neutral-dark: #3A4B50;
+  --c-outline: var(--ink-black);
+  --c-stone-dark: var(--ink-slate);
+  --c-floor: var(--ink-teal);
+  --c-floor-pattern: var(--ink-mint);
+  --c-pavement: var(--ink-mint);
+  --c-white: var(--ink-cream);
+  --c-glass: var(--ink-teal);
+  --c-cyan: var(--ink-mint);
+  --c-navy: var(--ink-slate);
+  --c-roof: var(--ink-ember);
+  --c-red: var(--ink-orange);
+  --c-red-light: var(--ink-ember);
+  --c-red-dark: var(--ink-black);
+  --c-green: var(--ink-slate);
+  --c-green-light: var(--ink-cream);
+  --c-green-dark: var(--ink-black);
+  --c-yellow: var(--ink-ember);
+  --c-yellow-dark: var(--ink-orange);
+  --c-wood: var(--ink-slate);
+  --c-wood-dark: var(--ink-black);
+  --c-shadow: rgba(11, 13, 12, 0.6);
+
+  --c-ui-panel: rgba(11, 13, 12, 0.72);
+  --c-ui-panel-light: rgba(185, 207, 200, 0.07);
+  --c-ui-edge: rgba(11, 13, 12, 0.85);
+  --c-ui-muted: var(--ink-teal);
+  --c-chip: var(--ink-ember);
+  --c-chip-dark: var(--ink-orange);
+  --c-mult: var(--ink-orange);
+  --c-mult-dark: var(--ink-orange);
+  --c-gold: var(--ink-ember);
+  --c-gold-dark: var(--ink-orange);
+  --c-orange: var(--ink-ember);
+  --c-orange-dark: var(--ink-orange);
+  --c-neutral: rgba(30, 42, 40, 0.85);
+  --c-neutral-dark: var(--ink-black);
+
+  /* Bloom y halación (en píxeles internos; el escenario los escala) */
+  --bloom-orange: drop-shadow(0 0 1.5px rgba(255, 74, 28, 0.95)) drop-shadow(0 0 6px rgba(242, 101, 42, 0.55));
+  --bloom-cream: drop-shadow(0 0 1.5px rgba(237, 235, 224, 0.7)) drop-shadow(0 0 5px rgba(255, 74, 28, 0.28));
 }
 
 html, body {
-  background: var(--c-outline);
-  color: var(--c-outline);
+  background: var(--ink-black);
+  color: var(--ink-cream);
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ===== ESCENARIO DE BAJA RESOLUCIÓN ===== */
+/* ===== ESCENARIO ===== */
 .stage {
-  font-family: var(--font-pixel), monospace;
+  font-family: var(--font-type), 'Courier New', monospace;
   font-size: 10px;
   line-height: 10px;
-  image-rendering: pixelated;
-  -webkit-font-smoothing: none;
-  font-smooth: never;
+  letter-spacing: 0.02em;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   touch-action: manipulation;
+  color: var(--ink-cream);
 }
 .stage * { box-sizing: border-box; }
-.stage svg { image-rendering: pixelated; }
 
-.text-title { font-size: 20px; line-height: 20px; }
+/* Cifras y títulos: tipografía condensada */
+.font-display { font-family: var(--font-display), var(--font-type), sans-serif; letter-spacing: 0.03em; }
+.text-title { font-family: var(--font-display), var(--font-type), sans-serif; font-size: 20px; line-height: 20px; letter-spacing: 0.06em; }
 
-/* Texto claro con contorno de 1 px (4 direcciones, sin desenfoque) */
+/* Texto de tinta crema con un leve desajuste de registro (dos tintas que no casan) */
 .text-outline {
-  color: var(--c-white);
-  text-shadow: 1px 0 0 var(--c-outline), -1px 0 0 var(--c-outline), 0 1px 0 var(--c-outline), 0 -1px 0 var(--c-outline),
-    1px 1px 0 var(--c-outline);
+  color: var(--ink-cream);
+  text-shadow: -0.5px 0 0 rgba(255, 74, 28, 0.45), 0.5px 0.3px 0 rgba(94, 122, 118, 0.55), 0 0 3px rgba(11, 13, 12, 0.6);
 }
+/* Texto oscuro sobre naranja o crema (silueta) */
+.text-ink { color: var(--ink-black); text-shadow: 0.5px 0 0 rgba(255, 74, 28, 0.35); }
 
-/* Esquinas: la interfaz usa rectángulos redondeados suaves (estilo mesa de cartas);
-   las cartas mantienen la esquina escalonada en píxel (.px-round-2). */
-.px-round { border-radius: 4px; }
-.px-round-2 {
-  clip-path: polygon(2px 0, calc(100% - 2px) 0, calc(100% - 2px) 1px, calc(100% - 1px) 1px, calc(100% - 1px) 2px, 100% 2px,
-    100% calc(100% - 2px), calc(100% - 1px) calc(100% - 2px), calc(100% - 1px) calc(100% - 1px), calc(100% - 2px) calc(100% - 1px), calc(100% - 2px) 100%,
-    2px 100%, 2px calc(100% - 1px), 1px calc(100% - 1px), 1px calc(100% - 2px), 0 calc(100% - 2px),
-    0 2px, 1px 2px, 1px 1px, 2px 1px);
-}
+/* Esquinas: blandas, sin contorno */
+.px-round { border-radius: 3px; }
+.px-round-2 { border-radius: 2px; }
 
-/* ===== PANEL: oscuro, redondeado, con canto inferior ===== */
+/* ===== PANEL: negro semitransparente, sin bordes ===== */
 .px-panel {
   background: var(--c-ui-panel);
-  color: var(--c-white);
-  box-shadow: inset 0 0 0 1px var(--c-ui-edge), inset 0 0 0 2px var(--c-ui-panel-light), 0 3px 0 0 rgba(10, 14, 18, 0.55);
+  color: var(--ink-cream);
+  box-shadow: inset 0 0 0 1px var(--c-ui-panel-light), 0 4px 10px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
 }
 .px-panel-dark {
   background: var(--c-ui-edge);
-  color: var(--c-white);
-  box-shadow: inset 0 0 0 1px #000, inset 0 0 0 2px var(--c-ui-panel);
+  color: var(--ink-cream);
+  box-shadow: inset 0 0 0 1px var(--c-ui-panel-light);
 }
 .px-band {
   height: 13px;
   padding: 2px 4px 0;
   border-radius: 3px 3px 0 0;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 /* Hueco interior (sub-panel) */
 .px-inset {
-  background: var(--c-ui-edge);
+  background: rgba(30, 42, 40, 0.6);
   border-radius: 3px;
-  box-shadow: inset 0 1px 0 0 rgba(0, 0, 0, 0.5);
 }
 
-/* ===== BOTÓN: color plano, canto inferior grueso que desaparece al pulsar ===== */
+/* ===== BOTÓN: masa de color plana con brillo; sin canto ni contorno ===== */
 .px-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--btn-bg, var(--c-neutral));
-  color: var(--btn-fg, var(--c-white));
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
-  box-shadow: 0 3px 0 0 var(--btn-dark, var(--c-neutral-dark)), inset 0 1px 0 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  color: var(--btn-fg, var(--ink-cream));
+  box-shadow: inset 0 0 0 1px rgba(185, 207, 200, 0.08);
   cursor: pointer;
-  transition: box-shadow 0.08s ease, background 0.15s ease, filter 0.15s ease;
+  transition: filter 0.15s ease, background 0.15s ease;
 }
-.px-btn:hover { filter: brightness(1.12); }
-.px-btn:active, .px-btn[data-pressed='true'] {
-  box-shadow: 0 1px 0 0 var(--btn-dark, var(--c-neutral-dark)), inset 0 1px 0 0 rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+.px-btn:hover { filter: brightness(1.15); }
+.px-btn:disabled { cursor: default; filter: saturate(0.2) brightness(0.6); }
+
+/* Botones de acción: naranja con bloom; el texto es una silueta oscura */
+.px-btn-yellow, .px-btn-green, .px-btn-red, .px-btn-blue, .px-btn-roof {
+  --btn-bg: var(--ink-orange);
+  --btn-fg: var(--ink-black);
+  background-image: radial-gradient(ellipse at 50% 40%, var(--ink-ember) 0%, transparent 75%);
+  box-shadow: 0 0 6px 1px rgba(255, 74, 28, 0.55), 0 0 18px 2px rgba(242, 101, 42, 0.25);
+  text-shadow: none;
 }
-.px-btn:disabled { cursor: default; filter: saturate(0.3); }
+.px-btn-yellow:hover, .px-btn-green:hover, .px-btn-red:hover, .px-btn-blue:hover, .px-btn-roof:hover { filter: brightness(1.08) saturate(1.1); }
 
-.px-btn-yellow { --btn-bg: var(--c-gold); --btn-dark: var(--c-gold-dark); }
-.px-btn-green { --btn-bg: var(--c-green); --btn-dark: var(--c-green-dark); }
-.px-btn-red { --btn-bg: var(--c-mult); --btn-dark: var(--c-mult-dark); }
-.px-btn-blue { --btn-bg: var(--c-chip); --btn-dark: var(--c-chip-dark); }
-.px-btn-roof { --btn-bg: var(--c-orange); --btn-dark: var(--c-orange-dark); }
-
-/* ===== BRILLO HOLOGRÁFICO de las figuras ===== */
-@keyframes holo-sweep { 0% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
-.holo {
-  background-image: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 44%, rgba(124, 200, 240, 0.45) 50%, rgba(240, 200, 48, 0.4) 56%, transparent 70%);
-  background-size: 260% 100%;
-  mix-blend-mode: screen;
-  animation: holo-sweep 3.4s ease-in-out infinite;
+/* Dentro de un botón naranja, el texto es silueta */
+.px-btn-yellow .text-outline, .px-btn-green .text-outline, .px-btn-red .text-outline, .px-btn-blue .text-outline, .px-btn-roof .text-outline {
+  color: var(--ink-black);
+  text-shadow: 0.5px 0 0 rgba(237, 235, 224, 0.25);
 }
 
-/* ===== CAPA CRT: líneas de barrido + viñeta ===== */
-.crt {
-  background:
-    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.13) 0 1px, transparent 1px 2px),
-    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.5) 100%);
-}
+/* ===== BLOOM (masas que brillan desde dentro) ===== */
+.bloom { filter: var(--bloom-orange); }
+.bloom-cream { filter: var(--bloom-cream); }
 
-/* Scroll de paneles con barra en píxel */
-.px-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--c-glass) var(--c-floor-pattern); }
-.px-scroll::-webkit-scrollbar { width: 4px; }
-.px-scroll::-webkit-scrollbar-track { background: var(--c-floor-pattern); }
-.px-scroll::-webkit-scrollbar-thumb { background: var(--c-glass); }
+/* ===== POSTPROCESADO ===== */
+.vignette { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(11, 13, 12, 0.55) 85%, rgba(11, 13, 12, 0.85) 100%); }
+
+.px-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ink-teal) transparent; }
+.px-scroll::-webkit-scrollbar { width: 3px; }
+.px-scroll::-webkit-scrollbar-track { background: transparent; }
+.px-scroll::-webkit-scrollbar-thumb { background: var(--ink-teal); }
 
 /* ===== ANIMACIONES =====
-   Movimiento suave (ease / springs); los píxeles siguen siendo nítidos.
-   Los parpadeos de texto y cursores mantienen el corte duro tipo DS. */
-@keyframes px-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+   Mismos tiempos que antes. Lo que brilla "respira" y vibra un poco. */
+@keyframes px-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.25; } }
 @keyframes float-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 @keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, 0.97); } }
 @keyframes card-glow {
-  0%, 100% { box-shadow: 0 0 0 1px var(--c-yellow), 0 0 6px 1px rgba(240, 200, 48, 0.55); }
-  50% { box-shadow: 0 0 0 1px var(--c-white), 0 0 10px 3px rgba(240, 200, 48, 0.85); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(237, 235, 224, 0.75), 0 0 6px 2px rgba(242, 101, 42, 0.45); }
+  50% { box-shadow: 0 0 0 1px var(--ink-cream), 0 0 12px 4px rgba(255, 74, 28, 0.7); }
 }
 @keyframes slot-glow {
-  0%, 100% { box-shadow: inset 0 0 0 1px var(--c-outline), 0 0 0 1px var(--c-yellow), 0 0 6px 1px rgba(124, 200, 240, 0.6); filter: brightness(1); }
-  50% { box-shadow: inset 0 0 0 1px var(--c-outline), 0 0 0 1px var(--c-white), 0 0 12px 3px rgba(124, 200, 240, 0.9); filter: brightness(1.12); }
+  0%, 100% { box-shadow: 0 0 5px 1px rgba(237, 235, 224, 0.25); filter: brightness(1); }
+  50% { box-shadow: 0 0 10px 3px rgba(237, 235, 224, 0.45); filter: brightness(1.15); }
 }
 @keyframes banner-wave { 0%, 100% { transform: skewY(0deg) scaleX(1); } 50% { transform: skewY(4deg) scaleX(0.94); } }
-@keyframes lamp-glow { 0%, 100% { opacity: 0.55; transform: scale(1); } 45% { opacity: 0.85; transform: scale(1.08); } 55% { opacity: 0.7; } }
+@keyframes lamp-glow { 0%, 100% { opacity: 0.6; transform: scale(1); } 45% { opacity: 0.95; transform: scale(1.1); } 55% { opacity: 0.75; } }
 @keyframes dust-rise {
   0% { transform: translate(0, 0); opacity: 0; }
-  15% { opacity: 0.8; }
+  15% { opacity: 0.7; }
   100% { transform: translate(var(--drift, 12px), -120px); opacity: 0; }
 }
 @keyframes shine-sweep { 0% { transform: translateX(-120%) skewX(-20deg); } 60%, 100% { transform: translateX(220%) skewX(-20deg); } }
-@keyframes vignette-pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.6; } }
+/* Grano: salta entre fotogramas de ruido a pocos fps (boil lento, sin parpadeo) */
+@keyframes grain-boil { from { background-position: 0 0; } to { background-position: calc(var(--grain-w) * -1) 0; } }
+/* Las masas naranjas vibran levemente */
+@keyframes ember-jitter {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(0.3px, -0.2px); }
+  50% { transform: translate(-0.2px, 0.3px); }
+  75% { transform: translate(0.2px, 0.2px); }
+}
 
 .anim-blink { animation: px-blink 0.8s steps(1) infinite; }
 .anim-bob { animation: float-bob 1.2s ease-in-out infinite; }
@@ -189,7 +201,9 @@ html, body {
 .anim-banner { animation: banner-wave 2.4s ease-in-out infinite; transform-origin: 0 0; }
 .anim-lamp { animation: lamp-glow 2.8s ease-in-out infinite; }
 .anim-shine { animation: shine-sweep 3.2s ease-in-out infinite; }
+.anim-ember { animation: ember-jitter 0.5s steps(4) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine, .holo { animation: none; }
+  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine, .anim-ember { animation: none; }
+  .grain { animation: none !important; }
 }

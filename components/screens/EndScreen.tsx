@@ -11,13 +11,15 @@ import { Panel, PxButton } from '@/components/pixel/ui';
 import { Mascot, MenuBackground } from './MenuScreen';
 
 const RESULT_UI: Record<GameResult, { title: keyof Translations; sub: keyof Translations; band: string }> = {
-  win: { title: 'win', sub: 'win_sub', band: 'var(--c-green)' },
-  draw: { title: 'draw', sub: 'draw_sub', band: 'var(--c-chip)' },
-  loss: { title: 'loss', sub: 'loss_sub', band: 'var(--c-mult)' },
+  // Victoria: recompensa (naranja que brilla); empate: niebla; derrota: silueta
+  win: { title: 'win', sub: 'win_sub', band: 'var(--ink-orange)' },
+  draw: { title: 'draw', sub: 'draw_sub', band: 'var(--ink-teal)' },
+  loss: { title: 'loss', sub: 'loss_sub', band: 'var(--ink-slate)' },
 };
 
 // --- CONFETI EN PÍXEL (determinista, sin Math.random en el render) ---
-const CONFETTI_COLORS = [PALETTE.yellow, PALETTE.green, PALETTE.cyan, PALETTE.roof, PALETTE.white];
+/** Polvo granulado que cae, no confeti de colores */
+const CONFETTI_COLORS = [PALETTE.white, PALETTE.white, PALETTE.cyan, PALETTE.red, PALETTE.roof];
 const CONFETTI = Array.from({ length: 36 }, (_, i) => ({
   /** Posición horizontal como fracción del ancho */
   fx: ((i * 97) % 384) / 384,
@@ -35,7 +37,7 @@ const Confetti = () => {
         <motion.div
           key={i}
           className="absolute pointer-events-none z-[5]"
-          style={{ left: Math.floor(c.fx * width), top: -4, width: c.size, height: c.size, background: c.color, boxShadow: '1px 1px 0 0 var(--c-outline)' }}
+          style={{ left: Math.floor(c.fx * width), top: -4, width: c.size, height: c.size, background: c.color, borderRadius: '50%', filter: 'blur(0.4px)', boxShadow: `0 0 3px ${c.color}` }}
           animate={{ y: [0, height + 8], x: [0, 6, -6, 4, 0], rotate: [0, 360 * (i % 2 ? 1 : -1)] }}
           transition={{ duration: c.duration, delay: c.delay, repeat: 2, ease: 'linear' }}
         />
@@ -49,7 +51,7 @@ const Rays = ({ x, y }: { x: number; y: number }) => (
   <motion.div
     className="absolute pointer-events-none z-[5] rounded-full"
     style={{ left: x - 160, top: y - 160, width: 320, height: 320,
-      background: 'repeating-conic-gradient(rgba(240, 200, 48, 0.35) 0deg 12deg, transparent 12deg 30deg)',
+      background: 'repeating-conic-gradient(rgba(255, 74, 28, 0.28) 0deg 12deg, transparent 12deg 30deg)', filter: 'blur(3px)',
       maskImage: 'radial-gradient(circle, black 30%, transparent 70%)', WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)' }}
     initial={{ scale: 0, opacity: 0 }}
     animate={{ scale: 1, opacity: 1, rotate: 360 }}
@@ -94,7 +96,7 @@ export const EndScreen = () => {
   return (
     <div className="absolute inset-0">
       <MenuBackground />
-      {isLoss && <div className="absolute inset-0 z-[4]" style={{ background: 'rgba(30, 38, 56, 0.45)' }} />}
+      {isLoss && <div className="absolute inset-0 z-[4]" style={{ background: 'rgba(11, 13, 12, 0.55)' }} />}
       {isWin && <Rays x={cx} y={playY + 34} />}
       {isWin && <Confetti />}
       <Mascot rank={gameResult === 'loss' ? 'K' : 'J'} owner={gameResult === 'loss' ? 'opponent' : 'player'} x={cx - 16} y={board.diorama.y + 6} />

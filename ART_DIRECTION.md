@@ -1,215 +1,165 @@
 # Dirección de arte — Magic Poker
 
-Fuente de verdad del estilo visual. Cualquier pantalla, carta o escenario nuevo
-(mesa, río, ciudad, bosque…) debe cumplir este documento.
+Fuente de verdad del estilo visual. Cualquier pantalla, carta o escenario nuevo debe
+cumplir este documento. La dirección de arte **solo** toca color, sombreado,
+texturas, luz, postprocesado y la estética de sprites e interfaz: mecánicas,
+proporciones, zonas de toque, cámara, distribución de la interfaz, tiempos y lógica
+(`lib/`, `store/`) no cambian.
 
-**Referencia:** RPG de portátil de doble pantalla, era 2012. Escenarios 2.5D vistos
-desde una cámara alta, texturas de baja resolución nítidas, personajes chibi con
-contorno, paleta limpia y saturada sobre una base urbana fría. No es pixel art puro:
-es baja resolución que *se lee* como pixel art.
+## Concepto: impresión analógica nocturna
 
-**Propiedad intelectual:** solo tomamos el estilo. Ningún personaje, criatura, logo,
-símbolo, fuente ni asset de terceros. Todo es original: sprites dibujados a mano en
-`components/pixel/sprites.ts`, texturas procedurales en `components/pixel/patterns.ts`
-y una fuente libre (Pixelify Sans, licencia OFL).
+Mezcla de risografía, serigrafía y película de los 70 forzada, con grano extremo. Una
+noche silenciosa y onírica, como un *western* visto con una cámara térmica: siluetas
+oscuras y nítidas contra niebla clara, y masas de luz naranja difusa que parecen
+brillar desde dentro. Grandes zonas de negro puro como espacio negativo.
 
-Los tokens viven en código en `theme/tokens.ts` (TypeScript) y en `app/globals.css`
-(variables `--c-*`). Si cambias un valor, cámbialo en los dos.
+**Propiedad intelectual:** todo es original: sprites en `components/pixel/sprites.ts`,
+texturas procedurales en `components/pixel/patterns.ts` y fuentes libres (OFL):
+**Special Elite** (máquina de escribir) para el texto y **Bebas Neue** (condensada)
+para cifras y títulos.
 
----
-
-## 0. Dirección híbrida: plaza en píxel + mesa de cartas psicodélica
-
-La dirección actual mezcla dos capas:
-
-1. **El mundo y las cartas** siguen siendo nuestro píxel de portátil: sprites con
-   contorno marino, chibis, pips, diorama de la plaza y paleta fría.
-2. **El "envoltorio"** toma el lenguaje de los juegos de cartas *roguelike* modernos
-   (referencia: Balatro). **Solo el estilo**: nada de sus assets, fuentes ni logos.
-   - **Fondo en remolino** (`components/fx/Swirl.tsx`): se calcula a 1/4 de resolución,
-     se cuantiza en 4 bandas con tramado y se escala sin suavizado. En calma es azul
-     y lento; en la pelea acelera y vira a rojo.
-   - **Capa CRT** (`.crt`): líneas de barrido y viñeta sobre todo el juego.
-   - **Interfaz oscura:** paneles redondeados `--c-ui-panel` con canto inferior,
-     huecos interiores `.px-inset` y texto claro.
-   - **Botones gruesos de color plano** con canto inferior de 3 px que desaparece al
-     pulsar. Los acentos tienen significado:
-     - azul `--c-chip`: continuar y bonus;
-     - rojo `--c-mult`: daño recibido y peligro;
-     - oro `--c-gold`: daño al rival y acción principal;
-     - naranja `--c-orange`: ronda y dificultad.
-   - **Barra lateral** con la ronda en grande (horizontal) o una ficha de ronda
-     (vertical).
-   - **Cartas vivas:** se mecen suavemente en la mano y en la mesa; J, Q, K, A y Joker
-     llevan brillo holográfico (`.holo`).
-   - **Números de daño:** etiquetas de color que saltan, giran y tiemblan.
-   - **Títulos y carteles** con letras que ondulan (`WavyText`).
-
-Las esquinas de la **interfaz** son redondeadas y suaves; las de las **cartas** siguen
-siendo escalonadas en píxel.
-
-## 1. Cámara y composición
-
-- **Vista cenital inclinada** con proyección casi ortográfica (oblicua): el suelo se ve
-  desde arriba y los objetos enseñan su cara frontal.
-- **El tablero es un diorama:** una plataforma con grosor (cara superior, cara frontal
-  de piedra y sombra proyectada), no una superficie plana.
-- **Capas, siempre en este orden:** fondo → plataforma/suelo → objetos del entorno
-  (farolas, banderolas, barandilla) → cartas → interfaz → modales → efectos (flash).
-- **Mucho aire en el suelo:** el detalle se concentra en los bordes del escenario.
-
-## 2. Resolución y nitidez
-
-- **Dos modos de pantalla** (`theme/layout.ts`, `components/pixel/Stage.tsx`):
-  - **Horizontal** (ordenador y móvil en horizontal): escenario fijo de **384×288**
-    (`STAGE` en `theme/tokens.ts`).
-  - **Vertical** (móvil): ancho interno de ~200–260 px, elegido para que la escala sea
-    entera sobre los píxeles físicos, y alto variable que llena la pantalla. Rival
-    arriba, tablero en el centro, y la mano y el botón de acción abajo, en la zona del
-    pulgar.
-- **Escala entera** sobre píxeles físicos (`devicePixelRatio`). Si el entero deja el
-  juego por debajo del 80 % del hueco disponible, se usa el ajuste exacto. El sobrante
-  se rellena con un letterbox de patrón navy.
-- **Ninguna posición está fija en los componentes.** Todo sale de
-  `computeGameLayout` / `computeMenuLayout` / `computeBoard` según el tamaño del
-  escenario.
-- **Sprites en SVG** con `shape-rendering: crispEdges` e `image-rendering: pixelated`.
-  Nada de suavizado.
-- **Texturas pequeñas (4–16 px)** en mosaico y con bordes duros.
-- **Sin degradados suaves.** Si hace falta transición de tono, se hace en 2–4 escalones
-  con cortes duros (`repeating-linear-gradient` con paradas duras, nunca fundidos).
-
-## 3. Forma y contorno
-
-- **Contorno de 1 px** (a resolución interna) en cartas, sprites, paneles y botones,
-  en **`#1E2638`**. Nunca negro puro.
-- **Biseles en todo bloque:** cara superior/izquierda más clara, cara media, y
-  sombra inferior/derecha oscura. En CSS se hace con `box-shadow: inset` sin desenfoque.
-- **Esquinas redondeadas en píxel:** `.px-round` (1 px) y `.px-round-2` (2 px
-  escalonados) con `clip-path`. No se usa `border-radius` en los elementos de interfaz.
-- **Detalle repetitivo y ordenado:** juntas de baldosa, greca, balaustres, sillares.
-
-## 4. Luz y sombreado
-
-- **Luz principal desde arriba-izquierda**, igual en todo el juego.
-- **Sombreado cel:** base + 1 sombra + 1 brillo (máximo 2 sombras). En los sprites,
-  `t/T/u` = base/brillo/sombra del bando.
-- **Sombras proyectadas** como manchas semitransparentes (`--c-shadow`,
-  `rgba(30,38,56,.35)`) desplazadas **abajo-derecha** (≈ +2/+3 px) bajo cartas,
-  objetos y plataforma.
-- **Brillos duros y pequeños** en cristal y metal (farolas, gemas de la corona).
-
-## 5. Paleta
-
-| Token | Hex | Uso |
-|---|---|---|
-| `outline` | `#1E2638` | Contorno, texto |
-| `stoneDark` | `#4A4E58` | Piedra oscura, sombras interiores, caras frontales |
-| `floor` | `#9AA6AE` | Suelo gris azulado |
-| `floorPattern` | `#B8C4CC` | Patrón del suelo, juntas, losas |
-| `pavement` | `#D8D4CC` | Pavimento claro, borde de la plataforma |
-| `white` | `#F4F4F0` | Blanco cálido: paneles y marcos de carta |
-| `glass` | `#4C8CD8` | Cristal; bandas de panel neutras |
-| `cyan` | `#7CC8F0` | Brillos, borde interior de panel, huecos seleccionables |
-| `navy` | `#2E3A5C` | Iconos, ventanas, insignia de ataque |
-| `roof` | `#E85A28` | Acento: dificultad, "resolver" |
-| `red` | `#C0281C` | **Bando rival** |
-| `green` | `#2E9A3A` | **Bando jugador** |
-| `yellow` | `#F0C830` | Interacción: botón principal, selección, valor |
-| `wood` | `#D07830` | Madera: barandilla, botas |
-
-Escalones derivados (brillo/sombra): `greenLight #5CC860`, `greenDark #1E6A2A`,
-`redLight #E8584A`, `redDark #801810`, `yellowDark #B89010`, `woodDark #985020`,
-`skin #F8D0A8`, `skinShade #D8A078`.
-
-**Proporción:** ~70 % neutros fríos (suelo, piedra, blancos), ~20 % azules (cristal,
-cian, navy) y ~10 % acentos cálidos. Los acentos solo marcan lo importante: bandos,
-interacción y estados.
-
-## 6. Suelos y texturas
-
-- Suelos con **patrón geométrico sutil en dos tonos muy próximos** (rombos, greca,
-  ladrillo a matajunta).
-- **Juntas de 1 px** visibles, más claras u oscuras que la baldosa.
-- Las zonas se diferencian por **patrón y matiz**, no por colores estridentes.
-- Todas las texturas son procedurales: una función `(x, y) → color` en
-  `components/pixel/patterns.ts`. Se usan como `background-image` con
-  `background-size` igual a la baldosa.
-
-## 7. Personajes e ilustraciones
-
-- **Chibi de 2–2,5 cabezas:** cabeza grande, ojos de 1×2 px, silueta legible.
-- **Colores planos por zonas**, contorno marino y una sombra.
-- Pose frontal. Lienzo de **16×22 px**; ×2 para mascotas en menú y pantalla final.
-- **Visten el color de su bando** (`t/T/u`), así una misma figura sirve para los dos.
-- Personajes actuales: **K** Rey, **Q** Reina, **J** Príncipe, **A** Sabio con orbe,
-  **Joker** Bufón.
-- Las cartas numéricas (2–10) usan **pips** (rombo del bando) en disposición de baraja
-  clásica.
+Las tintas viven en `theme/tokens.ts` (`INK`, y `PALETTE`/`TEAM` como roles) y en
+`app/globals.css` (`--ink-*`, y `--c-*` como roles). Si cambias un valor, cámbialo en
+los dos.
 
 ---
 
-## Aplicación al juego
+## 1. Paleta (cerrada: no se añaden colores)
 
-### Tablero (`themes/<escenario>/`)
+| Tinta | Hex | Uso |
+| --- | --- | --- |
+| Negro profundo | `#0B0D0C` | fondos, cielo, vacío, siluetas. **Dominante** |
+| Pizarra verdoso | `#1E2A28` | cuerpos de tus cartas, paneles, huecos |
+| Teal apagado | `#5E7A76` | terreno, superficies, ladera |
+| Menta pálido | `#B9CFC8` | niebla media, brillos fríos, selección neutra |
+| Crema luminoso | `#EDEBE0` | niebla, polvo, luz, texto |
+| Bermellón | `#FF4A1C` | **acento**: rival, peligro, objetivos, vidas |
+| Brasa | `#F2652A` | acento secundario: interacción, núcleos de luz |
+| Musgo | `#6F8F5A` | solo transición en halos (niebla, pelea) |
 
-- **Diorama** (`Platform`): borde de pavimento con bisel, suelo encastrado con textura,
-  cara frontal de sillares y sombra proyectada.
-- **Huecos** (`SlotTile` en `components/game/Board.tsx`): losas encastradas, con sombra
-  interior arriba-izquierda y brillo abajo-derecha.
-- **Bandos:** banderolas rojas al fondo (rival) y verdes delante (jugador), cada una
-  con su emblema original (llama / rombo con brote).
-- **Franja central** con greca; ahí aparece la cinta "¡PELEA!".
+**El naranja es el único color saturado y se reserva para lo importante.** Nunca hay
+dos fuentes de color compitiendo: el decorado es negro y grises fríos.
 
-### Cartas (40×56) — `components/game/Card.tsx`
+### Reglas por tipo de asset
 
-- **Anverso, de arriba abajo:**
-  - contorno de 1 px con esquinas de 2 px y marco blanco con bisel;
-  - banda de nombre en el color del bando;
-  - ventana de ilustración sobre damero blanco/cian, con el chibi o los pips;
-  - insignia de **valor** (amarilla) e insignia de **ataque** (navy) con 3 casillas
-    (izquierda, frente, derecha): amarillas si golpea todas, cian si elige una al azar
-    (J), una estrella para el As y "+2" para el Joker.
-- **Dorso:** celosía de rombos en el color del bando sobre navy, con el emblema del
-  bando en una placa central.
-- **Estados:** nunca se marcan con sombras difusas.
-  - **seleccionada:** contorno amarillo/blanco que parpadea en escalones, carta elevada
-    6 px y bob de 1 px;
-  - **deshabilitada:** desaturada;
-  - **dañada:** velo rojo, parpadeo en escalones y sacudida de 1 px;
-  - **anulada (As):** escala de grises y velo navy;
-  - **sello del atacante:** círculo del bando con su rango.
+- **Siluetas (sólidos):** casi negras, borde limpio, sin detalle interno, lectura por
+  contorno. Personajes de las cartas, tus banderolas, farolas, barandilla, iconos.
+  En código: `PixelSprite` con `tint` (un solo color para todo el sprite).
+- **Masas vivas (energía, interacción, rival):** naranja con *bloom* (`.bloom`), halo
+  suave y bordes que se deshacen (máscara radial + desenfoque). Cartas y banderolas
+  del rival, vidas, botones de acción, avisos, números de golpe, "¡PELEA!".
+- **Superficies y terreno:** planos inclinados de grano estocástico (pizarra con puntos
+  negros y teal), sin dibujo ni baldosas.
+- **Niebla:** crema/menta a ras de suelo; envuelve la base del diorama y la de cada
+  fila de cartas. Es la luz contra la que se recortan tus siluetas.
+- **Sombras:** largas, oscuras y difusas, alejándose de la luz (abajo-derecha).
+- **Prohibido:** contornos, *cel shading*, brillos especulares, degradados limpios
+  sin grano, colores saturados que no sean el naranja, cielos con estrellas o nubes,
+  estética *cartoon*.
 
-### Interfaz — `components/pixel/ui.tsx`
+### Jerarquía de lectura
 
-- **Panel DS** (`.px-panel`): borde doble (1 px oscuro exterior + 1 px cian interior),
-  fondo blanco cálido y banda de cabecera de color (`.px-band`) con texto contorneado.
-- **Botón** (`.px-btn`): bisel y 2 px de profundidad que se hunden al pulsar. Tonos:
-  `yellow`, `green`, `red`, `blue`, `roof` y blanco.
-- **Tipografía:** Pixelify Sans a **10 px** (texto) y **20 px** (títulos), o múltiplos
-  (logo a 40 px). El texto claro lleva contorno de 1 px (`.text-outline`).
-- **Cuadro de texto** (`TextBox`): aparición letra a letra (28 ms por letra) e
-  indicador ▼ parpadeante.
-- **Iconos:** sprites de 9×9 en navy (`ICONS`). No se usan librerías de iconos
-  vectoriales.
+- **Tú:** silueta oscura (pizarra) con niebla crema detrás. Tus flechas son de luz
+  crema.
+- **El rival, los objetivos, los peligros y las recompensas:** masas naranjas que
+  brillan. Sus flechas, naranjas con halación.
+- **Fondo y decorado:** negro y grises fríos.
+- Todo lo interactivo se distingue de un vistazo: o es crema sobre negro, o es naranja.
+
+## 2. Postprocesado
+
+Se aplica sin *shaders* WebGL, con capas baratas de composición:
+
+- **Grano** (`components/fx/FilmGrain.tsx`): una tira de 4 fotogramas de ruido a
+  resolución de pantalla (1 punto = 1 px CSS, no un píxel interno), recorrida a
+  ~8 fps (*boil* lento).
+  - Capa `overlay` al 60 %: grano de luminancia con colas largas. Convierte todo
+    degradado en densidad de puntos.
+  - Capa `screen` al 35 %: motas sueltas crema, naranja, teal y menta, que también
+    salpican el negro puro (el overlay no lo aclara).
+- **Bloom y halación:** `filter: drop-shadow` encadenado (`--bloom-orange`,
+  `--bloom-cream`): un halo cercano intenso y otro amplio rojizo, como la halación de
+  la película. Las farolas llevan un halo naranja propio.
+- **Desajuste de registro / aberración mínima:** el texto lleva dos sombras
+  desplazadas medio píxel (naranja a un lado, teal al otro), como dos tintas que no
+  casan (`.text-outline`, logo).
+- **Ghosting:** desenfoque animado en lo que se mueve rápido (cartas que vuelan,
+  cartel de ronda, cinta de pelea).
+- **Viñeta** (`.vignette`): oscurece suavemente los bordes.
+- **Fondo** (`components/fx/Nocturne.tsx`): ladera nocturna con niebla, calculada por
+  píxel con tramado estocástico (cada píxel elige tinta por luminancia + umbral
+  aleatorio; el 12 % de los umbrales se renueva en cada fotograma) y escalada con
+  suavizado y un leve desenfoque, para que los puntos se fundan como tinta. En la
+  pelea la niebla se calienta: brasas naranjas con transición musgo.
+
+Si en el futuro se pasa a WebGL, el *shader* equivalente sería: grano (ruido azul
+animado a 8 fps, mezcla overlay) → umbral de brillo sobre naranjas y cremas → dos
+desenfoques gaussianos (bloom cercano y halación amplia teñida de rojo) → desfase de
+canales de 0,5 px → viñeta.
+
+## 3. Cámara y composición (sin cambios)
+
+- Vista cenital inclinada; el tablero es un diorama con grosor y sombra.
+- **Capas:** fondo → plataforma/suelo → niebla → objetos del entorno → cartas →
+  interfaz → modales → flash → viñeta → grano.
+- Mucho aire: el negro es espacio negativo.
+
+## 4. Resolución
+
+- La maquetación sigue en píxeles internos (384×288 en horizontal; ancho ~180–300 en
+  vertical) escalados por enteros, así que **posiciones y tamaños no cambian**.
+- Lo que se pinta ya no es *pixel art* nítido: texturas de grano fundidas con un leve
+  desenfoque, grano fino a resolución de pantalla encima y fuentes vectoriales.
+
+---
+
+## Aplicación al juego (lista de assets)
+
+| Asset | Antes | Ahora |
+| --- | --- | --- |
+| Fondo (`Backdrop`) | remolino psicodélico azul/rojo | ladera nocturna con niebla punteada; brasas en la pelea |
+| Capa final | CRT con líneas de barrido | grano de película + viñeta |
+| Diorama (`Platform`) | pavimento claro con bisel y contorno | plano de grano pizarra/teal, sombra larga, niebla en la base |
+| Suelo | baldosas con rombos | grano estocástico sin dibujo |
+| Franja central | greca | línea de niebla tenue |
+| Barandilla | madera naranja | silueta negra contra un resplandor de niebla |
+| Farolas | cristal azul con halo cian | silueta negra con halo naranja (halación) |
+| Banderolas | roja (rival) / verde (tú) con emblema | masa naranja con bloom (rival) / silueta negra (tú) |
+| Huecos | losas claras con bisel | rebajes oscuros; se iluminan de niebla si puedes jugar |
+| Tus cartas | marco verde, damero cian, chibi a color | cuerpo pizarra, ventana de niebla crema, personaje en silueta, cifra negra |
+| Cartas rivales | marco rojo | masa naranja con bloom y núcleo encendido |
+| Dorsos | celosía de rombos con emblema | grano del color del bando con bordes que se deshacen, emblema en silueta |
+| Insignias | amarilla / navy con contorno | píldoras negras, cifra crema, casillas de ataque brasa o menta |
+| Flechas | verde / roja con borde | luz crema (tú) / naranja con halación (rival), sin contorno |
+| Avisos | badges de color con contorno | masas de luz con la marca en silueta |
+| Paneles | oscuros con canto inferior | negro semitransparente con leve desenfoque detrás, sin bordes |
+| Botones | color plano con canto | naranja con bloom y texto en silueta; secundarios negros |
+| Vidas | corazones rojos con brillo | brasas naranjas con bloom; perdidas, en pizarra |
+| Iconos | navy con detalle | siluetas crema planas |
+| Tipografía | Pixelify Sans | Special Elite (texto) + Bebas Neue (cifras y títulos) |
+| Partículas | cuadrados con contorno | polvo granulado redondo |
+| Ondas | anillos nítidos | halos difusos |
+| Logo | amarillo/blanco con contorno grueso | naranja con bloom / crema, con desajuste de registro |
+| Mascotas del menú | chibis a color | silueta negra (tú) / masa naranja (rival) |
+| Final | rayos dorados, confeti | rayos naranjas difusos, polvo que cae |
 
 ### Lectura de la partida (claridad ante todo)
 
-- **Cartas:** las numéricas muestran la cifra grande en el centro (30 px, negrita,
-  contorno de 2 px). Las figuras llevan una pestaña de rango (20 px) sobre la
-  ilustración, y la insignia de valor es oscura con el número en blanco.
+- **Cartas:** las numéricas muestran la cifra grande en el centro (34 px, condensada,
+  en silueta negra sobre la luz). Las figuras llevan el rango (20 px) en la esquina,
+  y la insignia de valor es una píldora negra con la cifra crema.
 - **Avisos del tablero** (`components/game/BoardHints.tsx`). Solo usan información
   visible, nunca las cartas boca abajo del rival:
-  - **hueco tuyo vacío:** corazón tenue (si lo golpean pierdes una vida); con una
-    carta rival justo delante, "!" rojo que late;
+  - **hueco tuyo vacío:** corazón menta tenue (si lo golpean pierdes una vida); con
+    una carta rival justo delante, el hueco se calienta en naranja y late un "!";
   - **flechas de ataque** (`components/game/AttackArrows.tsx`):
     - **a demanda:** tocar una carta de la mesa enciende sus flechas (brilla en el
       color de su bando) y volver a tocarla las apaga; se pueden encender varias a la
-      vez, tuyas o rivales destapadas. La carta que estás colocando siempre muestra las
+      vez, tuyas o rivales destapadas (las boca abajo no responden). La carta que estás colocando siempre muestra las
       suyas como vista previa;
     - **forma:** cada carta dibuja una cuña translúcida (fina al salir, ancha en la
-      punta) con un leve arco hacia cada hueco que golpeará, del **color de su bando**:
-      verde tú, rojo el rival;
+      punta) con un leve arco hacia cada hueco que golpeará, hecha de **luz del
+      bando**: crema la tuya, naranja con halación la del rival. Sin contorno;
     - **cruces:** cada flecha se curva siempre hacia su derecha, así que dos flechas que
       se cruzan forman una "X" clara;
     - **mismo hueco:** si varias apuntan al mismo, sus puntas se abren en abanico;
@@ -222,30 +172,30 @@ interacción y estados.
     - **al resolverse la pelea:** las flechas se ven `ARROW_HOLD_S` (0,6 s) y
       desaparecen antes de las embestidas. El choque visual se retrasa ese tiempo, pero
       la lógica no cambia;
-  - **"-N" dorado** en los huecos rivales vacíos a los que apuntan tus cartas con las
+  - **"-N" naranja** en los huecos rivales vacíos a los que apuntan tus cartas con las
     flechas encendidas (daño seguro, se suma si coinciden varias);
-  - **antes del golpe**, con todo destapado: ✓ en las cartas rivales que caerán y ✗
-    en las tuyas.
+  - **antes del golpe**, con todo destapado: ✓ crema en las cartas rivales que caerán
+    y ✗ naranja en las tuyas.
 - **Carteles sin tapar la acción:** "¡PELEA!" dura 0,7 s y se va antes de que las
   cartas embistan; "RONDA" pasa en 1,1 s sobre la franja central.
 - **Ficha de carta:** mantener pulsada una carta (o dejar el ratón encima) la abre.
 - **Arrastrar y soltar:** al arrastrar, la carta sigue al dedo 1:1 y se ajusta al
   tamaño de la mesa. El destino es el hueco libre más cercano al centro de la carta
   (con margen generoso alrededor de cada hueco); se confirma con la vista previa, un
-  marco verde que late, un clic y una vibración breve.
+  marco naranja que late, un clic y una vibración breve.
 - **Móvil en vertical:**
   - escala ×6 en los móviles habituales (ancho interno ~180–195 px);
   - diorama compacto que crece hasta 40 px para llenar el hueco libre, siempre
     ensanchando el centro (entre bandos), donde pasan los carteles;
-  - si no hay margen lateral, la barandilla baja para que las banderolas verdes no
+  - si no hay margen lateral, la barandilla baja para que tus banderolas no
     queden tapadas por tus cartas;
   - mano a ×1,5 si cabe (sigue cayendo en píxeles enteros).
 
 ### Movimiento y game feel
 
-Los **píxeles son nítidos, pero el movimiento es suave**: muelles (`type: 'spring'`) y
-curvas ease. Las transiciones duras con cortes (`steps`) solo se usan en parpadeos de
-texto y cursores, como homenaje a la DS.
+El movimiento es suave: muelles (`type: 'spring'`) y curvas ease. **Los tiempos no
+cambiaron con la dirección analógica**; solo se añadió *ghosting* (desenfoque) a lo que
+se mueve rápido y una vibración leve a las masas naranjas.
 
 - **Cámara 3D** (`components/game/Board.tsx`):
   - el tablero es un único plano inclinado en perspectiva (14°, 20° durante la pelea);
@@ -253,11 +203,12 @@ texto y cursores, como homenaje a la DS.
     elementos coplanarios;
   - las farolas y banderolas compensan la inclinación con `--tilt`.
 - **Cámara de impacto** (`components/fx/fxStore.ts`): sacudida con amortiguación,
-  "punch" de zoom y flash blanco. La intensidad escala con lo que pasa en pantalla.
+  "punch" de zoom y flash crema. La intensidad escala con lo que pasa en pantalla.
 - **Cartas:**
   - volteo real en 3D (rotateY, dos caras con `backface-visibility`);
-  - al jugarse vuelan en arco desde su posición en la mano (o desde el rival), se
-    acercan a la cámara a mitad de vuelo, se aplastan al aterrizar y levantan polvo;
+  - al jugarse vuelan en arco desde su posición en la mano (o desde el rival),
+    borrosas (*ghosting*), se acercan a la cámara a mitad de vuelo, se enfocan y
+    aplastan al aterrizar y levantan polvo;
   - en la pelea embisten hacia su objetivo y el golpe llega `IMPACT_DELAY_S` después;
   - al morir se agrietan, sueltan esquirlas y caen al retirarse.
 - **Mano:**
@@ -265,7 +216,9 @@ texto y cursores, como homenaje a la DS.
   - al pasar el ratón la carta se eleva y se inclina en 3D siguiendo el puntero;
   - las cartas robadas llegan una tras otra desde el mazo.
 - **Partículas, textos flotantes y ondas de choque** (`components/fx/FxLayer.tsx`), en
-  la capa del tablero o de la interfaz.
+  la capa del tablero o de la interfaz. Las partículas son polvo granulado (motas
+  redondas y blandas), las ondas son halos difusos y los números de golpe, masas
+  naranjas con la cifra en silueta.
 - **Coreografía** (`components/game/CombatDirector.tsx`): escucha los estados de la
   lógica (fase y resultado del combate) y dispara sonido, partículas y cámara. **Nunca
   cambia tiempos ni el orden de los eventos de juego.**
@@ -276,10 +229,10 @@ texto y cursores, como homenaje a la DS.
   - cámara del menú que se mece.
 - **Interfaz:**
   - botones con muelle (crecen al pasar, se aplastan al pulsar);
-  - cartel "RONDA N" que barre la pantalla al empezar cada ronda;
-  - cinta "¡PELEA!" que entra de golpe;
-  - corazones que salen despedidos al perder una vida, y viñeta roja con latido cuando
-    te queda una.
+  - cartel "RONDA N" que barre la pantalla (borroso al moverse) al empezar cada ronda;
+  - cinta "¡PELEA!": una masa naranja que entra de golpe;
+  - corazones (brasas) que salen despedidos al perder una vida, y viñeta naranja con
+    latido cuando te queda una.
 - **Transiciones entre pantallas:** iris circular con un leve zoom.
 - Con `prefers-reduced-motion` se desactivan los bucles CSS.
 
@@ -304,31 +257,17 @@ texto y cursores, como homenaje a la DS.
 
 ## Cómo crear un escenario nuevo
 
-1. **Crea la carpeta** `themes/<nombre>/index.tsx`, por ejemplo `themes/rio/`.
-2. **Texturas:** añade las baldosas que necesites en `components/pixel/patterns.ts`
-   (o en tu carpeta) como funciones `tile(w, h, (x, y) => colorChar)`, usando solo
-   caracteres de la paleta. Por ejemplo, agua en 2 tonos de cian/cristal o un puente de
-   tablones de madera.
-3. **Sprites del entorno:** añádelos en `sprites.ts` o en tu carpeta (árboles, rocas,
-   barcas…). Lienzo pequeño, contorno `o`, luz arriba-izquierda y una sola sombra.
-4. **Compón el diorama** con las piezas de `themes/pieces.tsx`:
-   - `Platform`: suelo, borde, cara frontal y sombra;
-   - `Strip`: franjas decorativas;
-   - `Railing`: barandillas;
-   - `Prop`: objetos con su sombra;
-   - `Surface`: cualquier superficie con textura.
-5. **Exporta un `Theme`** (`themes/types.ts`) con `Backdrop` (que ocupe el 100 % del
-   escenario) y `Diorama({ board })`. El diorama recibe la geometría ya calculada
-   (`BoardGeometry`: caja, huecos, franja central y barandilla). Coloca la decoración
-   **relativa a esa geometría**, nunca con coordenadas fijas, así sirve tanto en
-   horizontal como en vertical. Siempre hay 4 huecos por bando, en orden de índice
-   lógico.
-6. **Actívalo** cambiando `ACTIVE_THEME` en `themes/index.ts`. No hay que tocar nada más:
-   la lógica, las cartas y la interfaz son independientes del escenario.
-7. **Comprueba los pilares:**
-   - contorno `#1E2638`;
-   - luz arriba-izquierda;
-   - sombras abajo-derecha;
-   - 70/20/10 de color;
-   - bandos rojo (fondo) y verde (delante);
-   - nada fuera de la rejilla de píxel.
+1. **Crea la carpeta** `themes/<nombre>/index.tsx`.
+2. **Texturas:** añade baldosas de grano en `components/pixel/patterns.ts` con
+   `grain(tamaño, semilla, base, capas)` o `tile(w, h, (x, y) => rol)`, usando solo
+   letras de rol de la paleta (o negro, d pizarra, g teal, l menta, w crema, x naranja,
+   a brasa, t/T/u bando).
+3. **Sprites del entorno:** dibújalos en `sprites.ts` pensando en la silueta (se
+   pintan con `tint`); el detalle interno no se verá.
+4. **Compón el diorama** con `themes/pieces.tsx`: `Platform`, `Fog`, `Strip`, `Railing`,
+   `Prop` (con `tint` y `bloom`) y `Surface`.
+5. **Exporta un `Theme`** con `Backdrop` y `Diorama({ board })`, colocando todo
+   **relativo a la geometría** del tablero. Actívalo en `themes/index.ts`.
+6. **Comprueba los pilares:** paleta cerrada; el naranja solo en lo importante;
+   siluetas sin contorno; grano en todo; niebla en las bases; sombras largas; negro
+   como espacio negativo.

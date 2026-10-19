@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations } from '@/lib/i18n';
 import { STARTING_LIVES } from '@/lib/constants';
-import { CARD_SIZE } from '@/theme/tokens';
+import { CARD_SIZE, INK } from '@/theme/tokens';
 import { Card as CardType, Owner } from '@/types';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { Panel } from '@/components/pixel/ui';
@@ -28,7 +28,7 @@ const FlyingHeart = ({ index }: { index: number }) => (
     animate={{ y: [0, -16, 10], x: [0, 4, 9], rotate: [0, 25, 90], opacity: [1, 1, 0], scale: [1.4, 1.2, 0.8] }}
     transition={{ duration: 0.75, times: [0, 0.4, 1], ease: 'easeOut' }}
   >
-    <PixelSprite sprite={HEART} />
+    <PixelSprite sprite={HEART} tint={INK.orange} />
   </motion.div>
 );
 
@@ -60,7 +60,8 @@ const Lives = ({ lives, owner }: { lives: number; owner: Owner }) => {
           animate={critical && i < lives ? { scale: [1, 1.25, 1, 1.15, 1] } : { scale: 1 }}
           transition={critical ? { duration: 1.1, repeat: Infinity, times: [0, 0.12, 0.25, 0.37, 1] } : { type: 'spring', stiffness: 500, damping: 14 }}
         >
-          <PixelSprite sprite={i < lives ? HEART : HEART_LOST} />
+          {/* Vida: brasa que brilla; perdida: hueco apagado */}
+          <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={i < lives ? INK.orange : INK.slate} className={i < lives ? 'bloom' : undefined} />
         </motion.div>
       ))}
       {lost?.indices.map(i => <FlyingHeart key={`${lost.id}-${i}`} index={i} />)}
@@ -71,8 +72,11 @@ const Lives = ({ lives, owner }: { lives: number; owner: Owner }) => {
 /** Dorso en miniatura (8×11) para mazo y mano rival */
 const MiniBack = ({ owner, style }: { owner: Owner; style?: CSSProperties }) => (
   <div className="px-round" style={{
-    width: 8, height: 11, backgroundImage: patternUri('card-back', CARD_BACK_TILE, owner), backgroundSize: '8px',
-    boxShadow: 'inset 0 0 0 1px var(--c-outline)', ...style,
+    width: 8, height: 11, ...style,
+    // Rival: brasa granulada; tú: silueta pizarra con un filo de niebla
+    ...(owner === 'opponent'
+      ? { backgroundImage: patternUri('card-back', CARD_BACK_TILE, owner), backgroundSize: '16px', boxShadow: '0 0 3px rgba(255,74,28,0.6)' }
+      : { background: 'var(--ink-slate)', boxShadow: '0 0 0 1px rgba(185,207,200,0.35)' }),
   }} />
 );
 
@@ -82,13 +86,15 @@ const DeckCount = ({ owner, count }: { owner: Owner; count: number }) => (
       <MiniBack owner={owner} style={{ position: 'absolute', left: 2, top: 0 }} />
       <MiniBack owner={owner} style={{ position: 'absolute', left: 0, top: 2 }} />
     </div>
-    <motion.span key={count} initial={{ scale: 1.7, color: 'var(--c-gold)' }} animate={{ scale: 1, color: 'var(--c-white)' }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
+    <motion.span key={count} initial={{ scale: 1.7, color: '#F2652A' }} animate={{ scale: 1, color: '#EDEBE0' }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
       x{count}
     </motion.span>
   </div>
 );
 
-const TEAM_BAND: Record<Owner, string> = { player: 'var(--c-green)', opponent: 'var(--c-red)' };
+/** Etiqueta del bando: tú en silueta pizarra con letra crema; el rival, naranja que brilla */
+const TEAM_BAND: Record<Owner, string> = { player: 'var(--ink-slate)', opponent: 'var(--ink-orange)' };
+const TEAM_BAND_TEXT: Record<Owner, string> = { player: 'text-outline', opponent: 'text-ink bloom' };
 
 const usePlayerHud = (owner: Owner) => useGameStore(useShallow(s => ({
   lives: s[owner].lives,
@@ -99,8 +105,8 @@ const usePlayerHud = (owner: Owner) => useGameStore(useShallow(s => ({
 /** Panel horizontal (móvil): etiqueta del bando a la izquierda y datos en fila */
 const CompactPanel = ({ label, owner, rect, children }: { label: string; owner: Owner; rect: Rect; children: ReactNode }) => (
   <div className="px-panel px-round absolute flex items-center gap-[6px] pr-[5px]" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}>
-    <div className="text-outline h-full flex items-center px-[5px] shrink-0"
-      style={{ background: TEAM_BAND[owner], boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px rgba(255,255,255,0.35)' }}>
+    <div className={clsx(TEAM_BAND_TEXT[owner], 'h-full flex items-center px-[5px] pt-[1px] shrink-0 rounded-l-[3px]')}
+      style={{ background: TEAM_BAND[owner] }}>
       {label}
     </div>
     {children}
@@ -137,7 +143,7 @@ export const RivalPanel = () => {
     );
   }
   return (
-    <Panel title={t.rival} band={TEAM_BAND.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
+    <Panel title={t.rival} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
       <Lives lives={lives} owner="opponent" />
       <RivalHand count={handCount} />
       <DeckCount owner="opponent" count={deckCount} />
@@ -160,7 +166,7 @@ export const PlayerPanel = () => {
     );
   }
   return (
-    <Panel title={t.you} band={TEAM_BAND.player} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[4px]">
+    <Panel title={t.you} band={TEAM_BAND.player} titleClassName={TEAM_BAND_TEXT.player} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[4px]">
       <Lives lives={lives} owner="player" />
       <DeckCount owner="player" count={deckCount} />
     </Panel>

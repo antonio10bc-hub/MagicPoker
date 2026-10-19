@@ -5,6 +5,7 @@ import { Rank } from '@/types';
 import { RANKS } from '@/lib/game-utils';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { INK } from '@/theme/tokens';
 import { CHARACTERS } from '@/components/pixel/sprites';
 
 // --- FICHA DE CARTA ---
@@ -24,8 +25,7 @@ const AttackDiagram = ({ rank }: { rank: Rank }) => {
       {[-1, 0, 1].map(o => (
         <span key={o} style={{
           width: 6, height: 6, borderRadius: 1,
-          background: attack.offsets.includes(o) ? (attack.mode === 'random-one' ? 'var(--c-cyan)' : 'var(--c-gold)') : 'var(--c-ui-panel-light)',
-          boxShadow: '0 0 0 1px var(--c-ui-edge)',
+          background: attack.offsets.includes(o) ? (attack.mode === 'random-one' ? 'var(--ink-mint)' : 'var(--ink-ember)') : 'var(--ink-slate)',
         }} />
       ))}
     </div>
@@ -51,10 +51,10 @@ export const CardInfo = ({ cardId }: { cardId: string | null }) => {
           exit={{ y: 6, scale: 0.9, opacity: 0, transition: { duration: 0.12 } }}
           transition={{ type: 'spring', stiffness: 500, damping: 24 }}
         >
-          {CHARACTERS[card.rank] && <PixelSprite sprite={CHARACTERS[card.rank]!} owner="player" className="shrink-0" />}
+          {CHARACTERS[card.rank] && <PixelSprite sprite={CHARACTERS[card.rank]!} tint={INK.cream} className="shrink-0 bloom-cream" />}
           <div className="flex flex-col gap-[3px] leading-[11px] min-w-0">
             <div className="flex items-center gap-[5px]">
-              <span className="text-title text-outline font-bold" style={{ color: 'var(--c-gold)' }}>{card.rank}</span>
+              <span className="text-title text-outline bloom" style={{ color: 'var(--ink-orange)' }}>{card.rank}</span>
               <span style={{ color: 'var(--c-ui-muted)' }}>{t.card_value} {card.value}</span>
               <AttackDiagram rank={card.rank} />
             </div>

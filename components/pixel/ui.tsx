@@ -4,6 +4,7 @@ import { playSfx } from '@/lib/sounds';
 import { clsx } from 'clsx';
 import { PixelSprite, Sprite } from './PixelSprite';
 import { ICONS } from './sprites';
+import { INK } from '@/theme/tokens';
 
 // --- PANEL TIPO MENÚ DS ---
 interface PanelProps {
@@ -11,16 +12,22 @@ interface PanelProps {
   /** Color de la banda de cabecera (variable CSS) */
   band?: string;
   dark?: boolean;
+  /** Clase del texto de la banda (por defecto, tinta crema) */
+  titleClassName?: string;
   className?: string;
   bodyClassName?: string;
   style?: CSSProperties;
   children?: ReactNode;
 }
 
-export const Panel = ({ title, band = 'var(--c-glass)', dark, className, bodyClassName, style, children }: PanelProps) => (
+/** Bandas de acento (naranjas): texto en silueta oscura y brillo */
+const HOT_BAND = /orange|mult|gold|ember|roof|red|yellow|chip/;
+
+export const Panel = ({ title, band = 'var(--ink-slate)', dark, titleClassName, className, bodyClassName, style, children }: PanelProps) => (
   <div className={clsx(dark ? 'px-panel-dark' : 'px-panel', 'px-round relative flex flex-col', className)} style={style}>
     {title !== undefined && (
-      <div className="px-band text-outline shrink-0 m-[1px] mb-0 whitespace-nowrap" style={{ background: band }}>{title}</div>
+      <div className={clsx('px-band shrink-0 whitespace-nowrap', titleClassName ?? (HOT_BAND.test(band) ? 'text-ink' : 'text-outline'))}
+        style={{ background: band, boxShadow: HOT_BAND.test(band) ? '0 -2px 6px rgba(255,74,28,0.35)' : undefined }}>{title}</div>
     )}
     <div className={clsx('relative flex-1 min-h-0', bodyClassName)}>{children}</div>
   </div>
@@ -49,7 +56,7 @@ export const PxButton = ({ tone = 'white', className, children, onPointerEnter, 
 
 export const IconButton = ({ icon, className, ...rest }: PxButtonProps & { icon: Sprite }) => (
   <PxButton className={clsx('w-[18px] h-[18px]', className)} {...rest}>
-    <PixelSprite sprite={icon} />
+    <PixelSprite sprite={icon} tint={INK.cream} />
   </PxButton>
 );
 
@@ -73,7 +80,7 @@ const TypedText = ({ text, showCursor, suffix }: { text: string; showCursor: boo
       <span>{shown}</span>
       {done && suffix}
       {showCursor && done && (
-        <span className="absolute right-[4px] bottom-[3px] anim-blink"><PixelSprite sprite={ICONS.cursor} /></span>
+        <span className="absolute right-[4px] bottom-[3px] anim-blink"><PixelSprite sprite={ICONS.cursor} tint={INK.ember} /></span>
       )}
     </>
   );

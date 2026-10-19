@@ -5,7 +5,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Card as CardType, Owner } from '@/types';
 import { useGameLayout } from '@/components/pixel/Stage';
 import { BoardGeometry } from '@/theme/layout';
-import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
+import { CARD_SIZE, INK, PALETTE } from '@/theme/tokens';
 import { useTranslations } from '@/lib/i18n';
 import { getTargetIndices, RANKS } from '@/lib/game-utils';
 import { playSfx, vibrate } from '@/lib/sounds';
@@ -30,14 +30,16 @@ const TILT_IDLE = 14;
 const TILT_FIGHT = 20;
 const PERSPECTIVE = 650;
 
-/** Losa encastrada en el suelo: sombra interior arriba-izquierda, brillo abajo-derecha */
+/** Hueco: un rebaje oscuro en la piedra; si se puede jugar, la niebla lo ilumina */
 const SlotTile = ({ x, y, highlight }: { x: number; y: number; highlight: boolean }) => (
   <div
     className={highlight ? 'absolute px-round anim-slot-glow' : 'absolute px-round'}
     style={{
       left: x - 1, top: y - 1, width: CARD_SIZE.width + 2, height: CARD_SIZE.height + 2,
-      background: highlight ? 'var(--c-cyan)' : 'var(--c-floor-pattern)',
-      boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px var(--c-stone-dark), inset -1px -1px 0 1px var(--c-white)',
+      background: highlight
+        ? 'radial-gradient(ellipse 70% 60% at 50% 70%, rgba(237,235,224,0.38) 0%, rgba(185,207,200,0.14) 60%, rgba(11,13,12,0.35) 100%)'
+        : 'rgba(11,13,12,0.45)',
+      boxShadow: 'inset 0 2px 4px rgba(11,13,12,0.8), inset 0 0 0 1px rgba(185,207,200,0.07)',
       transition: 'background 0.2s ease',
     }}
   />
@@ -79,7 +81,8 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
       className="absolute z-10"
       style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height, transformPerspective: 400 }}
       initial={{ x: dx, y: dy, scale: 1.15, rotateZ: spin, rotateX: -TILT_IDLE }}
-      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [1.15, 1.35, 1], rotateZ: [spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0] }}
+      // Ghosting: la carta vuela borrosa y se enfoca al aterrizar
+      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [1.15, 1.35, 1], rotateZ: [spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], filter: ['blur(1.5px)', 'blur(1px)', 'blur(0px)'] }}
       transition={{ duration: 0.42, times: [0, 0.5, 1], ease: [0.3, 0.1, 0.4, 1] }}
       onAnimationStart={() => { if (!landed.current) playSfx('whoosh', 0.8); }}
       onAnimationComplete={() => {
@@ -128,7 +131,9 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
           <AnimatePresence>
             {arrowsOn && (
               <motion.div className="absolute inset-0 pointer-events-none rounded-[3px]"
-                style={{ boxShadow: `0 0 0 1px ${TEAM[owner].light}, 0 0 8px 2px ${TEAM[owner].base}` }}
+                style={{ boxShadow: owner === 'player'
+                  ? '0 0 0 1px rgba(237,235,224,0.85), 0 0 9px 2px rgba(237,235,224,0.45)'
+                  : '0 0 0 1px rgba(255,74,28,0.95), 0 0 10px 3px rgba(255,74,28,0.6)' }}
                 initial={{ opacity: 0 }} animate={{ opacity: [0.6, 1, 0.6] }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={{ duration: 1.6, repeat: Infinity }} />
             )}
@@ -148,26 +153,20 @@ const FightRibbon = ({ geo }: { geo: BoardGeometry }) => {
   const c = geo.centerLine;
   return (
     <motion.div
-      className="absolute z-30 flex items-center justify-center text-title pointer-events-none"
-      style={{ left: c.x, top: c.y - 4, width: c.w, height: c.h + 8, background: 'var(--c-yellow)',
-        boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 0 2px 0 0 #FFF0A0, inset 0 -2px 0 0 var(--c-yellow-dark), 0 3px 0 0 var(--c-shadow)' }}
-      initial={{ scaleX: 0.2, scaleY: 3, opacity: 0, rotateZ: -6 }}
-      animate={{ scaleX: [0.2, 1.05, 1, 1.4], scaleY: [3, 1, 1, 0], opacity: [0, 1, 1, 0], rotateZ: [-6, 2, 0, 0] }}
+      className="absolute z-30 flex items-center justify-center text-title pointer-events-none bloom"
+      style={{ left: c.x, top: c.y - 4, width: c.w, height: c.h + 8, background: 'radial-gradient(ellipse 60% 70% at 50% 50%, var(--ink-ember) 0%, var(--ink-orange) 70%)', borderRadius: 2 }}
+      initial={{ scaleX: 0.2, scaleY: 3, opacity: 0, rotateZ: -6, filter: 'blur(3px)' }}
+      animate={{ scaleX: [0.2, 1.05, 1, 1.4], scaleY: [3, 1, 1, 0], opacity: [0, 1, 1, 0], rotateZ: [-6, 2, 0, 0], filter: ['blur(3px)', 'blur(0px)', 'blur(0px)', 'blur(2px)'] }}
       exit={{ opacity: 0, transition: { duration: 0.1 } }}
       transition={{ duration: 0.7, times: [0, 0.18, 0.78, 1], ease: 'easeOut' }}
     >
       <motion.span
-        className="text-outline"
-        style={{ color: 'var(--c-mult)' }}
+        className="text-ink"
         animate={{ scale: [1, 1.08, 1] }}
         transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
       >
         <WavyText text={t.fight} amplitude={1.5} />
       </motion.span>
-      {/* Brillo que barre la cinta */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="anim-shine absolute top-0 bottom-0 w-[18px]" style={{ background: 'rgba(255,255,255,0.45)' }} />
-      </div>
     </motion.div>
   );
 };
@@ -254,13 +253,13 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
                   aunque al pasar por encima cambie de cursor a vista previa */}
               {showGhost
                 ? <div className="pointer-events-none" style={{ opacity: 0.55 }}><Card card={selectedCard} /></div>
-                : <span className="anim-bob pointer-events-none"><PixelSprite sprite={ICONS.cursor} scale={2} /></span>}
+                : <span className="anim-bob pointer-events-none bloom-cream"><PixelSprite sprite={ICONS.cursor} scale={2} tint={INK.cream} /></span>}
               {/* Destino confirmado: marco verde suave que late sobre la vista previa */}
               {showGhost && (
                 <motion.div
                   className="absolute pointer-events-none px-round"
-                  style={{ inset: -2, boxShadow: `0 0 0 1px ${PALETTE.outline}, 0 0 0 2px ${TEAM.player.light}, 0 0 8px 2px ${TEAM.player.base}`,
-                    background: 'rgba(92, 200, 96, 0.18)' }}
+                  style={{ inset: -2, boxShadow: '0 0 0 1px rgba(255,74,28,0.9), 0 0 10px 3px rgba(255,74,28,0.55), inset 0 0 8px rgba(242,101,42,0.45)',
+                    background: 'rgba(255,74,28,0.12)' }}
                   initial={{ opacity: 0, scale: 1.12 }}
                   animate={{ opacity: [0.75, 1, 0.75], scale: 1 }}
                   transition={{ opacity: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }, scale: { type: 'spring', stiffness: 500, damping: 22 } }}

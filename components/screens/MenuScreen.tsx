@@ -12,6 +12,7 @@ import { ACTIVE_THEME } from '@/themes';
 import { Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS } from '@/components/pixel/sprites';
+import { INK } from '@/theme/tokens';
 import { useMenuLayout } from '@/components/pixel/Stage';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
@@ -42,14 +43,12 @@ export const MenuBackground = () => {
   );
 };
 
-/** Contorno de 2 px para texto grande */
-const bigOutline = [-2, -1, 0, 1, 2]
-  .flatMap(x => [-2, -1, 0, 1, 2].map(y => `${x}px ${y}px 0 var(--c-outline)`))
-  .join(', ');
+/** Sin contorno: las dos tintas del logo no casan del todo (desajuste de registro) */
+const MISREGISTER = '-1px 0 0 rgba(255,74,28,0.55), 1px 0.5px 0 rgba(94,122,118,0.6)';
 
 /** Una palabra del logo: letras que caen con muelle y luego ondulan sin parar */
-const LogoWord = ({ word, color, offset }: { word: string; color: string; offset: number }) => (
-  <div className="flex">
+const LogoWord = ({ word, color, offset, glow }: { word: string; color: string; offset: number; glow?: boolean }) => (
+  <div className={glow ? 'flex font-display bloom' : 'flex font-display'}>
     {word.split('').map((ch, i) => (
       <motion.span
         key={i}
@@ -59,7 +58,7 @@ const LogoWord = ({ word, color, offset }: { word: string; color: string; offset
         style={{ display: 'inline-block' }}
       >
         <motion.span
-          style={{ display: 'inline-block', fontSize: 40, lineHeight: '36px', color, textShadow: `${bigOutline}, 3px 4px 0 var(--c-outline)` }}
+          style={{ display: 'inline-block', fontSize: 46, lineHeight: '38px', letterSpacing: '0.04em', color, textShadow: MISREGISTER }}
           animate={{ y: [0, -3, 0] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: 1 + (offset + i) * 0.1 }}
         >
@@ -72,8 +71,8 @@ const LogoWord = ({ word, color, offset }: { word: string; color: string; offset
 
 export const Logo = ({ y }: { y: number }) => (
   <div className="absolute left-0 right-0 flex flex-col items-center z-20" style={{ top: y }}>
-    <LogoWord word="MAGIC" color="var(--c-yellow)" offset={0} />
-    <LogoWord word="POKER" color="var(--c-white)" offset={5} />
+    <LogoWord word="MAGIC" color="var(--ink-orange)" offset={0} glow />
+    <LogoWord word="POKER" color="var(--ink-cream)" offset={5} />
   </div>
 );
 
@@ -85,14 +84,15 @@ export const Mascot = ({ rank, owner, x, y, delay = 0 }: { rank: Rank; owner: Ow
     transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.5 + delay }}
   >
     {/* Sombra que se encoge cuando salta */}
-    <motion.div className="absolute" style={{ left: 2, top: 40, width: 30, height: 6, borderRadius: '50%', background: 'var(--c-shadow)' }}
+    <motion.div className="absolute" style={{ left: 4, top: 40, width: 44, height: 6, borderRadius: '50%', background: 'rgba(11,13,12,0.8)', filter: 'blur(1.5px)', transform: 'skewX(-40deg)' }}
       animate={{ scaleX: [1, 0.6, 1, 1] }} transition={{ duration: 0.7, times: [0, 0.4, 0.8, 1], repeat: Infinity, repeatDelay: 2.2, delay: 1.5 + delay }} />
     {/* Salto con estiramiento y aplastamiento */}
     <motion.div style={{ transformOrigin: '50% 100%' }}
       animate={{ y: [0, -14, 0, 0], scaleY: [1, 1.1, 0.85, 1], scaleX: [1, 0.92, 1.12, 1] }}
       transition={{ duration: 0.7, times: [0, 0.4, 0.8, 1], repeat: Infinity, repeatDelay: 2.2, delay: 1.5 + delay }}>
-      <div className="anim-breathe" style={{ animationDelay: `${delay}s` }}>
-        <PixelSprite sprite={CHARACTERS[rank]!} owner={owner} scale={2} />
+      {/* Tú: silueta negra; el rival: masa naranja que brilla */}
+      <div className={owner === 'opponent' ? 'anim-breathe bloom' : 'anim-breathe'} style={{ animationDelay: `${delay}s` }}>
+        <PixelSprite sprite={CHARACTERS[rank]!} tint={owner === 'opponent' ? INK.orange : INK.black} scale={2} />
       </div>
     </motion.div>
   </motion.div>
@@ -129,7 +129,6 @@ export const MenuScreen = () => {
         transition={{ scale: { duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }, rotate: { type: 'spring', stiffness: 300, damping: 12, delay: 0.9 } }}>
         <PxButton tone="yellow" onClick={handleStartGame} className="text-title w-full h-full overflow-hidden">
           {t.play}
-          <span className="anim-shine absolute top-0 bottom-0 left-0 w-[14px] pointer-events-none" style={{ background: 'rgba(255,255,255,0.5)' }} />
         </PxButton>
       </motion.div>
 

@@ -10,6 +10,7 @@ import { useMuted } from '@/hooks/useMuted';
 import { Difficulty, Rank } from '@/types';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
 import { CHARACTERS, ICONS, STAR } from '@/components/pixel/sprites';
 
@@ -40,7 +41,7 @@ export const Modals = () => {
 const Overlay = ({ onClose, children }: { onClose?: () => void; children: ReactNode }) => (
   <motion.div
     className="absolute inset-0 z-[200] flex items-center justify-center"
-    style={{ background: 'rgba(30,38,56,0.6)' }}
+    style={{ background: 'rgba(11,13,12,0.7)' }}
     initial={{ opacity: 0, backdropFilter: 'blur(0px)' }} animate={{ opacity: 1, backdropFilter: 'blur(1.5px)' }} exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
     transition={{ duration: 0.2 }}
     onClick={onClose}
@@ -111,7 +112,7 @@ const ConfirmExitModal = () => {
 };
 
 // --- ESTADÍSTICAS ---
-const WIN_COLORS: Record<Difficulty, string> = { easy: 'var(--c-green-light)', normal: 'var(--c-gold)', hard: 'var(--c-mult)' };
+const WIN_COLORS: Record<Difficulty, string> = { easy: 'var(--ink-cream)', normal: 'var(--ink-ember)', hard: 'var(--ink-orange)' };
 
 const Section = ({ title, children, className }: { title: string; children: ReactNode; className?: string }) => (
   <div className={clsx('px-inset p-[5px]', className)}>
@@ -152,11 +153,11 @@ const StatsModal = () => {
         <div className="px-round flex items-center gap-[6px] p-[5px]" style={{
           color: 'var(--c-outline)',
           background: stats.achievementRepublicana ? 'var(--c-gold)' : 'var(--c-ui-muted)',
-          boxShadow: 'inset 0 0 0 1px var(--c-outline)',
+          boxShadow: stats.achievementRepublicana ? '0 0 8px 1px rgba(255,74,28,0.5)' : undefined,
           filter: stats.achievementRepublicana ? undefined : 'grayscale(1)',
           opacity: stats.achievementRepublicana ? 1 : 0.7,
         }}>
-          <PixelSprite sprite={STAR} scale={2} />
+          <PixelSprite sprite={STAR} scale={2} tint={INK.black} />
           <div>
             <div className="uppercase">{t.achievement_republicana}</div>
             <div>{t.achievement_desc}</div>
@@ -175,8 +176,8 @@ interface RulesSection {
 }
 
 const RULES: RulesSection[] = [
-  { title: 'obj_title', items: ['obj_desc'], band: 'var(--c-green)' },
-  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], band: 'var(--c-chip)' },
+  { title: 'obj_title', items: ['obj_desc'], band: 'var(--ink-slate)' },
+  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], band: 'var(--ink-teal)' },
   { title: 'fight_title', items: ['fight_li_1', 'fight_li_2'], band: 'var(--c-mult)' },
   { title: 'special_title', items: ['special_ace', 'special_king', 'special_queen', 'special_jack', 'special_joker'], band: 'var(--c-orange)' },
 ];
@@ -201,7 +202,7 @@ const RulesModal = () => {
       <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[6px] leading-[12px]">
         {RULES.map(section => (
           <section key={section.title}>
-            <div className="inline-block px-round px-[4px] pt-[2px] h-[13px] mb-[3px] text-outline" style={{ background: section.band, boxShadow: 'inset 0 0 0 1px var(--c-outline)' }}>
+            <div className={clsx('inline-block px-round px-[4px] pt-[2px] h-[13px] mb-[3px]', /orange|mult/.test(section.band) ? 'text-ink' : 'text-outline')} style={{ background: section.band }}>
               {t[section.title]}
             </div>
             <ul className="flex flex-col gap-[3px]">
@@ -211,8 +212,8 @@ const RulesModal = () => {
                 return (
                   <li key={item} className="flex gap-[4px] items-start">
                     {sprite
-                      ? <PixelSprite sprite={sprite} className="shrink-0" />
-                      : <span className="shrink-0" style={{ color: 'var(--c-gold)' }}>▸</span>}
+                      ? <PixelSprite sprite={sprite} tint={INK.cream} className="shrink-0" />
+                      : <span className="shrink-0" style={{ color: 'var(--ink-orange)' }}>▸</span>}
                     <span className={sprite ? 'pt-[5px]' : undefined}>{t[item]}</span>
                   </li>
                 );

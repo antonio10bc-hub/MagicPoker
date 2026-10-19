@@ -25,7 +25,7 @@ export const AmbientDust = () => {
           className="absolute"
           style={{
             left: Math.round(m.fx * width), top: Math.round(m.fy * height), width: m.size, height: m.size,
-            background: 'rgba(244, 244, 240, 0.8)',
+            background: 'rgba(237, 235, 224, 0.75)', borderRadius: '50%', filter: 'blur(0.4px)',
             animation: `dust-rise ${m.duration}s linear ${m.delay}s infinite`,
             '--drift': `${m.drift}px`,
           } as CSSProperties}
@@ -49,7 +49,7 @@ export const LowHealth = ({ active }: { active: boolean }) => {
   return (
     <motion.div
       className="absolute inset-0 pointer-events-none z-[70]"
-      style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(192, 40, 28, 0.55) 100%)' }}
+      style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(255, 74, 28, 0.45) 100%)' }}
       animate={{ opacity: [0.35, 0.85, 0.4, 0.7, 0.35] }}
       transition={{ duration: 1.1, repeat: Infinity, times: [0, 0.12, 0.25, 0.37, 1] }}
     />

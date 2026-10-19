@@ -80,16 +80,18 @@ interface PixelSpriteProps {
   owner?: Owner;
   /** Factor entero de escala sobre la resolución interna */
   scale?: number;
+  /** Silueta plana: todos los píxeles opacos de este color (sin detalle interno) */
+  tint?: string;
   className?: string;
   style?: CSSProperties;
 }
 
-const PixelSpriteComponent = ({ sprite, owner = 'player', scale = 1, className, style }: PixelSpriteProps) => {
+const PixelSpriteComponent = ({ sprite, owner = 'player', scale = 1, tint, className, style }: PixelSpriteProps) => {
   const { width, height } = spriteSize(sprite);
-  const rects = useMemo(
-    () => toRects(sprite, owner === 'player' ? PLAYER_COLORS : OPPONENT_COLORS),
-    [sprite, owner]
-  );
+  const rects = useMemo(() => {
+    const colors = owner === 'player' ? PLAYER_COLORS : OPPONENT_COLORS;
+    return toRects(sprite, tint ? Object.fromEntries(Object.keys(colors).map(k => [k, tint])) : colors);
+  }, [sprite, owner, tint]);
   return (
     <svg
       width={width * scale}

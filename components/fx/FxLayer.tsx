@@ -4,7 +4,8 @@ import { Effect, FxLayer as Layer, useFxStore } from './fxStore';
 
 // --- RENDER DE EFECTOS ---
 // Partículas con física sencilla (impulso + gravedad), textos que suben y se
-// desvanecen, y ondas de choque. Movimiento suave; los píxeles siguen siendo cuadrados.
+// desvanecen, y ondas de choque. Las partículas son polvo granulado (motas blandas,
+// no chispas) y las ondas, halos difusos.
 
 const Particles = ({ e }: { e: Extract<Effect, { kind: 'particles' }> }) => (
   <>
@@ -12,7 +13,7 @@ const Particles = ({ e }: { e: Extract<Effect, { kind: 'particles' }> }) => (
       <motion.div
         key={i}
         className="absolute pointer-events-none"
-        style={{ left: e.x, top: e.y, width: p.size, height: p.size, background: p.color, boxShadow: '0 0 0 0.5px var(--c-outline)' }}
+        style={{ left: e.x, top: e.y, width: p.size, height: p.size, background: p.color, borderRadius: '50%', filter: 'blur(0.4px)', boxShadow: `0 0 2px ${p.color}` }}
         initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
         animate={{
           x: [0, p.dx * 0.6, p.dx],
@@ -42,11 +43,11 @@ const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
       transition={{ duration: e.life / 1000, times: [0, 0.2, 0.6, 1], ease: 'easeOut' }}
     >
       <motion.div
-        className={e.bg ? 'text-outline px-[4px] pt-[2px] pb-[1px]' : 'text-outline'}
+        // Golpe: masa naranja que brilla con la cifra en silueta oscura
+        className={e.bg ? 'text-ink font-display bloom px-[4px] pt-[3px]' : 'text-outline font-display'}
         style={{
-          color: e.bg ? 'var(--c-white)' : e.color, fontSize: e.size, lineHeight: `${e.size}px`,
+          color: e.bg ? 'var(--ink-black)' : e.color, fontSize: e.size, lineHeight: `${e.size}px`,
           background: e.bg, borderRadius: 4,
-          boxShadow: e.bg ? '0 2px 0 0 rgba(0,0,0,0.45), inset 0 1px 0 0 rgba(255,255,255,0.3)' : undefined,
         }}
         animate={{ x: [0, -1, 1, -1, 0] }}
         transition={{ duration: 0.25, repeat: 2 }}
@@ -60,7 +61,7 @@ const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
 const Ring = ({ e }: { e: Extract<Effect, { kind: 'ring' }> }) => (
   <motion.div
     className="absolute pointer-events-none rounded-full"
-    style={{ left: e.x - e.radius, top: e.y - e.radius, width: e.radius * 2, height: e.radius * 2, boxShadow: `0 0 0 2px ${e.color}, inset 0 0 0 1px ${e.color}` }}
+    style={{ left: e.x - e.radius, top: e.y - e.radius, width: e.radius * 2, height: e.radius * 2, boxShadow: `0 0 6px 2px ${e.color}, inset 0 0 6px 1px ${e.color}`, filter: 'blur(0.8px)' }}
     initial={{ scale: 0.1, opacity: 1 }}
     animate={{ scale: 1, opacity: 0 }}
     transition={{ duration: e.life / 1000, ease: [0.1, 0.8, 0.3, 1] }}

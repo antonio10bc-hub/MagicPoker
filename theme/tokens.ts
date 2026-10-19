@@ -3,38 +3,55 @@
 // variables CSS en app/globals.css (--c-*) para usarlos desde estilos.
 import { Owner } from '@/types';
 
+// Dirección "impresión analógica nocturna": paleta cerrada de 8 tintas. Las claves
+// antiguas se conservan como ROLES (qué es cada cosa) y apuntan a la tinta que toca.
+export const INK = {
+  black: '#0B0D0C',   // Negro profundo: fondos, vacío, siluetas (dominante)
+  slate: '#1E2A28',   // Gris pizarra verdoso
+  teal: '#5E7A76',    // Gris azulado apagado: terreno, superficies
+  mint: '#B9CFC8',    // Gris menta pálido
+  cream: '#EDEBE0',   // Blanco crema: polvo, niebla, luz
+  orange: '#FF4A1C',  // Bermellón: ACENTO (rival, peligro, objetivo)
+  ember: '#F2652A',   // Naranja cálido: acento secundario (interacción)
+  moss: '#6F8F5A',    // Musgo apagado: solo transición en halos
+} as const;
+
 export const PALETTE = {
-  outline: '#1E2638',     // Contorno (nunca negro puro)
-  stoneDark: '#4A4E58',   // Piedra oscura / caras frontales en sombra
-  floor: '#9AA6AE',       // Suelo gris-azulado
-  floorPattern: '#B8C4CC',// Patrón de suelo / brillos fríos
-  pavement: '#D8D4CC',    // Pavimento claro
-  white: '#F4F4F0',       // Blanco cálido (paneles, cartas)
-  glass: '#4C8CD8',       // Cristal azul
-  cyan: '#7CC8F0',        // Cian brillante (brillos, selección)
-  navy: '#2E3A5C',        // Navy ventanas / fondos de panel
-  roof: '#E85A28',        // Naranja tejado
-  red: '#C0281C',         // Rojo profundo (bando rival)
-  green: '#2E9A3A',       // Verde banderola (bando jugador)
-  yellow: '#F0C830',      // Amarillo acento (interacción)
-  wood: '#D07830',        // Madera naranja
-  // Escalones derivados (cel shading: base + 1 sombra + 1 brillo)
-  greenLight: '#5CC860',
-  greenDark: '#1E6A2A',
-  redLight: '#E8584A',
-  redDark: '#801810',
-  woodDark: '#985020',
-  yellowDark: '#B89010',
-  skin: '#F8D0A8',
-  skinShade: '#D8A078',
+  outline: INK.black,     // Ya no hay contorno: se funde con el negro
+  stoneDark: INK.slate,
+  floor: INK.teal,
+  floorPattern: INK.mint,
+  pavement: INK.mint,
+  white: INK.cream,
+  glass: INK.teal,
+  cyan: INK.mint,         // Selección neutra / brillos fríos
+  navy: INK.slate,
+  roof: INK.ember,
+  red: INK.orange,        // Bando rival
+  green: INK.slate,       // Bando jugador (silueta oscura)
+  yellow: INK.ember,      // Interacción
+  wood: INK.slate,
+  greenLight: INK.cream,
+  greenDark: INK.black,
+  redLight: INK.ember,
+  redDark: INK.black,
+  woodDark: INK.black,
+  yellowDark: INK.orange,
+  skin: INK.black,        // Personajes: siluetas
+  skinShade: INK.black,
+  moss: INK.moss,
 } as const;
 
 export type PaletteKey = keyof typeof PALETTE;
 
-/** Color de cada bando: base, brillo y sombra */
+/**
+ * Color de cada bando. `base` = cuerpo, `light` = luz/energía (flechas, brillos),
+ * `dark` = sombra. El jugador es una silueta oscura con luz crema; el rival, una masa
+ * naranja que brilla.
+ */
 export const TEAM: Record<Owner, { base: string; light: string; dark: string }> = {
-  player: { base: PALETTE.green, light: PALETTE.greenLight, dark: PALETTE.greenDark },
-  opponent: { base: PALETTE.red, light: PALETTE.redLight, dark: PALETTE.redDark },
+  player: { base: INK.slate, light: INK.cream, dark: INK.black },
+  opponent: { base: INK.orange, light: INK.ember, dark: INK.black },
 };
 
 // --- RESOLUCIÓN INTERNA ---

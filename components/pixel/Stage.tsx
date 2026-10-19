@@ -3,7 +3,7 @@ import { motion, MotionConfig, useAnimationControls } from 'framer-motion';
 import { STAGE } from '@/theme/tokens';
 import { computeGameLayout, computeMenuLayout, LANDSCAPE_STAGE, StageSize } from '@/theme/layout';
 import { useFxStore } from '@/components/fx/fxStore';
-import { LETTERBOX_TILE, patternUri } from './patterns';
+import { FilmGrain } from '@/components/fx/FilmGrain';
 
 // --- ESCALADO ENTERO ---
 // La escala se calcula en píxeles FÍSICOS (devicePixelRatio) para que cada píxel
@@ -132,7 +132,7 @@ export const Stage = ({ children }: { children: ReactNode }) => {
     <StageContext.Provider value={stage}>
       <div
         className="fixed inset-0 flex items-center justify-center overflow-hidden"
-        style={{ backgroundImage: patternUri('letterbox', LETTERBOX_TILE), backgroundSize: `${8 * scale}px` }}
+        style={{ background: 'var(--ink-black)' }}
       >
         <div style={{ width: width * scale, height: height * scale, position: 'relative' }}>
           <div
@@ -147,8 +147,9 @@ export const Stage = ({ children }: { children: ReactNode }) => {
               </motion.div>
             </MotionConfig>
             <Flash />
-            {/* Capa CRT: líneas de barrido y viñeta sobre todo el juego */}
-            <div className="crt absolute inset-0 pointer-events-none z-[998]" />
+            {/* Postprocesado de película: viñeta + grano (siempre por encima de todo) */}
+            <div className="vignette absolute inset-0 pointer-events-none z-[996]" />
+            <FilmGrain scale={scale} />
           </div>
         </div>
       </div>

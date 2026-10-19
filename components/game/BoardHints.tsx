@@ -2,7 +2,7 @@ import { ReactNode, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BoardSlot, Card as CardType, CombatResult, GamePhase } from '@/types';
 import { BoardGeometry } from '@/theme/layout';
-import { CARD_SIZE } from '@/theme/tokens';
+import { CARD_SIZE, INK } from '@/theme/tokens';
 import { calculateCombat, getTargetIndices, RANKS } from '@/lib/game-utils';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
 import { ALERT, CHECK, CROSS, HEART_LOST } from '@/components/pixel/sprites';
@@ -58,9 +58,9 @@ const aimAtOpponent = (board: BoardSlot[], preview: BoardHintsProps['preview'], 
 
 const Badge = ({ x, y, bg, children, pulse }: { x: number; y: number; bg: string; children: ReactNode; pulse?: boolean }) => (
   <motion.div
-    className="absolute flex items-center justify-center pointer-events-none z-[25] text-outline"
-    style={{ left: x, top: y, minWidth: 13, height: 13, padding: '0 2px', borderRadius: 7, background: bg,
-      boxShadow: '0 0 0 1px var(--c-outline), 0 2px 0 0 rgba(0,0,0,0.4)' }}
+    // Masa de luz con la marca en silueta oscura
+    className="absolute flex items-center justify-center pointer-events-none z-[25] text-ink font-display bloom"
+    style={{ left: x, top: y, minWidth: 13, height: 13, padding: '2px 2px 0', borderRadius: 7, background: bg }}
     initial={{ scale: 0 }}
     animate={pulse ? { scale: [1, 1.18, 1] } : { scale: 1 }}
     // Transición propia en la salida: si heredase el latido infinito, nunca terminaría
@@ -72,7 +72,7 @@ const Badge = ({ x, y, bg, children, pulse }: { x: number; y: number; bg: string
 );
 
 const SpriteBadge = ({ sprite, ...rest }: { sprite: Sprite; x: number; y: number; bg: string; pulse?: boolean }) => (
-  <Badge {...rest}><PixelSprite sprite={sprite} /></Badge>
+  <Badge {...rest}><PixelSprite sprite={sprite} tint={INK.black} /></Badge>
 );
 
 export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, preview, shown }: BoardHintsProps) => {
@@ -106,11 +106,11 @@ export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, pre
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}>
             {threatened && (
               <motion.div className="absolute inset-0 rounded-[3px]"
-                style={{ background: 'rgba(255, 75, 62, 0.22)', boxShadow: 'inset 0 0 0 1px var(--c-mult)' }}
+                style={{ background: 'radial-gradient(ellipse at 50% 60%, rgba(255,74,28,0.35), rgba(255,74,28,0.08) 70%)', boxShadow: '0 0 6px 1px rgba(255,74,28,0.35)' }}
                 animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.1, repeat: Infinity }} />
             )}
             <div className="absolute" style={{ left: 15, top: CARD_SIZE.height - 14, opacity: threatened ? 0.9 : 0.45 }}>
-              <PixelSprite sprite={HEART_LOST} />
+              <PixelSprite sprite={HEART_LOST} tint={threatened ? INK.orange : INK.mint} />
             </div>
           </motion.div>
         );
@@ -145,7 +145,7 @@ export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, pre
         const owner = slot.card.owner;
         const b = badgeAt(geo.slots[owner][slot.index]);
         return owner === 'opponent'
-          ? <SpriteBadge key={`win-${slot.card.id}`} sprite={CHECK} x={b.x} y={b.y} bg="var(--c-green)" />
+          ? <SpriteBadge key={`win-${slot.card.id}`} sprite={CHECK} x={b.x} y={b.y} bg="var(--ink-cream)" />
           : <SpriteBadge key={`lose-${slot.card.id}`} sprite={CROSS} x={b.x} y={b.y} bg="var(--c-mult)" />;
       })}
     </AnimatePresence>

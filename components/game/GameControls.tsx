@@ -48,8 +48,8 @@ export const TurnBox = () => {
       />
       {/* En vertical no hay barra lateral: la ronda va en una ficha dentro del cuadro */}
       {compactPanels && (
-        <div className="absolute px-round text-outline flex items-center px-[4px]"
-          style={{ right: 3, top: 2, height: 12, background: 'var(--c-orange)', boxShadow: '0 1px 0 0 var(--c-orange-dark)' }}>
+        <div className="absolute px-round text-ink font-display flex items-center px-[4px] pt-[2px]"
+          style={{ right: 3, top: 2, height: 12, background: 'var(--ink-orange)', boxShadow: '0 0 6px 1px rgba(255,74,28,0.5)' }}>
           {t.round.charAt(0)}{round}
         </div>
       )}
@@ -72,12 +72,13 @@ const RoundBanner = ({ round }: { round: number }) => {
     <motion.div
       className="absolute left-0 z-[80] pointer-events-none flex items-center justify-center gap-[8px]"
       style={{ top: board.centerLine.y + Math.round(board.centerLine.h / 2) - 13, width, height: 26, background: 'var(--c-ui-panel)',
-        boxShadow: 'inset 0 2px 0 0 var(--c-orange), inset 0 -2px 0 0 var(--c-orange), 0 0 0 1px var(--c-ui-edge), 0 4px 0 1px rgba(0,0,0,0.45)' }}
-      initial={{ x: -width, skewX: -20 }}
-      animate={{ x: [-width, 0, 0, width], skewX: [-20, 0, 0, 20] }}
+        boxShadow: '0 0 12px 3px rgba(255,74,28,0.3), inset 0 1px 6px rgba(255,74,28,0.35)' }}
+      // Ghosting: borroso mientras barre, nítido mientras se lee
+      initial={{ x: -width, skewX: -20, filter: 'blur(3px)' }}
+      animate={{ x: [-width, 0, 0, width], skewX: [-20, 0, 0, 20], filter: ['blur(3px)', 'blur(0px)', 'blur(0px)', 'blur(3px)'] }}
       transition={{ duration: 1.1, times: [0, 0.22, 0.72, 1], ease: 'easeInOut' }}
     >
-      <WavyText text={`${t.round} ${round}`} className="text-title text-outline" style={{ color: 'var(--c-gold)' }} />
+      <WavyText text={`${t.round} ${round}`} className="text-title text-outline bloom" style={{ color: 'var(--ink-orange)' }} />
       <WavyText text={t.your_turn} className="text-outline" style={{ color: 'var(--c-cyan)' }} />
     </motion.div>
   );

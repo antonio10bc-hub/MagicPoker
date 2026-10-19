@@ -198,11 +198,12 @@ const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
           <stop offset="1" stopColor={team.light} stopOpacity={1} />
         </linearGradient>
       </defs>
-      {/* Halo suave del color del bando */}
-      <path d={d} fill={team.base} opacity={0.35} filter="url(#arrow-glow)" />
-      {/* Cuerpo translúcido con borde fino del tono oscuro del bando */}
-      <path d={d} fill={`url(#${gradId})`} stroke={team.dark} strokeOpacity={0.6} strokeWidth={0.8} strokeLinejoin="round"
-        strokeDasharray={a.maybe ? '3 3' : undefined} />
+      {/* Halo: luz del bando que se deshace (halación rojiza en ambos) */}
+      <path d={d} fill={team.light} opacity={0.5} filter="url(#arrow-glow)" />
+      <path d={d} fill="#FF4A1C" opacity={a.owner === 'opponent' ? 0.45 : 0.12} filter="url(#arrow-halation)" />
+      {/* Cuerpo luminoso, sin contorno; el Príncipe (al azar) va discontinuo */}
+      <path d={d} fill={`url(#${gradId})`} stroke={a.maybe ? team.light : 'none'} strokeOpacity={0.8} strokeWidth={0.8} strokeLinejoin="round"
+        strokeDasharray={a.maybe ? '3 3' : undefined} fillOpacity={a.maybe ? 0.5 : 1} />
     </motion.g>
   );
 };
@@ -216,7 +217,10 @@ export const AttackArrows = (props: AttackArrowsProps) => {
     <svg className="absolute left-0 top-0 pointer-events-none z-[12]" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
       <defs>
         <filter id="arrow-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" />
+          <feGaussianBlur stdDeviation="1.6" />
+        </filter>
+        <filter id="arrow-halation" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="4" />
         </filter>
       </defs>
       <AnimatePresence>
@@ -227,7 +231,7 @@ export const AttackArrows = (props: AttackArrowsProps) => {
             exit={{ opacity: 0, transition: { duration: 0.2 } }} transition={{ duration: 0.8, repeat: Infinity }}
             style={{ transformOrigin: `${c.x}px ${c.y}px` }}>
             <path d={`M ${c.x} ${c.y - 6} L ${c.x + 2} ${c.y - 2} L ${c.x + 6} ${c.y} L ${c.x + 2} ${c.y + 2} L ${c.x} ${c.y + 6} L ${c.x - 2} ${c.y + 2} L ${c.x - 6} ${c.y} L ${c.x - 2} ${c.y - 2} Z`}
-              fill="var(--c-yellow)" stroke="var(--c-outline)" strokeWidth={0.8} />
+              fill="#EDEBE0" style={{ filter: 'drop-shadow(0 0 3px #FF4A1C)' }} />
           </motion.g>
         ))}
         {/* El As: onda que late alrededor (barre todo el tablero) */}
@@ -237,8 +241,9 @@ export const AttackArrows = (props: AttackArrowsProps) => {
             cx={w.x}
             cy={w.y}
             fill="none"
-            stroke="var(--c-cyan)"
+            stroke="#EDEBE0"
             strokeWidth={2}
+            style={{ filter: 'blur(0.6px) drop-shadow(0 0 3px #FF4A1C)' }}
             initial={{ r: 10, opacity: 0.9 }}
             animate={{ r: [10, 34], opacity: [0.9, 0] }}
             exit={{ opacity: 0, transition: { duration: 0.15 } }}
