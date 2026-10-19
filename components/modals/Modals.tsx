@@ -1,15 +1,17 @@
-import { useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { ReactNode, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Trophy, Volume2, VolumeX } from 'lucide-react';
-import { Dialog, Overlay } from '@/components/ui/Overlay';
 import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { getStats } from '@/lib/stats';
 import { playSound, toggleMute } from '@/lib/sounds';
 import { useMuted } from '@/hooks/useMuted';
-import { Difficulty } from '@/types';
+import { Difficulty, Rank } from '@/types';
+import { steps } from '@/theme/tokens';
+import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
+import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { CHARACTERS, ICONS, STAR } from '@/components/pixel/sprites';
 
 const closeWithClick = () => {
   playSound('click');
@@ -28,6 +30,46 @@ export const Modals = () => {
   );
 };
 
+// --- CAPA DE FONDO + VENTANA ---
+const Overlay = ({ onClose, children }: { onClose?: () => void; children: ReactNode }) => (
+  <motion.div
+    className="absolute inset-0 z-[200] flex items-center justify-center"
+    style={{ background: 'rgba(30,38,56,0.6)' }}
+    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    transition={{ duration: 0.12, ease: steps(3) }}
+    onClick={onClose}
+  >
+    <motion.div
+      onClick={e => e.stopPropagation()}
+      initial={{ scaleY: 0.1 }} animate={{ scaleY: 1 }} exit={{ scaleY: 0.1 }}
+      transition={{ duration: 0.12, ease: steps(3) }}
+    >
+      {children}
+    </motion.div>
+  </motion.div>
+);
+
+const Dialog = ({ title, width, height, actions, children }: { title: string; width: number; height: number; actions?: ReactNode; children: ReactNode }) => (
+  <Overlay onClose={closeWithClick}>
+    <Panel
+      title={
+        <div className="flex items-center justify-between">
+          <span>{title}</span>
+        </div>
+      }
+      band="var(--c-glass)"
+      style={{ width, height }}
+      bodyClassName="flex flex-col"
+    >
+      <div className="absolute flex gap-[3px] z-10" style={{ right: 3, top: -14 }}>
+        {actions}
+        <IconButton icon={ICONS.close} onClick={closeWithClick} aria-label="close" className="!w-[13px] !h-[12px]" />
+      </div>
+      {children}
+    </Panel>
+  </Overlay>
+);
+
 // --- CONFIRMAR SALIDA ---
 const ConfirmExitModal = () => {
   const t = useTranslations();
@@ -40,21 +82,27 @@ const ConfirmExitModal = () => {
   };
 
   return (
-    <Overlay className="z-[200]">
-      <div className="bg-white p-6 rounded-lg border-[6px] border-black shadow-[12px_12px_0_#000] text-center max-w-sm w-full">
-        <h2 className="text-2xl font-black mb-4">{t.confirm_exit_title}</h2>
-        <p className="mb-6 font-medium">{t.confirm_exit_desc}</p>
-        <div className="flex gap-4 justify-center">
-          <button onClick={confirmExit} className="bg-red-500 text-white px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">{t.yes_exit}</button>
-          <button onClick={closeWithClick} className="bg-gray-200 px-6 py-2 rounded border-[3px] border-black font-bold shadow-[4px_4px_0_#000]">{t.cancel}</button>
+    <Overlay>
+      <Panel title={t.confirm_exit_title} band="var(--c-red)" style={{ width: 200 }} bodyClassName="p-[6px] flex flex-col gap-[8px]">
+        <p className="leading-[12px]">{t.confirm_exit_desc}</p>
+        <div className="flex gap-[6px] justify-center pb-[3px]">
+          <PxButton tone="red" onClick={confirmExit} className="px-[6px] h-[16px]"><span className="text-outline">{t.yes_exit}</span></PxButton>
+          <PxButton onClick={closeWithClick} className="px-[6px] h-[16px]">{t.cancel}</PxButton>
         </div>
-      </div>
+      </Panel>
     </Overlay>
   );
 };
 
 // --- ESTADÍSTICAS ---
-const WIN_COLORS: Record<Difficulty, string> = { easy: 'text-green-600', normal: 'text-yellow-600', hard: 'text-red-600' };
+const WIN_COLORS: Record<Difficulty, string> = { easy: 'var(--c-green)', normal: 'var(--c-yellow-dark)', hard: 'var(--c-red)' };
+
+const Section = ({ title, children, className }: { title: string; children: ReactNode; className?: string }) => (
+  <div className={clsx('px-panel px-round p-[5px]', className)}>
+    <div className="mb-[4px] pb-[2px] uppercase" style={{ color: 'var(--c-glass)', boxShadow: '0 1px 0 0 var(--c-floor-pattern)' }}>{title}</div>
+    {children}
+  </div>
+);
 
 const StatsModal = () => {
   const t = useTranslations();
@@ -68,37 +116,33 @@ const StatsModal = () => {
   ];
 
   return (
-    <Dialog
-      onClose={closeWithClick}
-      className="max-w-lg"
-      titleClassName="text-2xl flex items-center gap-2"
-      title={<><Trophy className="w-8 h-8 stroke-[3px]" /> {t.stats_title}</>}
-    >
-      <div className="p-6 space-y-4 text-lg font-bold">
-        <div className="bg-gray-100 p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000]">
-          <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">{t.wins}</h3>
-          <div className="grid grid-cols-3 gap-2 text-center">
+    <Dialog title={t.stats_title} width={236} height={196}>
+      <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[12px]">
+        <Section title={t.wins}>
+          <div className="grid grid-cols-3 text-center">
             {(Object.keys(WIN_COLORS) as Difficulty[]).map(d => (
               <div key={d}>
-                <div className="text-sm text-gray-500 uppercase">{t[d]}</div>
-                <div className={clsx("text-2xl", WIN_COLORS[d])}>{stats.wins[d]}</div>
+                <div>{t[d]}</div>
+                <div className="text-title" style={{ color: WIN_COLORS[d] }}>{stats.wins[d]}</div>
               </div>
             ))}
           </div>
-        </div>
-        <div className="bg-gray-100 p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000]">
-          <h3 className="text-xl uppercase border-b-2 border-black pb-2 mb-3">{t.global}</h3>
+        </Section>
+        <Section title={t.global}>
           {globals.map(([label, value]) => (
             <div key={label} className="flex justify-between"><span>{label}</span><span>{value}</span></div>
           ))}
-        </div>
-        <div className={clsx("p-4 rounded-md border-[3px] border-black shadow-[4px_4px_0_#000] transition-colors", stats.achievementRepublicana ? "bg-[#8e0dff] text-white" : "bg-gray-200 text-gray-400 grayscale")}>
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">🏆</span>
-            <div>
-              <div className="uppercase font-black">{t.achievement_republicana}</div>
-              <div className="text-sm font-medium leading-tight opacity-80">{t.achievement_desc}</div>
-            </div>
+        </Section>
+        <div className="px-round flex items-center gap-[6px] p-[5px]" style={{
+          background: stats.achievementRepublicana ? 'var(--c-yellow)' : 'var(--c-floor-pattern)',
+          boxShadow: 'inset 0 0 0 1px var(--c-outline)',
+          filter: stats.achievementRepublicana ? undefined : 'grayscale(1)',
+          opacity: stats.achievementRepublicana ? 1 : 0.7,
+        }}>
+          <PixelSprite sprite={STAR} scale={2} />
+          <div>
+            <div className="uppercase">{t.achievement_republicana}</div>
+            <div>{t.achievement_desc}</div>
           </div>
         </div>
       </div>
@@ -110,52 +154,52 @@ const StatsModal = () => {
 interface RulesSection {
   title: keyof Translations;
   items: (keyof Translations)[];
-  titleClassName: string;
-  listClassName?: string;
+  band: string;
 }
 
 const RULES: RulesSection[] = [
-  { title: 'obj_title', items: ['obj_desc'], titleClassName: 'bg-[#8e0dff] text-white border-black shadow-[3px_3px_0_#000] -rotate-1' },
-  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], titleClassName: 'bg-[#ff590d] text-white border-black shadow-[3px_3px_0_#000] rotate-1' },
-  { title: 'fight_title', items: ['fight_li_1', 'fight_li_2'], titleClassName: 'bg-yellow-400 text-black border-black shadow-[3px_3px_0_#000] -rotate-1' },
-  {
-    title: 'special_title',
-    items: ['special_ace', 'special_king', 'special_queen', 'special_jack', 'special_joker'],
-    titleClassName: 'bg-black text-white border-gray-500 shadow-[3px_3px_0_#888] rotate-1',
-    listClassName: 'space-y-2 text-sm sm:text-base',
-  },
+  { title: 'obj_title', items: ['obj_desc'], band: 'var(--c-green)' },
+  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], band: 'var(--c-glass)' },
+  { title: 'fight_title', items: ['fight_li_1', 'fight_li_2'], band: 'var(--c-red)' },
+  { title: 'special_title', items: ['special_ace', 'special_king', 'special_queen', 'special_jack', 'special_joker'], band: 'var(--c-roof)' },
 ];
+
+/** Retrato del personaje que acompaña a cada regla de carta especial */
+const SPECIAL_PORTRAIT: Partial<Record<keyof Translations, Rank>> = {
+  special_ace: 'A', special_king: 'K', special_queen: 'Q', special_jack: 'J', special_joker: 'JOKER',
+};
 
 const MuteButton = () => {
   const isMuted = useMuted();
   const handleToggle = () => {
     if (!toggleMute()) playSound('click');
   };
-  return (
-    <button onClick={handleToggle} className={clsx("p-2 rounded-md border-[3px] border-black shadow-[3px_3px_0_#000] active:translate-y-1 active:shadow-none transition-all", isMuted ? "bg-black text-white" : "bg-[#F7F5E6] text-black")}>
-      {isMuted ? <VolumeX className="w-6 h-6 stroke-[3px]" /> : <Volume2 className="w-6 h-6 stroke-[3px]" />}
-    </button>
-  );
+  return <IconButton icon={isMuted ? ICONS.soundOff : ICONS.soundOn} onClick={handleToggle} aria-label="mute" className="!w-[13px] !h-[12px]" />;
 };
 
 const RulesModal = () => {
   const t = useTranslations();
   return (
-    <Dialog
-      onClose={closeWithClick}
-      className="max-w-2xl max-h-[80vh]"
-      headerClassName="p-4 sm:p-6"
-      titleClassName="text-2xl sm:text-3xl drop-shadow-[2px_2px_0_#fff]"
-      closeIconClassName="w-6 h-6 sm:w-8 sm:h-8"
-      title={t.rules_title}
-      actions={<MuteButton />}
-    >
-      <div className="p-6 space-y-6 text-base sm:text-lg font-medium leading-relaxed">
+    <Dialog title={t.rules_title} width={300} height={232} actions={<MuteButton />}>
+      <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[6px] leading-[12px]">
         {RULES.map(section => (
           <section key={section.title}>
-            <h3 className={clsx("font-black text-xl mb-2 inline-block px-2 border-[2px]", section.titleClassName)}>{t[section.title]}</h3>
-            <ul className={clsx("list-disc pl-5", section.listClassName ?? "space-y-1")}>
-              {section.items.map(item => <li key={item}>{t[item]}</li>)}
+            <div className="inline-block px-round px-[4px] pt-[2px] h-[13px] mb-[3px] text-outline" style={{ background: section.band, boxShadow: 'inset 0 0 0 1px var(--c-outline)' }}>
+              {t[section.title]}
+            </div>
+            <ul className="flex flex-col gap-[3px]">
+              {section.items.map(item => {
+                const portrait = SPECIAL_PORTRAIT[item];
+                const sprite = portrait && CHARACTERS[portrait];
+                return (
+                  <li key={item} className="flex gap-[4px] items-start">
+                    {sprite
+                      ? <PixelSprite sprite={sprite} className="shrink-0" />
+                      : <span className="shrink-0" style={{ color: 'var(--c-glass)' }}>▸</span>}
+                    <span className={sprite ? 'pt-[5px]' : undefined}>{t[item]}</span>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

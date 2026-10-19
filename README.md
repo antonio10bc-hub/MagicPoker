@@ -2,6 +2,8 @@
 
 Juego de cartas estratégico (Next.js + React + Zustand + Tailwind + Framer Motion).
 
+El estilo visual está definido en [`ART_DIRECTION.md`](ART_DIRECTION.md).
+
 ## Scripts
 
 ```bash
@@ -27,11 +29,17 @@ lib/
 store/
   useGameStore.ts       Estado de la partida y flujo de turnos (temporizadores cancelables)
   useUiStore.ts         Modal abierto (reglas / estadísticas / salir)
+theme/
+  tokens.ts             Paleta, resolución interna (384×288), tamaños y easings
+themes/
+  index.ts              ACTIVE_THEME: punto único para cambiar de escenario
+  pieces.tsx            Piezas de diorama reutilizables (plataforma, barandilla, props)
+  plaza/                Escenario por defecto
 components/
+  pixel/                Stage (escalado entero), sprites, texturas y UI estilo DS
   screens/              MenuScreen, GameScreen, EndScreen
-  game/                 Card, Board, PlayerFooter, OpponentHeader, GameControls, HudParts
+  game/                 Card, Board, Hud (paneles y mano), GameControls
   modals/               Reglas, estadísticas y confirmación de salida
-  ui/                   Overlay y Dialog reutilizables
 hooks/                  useMuted
 ```
 

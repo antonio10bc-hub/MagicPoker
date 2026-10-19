@@ -12,14 +12,14 @@ const es = {
   resolve: "¡RESOLVER!",
   stand: "PLANTARSE",
   continue: "CONTINUAR",
-  fight: "💥 ¡PELEA! 💥",
+  fight: "¡PELEA!",
   your_turn: "TU TURNO",
   rival_turn: "RIVAL...",
   rival: "RIVAL",
   you: "TÚ",
-  win: "¡VICTORIA! 🎉",
-  draw: "¡EMPATE! 🤝",
-  loss: "💥 FIN DEL JUEGO 💥",
+  win: "¡VICTORIA!",
+  draw: "¡EMPATE!",
+  loss: "FIN DEL JUEGO",
   win_sub: "¡Has aplastado a tu rival!",
   draw_sub: "¡Nadie gana esta vez!",
   loss_sub: "Te han hecho puré...",
@@ -47,11 +47,11 @@ const es = {
   fight_li_1: "Las cartas se enfrentan cara a cara. La carta con el número más alto gana y destruye a la otra.",
   fight_li_2: "Si tu carta se enfrenta a un hueco vacío directamente, le haces 1 punto de daño directo.",
   special_title: "4. Cartas Especiales",
-  special_ace: "🅰️ El As (A): Limpia el tablero (elimina todas las cartas de ambos jugadores).",
-  special_king: "👑 El Rey (K): Ataca a las 3 posiciones que tiene en frente a la vez.",
-  special_queen: "👸 La Reina (Q): Ataca a las 2 posiciones en diagonal a la vez.",
-  special_jack: "🤴 El Príncipe (J): Ataca 1 posición aleatoria entre las que tiene en frente.",
-  special_joker: "🃏 El Joker: No hace daño, pero te permite robar 2 cartas extra."
+  special_ace: "El As (A): Limpia el tablero (elimina todas las cartas de ambos jugadores).",
+  special_king: "El Rey (K): Ataca a las 3 posiciones que tiene en frente a la vez.",
+  special_queen: "La Reina (Q): Ataca a las 2 posiciones en diagonal a la vez.",
+  special_jack: "El Príncipe (J): Ataca 1 posición aleatoria entre las que tiene en frente.",
+  special_joker: "El Joker: No hace daño, pero te permite robar 2 cartas extra."
 };
 
 const en: Translations = {
@@ -64,14 +64,14 @@ const en: Translations = {
   resolve: "RESOLVE!",
   stand: "STAND",
   continue: "CONTINUE",
-  fight: "💥 FIGHT! 💥",
+  fight: "FIGHT!",
   your_turn: "YOUR TURN",
   rival_turn: "RIVAL...",
   rival: "RIVAL",
   you: "YOU",
-  win: "VICTORY! 🎉",
-  draw: "DRAW! 🤝",
-  loss: "💥 GAME OVER 💥",
+  win: "VICTORY!",
+  draw: "DRAW!",
+  loss: "GAME OVER",
   win_sub: "You crushed your rival!",
   draw_sub: "Nobody wins this time!",
   loss_sub: "You got mashed...",
@@ -99,11 +99,11 @@ const en: Translations = {
   fight_li_1: "Cards face each other. The highest number wins and destroys the other.",
   fight_li_2: "If your card faces an empty slot, you deal 1 direct damage.",
   special_title: "4. Special Cards",
-  special_ace: "🅰️ The Ace (A): Wipes the board (removes all cards from both players).",
-  special_king: "👑 The King (K): Attacks the 3 positions in front at once.",
-  special_queen: "👸 The Queen (Q): Attacks the 2 diagonal positions at once.",
-  special_jack: "🤴 The Jack (J): Attacks 1 random position among those in front.",
-  special_joker: "🃏 The Joker: Deals no damage, but lets you draw 2 extra cards."
+  special_ace: "The Ace (A): Wipes the board (removes all cards from both players).",
+  special_king: "The King (K): Attacks the 3 positions in front at once.",
+  special_queen: "The Queen (Q): Attacks the 2 diagonal positions at once.",
+  special_jack: "The Jack (J): Attacks 1 random position among those in front.",
+  special_joker: "The Joker: Deals no damage, but lets you draw 2 extra cards."
 };
 
 export type Translations = typeof es;

@@ -2,3 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== TOKENS (espejo de theme/tokens.ts) ===== */
+:root {
+  --c-outline: #1E2638;
+  --c-stone-dark: #4A4E58;
+  --c-floor: #9AA6AE;
+  --c-floor-pattern: #B8C4CC;
+  --c-pavement: #D8D4CC;
+  --c-white: #F4F4F0;
+  --c-glass: #4C8CD8;
+  --c-cyan: #7CC8F0;
+  --c-navy: #2E3A5C;
+  --c-roof: #E85A28;
+  --c-red: #C0281C;
+  --c-red-light: #E8584A;
+  --c-red-dark: #801810;
+  --c-green: #2E9A3A;
+  --c-green-light: #5CC860;
+  --c-green-dark: #1E6A2A;
+  --c-yellow: #F0C830;
+  --c-yellow-dark: #B89010;
+  --c-wood: #D07830;
+  --c-wood-dark: #985020;
+  --c-shadow: rgba(30, 38, 56, 0.35);
+}
+
+html, body {
+  background: var(--c-outline);
+  color: var(--c-outline);
+}
+
+/* ===== ESCENARIO DE BAJA RESOLUCIÓN ===== */
+.stage {
+  font-family: var(--font-pixel), monospace;
+  font-size: 10px;
+  line-height: 10px;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  user-select: none;
+}
+.stage * { box-sizing: border-box; }
+.stage svg { image-rendering: pixelated; }
+
+.text-title { font-size: 20px; line-height: 20px; }
+
+/* Texto claro con contorno de 1 px (4 direcciones, sin desenfoque) */
+.text-outline {
+  color: var(--c-white);
+  text-shadow: 1px 0 0 var(--c-outline), -1px 0 0 var(--c-outline), 0 1px 0 var(--c-outline), 0 -1px 0 var(--c-outline),
+    1px 1px 0 var(--c-outline);
+}
+
+/* Esquinas "redondeadas" de 1 px en píxel */
+.px-round {
+  clip-path: polygon(1px 0, calc(100% - 1px) 0, 100% 1px, 100% calc(100% - 1px), calc(100% - 1px) 100%, 1px 100%, 0 calc(100% - 1px), 0 1px);
+}
+.px-round-2 {
+  clip-path: polygon(2px 0, calc(100% - 2px) 0, calc(100% - 2px) 1px, calc(100% - 1px) 1px, calc(100% - 1px) 2px, 100% 2px,
+    100% calc(100% - 2px), calc(100% - 1px) calc(100% - 2px), calc(100% - 1px) calc(100% - 1px), calc(100% - 2px) calc(100% - 1px), calc(100% - 2px) 100%,
+    2px 100%, 2px calc(100% - 1px), 1px calc(100% - 1px), 1px calc(100% - 2px), 0 calc(100% - 2px),
+    0 2px, 1px 2px, 1px 1px, 2px 1px);
+}
+
+/* ===== PANEL TIPO MENÚ DS: borde doble (exterior oscuro, interior claro) ===== */
+.px-panel {
+  background: var(--c-white);
+  box-shadow: inset 0 0 0 1px var(--c-outline), inset 0 0 0 2px var(--c-cyan), inset 0 0 0 3px var(--c-white);
+}
+.px-panel-dark {
+  background: var(--c-navy);
+  color: var(--c-white);
+  box-shadow: inset 0 0 0 1px var(--c-outline), inset 0 0 0 2px var(--c-glass);
+}
+.px-band {
+  height: 13px;
+  padding: 2px 4px 0;
+  box-shadow: inset 0 -1px 0 var(--c-outline), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* ===== BOTÓN: bisel + 2 px de profundidad que se hunde al pulsar ===== */
+.px-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--btn-bg, var(--c-white));
+  color: var(--btn-fg, var(--c-outline));
+  box-shadow:
+    inset 0 0 0 1px var(--c-outline),
+    inset 1px 1px 0 1px var(--btn-light, #ffffff),
+    inset -1px -1px 0 1px var(--btn-dark, var(--c-floor)),
+    0 2px 0 0 var(--c-outline);
+  cursor: pointer;
+  transform: translateY(0);
+}
+.px-btn:hover { background: var(--btn-hover, var(--btn-bg, var(--c-white))); }
+.px-btn:active, .px-btn[data-pressed='true'] {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 1px var(--c-outline),
+    inset 1px 1px 0 1px var(--btn-dark, var(--c-floor)),
+    0 0 0 0 var(--c-outline);
+}
+.px-btn:disabled { cursor: default; filter: saturate(0.3); }
+
+.px-btn-yellow { --btn-bg: var(--c-yellow); --btn-light: #FFF0A0; --btn-dark: var(--c-yellow-dark); --btn-hover: #F8D850; }
+.px-btn-green { --btn-bg: var(--c-green); --btn-light: var(--c-green-light); --btn-dark: var(--c-green-dark); --btn-fg: var(--c-white); }
+.px-btn-red { --btn-bg: var(--c-red); --btn-light: var(--c-red-light); --btn-dark: var(--c-red-dark); --btn-fg: var(--c-white); }
+.px-btn-blue { --btn-bg: var(--c-glass); --btn-light: var(--c-cyan); --btn-dark: var(--c-navy); --btn-fg: var(--c-white); }
+.px-btn-roof { --btn-bg: var(--c-roof); --btn-light: #F89060; --btn-dark: #A83810; --btn-fg: var(--c-white); }
+
+/* Scroll de paneles con barra en píxel */
+.px-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--c-glass) var(--c-floor-pattern); }
+.px-scroll::-webkit-scrollbar { width: 4px; }
+.px-scroll::-webkit-scrollbar-track { background: var(--c-floor-pattern); }
+.px-scroll::-webkit-scrollbar-thumb { background: var(--c-glass); }
+
+/* ===== ANIMACIONES EN ESCALONES ===== */
+@keyframes px-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes px-bob { 0%, 49% { transform: translateY(0); } 50%, 100% { transform: translateY(-1px); } }
+@keyframes px-pulse-outline {
+  0%, 49% { box-shadow: 0 0 0 1px var(--c-yellow); }
+  50%, 100% { box-shadow: 0 0 0 1px var(--c-white); }
+}
+@keyframes px-damage-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.35; } }
+
+.anim-blink { animation: px-blink 0.8s steps(1) infinite; }
+.anim-bob { animation: px-bob 0.6s steps(1) infinite; }
+.anim-pulse-outline { animation: px-pulse-outline 0.5s steps(1) infinite; }
+.anim-damage { animation: px-damage-blink 0.2s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-blink, .anim-bob, .anim-pulse-outline, .anim-damage { animation: none; }
+}

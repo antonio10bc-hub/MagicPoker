@@ -1,132 +1,181 @@
-import { memo } from 'react';
-import { Card as CardType } from '@/types';
+import { memo, ReactNode } from 'react';
+import { Card as CardType, Owner } from '@/types';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-import { ArrowUp, ArrowUpLeft, ArrowUpRight, ArrowDown, ArrowDownLeft, ArrowDownRight, LucideIcon } from 'lucide-react';
 import { RANKS } from '@/lib/game-utils';
-import { COLORS, OWNER_COLORS } from '@/lib/constants';
+import { JOKER_DRAW_BONUS } from '@/lib/constants';
+import { CARD_SIZE, TEAM, steps } from '@/theme/tokens';
+import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { CHARACTERS, EMBLEM_OPPONENT, EMBLEM_PLAYER, PIP, STAR } from '@/components/pixel/sprites';
+import { CARD_BACK_TILE, WINDOW_TILE, patternUri } from '@/components/pixel/patterns';
 
 interface CardProps {
   card: CardType;
   onClick?: () => void;
   isSelected?: boolean;
+  /** Carta en mano que ahora no se puede jugar (se desatura) */
+  isDisabled?: boolean;
   className?: string;
-  isInHand?: boolean;
 }
 
-// Flecha por desplazamiento de ataque (-1 izquierda, 0 frente, +1 derecha)
-const ARROWS: Record<'player' | 'opponent', Record<number, LucideIcon>> = {
-  player: { [-1]: ArrowUpLeft, 0: ArrowUp, 1: ArrowUpRight },
-  opponent: { [-1]: ArrowDownLeft, 0: ArrowDown, 1: ArrowDownRight },
+export const EMBLEMS: Record<Owner, typeof EMBLEM_PLAYER> = { player: EMBLEM_PLAYER, opponent: EMBLEM_OPPONENT };
+
+// --- PIPS DE CARTAS NUMÉRICAS (posición en una rejilla de 3 columnas × 5 filas) ---
+const PIP_LAYOUT: Record<number, [number, number][]> = {
+  2: [[1, 0], [1, 4]],
+  3: [[1, 0], [1, 2], [1, 4]],
+  4: [[0, 0], [2, 0], [0, 4], [2, 4]],
+  5: [[0, 0], [2, 0], [1, 2], [0, 4], [2, 4]],
+  6: [[0, 0], [2, 0], [0, 2], [2, 2], [0, 4], [2, 4]],
+  7: [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2], [0, 4], [2, 4]],
+  8: [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2], [1, 3], [0, 4], [2, 4]],
+  9: [[0, 0], [2, 0], [0, 4 / 3], [2, 4 / 3], [1, 2], [0, 8 / 3], [2, 8 / 3], [0, 4], [2, 4]],
+  10: [[0, 0], [2, 0], [1, 2 / 3], [0, 4 / 3], [2, 4 / 3], [0, 8 / 3], [2, 8 / 3], [1, 10 / 3], [0, 4], [2, 4]],
 };
+const PIP_COLS = [6, 14, 23];
+const pipRow = (r: number) => Math.floor(1 + r * 5.25);
 
-const baseCardStyle = "relative w-full h-full aspect-[2/3] rounded-md border-[2px] sm:border-[3px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-between p-0.5 sm:p-1 cursor-pointer select-none transition-all overflow-hidden bg-white";
+const Pips = ({ value, owner }: { value: number; owner: Owner }) => (
+  <>
+    {(PIP_LAYOUT[value] ?? []).map(([c, r], i) => (
+      <PixelSprite key={i} sprite={PIP} owner={owner} style={{ position: 'absolute', left: PIP_COLS[c], top: pipRow(r) }} />
+    ))}
+  </>
+);
 
-const AttackIndicators = ({ card, isInHand }: { card: CardType; isInHand?: boolean }) => {
-  const pattern = RANKS[card.rank].attack;
-  if (!pattern || card.isVoided) return null;
-
-  const isOpponent = card.owner === 'opponent';
-  // Iconos un poco más pequeños si está en la mano para no saturar
-  const iconClass = clsx(
-    isInHand ? "w-3 h-3 sm:w-4 sm:h-4 stroke-[2px]" : "w-3 h-3 sm:w-5 sm:h-5 stroke-[3px] sm:stroke-[4px]",
-    "text-white drop-shadow-[0_1px_0_#000] sm:drop-shadow-[0_2px_0_#000]"
-  );
-
+// --- INSIGNIA DE ATAQUE: 3 casillas (izquierda, frente, derecha) ---
+const AttackBadge = ({ card }: { card: CardType }) => {
+  const def = RANKS[card.rank];
+  let content: ReactNode;
+  if (def.wipesBoard) {
+    content = <PixelSprite sprite={STAR} />;
+  } else if (!def.attack) {
+    content = <span className="text-outline leading-[10px]">+{JOKER_DRAW_BONUS}</span>;
+  } else {
+    const fill = def.attack.mode === 'random-one' ? 'var(--c-cyan)' : 'var(--c-yellow)';
+    // El rival ataca hacia abajo: su izquierda es nuestra derecha en pantalla, pero
+    // el patrón es simétrico, así que basta con marcar las casillas.
+    content = [-1, 0, 1].map(offset => (
+      <span key={offset} style={{
+        width: 3, height: 4,
+        background: def.attack!.offsets.includes(offset) ? fill : 'var(--c-stone-dark)',
+        boxShadow: '0 0 0 1px var(--c-outline)',
+      }} />
+    ));
+  }
   return (
-    <div className={clsx(
-      "absolute left-0 w-full flex justify-center gap-0.5 pointer-events-none z-20",
-      isOpponent ? "bottom-0.5 sm:bottom-1" : "top-0.5 sm:top-1"
-    )}>
-      {pattern.offsets.map(offset => {
-        const Icon = ARROWS[card.owner][offset];
-        return <Icon key={offset} className={iconClass} />;
-      })}
+    <div className="px-round absolute flex items-center justify-center gap-[2px]"
+      style={{ left: 22, top: 44, width: 15, height: 10, background: 'var(--c-navy)', boxShadow: 'inset 0 0 0 1px var(--c-outline)' }}>
+      {content}
     </div>
   );
 };
 
-const CardComponent = ({ card, onClick, isSelected, className, isInHand }: CardProps) => {
-  const isJoker = card.rank === 'JOKER';
-  const isDamage = card.isTakingDamage;
-  const isVoided = card.isVoided;
-  const isOpponent = card.owner === 'opponent';
+const ValueBadge = ({ value }: { value: number }) => (
+  <div className="px-round absolute flex items-center justify-center"
+    style={{ left: 3, top: 44, width: 17, height: 10, background: 'var(--c-yellow)', boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px #FFF0A0' }}>
+    <span className="leading-[10px] pt-[1px]" style={{ color: 'var(--c-outline)' }}>{value}</span>
+  </div>
+);
 
-  // --- REVERSO (BACK) ---
-  if (!card.isFaceUp) {
-    return (
-      <motion.div
-        layoutId={card.id}
-        className={clsx(baseCardStyle, "pattern-diagonal-lines-sm text-black/20 justify-center items-center !p-0", className)}
-        style={{ backgroundColor: isOpponent ? COLORS.opponentCardBack : COLORS.player }}
-      >
-        {/* Si está en mano, pequeño. Si no, gigante */}
-        <div className={clsx(
-          "font-black text-white drop-shadow-[1px_2px_0_#000] leading-none",
-          isInHand ? "text-3xl sm:text-4xl" : "text-7xl sm:text-6xl"
-        )}>?</div>
-      </motion.div>
-    );
-  }
+// --- DORSO ---
+const CardBack = ({ owner }: { owner: Owner }) => (
+  <div className="px-round-2 absolute inset-0" style={{ background: 'var(--c-outline)' }}>
+    <div className="absolute" style={{ inset: 1, background: 'var(--c-white)', boxShadow: 'inset -1px -1px 0 0 var(--c-floor)' }} />
+    <div className="absolute" style={{
+      inset: 3, backgroundImage: patternUri('card-back', CARD_BACK_TILE, owner), backgroundSize: '8px',
+      boxShadow: 'inset 0 0 0 1px var(--c-outline)',
+    }} />
+    {/* Placa central con el emblema */}
+    <div className="absolute flex items-center justify-center" style={{
+      left: 12, top: 20, width: 16, height: 16, background: 'var(--c-white)',
+      boxShadow: 'inset 0 0 0 1px var(--c-outline), inset -1px -1px 0 1px var(--c-floor)',
+    }}>
+      <PixelSprite sprite={EMBLEMS[owner]} owner={owner} />
+    </div>
+  </div>
+);
 
-  // --- ANVERSO (FRONT) ---
-  const bgColor = isVoided ? COLORS.voided : isDamage ? COLORS.damage : isJoker ? COLORS.joker : OWNER_COLORS[card.owner];
-  const isPlainJoker = isJoker && !isDamage && !isVoided;
+// --- ANVERSO ---
+const CardFace = ({ card }: { card: CardType }) => {
+  const team = TEAM[card.owner];
+  const character = CHARACTERS[card.rank];
+  return (
+    <div className="px-round-2 absolute inset-0" style={{ background: 'var(--c-outline)' }}>
+      {/* Marco con bisel */}
+      <div className="absolute" style={{ inset: 1, background: 'var(--c-white)', boxShadow: 'inset 1px 1px 0 0 #ffffff, inset -1px -1px 0 0 var(--c-floor)' }} />
+      {/* Banda de nombre */}
+      <div className="absolute text-outline whitespace-nowrap" style={{
+        left: 2, top: 2, width: 36, height: 12, padding: '2px 0 0 3px', background: team.base,
+        boxShadow: `inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px ${team.light}`,
+      }}>
+        {card.rank}
+      </div>
+      {/* Ventana de ilustración */}
+      <div className="absolute overflow-hidden" style={{
+        left: 3, top: 15, width: 34, height: 28, backgroundImage: patternUri('window', WINDOW_TILE), backgroundSize: '4px',
+        boxShadow: 'inset 0 0 0 1px var(--c-outline)',
+      }}>
+        {character
+          ? <PixelSprite sprite={character} owner={card.owner} style={{ position: 'absolute', left: 9, top: 4 }} />
+          : <Pips value={card.value} owner={card.owner} />}
+      </div>
+      <ValueBadge value={card.value} />
+      <AttackBadge card={card} />
+    </div>
+  );
+};
 
-  const selectionStyle = isSelected
-    ? "border-yellow-400 shadow-[4px_4px_0_#000] sm:shadow-[8px_8px_0_#000] -translate-y-1 sm:-translate-y-2 -translate-x-0.5 sm:-translate-x-1"
-    : "hover:-translate-y-1 hover:shadow-[3px_3px_0_#000] sm:shadow-[6px_6px_0_#000]";
+/** Sello del atacante sobre la carta destruida (K/Q/J o el As) */
+const DamageStamp = ({ source }: { source: NonNullable<CardType['damageSource']> }) => (
+  <motion.div
+    initial={{ scale: 2.5, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ duration: 0.15, ease: steps(3) }}
+    className="absolute z-30 flex items-center justify-center text-outline"
+    style={{
+      left: 10, top: 18, width: 20, height: 20, borderRadius: '50%', background: TEAM[source.owner].base,
+      boxShadow: `inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px ${TEAM[source.owner].light}`,
+    }}
+  >
+    {source.rank}
+  </motion.div>
+);
 
-  // JOKER: mano -> text-lg, mesa -> text-4xl. NÚMERO: mano -> text-3xl, mesa -> text-7xl
-  const fontSizeClass = isJoker
-    ? (isInHand ? "text-lg sm:text-xl" : "text-4xl sm:text-2xl")
-    : (isInHand ? "text-3xl sm:text-4xl" : "text-7xl sm:text-[45px]");
+const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: CardProps) => {
+  const isDamage = !!card.isTakingDamage;
+  const isVoided = !!card.isVoided;
 
   return (
     <motion.div
-      layoutId={card.id}
       onClick={onClick}
       animate={
-        isDamage ? { rotate: [-2, 2, -2, 2, 0], scale: 1.1 } :
-        isVoided ? { scale: 0.9, rotate: 180 } : {}
+        isDamage ? { x: [0, -1, 1, -1, 0] } :
+        isVoided ? { scale: [1, 0.95, 0.9] } :
+        { x: 0, scale: 1 }
       }
-      transition={{ duration: 0.2 }}
-      className={clsx(
-        baseCardStyle,
-        isPlainJoker ? "text-black" : "text-white",
-        selectionStyle,
-        isVoided && "pattern-diagonal-lines-sm",
-        isPlainJoker && "pattern-zigzag-sm",
-        isDamage && "animate-[wiggle_0.2s_ease-in-out_infinite]",
-        className
-      )}
-      style={{ backgroundColor: bgColor }}
+      transition={{ duration: 0.2, ease: steps(4) }}
+      className={clsx('relative', onClick && 'cursor-pointer', isSelected && 'anim-pulse-outline', className)}
+      style={{
+        width: CARD_SIZE.width,
+        height: CARD_SIZE.height,
+        filter: isVoided ? 'grayscale(1) brightness(0.7)' : isDisabled ? 'saturate(0.45)' : undefined,
+      }}
     >
-      <AttackIndicators card={card} isInHand={isInHand} />
+      {/* Volteo en escalones al revelarse */}
+      <motion.div
+        key={card.isFaceUp ? 'face' : 'back'}
+        className={clsx('absolute inset-0', isDamage && 'anim-damage')}
+        initial={{ scaleX: 0.2 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.1, ease: steps(3) }}
+      >
+        {card.isFaceUp ? <CardFace card={card} /> : <CardBack owner={card.owner} />}
+      </motion.div>
 
-      <div className={clsx(
-        "font-black flex items-center justify-center h-full z-10 drop-shadow-[1px_1px_0_#000] sm:drop-shadow-[2px_2px_0_#000]",
-        isJoker && "-rotate-90 tracking-widest",
-        fontSizeClass
-      )}>
-        {card.rank}
-      </div>
-
-      {card.damageSource && (isDamage || isVoided) && (
-        <motion.div
-          initial={{ opacity: 0, scale: 3, rotate: -20 }}
-          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 15 }}
-          className="absolute inset-0 w-full h-full flex justify-center items-center z-30 pointer-events-none"
-        >
-          <div
-            className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center shadow-[1px_1px_0_rgba(0,0,0,0.5)] sm:shadow-[2px_2px_0_rgba(0,0,0,0.5)]"
-            style={{ backgroundColor: OWNER_COLORS[card.damageSource.owner] }}
-          >
-            <span className="text-2xl sm:text-3xl font-black text-white">{card.damageSource.rank}</span>
-          </div>
-        </motion.div>
-      )}
+      {isDamage && <div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(192,40,28,0.45)', boxShadow: 'inset 0 0 0 1px var(--c-red)' }} />}
+      {isVoided && <div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(46,58,92,0.5)' }} />}
+      {card.damageSource && (isDamage || isVoided) && <DamageStamp source={card.damageSource} />}
     </motion.div>
   );
 };

@@ -3,25 +3,65 @@ import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Owner } from '@/types';
+import { ACTIVE_THEME } from '@/themes';
+import { CARD_SIZE, SNAP_EASE, steps } from '@/theme/tokens';
+import { useTranslations } from '@/lib/i18n';
+import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { BURST, ICONS } from '@/components/pixel/sprites';
 import { Card } from './Card';
 
-const slotStyle = "w-full h-full aspect-[2/3] relative flex items-center justify-center rounded-md transition-all border-[2px] sm:border-[4px] border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
+const { layout } = ACTIVE_THEME;
 
-const BURST_STYLES: Record<Owner, { rotate: number; ping: string; text: string }> = {
-  opponent: { rotate: -45, ping: 'text-yellow-400', text: 'text-[#FF2222]' },
-  player: { rotate: 45, ping: 'text-black', text: 'text-[#8e0dff]' },
-};
+/** Losa encastrada en el suelo: sombra interior arriba-izquierda, brillo abajo-derecha */
+const SlotTile = ({ x, y, highlight }: { x: number; y: number; highlight: boolean }) => (
+  <div
+    className={clsx('absolute px-round', highlight && 'anim-pulse-outline')}
+    style={{
+      left: x - 1, top: y - 1, width: CARD_SIZE.width + 2, height: CARD_SIZE.height + 2,
+      background: highlight ? 'var(--c-cyan)' : 'var(--c-floor-pattern)',
+      boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 1px 1px 0 1px var(--c-stone-dark), inset -1px -1px 0 1px var(--c-white)',
+    }}
+  />
+);
 
-/** Explosión "-N" sobre un hueco vacío que ha recibido daño directo */
-const DamageBurst = ({ amount, owner }: { amount: number; owner: Owner }) => {
-  const style = BURST_STYLES[owner];
+/** Estallido "-N" sobre un hueco vacío que recibe daño directo */
+const DamageBurst = ({ amount, x, y }: { amount: number; x: number; y: number }) => (
+  <motion.div
+    initial={{ scale: 0.4, opacity: 0 }}
+    animate={{ scale: [0.4, 1.4, 1], opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.2, ease: steps(3) }}
+    className="absolute z-40 pointer-events-none flex items-center justify-center"
+    style={{ left: x + 4, top: y + 12, width: 32, height: 32 }}
+  >
+    <PixelSprite sprite={BURST} scale={2} style={{ position: 'absolute', left: 3, top: 3 }} />
+    <span className="relative text-title text-outline" style={{ color: 'var(--c-red)' }}>-{amount}</span>
+  </motion.div>
+);
+
+/** Carta en mesa con su sombra; al aparecer hace un arco corto y rebota al aterrizar */
+const PlacedCard = ({ slot, owner, x, y }: { slot: BoardSlot; owner: Owner; x: number; y: number }) => {
+  const from = owner === 'player' ? 40 : -40;
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.5, rotate: style.rotate }} animate={{ opacity: 1, scale: 1.2, rotate: 0 }} exit={{ opacity: 0, scale: 0 }} className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-      <div className="relative flex items-center justify-center">
-        <span className={clsx("absolute inset-0 text-5xl scale-125 z-0 animate-ping", style.ping)}>💥</span>
-        <span className={clsx("text-3xl font-black drop-shadow-[2px_2px_0_#000] relative z-10", style.text)} style={{ WebkitTextStroke: '1px black' }}>-{amount}</span>
-      </div>
-    </motion.div>
+    <>
+      <motion.div
+        className="absolute"
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.25, ease: steps(4) }}
+        style={{ left: x + 2, top: y + 3, width: CARD_SIZE.width, height: CARD_SIZE.height, background: 'var(--c-shadow)' }}
+      />
+      <motion.div
+        className="absolute z-10"
+        style={{ left: x, top: y }}
+        initial={{ y: from, opacity: 0 }}
+        animate={{ y: [from, from / 2 - 8, -3, 0, -1, 0], opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.1, ease: steps(2) } }}
+        transition={{ duration: 0.25, ease: 'linear' }}
+      >
+        <Card card={slot.card!} />
+      </motion.div>
+    </>
   );
 };
 
@@ -31,51 +71,68 @@ interface BoardProps {
 }
 
 export const Board = ({ selectedCardId, onSlotClick }: BoardProps) => {
-  const { playerBoard, opponentBoard, combat, isPlacementPhase } = useGameStore(useShallow(s => ({
+  const t = useTranslations();
+  const { playerBoard, opponentBoard, combat, isPlacementPhase, isFighting } = useGameStore(useShallow(s => ({
     playerBoard: s.player.board,
     opponentBoard: s.opponent.board,
     combat: s.pendingCombatResult,
     isPlacementPhase: s.phase === 'placement',
+    isFighting: s.phase === 'combat' || s.phase === 'combat-reveal',
   })));
 
   const isTargeting = !!selectedCardId && isPlacementPhase;
-  const emptySlotInteractStyle = isTargeting
-    ? "border-dashed border-[#8e0dff] bg-purple-100 animate-[wiggle_1s_ease-in-out_infinite] cursor-pointer hover:bg-purple-200"
-    : "border-dashed border-black/40 bg-black/5";
 
-  const renderRow = (board: BoardSlot[], owner: Owner) => {
+  const renderSide = (board: BoardSlot[], owner: Owner) => {
     const hits = owner === 'player' ? combat?.playerEmptySlotsHit : combat?.opponentEmptySlotsHit;
-    return (
-      <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-4 items-center justify-items-center">
-        {board.map(slot => (
-          <div key={`${owner}-${slot.index}`} className={slotStyle}>
-            <AnimatePresence mode="popLayout">
-              {slot.card ? (
-                <Card key={slot.card.id} card={slot.card} className="z-10" />
-              ) : owner === 'player' && (
-                <motion.div key="empty" onClick={() => onSlotClick(slot.index)} className={clsx("absolute inset-0 rounded-md border-[2px] sm:border-[4px] transition-all duration-300 m-0.5 sm:m-1", emptySlotInteractStyle, !isPlacementPhase && "pointer-events-none opacity-50 border-solid")}>
-                  {isTargeting && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl sm:text-4xl text-[#8e0dff] animate-bounce font-black">+</span>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {hits?.[slot.index] !== undefined && <DamageBurst amount={hits[slot.index]} owner={owner} />}
-          </div>
-        ))}
-      </div>
-    );
+    return board.map(slot => {
+      const { x, y } = layout.slots[owner][slot.index];
+      const canTarget = owner === 'player' && !slot.card && isTargeting;
+      return (
+        <div key={`${owner}-${slot.index}`}>
+          <SlotTile x={x} y={y} highlight={canTarget} />
+          {canTarget && (
+            <button
+              aria-label={`slot ${slot.index + 1}`}
+              onClick={() => onSlotClick(slot.index)}
+              className="absolute z-20 flex items-center justify-center cursor-pointer"
+              style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height }}
+            >
+              <span className="anim-bob"><PixelSprite sprite={ICONS.cursor} scale={2} /></span>
+            </button>
+          )}
+          <AnimatePresence>
+            {slot.card && <PlacedCard key={slot.card.id} slot={slot} owner={owner} x={x} y={y} />}
+          </AnimatePresence>
+          <AnimatePresence>
+            {hits?.[slot.index] !== undefined && <DamageBurst amount={hits[slot.index]} x={x} y={y} />}
+          </AnimatePresence>
+        </div>
+      );
+    });
   };
 
+  const c = layout.centerLine;
   return (
-    <section className="flex-1 flex items-center justify-center p-1 sm:p-4 overflow-hidden min-h-0 relative py-2 sm:py-8">
-      <div className="w-full max-w-lg bg-white rounded-lg border-[4px] sm:border-[6px] border-black shadow-[8px_8px_0_#000] sm:shadow-[12px_12px_0_#000] relative flex flex-col p-2 sm:p-4 shrink-0 scale-90 sm:scale-100 origin-center">
-        {renderRow(opponentBoard, 'opponent')}
-        <div className="h-2 sm:h-4 w-full my-1 sm:my-2 flex justify-center items-center relative border-t-[3px] sm:border-t-[4px] border-b-[3px] sm:border-b-[4px] border-black border-dashed bg-gray-200" />
-        {renderRow(playerBoard, 'player')}
-      </div>
-    </section>
+    <>
+      {renderSide(opponentBoard, 'opponent')}
+      {renderSide(playerBoard, 'player')}
+
+      {/* Cinta "¡PELEA!" sobre la franja central */}
+      <AnimatePresence>
+        {isFighting && (
+          <motion.div
+            className="absolute z-30 flex items-center justify-center text-title text-outline pointer-events-none"
+            style={{ left: c.x, top: c.y - 4, width: c.w, height: c.h + 8, background: 'var(--c-yellow)', color: 'var(--c-white)',
+              boxShadow: 'inset 0 0 0 1px var(--c-outline), inset 0 2px 0 0 #FFF0A0, inset 0 -2px 0 0 var(--c-yellow-dark)' }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            exit={{ scaleY: 0, transition: { duration: 0.1, ease: steps(2) } }}
+            transition={{ duration: 0.15, ease: SNAP_EASE }}
+          >
+            <span style={{ color: 'var(--c-red)' }}>{t.fight}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

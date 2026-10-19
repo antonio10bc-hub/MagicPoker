@@ -2,11 +2,13 @@ import { useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { playSound } from '@/lib/sounds';
+import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
-import { OpponentHeader } from '@/components/game/OpponentHeader';
-import { PlayerFooter } from '@/components/game/PlayerFooter';
-import { ActionButton, FloatingButtons, TurnBanner } from '@/components/game/GameControls';
+import { Hand, PlayerPanel, RivalPanel } from '@/components/game/Hud';
+import { ActionButton, MenuButtons, TurnBox } from '@/components/game/GameControls';
 import { Modals } from '@/components/modals/Modals';
+
+const { Backdrop, Diorama } = ACTIVE_THEME;
 
 export const GameScreen = () => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -28,15 +30,19 @@ export const GameScreen = () => {
     setSelectedCardId(null);
   }, [selectedCardId, placeCard]);
 
+  // Capas: fondo → diorama → cartas → interfaz → modales
   return (
-    <main className="h-svh w-full flex flex-col bg-[#F7F5E6] text-black overflow-hidden relative select-none font-comic pattern-dots-sm">
-      <Modals />
-      <FloatingButtons />
-      <ActionButton canPlay={canPlay} />
-      <TurnBanner />
-      <OpponentHeader />
+    <div className="absolute inset-0">
+      <Backdrop />
+      <Diorama />
       <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} />
-      <PlayerFooter selectedCardId={selectedCardId} canPlay={canPlay} onSelectCard={handleSelectCard} />
-    </main>
+      <RivalPanel />
+      <PlayerPanel />
+      <MenuButtons />
+      <TurnBox />
+      <ActionButton canPlay={canPlay} />
+      <Hand selectedCardId={selectedCardId} canPlay={canPlay} onSelectCard={handleSelectCard} />
+      <Modals />
+    </div>
   );
 };
