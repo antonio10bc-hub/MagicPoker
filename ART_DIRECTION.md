@@ -202,10 +202,17 @@ interacción y estados.
   visible, nunca las cartas boca abajo del rival:
   - **hueco tuyo vacío:** corazón tenue (si lo golpean pierdes una vida); con una
     carta rival justo delante, "!" rojo que late;
-  - **objetivos de tus cartas en la fila rival:** "-N" dorado en huecos vacíos (daño
-    seguro, se suma si coinciden varias cartas) o una mira (con "xN" si son varias)
-    sobre cartas boca abajo. El Príncipe cuenta como "posible" ("+" o "?") y el As
-    marca todo;
+  - **flechas de ataque** (`components/game/AttackArrows.tsx`): cada carta dibuja
+    una flecha animada (trazo que avanza, contorno oscuro, punta) hacia cada hueco
+    que golpeará. Las diagonales se curvan;
+    - tus cartas: doradas (también la vista previa al apuntar o arrastrar);
+    - el rival: rojas, solo cuando sus cartas están destapadas;
+    - el Príncipe: punteadas en cian (objetivo aleatorio);
+    - el As: onda cian que late (barre todo);
+    - tras el golpe, las flechas que hicieron daño o destruyeron una carta brillan y
+      las demás se apagan: se ve quién le hizo qué a quién;
+  - **"-N" dorado** en los huecos rivales vacíos a los que apuntas (daño seguro, se
+    suma si coinciden varias cartas);
   - **antes del golpe**, con todo destapado: ✓ en las cartas rivales que caerán y ✗
     en las tuyas.
 - **Carteles sin tapar la acción:** "¡PELEA!" dura 0,7 s y se va antes de que las

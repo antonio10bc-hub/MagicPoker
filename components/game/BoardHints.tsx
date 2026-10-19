@@ -5,16 +5,15 @@ import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE } from '@/theme/tokens';
 import { calculateCombat, getTargetIndices, RANKS } from '@/lib/game-utils';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { ALERT, CHECK, CROSS, HEART_LOST, TARGET } from '@/components/pixel/sprites';
+import { ALERT, CHECK, CROSS, HEART_LOST } from '@/components/pixel/sprites';
 
 // --- AVISOS DEL TABLERO ---
 // Ayudas visuales que se calculan SOLO con información visible (sin mirar las cartas
 // boca abajo del rival) y con las mismas reglas de lib/game-utils (solo lectura):
 //  · Tus huecos vacíos muestran un corazón tenue: si los golpean, pierdes una vida.
 //    Si hay una carta rival justo delante, el aviso se vuelve un "!" rojo que late.
-//  · Tus cartas marcan sus objetivos en la fila rival: "-N" dorado si el hueco está
-//    vacío (daño seguro al rival, sumado si varias cartas coinciden) o una mira si hay
-//    una carta boca abajo. El Príncipe (objetivo aleatorio) cuenta como "posible".
+//  · Los huecos rivales vacíos a los que apuntan tus cartas muestran "-N" dorado (daño
+//    seguro, sumado si varias coinciden). Las flechas las dibuja AttackArrows.
 //  · Al destaparse todo, justo antes del golpe: ✓ en las cartas rivales que vas a
 //    destruir y ✗ en las tuyas que van a caer.
 
@@ -124,20 +123,9 @@ export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, pre
         const b = badgeAt(p);
         const occupied = !!opponentBoard[i].card;
         const faded = aim.previewOnly ? 0.75 : 1;
-        if (aim.wipe) {
-          return <Badge key={`aim-${i}`} x={b.x} y={b.y} bg="var(--c-chip)"><span style={{ opacity: faded }}>A</span></Badge>;
-        }
-        if (occupied) {
-          return (
-            <motion.div key={`aim-${i}`} className="absolute pointer-events-none z-[25] flex items-center gap-[1px]"
-              style={{ left: p.x + CARD_SIZE.width / 2 - 5, top: p.y + CARD_SIZE.height / 2 - 5, opacity: faded }}
-              initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0, transition: { duration: 0.15 } }}
-              transition={{ type: 'spring', stiffness: 400, damping: 16 }}>
-              <PixelSprite sprite={TARGET} />
-              {hits > 1 && <span className="text-outline">x{hits}</span>}
-            </motion.div>
-          );
-        }
+        // Las flechas (AttackArrows) ya señalan cartas y el barrido del As;
+        // aquí solo queda el daño seguro en huecos vacíos
+        if (aim.wipe || occupied) return null;
         return (
           <Badge key={`aim-${i}`} x={b.x - 2} y={p.y + CARD_SIZE.height / 2 - 6} bg="var(--c-gold)" pulse>
             <span style={{ opacity: faded }}>{aim.sure > 0 ? `-${aim.sure}${aim.maybe > 0 ? '+' : ''}` : '-?'}</span>

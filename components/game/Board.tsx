@@ -19,6 +19,7 @@ import { Card } from './Card';
 import { cardOrigins } from './cardOrigins';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
+import { AttackArrows } from './AttackArrows';
 
 const { Diorama } = ACTIVE_THEME;
 
@@ -259,6 +260,7 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
         <Diorama board={geo} />
         {renderSide(opponentBoard, 'opponent')}
         {renderSide(playerBoard, 'player')}
+        <AttackArrows geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} />
         <BoardHints geo={geo} playerBoard={playerBoard} opponentBoard={opponentBoard} phase={phase} combat={combat} preview={preview} />
         <AnimatePresence>{isFighting && <FightRibbon geo={geo} />}</AnimatePresence>
         <FxLayer layer="board" />
