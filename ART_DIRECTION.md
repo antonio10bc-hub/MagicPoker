@@ -202,17 +202,21 @@ interacción y estados.
   visible, nunca las cartas boca abajo del rival:
   - **hueco tuyo vacío:** corazón tenue (si lo golpean pierdes una vida); con una
     carta rival justo delante, "!" rojo que late;
-  - **flechas de ataque** (`components/game/AttackArrows.tsx`): cada carta dibuja
-    una flecha recta, de centro a centro, hacia cada hueco que golpeará. Estilo casi
-    holograma: trazo grueso y translúcido que se enciende hacia la punta, halo difuso,
-    franjas de luz que avanzan, leve parpadeo, fusión en modo *screen* y sin contorno
-    oscuro;
-    - tus cartas: doradas (también la vista previa al apuntar o arrastrar);
-    - el rival: rojas, solo cuando sus cartas están destapadas;
-    - el Príncipe: punteadas en cian (objetivo aleatorio);
-    - el As: onda cian que late (barre todo);
-    - tras el golpe, las flechas que hicieron daño o destruyeron una carta brillan y
-      las demás se apagan: se ve quién le hizo qué a quién;
+  - **flechas de ataque** (`components/game/AttackArrows.tsx`):
+    - **forma:** cada carta dibuja una cuña translúcida (fina al salir, ancha en la
+      punta) con un leve arco hacia cada hueco que golpeará, del **color de su bando**:
+      verde tú, rojo el rival;
+    - **cruces:** cada flecha se curva siempre hacia su derecha, así que dos flechas que
+      se cruzan forman una "X" clara;
+    - **mismo hueco:** si varias apuntan al mismo, sus puntas se abren en abanico;
+    - **de frente:** si dos cartas se atacan cara a cara, solo queda la flecha de la que
+      gana; si empatan, ambas se quedan a mitad de camino y chocan con un destello;
+    - **el rival:** muestra flechas solo con las cartas destapadas;
+    - **casos especiales:** el Príncipe dibuja flechas discontinuas y tenues; el As, una
+      onda;
+    - **al resolverse la pelea:** las flechas se ven `ARROW_HOLD_S` (0,6 s) y
+      desaparecen antes de las embestidas. El choque visual se retrasa ese tiempo, pero
+      la lógica no cambia;
   - **"-N" dorado** en los huecos rivales vacíos a los que apuntas (daño seguro, se
     suma si coinciden varias cartas);
   - **antes del golpe**, con todo destapado: ✓ en las cartas rivales que caerán y ✗

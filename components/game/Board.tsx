@@ -15,7 +15,7 @@ import { ICONS } from '@/components/pixel/sprites';
 import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
-import { Card } from './Card';
+import { ARROW_HOLD_S, Card } from './Card';
 import { cardOrigins } from './cardOrigins';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
@@ -111,7 +111,7 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge }: PlacedCardProps) => {
           ? { x: [0, -lunge.dx * 0.15, lunge.dx, 0], y: [0, -lunge.dy * 0.2, lunge.dy, 0], rotateZ: [0, -2, 4, 0] }
           : { scaleY: [1, 1, 0.82, 1.06, 1], scaleX: [1, 1, 1.12, 0.97, 1] }}
         transition={lunge
-          ? { duration: 0.4, times: [0, 0.3, 0.55, 1], ease: 'easeInOut' }
+          ? { duration: 0.4, times: [0, 0.3, 0.55, 1], ease: 'easeInOut', delay: ARROW_HOLD_S }
           : { duration: 0.62, times: [0, 0.66, 0.76, 0.88, 1] }}
       >
         {/* Flotación suave en la mesa (se detiene durante el combate) */}

@@ -163,8 +163,13 @@ const DamageStamp = ({ source }: { source: NonNullable<CardType['damageSource']>
   </motion.div>
 );
 
-/** Retraso del daño: primero llega la embestida del atacante, luego el golpe */
-export const IMPACT_DELAY_S = 0.22;
+/**
+ * Coreografía visual del choque (no afecta a la lógica, que ya está resuelta):
+ * las flechas de ataque se ven un momento (ARROW_HOLD_S), luego las cartas embisten
+ * y el golpe llega IMPACT_DELAY_S después de publicarse el resultado.
+ */
+export const ARROW_HOLD_S = 0.6;
+export const IMPACT_DELAY_S = ARROW_HOLD_S + 0.22;
 
 const faceStyle = { backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as const;
 

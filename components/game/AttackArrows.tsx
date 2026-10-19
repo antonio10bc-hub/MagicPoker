@@ -1,21 +1,26 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BoardSlot, Card as CardType, CombatResult, GamePhase, Owner } from '@/types';
 import { BoardGeometry } from '@/theme/layout';
-import { CARD_SIZE } from '@/theme/tokens';
+import { CARD_SIZE, TEAM } from '@/theme/tokens';
 import { getTargetIndices, RANKS } from '@/lib/game-utils';
 import { useStage } from '@/components/pixel/Stage';
+import { ARROW_HOLD_S } from './Card';
 
 // --- FLECHAS DE ATAQUE ---
-// Cada carta dibuja una flecha animada hacia cada hueco que golpeará:
-//  · Estilo casi holograma: gruesas, translúcidas, con halo y franjas de luz.
-//  · Salen del centro de la carta y van en línea recta al centro del hueco objetivo,
-//    para que las diagonales (Reina, Rey, Príncipe) se lean sin ambigüedad.
-//  · Tus cartas: doradas (durante la colocación y la pelea; también la vista previa).
-//  · Cartas del rival: rojas, SOLO cuando están destapadas (al empezar la pelea).
-//  · Príncipe (objetivo aleatorio): cian más tenue, "puede ir a cualquiera".
-//  · Tras el golpe, las flechas que hicieron daño o destruyeron una carta brillan y
-//    las demás se apagan: así se ve quién le hizo qué a quién.
+// Cada carta dibuja una flecha hacia cada hueco que golpeará, del color de su bando
+// (verde tú, rojo el rival). Forma de cuña: fina al salir y ancha en la punta, con un
+// leve arco; translúcida para no tapar el tablero.
+//
+// Lectura de la pelea:
+//  · Dos cartas que se atacan de frente: si una gana, solo queda su flecha; si
+//    empatan, las dos se quedan a mitad de camino y chocan con un destello.
+//  · Varias flechas al mismo hueco abren sus puntas en abanico.
+//  · Cada flecha se curva siempre hacia su derecha: dos flechas que se cruzan dibujan
+//    una "X" clara en lugar de solaparse.
+//  · El rival solo muestra flechas con las cartas destapadas. Al resolverse la pelea
+//    se ven ARROW_HOLD_S segundos y desaparecen: las cartas embisten sin ruido.
+//  · Príncipe (objetivo aleatorio): flechas más tenues y discontinuas.
 //  · El As no dibuja flechas: una onda alrededor indica que barre todo el tablero.
 // Solo lee el estado y las reglas (lib/game-utils); no cambia nada de la partida.
 
@@ -26,13 +31,9 @@ interface Arrow {
   to: { x: number; y: number };
   maybe: boolean;
   preview: boolean;
-  /** null = aún no se sabe; true/false = tras el golpe, si hizo efecto */
-  effective: boolean | null;
+  /** Empate de frente: la flecha se queda a mitad de camino */
+  clash: boolean;
 }
-
-/** Tonos holográficos: claros y algo translúcidos para no tapar las cartas */
-const COLOR: Record<Owner, string> = { player: '#FFD96A', opponent: '#FF6B66' };
-const MAYBE_COLOR = '#8FE3FF';
 
 interface AttackArrowsProps {
   geo: BoardGeometry;
@@ -43,14 +44,23 @@ interface AttackArrowsProps {
   preview: { card: CardType; slotIndex: number } | null;
 }
 
-const buildArrows = ({ geo, playerBoard, opponentBoard, phase, combat, preview }: AttackArrowsProps): { arrows: Arrow[]; wipers: { x: number; y: number; owner: Owner }[] } => {
-  const arrows: Arrow[] = [];
-  const wipers: { x: number; y: number; owner: Owner }[] = [];
-  const fighting = phase === 'combat' || phase === 'combat-reveal';
-  if (phase !== 'placement' && !fighting) return { arrows, wipers };
+/** ¿Siguen visibles las flechas? Hasta ARROW_HOLD_S después de resolverse la pelea */
+export const useArrowsVisible = (combat: CombatResult | null) => {
+  const [expired, setExpired] = useState<CombatResult | null>(null);
+  useEffect(() => {
+    if (!combat) return;
+    const t = setTimeout(() => setExpired(combat), ARROW_HOLD_S * 1000);
+    return () => clearTimeout(t);
+  }, [combat]);
+  return !combat || expired !== combat;
+};
 
-  const boards: Record<Owner, BoardSlot[]> = { player: playerBoard, opponent: opponentBoard };
-  const dead = new Set(combat?.deadCardIds ?? []);
+interface Attack { card: CardType; index: number; owner: Owner; target: number; maybe: boolean; preview: boolean }
+
+const buildArrows = ({ geo, playerBoard, opponentBoard, phase, preview }: AttackArrowsProps) => {
+  const wipers: { x: number; y: number; owner: Owner }[] = [];
+  const attacks: Attack[] = [];
+  if (phase !== 'placement' && phase !== 'combat' && phase !== 'combat-reveal') return { arrows: [], wipers, clashes: [] };
 
   const attackers: { card: CardType; index: number; owner: Owner; preview: boolean }[] = [];
   playerBoard.forEach(s => s.card && attackers.push({ card: s.card, index: s.index, owner: 'player', preview: false }));
@@ -66,95 +76,145 @@ const buildArrows = ({ geo, playerBoard, opponentBoard, phase, combat, preview }
       return;
     }
     if (!def.attack) return;
-    const enemy: Owner = owner === 'player' ? 'opponent' : 'player';
-    const targets = getTargetIndices(index, card.rank);
-    targets.forEach(t => {
-      const q = geo.slots[enemy][t];
-      const targetCard = boards[enemy][t].card;
-      // De centro a centro y en línea recta: así las diagonales (Reina, Rey, Príncipe)
-      // se leen sin ambigüedad. Salen del borde que mira al rival.
-      const from = { x: p.x + CARD_SIZE.width / 2, y: owner === 'player' ? p.y + 10 : p.y + CARD_SIZE.height - 10 };
-      const to = { x: q.x + CARD_SIZE.width / 2, y: q.y + CARD_SIZE.height / 2 };
-
-      let effective: boolean | null = null;
-      if (combat && phase === 'combat-reveal') {
-        const hits = owner === 'player' ? combat.opponentEmptySlotsHit : combat.playerEmptySlotsHit;
-        effective = targetCard ? dead.has(targetCard.id) && card.value >= targetCard.value : (hits[t] ?? 0) > 0;
-      }
-      arrows.push({ key: `${card.id}-${t}`, owner, from, to, maybe: def.attack!.mode === 'random-one', preview: isPreview, effective });
-    });
+    getTargetIndices(index, card.rank).forEach(target =>
+      attacks.push({ card, index, owner, target, maybe: def.attack!.mode === 'random-one', preview: isPreview }));
   });
-  return { arrows, wipers };
-};
 
-/** Línea recta que termina en la base de la punta, y punta orientada hacia el objetivo */
-const geometry = (a: Arrow) => {
-  const dx = a.to.x - a.from.x;
-  const dy = a.to.y - a.from.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  const head = 9;
-  const base = { x: a.to.x - ux * head, y: a.to.y - uy * head };
-  const left = { x: base.x - uy * 6, y: base.y + ux * 6 };
-  const right = { x: base.x + uy * 6, y: base.y - ux * 6 };
-  return {
-    d: `M ${a.from.x} ${a.from.y} L ${base.x} ${base.y}`,
-    head: `${a.to.x},${a.to.y} ${left.x},${left.y} ${right.x},${right.y}`,
-  };
+  // Enfrentamientos de frente: A ataca el hueco de B y B ataca el de A
+  const hidden = new Set<Attack>();
+  const clashing = new Set<Attack>();
+  attacks.forEach(a => {
+    const rival = attacks.find(b => b.owner !== a.owner && b.index === a.target && b.target === a.index && !b.maybe && !a.maybe);
+    if (!rival) return;
+    if (a.card.value < rival.card.value) hidden.add(a);
+    else if (a.card.value === rival.card.value) clashing.add(a);
+  });
+
+  // Varias flechas al mismo hueco: abrimos las puntas en abanico
+  const visible = attacks.filter(a => !hidden.has(a));
+  const byTarget = new Map<string, Attack[]>();
+  visible.forEach(a => {
+    const k = `${a.owner}-${a.target}`;
+    byTarget.set(k, [...(byTarget.get(k) ?? []), a]);
+  });
+
+  const clashes: { x: number; y: number }[] = [];
+  const arrows: Arrow[] = visible.map(a => {
+    const enemy: Owner = a.owner === 'player' ? 'opponent' : 'player';
+    const p = geo.slots[a.owner][a.index];
+    const q = geo.slots[enemy][a.target];
+    const group = byTarget.get(`${a.owner}-${a.target}`)!.sort((m, n) => m.index - n.index);
+    const spread = group.length > 1 ? (group.indexOf(a) - (group.length - 1) / 2) * 9 : 0;
+    const from = { x: p.x + CARD_SIZE.width / 2, y: a.owner === 'player' ? p.y + 14 : p.y + CARD_SIZE.height - 14 };
+    let to = { x: q.x + CARD_SIZE.width / 2 + spread, y: q.y + CARD_SIZE.height / 2 };
+    const clash = clashing.has(a);
+    if (clash) {
+      to = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 + (a.owner === 'player' ? 4 : -4) };
+      if (a.owner === 'player') clashes.push({ x: to.x, y: to.y - 4 });
+    }
+    return { key: `${a.card.id}-${a.target}`, owner: a.owner, from, to, maybe: a.maybe, preview: a.preview, clash };
+  });
+  return { arrows, wipers, clashes };
 };
 
 /**
- * Flecha "casi holograma": trazo grueso y translúcido que se enciende hacia la punta,
- * halo difuso, franjas de luz que avanzan y un leve parpadeo. Sin contorno oscuro.
+ * Cuña con arco: curva cuadrática que siempre se dobla a la derecha de su dirección,
+ * con grosor creciente (2 → 10 px) y una punta ancha al final.
  */
+const wedge = (a: Arrow) => {
+  const dx = a.to.x - a.from.x;
+  const dy = a.to.y - a.from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len; // normal (derecha de la dirección)
+  const ny = dx / len;
+  const bend = Math.min(10, len * 0.18);
+  const c = { x: (a.from.x + a.to.x) / 2 + nx * bend, y: (a.from.y + a.to.y) / 2 + ny * bend };
+  const head = Math.min(13, len * 0.42);
+
+  // Punto y tangente de la curva en t
+  const at = (t: number) => {
+    const u = 1 - t;
+    return {
+      x: u * u * a.from.x + 2 * u * t * c.x + t * t * a.to.x,
+      y: u * u * a.from.y + 2 * u * t * c.y + t * t * a.to.y,
+      tx: 2 * u * (c.x - a.from.x) + 2 * t * (a.to.x - c.x),
+      ty: 2 * u * (c.y - a.from.y) + 2 * t * (a.to.y - c.y),
+    };
+  };
+  // La punta empieza donde quedan `head` px hasta el final (aprox. por longitud)
+  const tHead = Math.max(0.5, 1 - head / len);
+  const left: string[] = [];
+  const right: string[] = [];
+  const STEPS = 10;
+  for (let i = 0; i <= STEPS; i++) {
+    const t = (i / STEPS) * tHead;
+    const pt = at(t);
+    const tl = Math.hypot(pt.tx, pt.ty) || 1;
+    const w = 1 + 3.8 * (t / tHead); // medio grosor: fino → ancho
+    left.push(`${pt.x + (-pt.ty / tl) * w},${pt.y + (pt.tx / tl) * w}`);
+    right.unshift(`${pt.x - (-pt.ty / tl) * w},${pt.y - (pt.tx / tl) * w}`);
+  }
+  const base = at(tHead);
+  const bl = Math.hypot(base.tx, base.ty) || 1;
+  const hw = 9; // medio ancho de la punta
+  const headL = `${base.x + (-base.ty / bl) * hw},${base.y + (base.tx / bl) * hw}`;
+  const headR = `${base.x - (-base.ty / bl) * hw},${base.y - (base.tx / bl) * hw}`;
+  return `M ${left.join(' L ')} L ${headL} L ${a.to.x},${a.to.y} L ${headR} L ${right.join(' L ')} Z`;
+};
+
 const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
-  const { d, head } = geometry(a);
-  const color = a.maybe ? MAYBE_COLOR : COLOR[a.owner];
+  const team = TEAM[a.owner];
+  const d = wedge(a);
   const gradId = `arrow-grad-${a.key}`;
-  const base = a.effective === false ? 0.14 : a.effective === true ? 0.95 : a.preview ? 0.5 : a.maybe ? 0.5 : 0.7;
+  const peak = a.preview ? 0.5 : a.maybe ? 0.45 : 0.72;
   return (
     <motion.g
       initial={{ opacity: 0 }}
-      animate={{ opacity: [base * 0.85, base, base * 0.9] }}
-      exit={{ opacity: 0, transition: { duration: 0.15 } }}
-      transition={{ duration: 1.6, repeat: Infinity, repeatType: 'mirror', delay: index * 0.04 }}
-      style={{ mixBlendMode: 'screen' }}
+      animate={{ opacity: [peak * 0.8, peak, peak * 0.8] }}
+      exit={{ opacity: 0, transition: { duration: 0.2 } }}
+      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: index * 0.05 }}
     >
       <defs>
         <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y}>
-          <stop offset="0" stopColor={color} stopOpacity={0.05} />
-          <stop offset="0.5" stopColor={color} stopOpacity={0.55} />
-          <stop offset="1" stopColor={color} stopOpacity={0.95} />
+          <stop offset="0" stopColor={team.light} stopOpacity={0.2} />
+          <stop offset="0.6" stopColor={team.light} stopOpacity={0.65} />
+          <stop offset="1" stopColor={team.light} stopOpacity={1} />
         </linearGradient>
       </defs>
-      {/* Halo difuso */}
-      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={9} strokeLinecap="round" filter="url(#arrow-glow)" opacity={0.6} />
-      {/* Cuerpo grueso translúcido */}
-      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={a.effective ? 6 : 5} strokeLinecap="round" />
-      {/* Franjas de luz que avanzan hacia el objetivo */}
-      <path d={d} fill="none" stroke="#ffffff" strokeOpacity={0.55} strokeWidth={a.maybe ? 1.5 : 2} strokeLinecap="round"
-        strokeDasharray={a.maybe ? '1 6' : '2 7'} className="arrow-march" />
-      <polygon points={head} fill={color} fillOpacity={0.85} stroke="#ffffff" strokeOpacity={0.7} strokeWidth={1} strokeLinejoin="round" filter="url(#arrow-glow)" />
+      {/* Halo suave del color del bando */}
+      <path d={d} fill={team.base} opacity={0.35} filter="url(#arrow-glow)" />
+      {/* Cuerpo translúcido con borde fino del tono oscuro del bando */}
+      <path d={d} fill={`url(#${gradId})`} stroke={team.dark} strokeOpacity={0.6} strokeWidth={0.8} strokeLinejoin="round"
+        strokeDasharray={a.maybe ? '3 3' : undefined} />
     </motion.g>
   );
 };
 
 export const AttackArrows = (props: AttackArrowsProps) => {
   const { width, height } = useStage();
-  const { arrows, wipers } = useMemo(() => buildArrows(props), [props]);
+  const visible = useArrowsVisible(props.combat);
+  const { arrows, wipers, clashes } = useMemo(() => buildArrows(props), [props]);
 
   return (
     <svg className="absolute left-0 top-0 pointer-events-none z-[12]" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
       <defs>
         <filter id="arrow-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="1.6" />
+          <feGaussianBlur stdDeviation="2" />
         </filter>
       </defs>
       <AnimatePresence>
-        {arrows.map((a, i) => <ArrowView key={a.key} a={a} index={i} />)}
+        {visible && arrows.map((a, i) => <ArrowView key={a.key} a={a} index={i} />)}
+        {/* Empate de frente: destello donde chocan las dos flechas */}
+        {visible && clashes.map(c => (
+          <motion.g key={`clash-${c.x}-${c.y}`} initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 1.25, 1], opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }} transition={{ duration: 0.8, repeat: Infinity }}
+            style={{ transformOrigin: `${c.x}px ${c.y}px` }}>
+            <path d={`M ${c.x} ${c.y - 6} L ${c.x + 2} ${c.y - 2} L ${c.x + 6} ${c.y} L ${c.x + 2} ${c.y + 2} L ${c.x} ${c.y + 6} L ${c.x - 2} ${c.y + 2} L ${c.x - 6} ${c.y} L ${c.x - 2} ${c.y - 2} Z`}
+              fill="var(--c-yellow)" stroke="var(--c-outline)" strokeWidth={0.8} />
+          </motion.g>
+        ))}
         {/* El As: onda que late alrededor (barre todo el tablero) */}
-        {wipers.map(w => (
+        {visible && wipers.map(w => (
           <motion.circle
             key={`wipe-${w.x}-${w.y}`}
             cx={w.x}

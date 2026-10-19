@@ -6,7 +6,7 @@ import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
 import { JOKER_DRAW_BONUS, TIMINGS } from '@/lib/constants';
 import { duckMusic, playSfx, vibrate } from '@/lib/sounds';
 import { fx } from '@/components/fx/fxStore';
-import { IMPACT_DELAY_S } from './Card';
+import { ARROW_HOLD_S, IMPACT_DELAY_S } from './Card';
 
 // --- DIRECTOR DE COMBATE ---
 // No dibuja nada: escucha los estados que ya publica la lógica (fase y resultado del
@@ -14,6 +14,7 @@ import { IMPACT_DELAY_S } from './Card';
 // eventos de juego.
 
 const IMPACT_MS = IMPACT_DELAY_S * 1000;
+const HOLD_MS = ARROW_HOLD_S * 1000;
 
 type Located = { slot: BoardSlot; owner: Owner; x: number; y: number };
 
@@ -62,8 +63,8 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     // El As: onda expansiva que barre el tablero
     if (combat.voidedCardIds.length > 0) {
       const ace = cards.find(l => l.slot.card?.rank === 'A') ?? cards[0];
-      playSfx('wipe');
-      later(250, () => {
+      later(HOLD_MS, () => playSfx('wipe'));
+      later(HOLD_MS + 250, () => {
         fx.flash(0.9);
         fx.shake(4);
         fx.punch(0.07);
@@ -80,7 +81,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     }
 
     const attackers = cards.filter(l => l.slot.card && l.slot.card.rank !== 'JOKER');
-    if (attackers.length > 0) playSfx('swing');
+    if (attackers.length > 0) later(HOLD_MS, () => playSfx('swing'));
 
     later(IMPACT_MS, () => {
       const dead = new Set(combat.deadCardIds);

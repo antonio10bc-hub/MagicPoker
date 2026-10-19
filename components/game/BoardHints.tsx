@@ -6,6 +6,7 @@ import { CARD_SIZE } from '@/theme/tokens';
 import { calculateCombat, getTargetIndices, RANKS } from '@/lib/game-utils';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
 import { ALERT, CHECK, CROSS, HEART_LOST } from '@/components/pixel/sprites';
+import { useArrowsVisible } from './AttackArrows';
 
 // --- AVISOS DEL TABLERO ---
 // Ayudas visuales que se calculan SOLO con información visible (sin mirar las cartas
@@ -80,9 +81,12 @@ export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, pre
 
   // Predicción justo antes del golpe (cartas ya destapadas, resultado aún no llegado).
   // El Príncipe elige al azar: se usa su objetivo central solo para avisar.
+  // Con el resultado ya publicado se usa el real mientras las flechas siguen visibles
+  const arrowsVisible = useArrowsVisible(combat);
   const prediction = useMemo(
-    () => (phase === 'combat' && opponentRevealed && !combat ? calculateCombat(playerBoard, opponentBoard, () => 0.5) : null),
-    [phase, opponentRevealed, combat, playerBoard, opponentBoard]
+    () => (phase === 'combat' && opponentRevealed && !combat ? calculateCombat(playerBoard, opponentBoard, () => 0.5)
+      : combat && arrowsVisible ? combat : null),
+    [phase, opponentRevealed, combat, arrowsVisible, playerBoard, opponentBoard]
   );
 
   const badgeAt = (p: { x: number; y: number }) => ({ x: p.x + CARD_SIZE.width - 10, y: p.y - 5 });
