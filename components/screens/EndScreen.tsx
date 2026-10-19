@@ -37,7 +37,7 @@ const Confetti = () => {
         <motion.div
           key={i}
           className="absolute pointer-events-none z-[5]"
-          style={{ left: Math.floor(c.fx * width), top: -4, width: c.size, height: c.size, background: c.color, borderRadius: '50%', filter: 'blur(0.4px)', boxShadow: `0 0 3px ${c.color}` }}
+          style={{ left: Math.floor(c.fx * width), top: -4, width: c.size, height: c.size, background: c.color, borderRadius: '50%', boxShadow: `0 0 3px ${c.color}` }}
           animate={{ y: [0, height + 8], x: [0, 6, -6, 4, 0], rotate: [0, 360 * (i % 2 ? 1 : -1)] }}
           transition={{ duration: c.duration, delay: c.delay, repeat: 2, ease: 'linear' }}
         />
@@ -51,12 +51,15 @@ const Rays = ({ x, y }: { x: number; y: number }) => (
   <motion.div
     className="absolute pointer-events-none z-[5] rounded-full"
     style={{ left: x - 160, top: y - 160, width: 320, height: 320,
-      background: 'repeating-conic-gradient(rgba(255, 74, 28, 0.28) 0deg 12deg, transparent 12deg 30deg)', filter: 'blur(3px)',
       maskImage: 'radial-gradient(circle, black 30%, transparent 70%)', WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)' }}
     initial={{ scale: 0, opacity: 0 }}
-    animate={{ scale: 1, opacity: 1, rotate: 360 }}
-    transition={{ scale: { type: 'spring', stiffness: 120, damping: 14, delay: 0.3 }, opacity: { duration: 0.4 }, rotate: { duration: 20, repeat: Infinity, ease: 'linear' } }}
-  />
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ scale: { type: 'spring', stiffness: 120, damping: 14, delay: 0.3 }, opacity: { duration: 0.4 } }}
+  >
+    {/* Giro continuo en CSS (compositor) */}
+    <div className="absolute inset-0 rounded-full anim-spin"
+      style={{ background: 'repeating-conic-gradient(rgba(255, 74, 28, 0.22) 0deg 12deg, transparent 12deg 30deg)' }} />
+  </motion.div>
 );
 
 /** Título que aparece letra a letra con rebote */

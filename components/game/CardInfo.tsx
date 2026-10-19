@@ -54,7 +54,7 @@ export const CardInfo = ({ cardId }: { cardId: string | null }) => {
           {CHARACTERS[card.rank] && <PixelSprite sprite={CHARACTERS[card.rank]!} tint={INK.cream} className="shrink-0 bloom-cream" />}
           <div className="flex flex-col gap-[3px] leading-[11px] min-w-0">
             <div className="flex items-center gap-[5px]">
-              <span className="text-title text-outline bloom" style={{ color: 'var(--ink-orange)' }}>{card.rank}</span>
+              <span className="text-title text-outline glow-text" style={{ color: 'var(--ink-orange)' }}>{card.rank}</span>
               <span style={{ color: 'var(--c-ui-muted)' }}>{t.card_value} {card.value}</span>
               <AttackDiagram rank={card.rank} />
             </div>

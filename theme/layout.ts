@@ -21,73 +21,75 @@ export interface StageSize {
 export interface Rect { x: number; y: number; w: number; h: number }
 export interface Point { x: number; y: number }
 
-// --- GEOMETRÍA DEL TABLERO (diorama) ---
+// --- GEOMETRÍA DEL TABLERO (tapete) ---
 
 export interface BoardGeometry {
-  /** Caja completa: cara superior + cara frontal */
+  /** Caja completa: cara superior + canto frontal */
   diorama: Rect;
-  /** Altura de la cara frontal (sillares) */
+  /** Altura del canto frontal */
   faceHeight: number;
   rim: number;
   /** Esquina superior izquierda de cada hueco, por bando, en orden de índice lógico */
   slots: Record<Owner, Point[]>;
-  /** Franja decorativa entre bandos */
+  /** Línea central entre bandos */
   strip: Rect;
   /** Zona donde aparece "¡PELEA!" */
   centerLine: Rect;
-  railing: Rect;
 }
 
-export const DIORAMA_HEIGHT = 184;
-/** Diorama compacto (móvil vertical): menos márgenes, misma escala de cartas */
-export const DIORAMA_HEIGHT_COMPACT = 164;
-/** Lo que sobresalen farolas y banderolas por encima del diorama */
-export const DIORAMA_OVERHANG = 20;
-/** Sombra proyectada bajo el diorama */
+/** Lo que sobresale por encima del tapete (solo el halo del borde) */
+export const DIORAMA_OVERHANG = 4;
+/** Sombra proyectada bajo el tapete */
 export const DIORAMA_SHADOW = 6;
 
 const RIM = 4;
-/** Sin hueco lateral, las banderolas del jugador se plantan delante de la última fila:
- *  la barandilla baja lo justo para que las cartas no las tapen */
-const BANNER_CLEAR = 12;
 
-/** Margen lateral reservado a las banderolas (0 en pantallas estrechas) */
-const sideRoomFor = (w: number) => (w >= 210 ? 14 : 0);
+const metrics = (compact: boolean) => ({
+  /** Del borde del tapete a la fila de cartas (arriba y abajo) */
+  edge: compact ? 9 : 10,
+  /** Hueco mínimo entre las dos filas (incluye la línea central) */
+  center: compact ? 16 : 20,
+  stripH: compact ? 4 : 6,
+  face: compact ? 6 : 8,
+});
 
-/** Altura mínima del diorama para un ancho dado */
-export const boardMinHeight = (w: number, compact = false) =>
-  (compact ? DIORAMA_HEIGHT_COMPACT : DIORAMA_HEIGHT) + (sideRoomFor(w) ? 0 : BANNER_CLEAR - (compact ? 4 : 6));
+/** Altura mínima del tapete */
+export const boardMinHeight = (compact = false) => {
+  const m = metrics(compact);
+  return 2 * m.edge + 2 * CARD_SIZE.height + m.center + m.face;
+};
+
+/** Lo máximo que crece el centro entre filas: más allá, el espacio va a los bordes */
+const CENTER_GROW_MAX = 30;
 
 /**
- * Geometría del diorama. Con `height` mayor que el mínimo, el espacio sobrante ensancha
- * el centro (entre las dos filas): ahí aparecen los carteles sin tapar ninguna carta.
+ * Geometría del tapete. Con `height` mayor que el mínimo, el espacio sobrante ensancha
+ * primero el centro (entre las dos filas, donde pasan los carteles sin tapar cartas)
+ * y luego los bordes, así el tapete crece sin descolocar nada.
  */
 export const computeBoard = (x: number, y: number, w: number, compact = false, height?: number): BoardGeometry => {
-  // En pantallas estrechas las banderolas se superponen al borde para dejar sitio a las cartas
-  const sideRoom = sideRoomFor(w);
-  const gap = Math.max(2, Math.min(12, Math.floor((w - 2 * RIM - 2 * sideRoom - 4 * CARD_SIZE.width) / 3)));
+  const m = metrics(compact);
+  const gap = Math.max(2, Math.min(12, Math.floor((w - 2 * RIM - 4 - 4 * CARD_SIZE.width) / 3)));
   const rowW = 4 * CARD_SIZE.width + 3 * gap;
   const x0 = x + Math.floor((w - rowW) / 2);
-  const minH = boardMinHeight(w, compact);
+  const minH = boardMinHeight(compact);
   const h = Math.max(minH, Math.round(height ?? minH));
-  const pad = compact ? 4 : 6;
-  const centerPad = pad + Math.floor((h - minH) / 2);
-  const railPad = sideRoom ? pad : BANNER_CLEAR;
-  const rivalY = y + (compact ? 7 : 10);
-  const stripH = compact ? 6 : 8;
-  const stripY = rivalY + CARD_SIZE.height + centerPad;
-  const playerY = stripY + stripH + centerPad + ((h - minH) % 2);
-  const railY = playerY + CARD_SIZE.height + railPad;
+  const extra = h - minH;
+  const centerExtra = Math.min(CENTER_GROW_MAX, Math.round(extra * 0.6));
+  const edgeExtra = Math.floor((extra - centerExtra) / 2);
+  const center = m.center + centerExtra;
+  const rivalY = y + m.edge + edgeExtra;
+  const playerY = rivalY + CARD_SIZE.height + center;
+  const stripY = rivalY + CARD_SIZE.height + Math.round((center - m.stripH) / 2);
   const row = (rowY: number) => [0, 1, 2, 3].map(i => ({ x: x0 + i * (CARD_SIZE.width + gap), y: rowY }));
 
   return {
     diorama: { x, y, w, h },
-    faceHeight: compact ? 10 : 14,
+    faceHeight: m.face,
     rim: RIM,
     slots: { opponent: row(rivalY), player: row(playerY) },
-    strip: { x: x + RIM, y: stripY, w: w - 2 * RIM, h: stripH },
-    centerLine: { x: x + RIM, y: stripY - 2, w: w - 2 * RIM, h: stripH + 4 },
-    railing: { x: x + RIM, y: railY, w: w - 2 * RIM, h: compact ? 10 : 13 },
+    strip: { x: x + RIM + 6, y: stripY, w: w - 2 * RIM - 12, h: m.stripH },
+    centerLine: { x: x + RIM, y: stripY - 4, w: w - 2 * RIM, h: m.stripH + 8 },
   };
 };
 
@@ -108,14 +110,14 @@ export interface GameLayout {
 }
 
 const M = 4; // margen
-/** Lo máximo que crece el centro del tablero en móviles altos */
-const BOARD_GROW_MAX = 40;
+/** Lo máximo que crece el tapete en móviles altos */
+const BOARD_GROW_MAX = 80;
 
 export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): GameLayout => {
   if (mode === 'landscape') {
     return {
       mode,
-      board: computeBoard(70, 24, 240),
+      board: computeBoard(70, 12, 240, false, 196),
       rivalPanel: { x: M, y: M, w: 62, h: 62 },
       playerPanel: { x: M, y: 230, w: 62, h: 54 },
       menuButtons: { x: M, y: 70 },
@@ -131,7 +133,7 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
   // farolas y banderolas, el cuadro de turno y los botones de menú. El tablero se centra.
   // En móviles altos la mano se dibuja a ×1,5 (sigue cayendo en píxeles enteros) si cabe
   const boardW = W - 2 * M;
-  const boardMin = boardMinHeight(boardW, true);
+  const boardMin = boardMinHeight(true);
   const top = M + 28 + DIORAMA_OVERHANG + 2;
   const handScale = H - M - 1.5 * CARD_SIZE.height - 10 - 28 - 6 - top >= boardMin + DIORAMA_SHADOW ? 1.5 : 1;
   const handY = H - M - Math.round(CARD_SIZE.height * handScale);
@@ -175,17 +177,17 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
   if (mode === 'landscape') {
     return { board: computeBoard(70, 24, 240), cx: W / 2, logoY: 34, playY: 126, difficultyY: 176, panelW: 180 };
   }
-  // Vertical: logo arriba, plaza en el centro con el botón JUGAR, dificultad debajo
+  // Vertical: logo arriba, tapete en el centro con el botón JUGAR, dificultad debajo
   const PANEL_H = 44;
-  const boardH = boardMinHeight(W - 2 * M, true);
+  const boardH = boardMinHeight(true) + 16;
   const block = LOGO_HEIGHT + DIORAMA_OVERHANG + boardH + DIORAMA_SHADOW + 10 + PANEL_H;
   const top = Math.max(M, Math.floor((H - block) / 2));
   const boardY = top + LOGO_HEIGHT + DIORAMA_OVERHANG;
   return {
-    board: computeBoard(M, boardY, W - 2 * M, true),
+    board: computeBoard(M, boardY, W - 2 * M, true, boardH),
     cx: Math.floor(W / 2),
     logoY: top,
-    playY: boardY + 92,
+    playY: boardY + Math.round(boardH / 2) - 14,
     difficultyY: boardY + boardH + DIORAMA_SHADOW + 10,
     panelW: Math.min(180, W - 16),
   };

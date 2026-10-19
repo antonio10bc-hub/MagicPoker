@@ -2,17 +2,21 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { useStage } from '@/components/pixel/Stage';
 
-// --- FONDO: LADERA NOCTURNA CON NIEBLA ---
-// Cielo negro como espacio negativo, una ladera inclinada de grano frío y una banda de
-// niebla crema que se arrastra a ras de suelo. Todo se pinta con tramado estocástico:
-// cada píxel elige una tinta según su luminancia más un umbral aleatorio, así los
-// degradados son densidad de puntos, nunca rampas limpias. El mapa de umbrales se
-// renueva poco a poco (boil lento) en lugar de parpadear.
-// En la pelea la niebla se calienta: aparecen brasas naranjas con transición musgo.
+// --- FONDO: NOCHE CON NIEBLA ---
+// Negro como espacio negativo y una banda de niebla crema que se arrastra despacio
+// detrás del tablero. Todo se pinta con tramado estocástico: cada píxel elige una
+// tinta según su luminancia más un umbral aleatorio, así los degradados son densidad
+// de puntos, nunca rampas limpias. El mapa de umbrales se renueva poco a poco (boil
+// lento) en lugar de parpadear. En la pelea la niebla se calienta en naranja.
+//
+// Rendimiento: se calcula a media resolución interna, a 8 fps, y todo lo que no se
+// mueve (forma de la banda, variación del suelo) se precalcula una sola vez. Por
+// fotograma solo quedan sumas y una tabla de senos.
 
-const FPS = 10;
+const DOWNSCALE = 2;
+const FPS = 8;
 /** Fracción de umbrales que se renueva en cada fotograma */
-const BOIL = 0.12;
+const BOIL = 0.1;
 
 type RGB = [number, number, number];
 const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -21,6 +25,10 @@ const RAMP: RGB[] = ['#0B0D0C', '#1E2A28', '#5E7A76', '#B9CFC8', '#EDEBE0'].map(
 const ORANGE = hex('#FF4A1C');
 const EMBER = hex('#F2652A');
 const MOSS = hex('#6F8F5A');
+
+const SIN_N = 1024;
+const SIN = new Float32Array(SIN_N).map((_, i) => Math.sin((i / SIN_N) * Math.PI * 2));
+const sin = (a: number) => SIN[((Math.floor((a / (Math.PI * 2)) * SIN_N) % SIN_N) + SIN_N) % SIN_N];
 
 export const Nocturne = () => {
   const { width, height } = useStage();
@@ -34,12 +42,28 @@ export const Nocturne = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-    const w = width;
-    const h = height;
+    const w = Math.ceil(width / DOWNSCALE);
+    const h = Math.ceil(height / DOWNSCALE);
     canvas.width = w;
     canvas.height = h;
     const img = ctx.createImageData(w, h);
-    const thresholds = new Float32Array(w * h).map(() => Math.random());
+    const data = img.data;
+    const n = w * h;
+    const thresholds = new Float32Array(n).map(() => Math.random());
+    // Precalculado: luminancia de base (viñeta suave hacia el centro) y forma de la
+    // banda de niebla (gaussiana alrededor del centro del tablero)
+    const base = new Float32Array(n);
+    const band = new Float32Array(n);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const u = x / w - 0.5;
+        const v = y / h - 0.55;
+        base[y * w + x] = Math.max(0, 0.16 - (u * u + v * v) * 0.5);
+        const d = (y / h - 0.56) / 0.17;
+        band[y * w + x] = Math.exp(-d * d);
+      }
+    }
+    for (let i = 3; i < n * 4; i += 4) data[i] = 255;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     let raf = 0;
@@ -50,45 +74,34 @@ export const Nocturne = () => {
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       if (now - last < 1000 / FPS) return;
-      const dt = Math.min(0.2, (now - last) / 1000);
+      const dt = Math.min(0.25, (now - last) / 1000);
       last = now;
       time += dt;
       heat += ((fightRef.current ? 1 : 0) - heat) * Math.min(1, dt * 2);
 
-      const boil = Math.floor(w * h * BOIL);
-      for (let k = 0; k < boil; k++) thresholds[Math.floor(Math.random() * w * h)] = Math.random();
+      const boil = Math.floor(n * BOIL);
+      for (let k = 0; k < boil; k++) thresholds[(Math.random() * n) | 0] = Math.random();
 
-      const data = img.data;
-      const fogW = h * 0.13;
+      const hot = heat > 0.02;
       for (let y = 0; y < h; y++) {
+        const sy = sin(y * 0.04 + time * 0.25);
         for (let x = 0; x < w; x++) {
-          const fx = x / w;
-          // Ladera que baja hacia la derecha; por encima, negro
-          const ridge = h * (0.26 + 0.22 * fx) + Math.sin(fx * 7 + 1.3) * 4;
-          let v = 0.02;
-          if (y > ridge) {
-            const depth = (y - ridge) / h;
-            v = 0.18 + 0.06 * Math.sin(x * 0.021 + y * 0.013 + 0.7) * Math.sin(y * 0.017 - x * 0.009) + depth * 0.14;
-          }
-          // Niebla: banda diagonal que respira y se arrastra
-          const fogY = h * (0.5 + 0.18 * fx) + Math.sin(time * 0.35 + x * 0.025) * 6;
-          const d = (y - fogY) / fogW;
-          const swirl = 0.7 + 0.3 * Math.sin(x * 0.045 - time * 0.5 + y * 0.03) * Math.sin(y * 0.02 + time * 0.25);
-          const fog = Math.exp(-d * d) * swirl * (y > ridge - 6 ? 1 : 0.25);
-          v = v + fog * (0.92 - v);
-
           const i = y * w + x;
+          const swirl = 0.68 + 0.32 * sin(x * 0.09 - time * 0.5 + y * 0.06) * sy;
+          const fog = band[i] * swirl;
+          const v = base[i] + fog * 0.45;
           const t = thresholds[i];
-          const level = Math.max(0, Math.min(4, Math.floor(v * 4 + t * 0.95 - 0.2)));
+          let level = (v * 4 + t * 0.95 - 0.2) | 0;
+          if (level < 0) level = 0; else if (level > 4) level = 4;
           let c = RAMP[level];
           // Pelea: la niebla brilla en naranja (halación) con borde musgo
-          if (heat > 0.02 && fog > 0.3) {
+          if (hot && fog > 0.3) {
             const p = heat * (fog - 0.3) * 1.1;
-            if (t < p * 0.55) c = t < p * 0.25 ? ORANGE : EMBER;
-            else if (t > 1 - p * 0.18) c = MOSS;
+            if (t < p * 0.5) c = t < p * 0.22 ? ORANGE : EMBER;
+            else if (t > 1 - p * 0.16) c = MOSS;
           }
           const j = i * 4;
-          data[j] = c[0]; data[j + 1] = c[1]; data[j + 2] = c[2]; data[j + 3] = 255;
+          data[j] = c[0]; data[j + 1] = c[1]; data[j + 2] = c[2];
         }
       }
       ctx.putImageData(img, 0, 0);
@@ -103,7 +116,7 @@ export const Nocturne = () => {
       ref={canvasRef}
       className="absolute left-0 top-0"
       // Escalado suave: los puntos se funden como tinta, no son píxeles duros
-      style={{ width, height, imageRendering: 'auto', filter: 'blur(0.35px)' }}
+      style={{ width, height, imageRendering: 'auto' }}
       aria-hidden
     />
   );

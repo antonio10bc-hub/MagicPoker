@@ -181,63 +181,6 @@ export const PIP = s(
 );
 
 // --- ESCENARIO ---
-export const LAMP = s(
-  '...oooo...',
-  '..onnnno..',
-  '.onnnnnno.',
-  '.ocwccbco.',
-  '.owccccbo.',
-  '.ocbbbbbo.',
-  '.onnnnnno.',
-  '..oonnoo..',
-  '....on....',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '...onno...',
-  '..onnnno..',
-  '.oddddddo.',
-  '.ooooooooo',
-);
-
-/** Banderola con mástil; la tela usa el color del bando */
-export const BANNER = s(
-  '.oo.........',
-  'oyyo........',
-  'oYYoooooooo.',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTTtuo',
-  '.on.otTTttuo',
-  '.on.ottouttuo',
-  '.on.otuo.ouo',
-  '.on.ouo...oo',
-  '.on.oo......',
-  '.on.........',
-  '.on.........',
-  '.on.........',
-  '.on.........',
-  '.on.........',
-  'onno........',
-  'oooo........',
-);
-
 /** Estallido de impacto (13×13) */
 export const BURST = s(
   '......o......',

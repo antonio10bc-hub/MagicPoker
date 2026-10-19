@@ -31,16 +31,6 @@ const grain = (size: number, seed: number, base: string, layers: [string, number
 /** Suelo jugable: pizarra con grano teal y alguna mota clara (sin dibujo) */
 export const FLOOR_TILE = grain(16, 1, 'd', [['o', 0.32], ['g', 0.1], ['l', 0.004]]);
 
-/** Franja central: línea de niebla tenue (más densa en el centro de la banda) */
-export const MEANDER_TILE = tile(8, 8, (x, y) => {
-  const d = 1 - Math.abs(y - 3.5) / 4;
-  const r = hash(x, y, 7);
-  return r < d * 0.35 ? 'w' : r < d * 0.7 ? 'l' : r < 0.85 ? 'g' : 'd';
-});
-
-/** Borde del diorama: teal apagado con grano */
-export const PAVEMENT_TILE = grain(16, 3, 'g', [['d', 0.55], ['o', 0.12], ['l', 0.04]]);
-
 /** Cara frontal: casi negra, en sombra */
 export const STONE_FACE_TILE = grain(12, 5, 'o', [['d', 0.38], ['g', 0.04]]);
 
@@ -49,9 +39,6 @@ export const CARD_BACK_TILE = grain(16, 9, 't', [['T', 0.35], ['u', 0.12], ['w',
 
 /** Ventana de ilustración (por defecto): niebla crema-menta granulada */
 export const WINDOW_TILE = grain(8, 11, 'l', [['w', 0.45], ['g', 0.1]]);
-
-/** Fondo de pantalla fuera del escenario (letterbox) */
-export const LETTERBOX_TILE = grain(8, 13, 'o', [['d', 0.1]]);
 
 const cache = new Map<string, string>();
 export const patternUri = (name: string, sprite: Sprite, owner: Owner = 'player'): string => {

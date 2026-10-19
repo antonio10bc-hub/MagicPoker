@@ -1,5 +1,4 @@
 import { CSSProperties, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useStage } from '@/components/pixel/Stage';
 import { playSfx } from '@/lib/sounds';
 
@@ -25,7 +24,7 @@ export const AmbientDust = () => {
           className="absolute"
           style={{
             left: Math.round(m.fx * width), top: Math.round(m.fy * height), width: m.size, height: m.size,
-            background: 'rgba(237, 235, 224, 0.75)', borderRadius: '50%', filter: 'blur(0.4px)',
+            background: 'rgba(237, 235, 224, 0.75)', borderRadius: '50%',
             animation: `dust-rise ${m.duration}s linear ${m.delay}s infinite`,
             '--drift': `${m.drift}px`,
           } as CSSProperties}
@@ -47,11 +46,9 @@ export const LowHealth = ({ active }: { active: boolean }) => {
 
   if (!active) return null;
   return (
-    <motion.div
-      className="absolute inset-0 pointer-events-none z-[70]"
+    <div
+      className="absolute inset-0 pointer-events-none z-[70] anim-pulse"
       style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(255, 74, 28, 0.45) 100%)' }}
-      animate={{ opacity: [0.35, 0.85, 0.4, 0.7, 0.35] }}
-      transition={{ duration: 1.1, repeat: Infinity, times: [0, 0.12, 0.25, 0.37, 1] }}
     />
   );
 };

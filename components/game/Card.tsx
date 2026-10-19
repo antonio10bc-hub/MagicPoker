@@ -107,7 +107,6 @@ const CardBack = ({ owner }: { owner: Owner }) => (
       backgroundSize: '100% 100%, 16px',
       WebkitMaskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
       maskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
-      filter: 'blur(0.6px)',
     }} />
     {/* Emblema del bando en silueta */}
     <div className="absolute flex items-center justify-center" style={{ left: 12, top: 20, width: 16, height: 16 }}>
@@ -223,8 +222,10 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
         <>
           <motion.div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'var(--c-white)' }}
             initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 0.25, delay: IMPACT_DELAY_S }} />
-          <motion.div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(255,74,28,0.5)', filter: 'blur(0.6px)', boxShadow: '0 0 8px 2px rgba(255,74,28,0.6)' }}
-            initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.55, 1] }} transition={{ duration: 0.9, delay: IMPACT_DELAY_S + 0.1, repeat: Infinity, repeatType: 'reverse' }} />
+          <motion.div className="px-round-2 absolute inset-0 pointer-events-none"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: IMPACT_DELAY_S + 0.1 }}>
+            <div className="absolute inset-0 anim-pulse" style={{ background: 'rgba(255,74,28,0.5)', boxShadow: '0 0 8px 2px rgba(255,74,28,0.6)', animationDuration: '0.9s' }} />
+          </motion.div>
           <Cracks />
         </>
       )}

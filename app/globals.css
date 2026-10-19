@@ -52,9 +52,6 @@
   --c-neutral: rgba(30, 42, 40, 0.85);
   --c-neutral-dark: var(--ink-black);
 
-  /* Bloom y halación (en píxeles internos; el escenario los escala) */
-  --bloom-orange: drop-shadow(0 0 1.5px rgba(255, 74, 28, 0.95)) drop-shadow(0 0 6px rgba(242, 101, 42, 0.55));
-  --bloom-cream: drop-shadow(0 0 1.5px rgba(237, 235, 224, 0.7)) drop-shadow(0 0 5px rgba(255, 74, 28, 0.28));
 }
 
 html, body {
@@ -99,8 +96,6 @@ html, body {
   background: var(--c-ui-panel);
   color: var(--ink-cream);
   box-shadow: inset 0 0 0 1px var(--c-ui-panel-light), 0 4px 10px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(1.5px);
-  -webkit-backdrop-filter: blur(1.5px);
 }
 .px-panel-dark {
   background: var(--c-ui-edge);
@@ -150,9 +145,13 @@ html, body {
   text-shadow: 0.5px 0 0 rgba(237, 235, 224, 0.25);
 }
 
-/* ===== BLOOM (masas que brillan desde dentro) ===== */
-.bloom { filter: var(--bloom-orange); }
-.bloom-cream { filter: var(--bloom-cream); }
+/* ===== BLOOM (masas que brillan desde dentro) =====
+   Rendimiento: en cajas el halo es box-shadow (se pinta una vez y viaja con la capa);
+   `filter` solo en siluetas pequeñas y con una única sombra. */
+.bloom { box-shadow: 0 0 5px 1px rgba(255, 74, 28, 0.6), 0 0 14px 3px rgba(242, 101, 42, 0.25); }
+.bloom-shape { filter: drop-shadow(0 0 2px rgba(255, 74, 28, 0.85)); }
+.bloom-cream { filter: drop-shadow(0 0 2px rgba(237, 235, 224, 0.6)); }
+.glow-text { text-shadow: 0 0 4px rgba(255, 74, 28, 0.8), 0 0 10px rgba(242, 101, 42, 0.4); }
 
 /* ===== POSTPROCESADO ===== */
 .vignette { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(11, 13, 12, 0.55) 85%, rgba(11, 13, 12, 0.85) 100%); }
@@ -184,7 +183,8 @@ html, body {
 }
 @keyframes shine-sweep { 0% { transform: translateX(-120%) skewX(-20deg); } 60%, 100% { transform: translateX(220%) skewX(-20deg); } }
 /* Grano: salta entre fotogramas de ruido a pocos fps (boil lento, sin parpadeo) */
-@keyframes grain-boil { from { background-position: 0 0; } to { background-position: calc(var(--grain-w) * -1) 0; } }
+/* (Los saltos del grano, grain-jump-*, se generan en FilmGrain con px fijos: un
+   var() dentro de keyframes saca la animación del compositor.) */
 /* Las masas naranjas vibran levemente */
 @keyframes ember-jitter {
   0%, 100% { transform: translate(0, 0); }
@@ -192,6 +192,29 @@ html, body {
   50% { transform: translate(-0.2px, 0.3px); }
   75% { transform: translate(0.2px, 0.2px); }
 }
+
+/* Bucles que antes hacía JavaScript (framer-motion): en CSS los anima el compositor */
+@keyframes hand-sway { 0%, 100% { transform: translateY(0) rotate(-1.6deg); } 50% { transform: translateY(-1.5px) rotate(1.6deg); } }
+@keyframes table-float { 0%, 100% { transform: translateY(0) rotate(-0.8deg); } 50% { transform: translateY(-1px) rotate(0.8deg); } }
+@keyframes pulse-fade { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes pulse-soft { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
+@keyframes throb { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+@keyframes heartbeat { 0% { transform: scale(1); } 12% { transform: scale(1.25); } 25% { transform: scale(1); } 37% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes wave-letter { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-2px) rotate(-3deg); } 75% { transform: translateY(1px) rotate(3deg); } }
+@keyframes dot-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+@keyframes ring-out { from { r: 10; opacity: 0.9; } to { r: 34; opacity: 0; } }
+
+.anim-sway { animation: hand-sway 2.6s ease-in-out infinite; }
+.anim-float { animation: table-float 3s ease-in-out infinite; }
+.anim-pulse { animation: pulse-fade 1.1s ease-in-out infinite; }
+.anim-pulse-soft { animation: pulse-soft 2.2s ease-in-out infinite; }
+.anim-throb { animation: throb 0.9s ease-in-out infinite; }
+.anim-heartbeat { animation: heartbeat 1.1s linear infinite; }
+.anim-wave { display: inline-block; white-space: pre; animation: wave-letter 1.8s ease-in-out infinite; }
+.anim-dot { display: inline-block; animation: dot-hop 0.6s ease-in-out infinite; }
+.anim-ring { animation: ring-out 1.1s ease-out infinite; }
+.anim-spin { animation: spin-slow 20s linear infinite; }
 
 .anim-blink { animation: px-blink 0.8s steps(1) infinite; }
 .anim-bob { animation: float-bob 1.2s ease-in-out infinite; }
@@ -204,6 +227,7 @@ html, body {
 .anim-ember { animation: ember-jitter 0.5s steps(4) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine, .anim-ember { animation: none; }
+  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine, .anim-ember,
+  .anim-sway, .anim-float, .anim-pulse, .anim-pulse-soft, .anim-throb, .anim-heartbeat, .anim-wave, .anim-dot, .anim-ring, .anim-spin { animation: none; }
   .grain { animation: none !important; }
 }

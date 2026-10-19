@@ -13,7 +13,7 @@ const Particles = ({ e }: { e: Extract<Effect, { kind: 'particles' }> }) => (
       <motion.div
         key={i}
         className="absolute pointer-events-none"
-        style={{ left: e.x, top: e.y, width: p.size, height: p.size, background: p.color, borderRadius: '50%', filter: 'blur(0.4px)', boxShadow: `0 0 2px ${p.color}` }}
+        style={{ left: e.x, top: e.y, width: p.size, height: p.size, background: p.color, borderRadius: '50%', boxShadow: `0 0 2px ${p.color}` }}
         initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
         animate={{
           x: [0, p.dx * 0.6, p.dx],
@@ -61,7 +61,7 @@ const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
 const Ring = ({ e }: { e: Extract<Effect, { kind: 'ring' }> }) => (
   <motion.div
     className="absolute pointer-events-none rounded-full"
-    style={{ left: e.x - e.radius, top: e.y - e.radius, width: e.radius * 2, height: e.radius * 2, boxShadow: `0 0 6px 2px ${e.color}, inset 0 0 6px 1px ${e.color}`, filter: 'blur(0.8px)' }}
+    style={{ left: e.x - e.radius, top: e.y - e.radius, width: e.radius * 2, height: e.radius * 2, boxShadow: `0 0 6px 2px ${e.color}, inset 0 0 6px 1px ${e.color}` }}
     initial={{ scale: 0.1, opacity: 1 }}
     animate={{ scale: 1, opacity: 0 }}
     transition={{ duration: e.life / 1000, ease: [0.1, 0.8, 0.3, 1] }}

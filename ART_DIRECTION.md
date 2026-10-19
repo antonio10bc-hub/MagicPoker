@@ -43,15 +43,16 @@ dos fuentes de color compitiendo: el decorado es negro y grises fríos.
 ### Reglas por tipo de asset
 
 - **Siluetas (sólidos):** casi negras, borde limpio, sin detalle interno, lectura por
-  contorno. Personajes de las cartas, tus banderolas, farolas, barandilla, iconos.
+  contorno. Personajes de las cartas, mascotas, iconos.
   En código: `PixelSprite` con `tint` (un solo color para todo el sprite).
 - **Masas vivas (energía, interacción, rival):** naranja con *bloom* (`.bloom`), halo
-  suave y bordes que se deshacen (máscara radial + desenfoque). Cartas y banderolas
-  del rival, vidas, botones de acción, avisos, números de golpe, "¡PELEA!".
-- **Superficies y terreno:** planos inclinados de grano estocástico (pizarra con puntos
-  negros y teal), sin dibujo ni baldosas.
-- **Niebla:** crema/menta a ras de suelo; envuelve la base del diorama y la de cada
-  fila de cartas. Es la luz contra la que se recortan tus siluetas.
+  suave y bordes que se deshacen (máscara radial). Cartas del rival, vidas, botones
+  de acción, avisos, números de golpe, "¡PELEA!".
+- **Escenario: un tapete abstracto**, sin ciudad ni decorado. Plano inclinado de grano
+  estocástico (pizarra con puntos negros y teal), sin dibujo ni baldosas.
+- **Niebla:** crema/menta a ras de suelo; sube desde tu borde del tapete y envuelve su
+  base. Es la luz contra la que se recortan tus siluetas. En el borde del rival asoma
+  un halo de brasa.
 - **Sombras:** largas, oscuras y difusas, alejándose de la luz (abajo-derecha).
 - **Prohibido:** contornos, *cel shading*, brillos especulares, degradados limpios
   sin grano, colores saturados que no sean el naranja, cielos con estrellas o nubes,
@@ -70,27 +71,43 @@ dos fuentes de color compitiendo: el decorado es negro y grises fríos.
 
 Se aplica sin *shaders* WebGL, con capas baratas de composición:
 
-- **Grano** (`components/fx/FilmGrain.tsx`): una tira de 4 fotogramas de ruido a
-  resolución de pantalla (1 punto = 1 px CSS, no un píxel interno), recorrida a
-  ~8 fps (*boil* lento).
+- **Grano** (`components/fx/FilmGrain.tsx`): un mosaico de ruido a resolución de
+  pantalla (1 punto = 1 px CSS, no un píxel interno) que salta a 4 desplazamientos a
+  ~8 fps (*boil* lento) con un `transform` que hace el compositor.
   - Capa `overlay` al 60 %: grano de luminancia con colas largas. Convierte todo
     degradado en densidad de puntos.
-  - Capa `screen` al 35 %: motas sueltas crema, naranja, teal y menta, que también
-    salpican el negro puro (el overlay no lo aclara).
-- **Bloom y halación:** `filter: drop-shadow` encadenado (`--bloom-orange`,
-  `--bloom-cream`): un halo cercano intenso y otro amplio rojizo, como la halación de
-  la película. Las farolas llevan un halo naranja propio.
+  - Capa normal: motas sueltas crema, naranja, teal y menta, que también salpican el
+    negro puro (el overlay no lo aclara).
+- **Bloom y halación:** en cajas (cartas, botones, avisos) es un `box-shadow` doble:
+  halo cercano intenso y otro amplio rojizo, como la halación de la película
+  (`.bloom`). En siluetas pequeñas, un único `drop-shadow` (`.bloom-shape`,
+  `.bloom-cream`); en texto, `text-shadow` (`.glow-text`).
 - **Desajuste de registro / aberración mínima:** el texto lleva dos sombras
   desplazadas medio píxel (naranja a un lado, teal al otro), como dos tintas que no
   casan (`.text-outline`, logo).
 - **Ghosting:** desenfoque animado en lo que se mueve rápido (cartas que vuelan,
   cartel de ronda, cinta de pelea).
 - **Viñeta** (`.vignette`): oscurece suavemente los bordes.
-- **Fondo** (`components/fx/Nocturne.tsx`): ladera nocturna con niebla, calculada por
-  píxel con tramado estocástico (cada píxel elige tinta por luminancia + umbral
-  aleatorio; el 12 % de los umbrales se renueva en cada fotograma) y escalada con
-  suavizado y un leve desenfoque, para que los puntos se fundan como tinta. En la
+- **Fondo** (`components/fx/Nocturne.tsx`): noche con una banda de niebla detrás del
+  tapete, con tramado estocástico (cada píxel elige tinta por luminancia + umbral
+  aleatorio; el 10 % de los umbrales se renueva en cada fotograma), a media resolución
+  interna y escalada con suavizado para que los puntos se fundan como tinta. En la
   pelea la niebla se calienta: brasas naranjas con transición musgo.
+
+### Rendimiento (móvil primero)
+
+- **Bucles infinitos en CSS, nunca en JavaScript:** balanceo de la mano y de la mesa,
+  latidos, pulsos, letras que ondulan, rayos… (`.anim-*` en `globals.css`). Solo
+  `transform` y `opacity`, y **sin `var()` dentro de los keyframes** (lo saca del
+  compositor). framer-motion queda para transiciones puntuales (entrar, salir, volar,
+  embestir).
+- **Nada de `filter` ni `backdrop-filter` en superficies grandes o que se animen.** El
+  desenfoque de *ghosting* se quita (`filter: none`) en cuanto la carta aterriza.
+- **SVG de las flechas estático:** cualquier cambio dentro obliga a recalcular sus
+  desenfoques en cada fotograma.
+- **El fondo** se calcula a media resolución, a 8 fps y con lo estático precalculado.
+- Referencia medida (móvil simulado, CPU ×4 más lenta): de ~22 fps a ~55 fps; el
+  JavaScript por segundo bajó de ~450 ms a ~60 ms.
 
 Si en el futuro se pasa a WebGL, el *shader* equivalente sería: grano (ruido azul
 animado a 8 fps, mezcla overlay) → umbral de brillo sobre naranjas y cremas → dos
@@ -99,9 +116,9 @@ canales de 0,5 px → viñeta.
 
 ## 3. Cámara y composición (sin cambios)
 
-- Vista cenital inclinada; el tablero es un diorama con grosor y sombra.
-- **Capas:** fondo → plataforma/suelo → niebla → objetos del entorno → cartas →
-  interfaz → modales → flash → viñeta → grano.
+- Vista cenital inclinada; el tablero es un tapete con canto y sombra.
+- **Capas:** fondo → tapete → luces y niebla → cartas → interfaz → modales → flash →
+  viñeta → grano.
 - Mucho aire: el negro es espacio negativo.
 
 ## 4. Resolución
@@ -117,14 +134,12 @@ canales de 0,5 px → viñeta.
 
 | Asset | Antes | Ahora |
 | --- | --- | --- |
-| Fondo (`Backdrop`) | remolino psicodélico azul/rojo | ladera nocturna con niebla punteada; brasas en la pelea |
+| Fondo (`Backdrop`) | remolino psicodélico azul/rojo | noche con niebla punteada; brasas en la pelea |
 | Capa final | CRT con líneas de barrido | grano de película + viñeta |
-| Diorama (`Platform`) | pavimento claro con bisel y contorno | plano de grano pizarra/teal, sombra larga, niebla en la base |
+| Escenario (`themes/mesa`) | plaza de ciudad con farolas, banderolas y barandilla | tapete abstracto de grano: halo de brasa del lado rival, niebla en el tuyo, sombra larga |
 | Suelo | baldosas con rombos | grano estocástico sin dibujo |
-| Franja central | greca | línea de niebla tenue |
-| Barandilla | madera naranja | silueta negra contra un resplandor de niebla |
-| Farolas | cristal azul con halo cian | silueta negra con halo naranja (halación) |
-| Banderolas | roja (rival) / verde (tú) con emblema | masa naranja con bloom (rival) / silueta negra (tú) |
+| Franja central | greca | línea de niebla que se desvanece hacia los lados, con un rombo de luz |
+| Farolas, banderolas, barandilla | decorado de la plaza | eliminados |
 | Huecos | losas claras con bisel | rebajes oscuros; se iluminan de niebla si puedes jugar |
 | Tus cartas | marco verde, damero cian, chibi a color | cuerpo pizarra, ventana de niebla crema, personaje en silueta, cifra negra |
 | Cartas rivales | marco rojo | masa naranja con bloom y núcleo encendido |
@@ -151,7 +166,9 @@ canales de 0,5 px → viñeta.
 - **Avisos del tablero** (`components/game/BoardHints.tsx`). Solo usan información
   visible, nunca las cartas boca abajo del rival:
   - **hueco tuyo vacío:** corazón menta tenue (si lo golpean pierdes una vida); con
-    una carta rival justo delante, el hueco se calienta en naranja y late un "!";
+    amenaza de una carta rival, el hueco se calienta en naranja y late un "!". Una
+    carta rival destapada amenaza solo los huecos de su patrón (la Reina, en diagonal;
+    As y Joker, ninguno); una boca abajo, el hueco que tiene delante;
   - **flechas de ataque** (`components/game/AttackArrows.tsx`):
     - **a demanda:** tocar una carta de la mesa enciende sus flechas (brilla en el
       color de su bando) y volver a tocarla las apaga; se pueden encender varias a la
@@ -185,10 +202,8 @@ canales de 0,5 px → viñeta.
   marco naranja que late, un clic y una vibración breve.
 - **Móvil en vertical:**
   - escala ×6 en los móviles habituales (ancho interno ~180–195 px);
-  - diorama compacto que crece hasta 40 px para llenar el hueco libre, siempre
-    ensanchando el centro (entre bandos), donde pasan los carteles;
-  - si no hay margen lateral, la barandilla baja para que tus banderolas no
-    queden tapadas por tus cartas;
+  - tapete compacto que crece para llenar el hueco libre: primero se ensancha el
+    centro (entre bandos, donde pasan los carteles) y luego los bordes;
   - mano a ×1,5 si cabe (sigue cayendo en píxeles enteros).
 
 ### Movimiento y game feel
@@ -201,7 +216,6 @@ se mueve rápido y una vibración leve a las masas naranjas.
   - el tablero es un único plano inclinado en perspectiva (14°, 20° durante la pelea);
   - **no se usa `preserve-3d` dentro del tablero**, porque rompe el orden de clic entre
     elementos coplanarios;
-  - las farolas y banderolas compensan la inclinación con `--tilt`.
 - **Cámara de impacto** (`components/fx/fxStore.ts`): sacudida con amortiguación,
   "punch" de zoom y flash crema. La intensidad escala con lo que pasa en pantalla.
 - **Cartas:**
@@ -224,7 +238,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   cambia tiempos ni el orden de los eventos de juego.**
 - **Ambiente:**
   - motas de polvo que suben;
-  - banderolas ondeando y halo en las farolas;
+  - niebla de fondo que se arrastra y hierve;
   - personajes que respiran y saltan;
   - cámara del menú que se mece.
 - **Interfaz:**
@@ -264,10 +278,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
    a brasa, t/T/u bando).
 3. **Sprites del entorno:** dibújalos en `sprites.ts` pensando en la silueta (se
    pintan con `tint`); el detalle interno no se verá.
-4. **Compón el diorama** con `themes/pieces.tsx`: `Platform`, `Fog`, `Strip`, `Railing`,
-   `Prop` (con `tint` y `bloom`) y `Surface`.
+4. **Compón el tapete** con `themes/pieces.tsx`: `Mat` (superficie, canto y sombra),
+   `Glow` (luces y niebla con degradados) y `Surface`. Sin `filter`.
 5. **Exporta un `Theme`** con `Backdrop` y `Diorama({ board })`, colocando todo
    **relativo a la geometría** del tablero. Actívalo en `themes/index.ts`.
 6. **Comprueba los pilares:** paleta cerrada; el naranja solo en lo importante;
    siluetas sin contorno; grano en todo; niebla en las bases; sombras largas; negro
-   como espacio negativo.
+   como espacio negativo; y las reglas de rendimiento.

@@ -56,12 +56,13 @@ const Lives = ({ lives, owner }: { lives: number; owner: Owner }) => {
       {Array.from({ length: STARTING_LIVES }, (_, i) => (
         <motion.div
           key={`${i}-${i < lives}`}
+          className={critical && i < lives ? 'anim-heartbeat' : undefined}
           initial={i < lives ? false : { scale: 0.2 }}
-          animate={critical && i < lives ? { scale: [1, 1.25, 1, 1.15, 1] } : { scale: 1 }}
-          transition={critical ? { duration: 1.1, repeat: Infinity, times: [0, 0.12, 0.25, 0.37, 1] } : { type: 'spring', stiffness: 500, damping: 14 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 14 }}
         >
           {/* Vida: brasa que brilla; perdida: hueco apagado */}
-          <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={i < lives ? INK.orange : INK.slate} className={i < lives ? 'bloom' : undefined} />
+          <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={i < lives ? INK.orange : INK.slate} className={i < lives ? 'bloom-shape' : undefined} />
         </motion.div>
       ))}
       {lost?.indices.map(i => <FlyingHeart key={`${lost.id}-${i}`} index={i} />)}
@@ -343,16 +344,15 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
       >
       {/* Balanceo continuo: las cartas nunca están quietas del todo */}
       <div ref={faceRef} style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0', width: CARD_SIZE.width, height: CARD_SIZE.height }}>
-      <motion.div
-        className={clsx(isSelected && 'anim-bob')}
-        animate={{ rotate: [-1.6, 1.6, -1.6], y: [0, -1.5, 0] }}
-        transition={{ duration: 2.6 + (card.value % 4) * 0.3, repeat: Infinity, ease: 'easeInOut', delay: (card.value % 7) * -0.4 }}
+      <div
+        className={isSelected ? 'anim-bob' : 'anim-sway'}
+        style={{ animationDuration: isSelected ? undefined : `${2.6 + (card.value % 4) * 0.3}s`, animationDelay: `${(card.value % 7) * -0.4}s` }}
       >
         {/* Sombra proyectada abajo-derecha: se aleja cuando la carta se levanta */}
         <motion.div className="absolute" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, background: 'var(--c-shadow)' }}
           animate={{ x: lifted ? 5 : 2, y: lifted ? 9 : 3, opacity: lifted ? 0.7 : 1 }} transition={SPRING} />
         <Card card={card} onClick={handleClick} isSelected={isSelected} isDisabled={!canPlay} />
-      </motion.div>
+      </div>
       </div>
       </motion.div>
     </motion.div>

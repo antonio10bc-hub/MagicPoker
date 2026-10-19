@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence, animate, MotionStyle, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, animate, useMotionValue } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Card as CardType, Owner } from '@/types';
@@ -82,7 +82,7 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
       style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height, transformPerspective: 400 }}
       initial={{ x: dx, y: dy, scale: 1.15, rotateZ: spin, rotateX: -TILT_IDLE }}
       // Ghosting: la carta vuela borrosa y se enfoca al aterrizar
-      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [1.15, 1.35, 1], rotateZ: [spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], filter: ['blur(1.5px)', 'blur(1px)', 'blur(0px)'] }}
+      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [1.15, 1.35, 1], rotateZ: [spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], filter: ['blur(1.5px)', 'blur(1px)', 'blur(0px)'], transitionEnd: { filter: 'none' } }}
       transition={{ duration: 0.42, times: [0, 0.5, 1], ease: [0.3, 0.1, 0.4, 1] }}
       onAnimationStart={() => { if (!landed.current) playSfx('whoosh', 0.8); }}
       onAnimationComplete={() => {
@@ -121,24 +121,24 @@ const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows
           : { duration: 0.62, times: [0, 0.66, 0.76, 0.88, 1] }}
       >
         {/* Flotación suave en la mesa (se detiene durante el combate) */}
-        <motion.div
-          animate={lunge || dead ? { y: 0, rotate: 0 } : { y: [0, -1, 0], rotate: [-0.8, 0.8, -0.8] }}
-          transition={lunge || dead ? { duration: 0.2 } : { duration: 3 + (card.value % 3) * 0.4, repeat: Infinity, ease: 'easeInOut', delay: (card.value % 5) * -0.5 }}
+        <div
+          className={lunge || dead ? undefined : 'anim-float'}
+          style={{ animationDuration: `${3 + (card.value % 3) * 0.4}s`, animationDelay: `${(card.value % 5) * -0.5}s` }}
         >
           {/* Boca abajo no se sabe a dónde ataca: solo se pueden encender las cartas visibles */}
           <Card card={card} onClick={owner === 'player' || card.isFaceUp ? () => onToggleArrows(card.id) : undefined} />
           {/* Brillo del color del bando mientras sus flechas están encendidas */}
           <AnimatePresence>
             {arrowsOn && (
-              <motion.div className="absolute inset-0 pointer-events-none rounded-[3px]"
-                style={{ boxShadow: owner === 'player'
+              <motion.div className="absolute inset-0 pointer-events-none"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}>
+                <div className="absolute inset-0 rounded-[3px] anim-pulse" style={{ animationDuration: '1.6s', boxShadow: owner === 'player'
                   ? '0 0 0 1px rgba(237,235,224,0.85), 0 0 9px 2px rgba(237,235,224,0.45)'
-                  : '0 0 0 1px rgba(255,74,28,0.95), 0 0 10px 3px rgba(255,74,28,0.6)' }}
-                initial={{ opacity: 0 }} animate={{ opacity: [0.6, 1, 0.6] }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                transition={{ duration: 1.6, repeat: Infinity }} />
+                  : '0 0 0 1px rgba(255,74,28,0.95), 0 0 10px 3px rgba(255,74,28,0.6)' }} />
+              </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -160,13 +160,9 @@ const FightRibbon = ({ geo }: { geo: BoardGeometry }) => {
       exit={{ opacity: 0, transition: { duration: 0.1 } }}
       transition={{ duration: 0.7, times: [0, 0.18, 0.78, 1], ease: 'easeOut' }}
     >
-      <motion.span
-        className="text-ink"
-        animate={{ scale: [1, 1.08, 1] }}
-        transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <WavyText text={t.fight} amplitude={1.5} />
-      </motion.span>
+      <span className="text-ink">
+        <WavyText text={t.fight} />
+      </span>
     </motion.div>
   );
 };
@@ -210,7 +206,6 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
 
   // Cámara: se inclina más durante la pelea (spring suave)
   const tilt = useMotionValue(TILT_IDLE);
-  const tiltVar = useTransform(tilt, v => `${v}deg`);
   useEffect(() => {
     const controls = animate(tilt, isFighting ? TILT_FIGHT : TILT_IDLE, { type: 'spring', stiffness: 120, damping: 18 });
     return () => controls.stop();
@@ -261,8 +256,8 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
                   style={{ inset: -2, boxShadow: '0 0 0 1px rgba(255,74,28,0.9), 0 0 10px 3px rgba(255,74,28,0.55), inset 0 0 8px rgba(242,101,42,0.45)',
                     background: 'rgba(255,74,28,0.12)' }}
                   initial={{ opacity: 0, scale: 1.12 }}
-                  animate={{ opacity: [0.75, 1, 0.75], scale: 1 }}
-                  transition={{ opacity: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }, scale: { type: 'spring', stiffness: 500, damping: 22 } }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 22 }}
                 />
               )}
             </button>
@@ -290,7 +285,7 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot }: BoardProps)
     <div className="absolute inset-0" style={{ perspective: PERSPECTIVE, perspectiveOrigin: origin }}>
       <motion.div
         className="absolute inset-0"
-        style={{ rotateX: tilt, transformOrigin: origin, '--tilt': tiltVar } as MotionStyle}
+        style={{ rotateX: tilt, transformOrigin: origin }}
       >
         <Diorama board={geo} />
         {renderSide(opponentBoard, 'opponent')}

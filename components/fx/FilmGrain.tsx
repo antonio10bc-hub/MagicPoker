@@ -1,16 +1,16 @@
 import { CSSProperties, useSyncExternalStore } from 'react';
 
 // --- POSTPROCESADO: GRANO DE PELÍCULA ---
-// Se calcula una vez una tira de 4 fotogramas de ruido (a resolución de pantalla, no
-// de píxel interno) y se recorre a pocos fotogramas por segundo: "boil" lento, sin
-// parpadeo. Dos capas:
+// Un mosaico de ruido a resolución de pantalla (1 punto = 1 px CSS, no un píxel
+// interno) que salta a posiciones distintas a ~8 fps: "boil" lento, sin parpadeo.
+// El salto es un `transform` en una capa propia, así lo hace el compositor sin
+// repintar nada. Dos capas:
 //  · overlay: grano de luminancia fuerte que convierte cualquier degradado en
 //    densidad de puntos;
-//  · screen: motas sueltas crema / naranja / teal, que también salpican el negro
-//    (el overlay no aclara el negro puro).
+//  · normal: motas sueltas crema / naranja / teal, que también salpican el negro
+//    (el overlay no aclara el negro puro). Mezcla normal = barata.
 
-const SIZE = 192;
-const FRAMES = 4;
+const SIZE = 256;
 
 type RGB = [number, number, number];
 const SPECKS: RGB[] = [[237, 235, 224], [255, 74, 28], [94, 122, 118], [185, 207, 200]];
@@ -19,30 +19,29 @@ const SPECKS: RGB[] = [[237, 235, 224], [255, 74, 28], [94, 122, 118], [185, 207
 const rng = (seed: number) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
 const build = () => {
-  const w = SIZE * FRAMES;
   const make = (paint: (data: Uint8ClampedArray, i: number, r: () => number) => void, seed: number) => {
     const canvas = document.createElement('canvas');
-    canvas.width = w;
+    canvas.width = SIZE;
     canvas.height = SIZE;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    const img = ctx.createImageData(w, SIZE);
+    const img = ctx.createImageData(SIZE, SIZE);
     const r = rng(seed);
-    for (let i = 0; i < w * SIZE; i++) paint(img.data, i * 4, r);
+    for (let i = 0; i < SIZE * SIZE; i++) paint(img.data, i * 4, r);
     ctx.putImageData(img, 0, 0);
     return canvas.toDataURL('image/png');
   };
-  // Ruido con colas largas (suma de dos uniformes al cuadrado): mucho gris medio y
-  // puntos muy claros/oscuros, como el grano de una emulsión forzada
+  // Ruido con colas largas: mucho gris medio y puntos muy claros/oscuros, como el
+  // grano de una emulsión forzada
   const luma = make((d, i, r) => {
     const n = (r() + r()) / 2 - 0.5;
     const v = 128 + Math.sign(n) * Math.pow(Math.abs(n) * 2, 0.8) * 127;
     d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
   }, 11);
   const specks = make((d, i, r) => {
-    if (r() < 0.035) {
+    if (r() < 0.03) {
       const c = SPECKS[Math.floor(r() * SPECKS.length)];
-      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 150 + r() * 105;
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 60 + r() * 70;
     }
   }, 23);
   return luma && specks ? { luma, specks } : null;
@@ -57,22 +56,34 @@ export const FilmGrain = ({ scale }: { scale: number }) => {
   const grain = useSyncExternalStore(noSubscribe, getGrain, () => null);
   if (!grain) return null;
 
-  // El escenario se escala por `scale`: dividimos para que 1 punto de ruido = 1 px CSS
-  const w = (SIZE * FRAMES) / scale;
-  const h = SIZE / scale;
-  const layer = (uri: string, blend: CSSProperties['mixBlendMode'], opacity: number, speed: number): CSSProperties => ({
+  // El escenario se escala por `scale`: dividimos para que 1 punto de ruido = 1 px CSS.
+  // La capa es un mosaico más grande que la pantalla para poder desplazarla.
+  const tile = SIZE / scale;
+  // Saltos a 4 desplazamientos del mosaico (fracciones "raras" para que no se note la
+  // repetición), en px fijos para que la animación la haga el compositor
+  const name = `grain-jump-${Math.round(tile * 100)}`;
+  const at = (fx: number, fy: number) => `transform: translate(${(fx * tile).toFixed(2)}px, ${(fy * tile).toFixed(2)}px)`;
+  const keyframes = `@keyframes ${name} { 0% { ${at(0, 0)} } 25% { ${at(-0.37, 0.61)} } 50% { ${at(0.53, -0.29)} } 75% { ${at(-0.71, -0.47)} } }`;
+  const layer = (uri: string, speed: number): CSSProperties => ({
+    left: -tile, top: -tile, right: -tile, bottom: -tile,
     backgroundImage: `url(${uri})`,
-    backgroundSize: `${w}px ${h}px`,
-    mixBlendMode: blend,
-    opacity,
-    animation: `grain-boil ${speed}s steps(${FRAMES}) infinite`,
-    '--grain-w': `${w}px`,
-  } as CSSProperties);
+    backgroundSize: `${tile}px ${tile}px`,
+    animation: `${name} ${speed}s steps(1) infinite`,
+    willChange: 'transform',
+  });
+  // El modo de mezcla va en el contenedor: si fuera en la capa interior, el contenedor
+  // (que recorta y apila) aislaría la mezcla y el grano taparía el juego
+  const wrap = (blend: CSSProperties['mixBlendMode'], opacity: number): CSSProperties => ({ mixBlendMode: blend, opacity });
 
   return (
     <>
-      <div className="grain absolute inset-0 pointer-events-none z-[997]" style={layer(grain.luma, 'overlay', 0.6, 0.5)} />
-      <div className="grain absolute inset-0 pointer-events-none z-[997]" style={layer(grain.specks, 'screen', 0.35, 0.62)} />
+      <style>{keyframes}</style>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[997]" style={wrap('overlay', 0.6)}>
+        <div className="grain absolute" style={layer(grain.luma, 0.5)} />
+      </div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[997]" style={wrap('normal', 1)}>
+        <div className="grain absolute" style={layer(grain.specks, 0.62)} />
+      </div>
     </>
   );
 };

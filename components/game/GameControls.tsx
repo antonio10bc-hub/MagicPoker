@@ -16,7 +16,7 @@ import { ICONS } from '@/components/pixel/sprites';
 const ThinkingDots = () => (
   <span className="inline-flex ml-[2px]">
     {[0, 1, 2].map(i => (
-      <motion.span key={i} animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.12 }}>.</motion.span>
+      <span key={i} className="anim-dot" style={{ animationDelay: `${i * 0.12}s` }}>.</span>
     ))}
   </span>
 );
@@ -78,7 +78,7 @@ const RoundBanner = ({ round }: { round: number }) => {
       animate={{ x: [-width, 0, 0, width], skewX: [-20, 0, 0, 20], filter: ['blur(3px)', 'blur(0px)', 'blur(0px)', 'blur(3px)'] }}
       transition={{ duration: 1.1, times: [0, 0.22, 0.72, 1], ease: 'easeInOut' }}
     >
-      <WavyText text={`${t.round} ${round}`} className="text-title text-outline bloom" style={{ color: 'var(--ink-orange)' }} />
+      <WavyText text={`${t.round} ${round}`} className="text-title text-outline glow-text" style={{ color: 'var(--ink-orange)' }} />
       <WavyText text={t.your_turn} className="text-outline" style={{ color: 'var(--c-cyan)' }} />
     </motion.div>
   );

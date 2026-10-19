@@ -104,17 +104,13 @@ export const TextBox = ({ text, suffix, compact, showCursor = true, className, s
 );
 
 // --- TEXTO ONDULANTE: cada letra flota con un pequeño desfase (títulos y carteles) ---
-export const WavyText = ({ text, amplitude = 2, className, style }: { text: string; amplitude?: number; className?: string; style?: CSSProperties }) => (
+export const WavyText = ({ text, className, style }: { text: string; className?: string; style?: CSSProperties }) => (
   <span className={clsx('inline-flex', className)} style={style}>
     {text.split('').map((ch, i) => (
-      <motion.span
-        key={i}
-        style={{ display: 'inline-block', whiteSpace: 'pre' }}
-        animate={{ y: [0, -amplitude, 0, amplitude * 0.5, 0], rotate: [0, -3, 0, 3, 0] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
-      >
+      // Bucle en CSS (compositor), con un pequeño desfase por letra
+      <span key={i} className="anim-wave" style={{ animationDelay: `${i * 0.08}s` }}>
         {ch}
-      </motion.span>
+      </span>
     ))}
   </span>
 );

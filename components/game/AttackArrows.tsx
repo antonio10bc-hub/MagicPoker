@@ -179,7 +179,7 @@ const wedge = (a: Arrow) => {
   return `M ${left.join(' L ')} L ${headL} L ${a.to.x},${a.to.y} L ${headR} L ${right.join(' L ')} Z`;
 };
 
-const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
+const ArrowView = ({ a }: { a: Arrow }) => {
   const team = TEAM[a.owner];
   const d = wedge(a);
   const gradId = `arrow-grad-${a.key}`;
@@ -187,10 +187,13 @@ const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
   return (
     <motion.g
       initial={{ opacity: 0 }}
-      animate={{ opacity: [peak * 0.8, peak, peak * 0.8] }}
+      animate={{ opacity: peak }}
       exit={{ opacity: 0, transition: { duration: 0.2 } }}
-      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: index * 0.05 }}
+      transition={{ duration: 0.25 }}
     >
+      {/* Estática a propósito: cualquier cambio dentro del SVG obliga a recalcular los
+          desenfoques de todas las flechas en cada fotograma */}
+      <g>
       <defs>
         <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y}>
           <stop offset="0" stopColor={team.light} stopOpacity={0.2} />
@@ -204,6 +207,7 @@ const ArrowView = ({ a, index }: { a: Arrow; index: number }) => {
       {/* Cuerpo luminoso, sin contorno; el Príncipe (al azar) va discontinuo */}
       <path d={d} fill={`url(#${gradId})`} stroke={a.maybe ? team.light : 'none'} strokeOpacity={0.8} strokeWidth={0.8} strokeLinejoin="round"
         strokeDasharray={a.maybe ? '3 3' : undefined} fillOpacity={a.maybe ? 0.5 : 1} />
+      </g>
     </motion.g>
   );
 };
@@ -224,30 +228,28 @@ export const AttackArrows = (props: AttackArrowsProps) => {
         </filter>
       </defs>
       <AnimatePresence>
-        {visible && arrows.map((a, i) => <ArrowView key={a.key} a={a} index={i} />)}
+        {visible && arrows.map(a => <ArrowView key={a.key} a={a} />)}
         {/* Empate de frente: destello donde chocan las dos flechas */}
         {visible && clashes.map(c => (
-          <motion.g key={`clash-${c.x}-${c.y}`} initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 1.25, 1], opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }} transition={{ duration: 0.8, repeat: Infinity }}
-            style={{ transformOrigin: `${c.x}px ${c.y}px` }}>
+          <motion.g key={`clash-${c.x}-${c.y}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            className="anim-throb" style={{ transformOrigin: `${c.x}px ${c.y}px`, transformBox: 'view-box' }}>
             <path d={`M ${c.x} ${c.y - 6} L ${c.x + 2} ${c.y - 2} L ${c.x + 6} ${c.y} L ${c.x + 2} ${c.y + 2} L ${c.x} ${c.y + 6} L ${c.x - 2} ${c.y + 2} L ${c.x - 6} ${c.y} L ${c.x - 2} ${c.y - 2} Z`}
               fill="#EDEBE0" style={{ filter: 'drop-shadow(0 0 3px #FF4A1C)' }} />
           </motion.g>
         ))}
         {/* El As: onda que late alrededor (barre todo el tablero) */}
         {visible && wipers.map(w => (
-          <motion.circle
+          <circle
             key={`wipe-${w.x}-${w.y}`}
+            className="anim-ring"
             cx={w.x}
             cy={w.y}
+            r={10}
             fill="none"
             stroke="#EDEBE0"
             strokeWidth={2}
-            style={{ filter: 'blur(0.6px) drop-shadow(0 0 3px #FF4A1C)' }}
-            initial={{ r: 10, opacity: 0.9 }}
-            animate={{ r: [10, 34], opacity: [0.9, 0] }}
-            exit={{ opacity: 0, transition: { duration: 0.15 } }}
-            transition={{ duration: 1.1, repeat: Infinity, ease: 'easeOut' }}
+            style={{ filter: 'drop-shadow(0 0 2px #FF4A1C)' }}
           />
         ))}
       </AnimatePresence>
