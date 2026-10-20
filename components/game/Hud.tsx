@@ -131,6 +131,18 @@ const RivalHand = ({ count }: { count: number }) => (
   </div>
 );
 
+/** Botón invisible de pruebas sobre el icono del rival: 3 toques rápidos ganan la partida */
+const SecretWin = ({ rect }: { rect: Rect }) => {
+  const taps = useRef<number[]>([]);
+  const debugWin = useGameStore(s => s.debugWin);
+  const onTap = () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter(t => now - t < 700), now];
+    if (taps.current.length >= 3) { taps.current = []; debugWin(); }
+  };
+  return <button type="button" aria-hidden tabIndex={-1} className="absolute z-[5] opacity-0 cursor-default" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} onPointerDown={onTap} />;
+};
+
 // --- PANEL DEL RIVAL ---
 export const RivalPanel = () => {
   const t = useTranslations();
@@ -142,20 +154,26 @@ export const RivalPanel = () => {
 
   if (compactPanels) {
     return (
-      <CompactPanel label={boss ? <BossFigure id={boss.id} height={22} dark glow={false} /> : t.rival} owner="opponent" rect={rect}>
-        <Lives lives={lives} max={maxLives} owner="opponent" />
-        <RivalHand count={handCount} />
-        <div className="ml-auto"><DeckCount owner="opponent" count={deckCount} /></div>
-      </CompactPanel>
+      <>
+        <CompactPanel label={boss ? <BossFigure id={boss.id} height={22} dark glow={false} /> : t.rival} owner="opponent" rect={rect}>
+          <Lives lives={lives} max={maxLives} owner="opponent" />
+          <RivalHand count={handCount} />
+          <div className="ml-auto"><DeckCount owner="opponent" count={deckCount} /></div>
+        </CompactPanel>
+        <SecretWin rect={{ ...rect, w: 36 }} />
+      </>
     );
   }
   return (
-    <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
-      {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><BossFigure id={boss.id} height={26} /></div>}
-      <Lives lives={lives} max={maxLives} owner="opponent" />
-      <RivalHand count={handCount} />
-      <DeckCount owner="opponent" count={deckCount} />
-    </Panel>
+    <>
+      <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
+        {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><BossFigure id={boss.id} height={26} /></div>}
+        <Lives lives={lives} max={maxLives} owner="opponent" />
+        <RivalHand count={handCount} />
+        <DeckCount owner="opponent" count={deckCount} />
+      </Panel>
+      <SecretWin rect={rect} />
+    </>
   );
 };
 

@@ -46,6 +46,8 @@ interface GameState {
   resolveCombatPhase: () => void;
   finishCombatPhase: () => void;
   drawCard: (target: Owner, amount?: number) => void;
+  /** Truco de pruebas: gana la partida en curso */
+  debugWin: () => void;
 }
 
 // --- TEMPORIZADORES ---
@@ -91,7 +93,26 @@ const END_SOUNDS: Record<GameResult, [Parameters<typeof playSound>[0], number]> 
   draw: ['click', 0.5],
 };
 
-export const useGameStore = create<GameState>((set, get) => ({
+export const useGameStore = create<GameState>((set, get) => {
+  /** Cierra la partida: estadísticas, boss vencido, logros y pantalla final */
+  const endMatch = (gameResult: GameResult, nextPlayer: PlayerState, nextOpponent: PlayerState) => {
+    const { difficulty, roundNumber, tutorialStep } = get();
+    playSound(...END_SOUNDS[gameResult]);
+    if (tutorialStep !== null) {
+      markTutorialDone();
+    } else {
+      const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
+      // Boss vencido: se desbloquea su sello (o la colección, con el primero)
+      if (gameResult === 'win') recordBossDefeat(get().bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
+      award(endStamps({
+        result: gameResult, difficulty, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
+        streak: stats.currentStreak, totalGames: stats.totalGames, track,
+      }));
+    }
+    set({ pendingCombatResult: null, sealFx: null, gameResult, phase: 'end', player: nextPlayer, opponent: nextOpponent });
+  };
+
+  return {
   screen: 'menu',
   // Sin selector: siempre se juega contra el rival difícil
   difficulty: 'hard',
@@ -286,8 +307,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     }, TIMINGS.combatFlip);
   },
 
+  debugWin: () => {
+    const { phase, screen, player, opponent } = get();
+    if (screen !== 'game' || phase === 'end' || phase === 'start') return;
+    cancelScheduled();
+    endMatch('win', { ...player, isPassed: false }, { ...opponent, lives: 0, isPassed: false });
+  },
+
   finishCombatPhase: () => {
-    const { phase, pendingCombatResult: result, player, opponent, difficulty, roundNumber, tutorialStep } = get();
+    const { phase, pendingCombatResult: result, player, opponent, roundNumber, tutorialStep } = get();
     if (phase !== 'combat-reveal') return;
     const tutorial = tutorialStep !== null;
     // En el tutorial, "Continuar" cierra el repaso de la pelea
@@ -319,20 +347,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const gameResult = getGameResult(nextPlayer, nextOpponent);
 
     if (gameResult) {
-      playSound(...END_SOUNDS[gameResult]);
-      if (tutorial) {
-        markTutorialDone();
-        set({ pendingCombatResult: null, gameResult, phase: 'end', player: nextPlayer, opponent: nextOpponent });
-        return;
-      }
-      const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
-      // Boss vencido: se desbloquea su sello (o la colección, con el primero)
-      if (gameResult === 'win') recordBossDefeat(get().bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
-      award(endStamps({
-        result: gameResult, difficulty, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
-        streak: stats.currentStreak, totalGames: stats.totalGames, track,
-      }));
-      set({ pendingCombatResult: null, gameResult, phase: 'end', player: nextPlayer, opponent: nextOpponent });
+      endMatch(gameResult, nextPlayer, nextOpponent);
       return;
     }
 
@@ -348,7 +363,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         : drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
     });
   },
-}));
+};
+});
 
 // --- GUARDADO AUTOMÁTICO ---
 // En tu turno de colocar el estado es estable: se guarda. Al terminar la partida o
