@@ -33,7 +33,8 @@ interface GameState {
   tutorialStep: number | null;
 
   setDifficulty: (diff: Difficulty) => void;
-  startGame: () => void;
+  /** Empieza contra un boss ya alcanzado (por defecto, el actual) */
+  startGame: (bossIndex?: number) => void;
   /** Retoma la partida guardada (si la hay) */
   resumeGame: () => boolean;
   /** Partida guionizada que enseña a jugar */
@@ -105,7 +106,7 @@ export const useGameStore = create<GameState>((set, get) => {
       // Boss vencido: se desbloquea su sello (o la colección, con el primero)
       if (gameResult === 'win') recordBossDefeat(get().bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
       award(endStamps({
-        result: gameResult, difficulty, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
+        result: gameResult, finalBoss: get().bossIndex === BOSSES.length - 1, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
         streak: stats.currentStreak, totalGames: stats.totalGames, track,
       }));
     }
@@ -120,13 +121,15 @@ export const useGameStore = create<GameState>((set, get) => {
 
   setDifficulty: (difficulty) => set({ difficulty }),
 
-  startGame: () => {
+  startGame: (pick) => {
     cancelScheduled();
     playSound('shuffle', 0.6);
     incrementStat('totalGames');
     track = newMatchTrack();
-    // Siempre contra el boss actual: su mazo lleva su sello; el tuyo, los que tengas
-    const bossIndex = currentBossIndex();
+    // Contra el boss elegido (solo los ya vencidos o el actual): su mazo lleva su
+    // sello; el tuyo, los que tengas. Repetir uno vencido no da premio.
+    const current = currentBossIndex();
+    const bossIndex = pick !== undefined && pick >= 0 && pick <= current ? pick : current;
     const boss = BOSSES[bossIndex];
 
     set({

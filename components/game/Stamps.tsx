@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
@@ -54,6 +54,9 @@ export const StampSeal = ({ id, earned, size = 30, tilt = -8 }: { id: StampId; e
  * tinta, y se va solo (o al tocarlo). Espera a que termine el choque de la pelea para
  * no tapar la acción.
  */
+/** Pequeña pausa antes de cada sello para no pisar la salida del aviso anterior */
+const ENTER_DELAY_MS = 300;
+
 export const StampToasts = () => {
   const t = useTranslations();
   const { width, height } = useStage();
@@ -62,7 +65,14 @@ export const StampToasts = () => {
   const busy = useGameStore(s => s.phase === 'combat');
   // El premio del boss (sello o colección) se celebra antes
   const unlockPending = useUiStore(s => s.unlockQueue.length > 0);
-  const show = current && !busy && !unlockPending;
+  const ready = current && !busy && !unlockPending;
+  const [shown, setShown] = useState<StampId | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    const id = setTimeout(() => setShown(current), ENTER_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [ready, current]);
+  const show = ready && shown === current;
 
   useEffect(() => {
     if (!show) return;

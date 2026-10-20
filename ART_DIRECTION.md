@@ -305,11 +305,16 @@ se mueve rápido y una vibración leve a las masas naranjas.
   contornos de objetivo al aplicarlo, los efectos de pelea y la colección.
 - **Carta de sello:** masa verde con el icono del sello en silueta negra y su nombre
   (DEFENSA, ATAQUE, CAMBIO, ROBO, VIDA). Se suelta sobre una carta tuya sin sello.
-- **Sello puesto:** insignia redonda verde en la esquina de la carta, visible aunque
-  esté boca abajo (los del rival se ven).
-- **Efectos en la pelea:** "CAMBIO" y "¡ROBO!" cuando las cartas cambian de sitio o de
-  bando antes del choque; "x2" en el ataque doble; "¡BLOQUEO!" y destello verde cuando
-  la defensa para los golpes; "+1" cuando el sello de vida devuelve una vida.
+- **Sello puesto:** la carta entera se tiñe de verde voltio (cuerpo, ventana y dorso,
+  también boca abajo) y lleva la insignia redonda verde en la esquina. Los del rival se
+  ven. Cuando el sello se rompe, la carta vuelve a su color.
+- **Efectos en la pelea:** cada sello se ve actuar.
+  - CAMBIO: la carta se desliza a su nuevo hueco con estela verde.
+  - ¡ROBO!: las dos cartas se cruzan en arco, brillando.
+  - Ataque (x2): doble embestida, con dos impactos verdes en el objetivo.
+  - Defensa: una burbuja verde se levanta, encaja el golpe (aplasta y rebota, chispas
+    hacia el atacante, "¡BLOQUEO!") y luego estalla en pedazos.
+  - Vida: "+1 VIDA" y chispas que suben; el corazón recuperado entra en verde.
 - **Bosses** (`components/pixel/bosses.ts`, `components/game/BossFigure.tsx`): siluetas
   grandes en naranja con su sello en verde como objeto (escudo, amuleto, anillo,
   colgante, corazón). Su forma cuenta su sello: El Muro (defensa) es enorme y fuerte,
@@ -318,11 +323,14 @@ se mueve rápido y una vibración leve a las masas naranjas.
   un corazón. El Forastero, el primero, no tiene sello.
 - **Menú:** el boss a derrotar, grande sobre el tapete y respirando; la lista se
   desliza en horizontal (con imán y puntos de página): los vencidos dicen VENCIDO y
-  los futuros salen apagados y sin nombre, con su premio a la vista.
+  los futuros salen apagados y sin nombre. JUGAR juega contra el boss en pantalla
+  (los vencidos se pueden repetir, sin premio; con uno bloqueado, JUGAR se apaga).
 - **En partida:** la silueta del boss (negra sobre la banda naranja) en el panel del
   rival, con tantos corazones como vidas tenga (algunos tienen 5).
 - **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes
   que los logros. El primero desbloquea la colección (botón verde en el menú).
+- **Orden de los avisos:** sello de carta > logros > panel de final de partida. Cada
+  uno espera a que se cierre el anterior.
 - Los logros (antes también llamados "sellos") se llaman **Logros** para no
   confundirlos con las cartas de sello.
 

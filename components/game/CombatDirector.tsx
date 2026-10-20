@@ -6,7 +6,8 @@ import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
 import { JOKER_DRAW_BONUS, TIMINGS } from '@/lib/constants';
 import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { fx } from '@/components/fx/fxStore';
-import { ARROW_HOLD_S, IMPACT_DELAY_S } from './Card';
+import { ARROW_HOLD_S, IMPACT_DELAY_S, SECOND_HIT_S, SHIELD_BREAK_S } from './Card';
+import { getTargetIndices } from '@/lib/game-utils';
 import { useTranslations } from '@/lib/i18n';
 
 // --- DIRECTOR DE COMBATE ---
@@ -49,6 +50,10 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         playSfx('whoosh', 0.9, 1.2);
         fx.emit({ kind: 'text', x: c.x, y: c.y - 18, text: t.fx_shift, bg: VOLT_BG, size: 10, life: 900 });
         fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 22, life: 450 });
+        // Estela entre los dos huecos
+        const o = center(e.owner, e.from);
+        [0.2, 0.4, 0.6, 0.8].forEach((k, j) => setTimeout(() =>
+          fx.emit({ kind: 'particles', x: o.x + (c.x - o.x) * k, y: o.y + (c.y - o.y) * k, colors: [VOLT, '#D8FF9A'], count: 5, speed: 10, gravity: -6, size: [1, 2], life: 500 }), j * 90));
       } else {
         const a = center('player', e.index);
         const b = center('opponent', e.index);
@@ -114,9 +119,28 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
 
     const attackers = cards.filter(l => l.slot.card && l.slot.card.rank !== 'JOKER');
     if (attackers.length > 0) later(HOLD_MS, () => playSfx('swing'));
-    // Sello de ataque: "x2" sobre la carta que golpea dos veces
-    attackers.filter(l => l.slot.card?.seal === 'double').forEach(l => later(HOLD_MS - 150, () =>
-      fx.emit({ kind: 'text', x: l.x, y: l.y - 22, text: t.fx_double, bg: VOLT_BG, size: 12, life: 800 })));
+    // Sello de ataque: "x2" sobre la carta y dos impactos seguidos en sus objetivos
+    attackers.filter(l => l.slot.card?.seal === 'double').forEach(l => {
+      later(HOLD_MS - 150, () => fx.emit({ kind: 'text', x: l.x, y: l.y - 22, text: t.fx_double, bg: VOLT_BG, size: 12, life: 900 }));
+      const foe: Owner = l.owner === 'player' ? 'opponent' : 'player';
+      const targets = getTargetIndices(l.slot.index, l.slot.card!.rank);
+      // El Príncipe golpea uno al azar: los chispazos van al centro de sus posibles objetivos
+      const spots = l.slot.card!.rank === 'J'
+        ? [targets.reduce((a, b) => a + b, 0) / Math.max(1, targets.length)]
+        : targets;
+      [0, SECOND_HIT_S * 1000].forEach((delay, hit) => later(IMPACT_MS + delay, () => {
+        if (hit === 1) { playSfx('swing', 0.8, 1.25); playSfx('hit', 0.9, 1.2); fx.shake(1.4); }
+        spots.forEach(i => {
+          const a = geo.slots[foe][Math.floor(i)];
+          const b = geo.slots[foe][Math.ceil(i)];
+          const x = (a.x + b.x) / 2 + CARD_SIZE.width / 2;
+          const y = a.y + CARD_SIZE.height / 2;
+          fx.emit({ kind: 'ring', x, y, color: VOLT, radius: hit ? 26 : 18, life: 350 });
+          fx.emit({ kind: 'particles', x, y, colors: [VOLT, PALETTE.white], count: hit ? 12 : 6, speed: 36, gravity: 30, size: [1, 2], life: 450 });
+          if (hit) fx.emit({ kind: 'text', x, y: y - 14, text: '2', bg: VOLT_BG, size: 11, life: 650 });
+        });
+      }));
+    });
 
     // Cámara de pelea: se acerca a donde va a pasar algo (cartas que caen y golpes
     // directos) mientras se ven las flechas, y se suelta tras el impacto
@@ -158,19 +182,30 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         fx.emit({ kind: 'text', x, y, text: `-${h.amount}`, bg: h.owner === 'player' ? 'var(--c-mult)' : 'var(--c-gold)', size: 20, life: 1200 });
       }));
 
-      // Sello de defensa: la carta aguanta y el sello estalla en verde
+      // Sello de defensa: la burbuja encaja el golpe (chispas que rebotan) y luego se rompe
       const shielded = new Set(combat.shieldedIds);
       cards.filter(l => l.slot.card && shielded.has(l.slot.card.id)).forEach(l => {
         playSfx('hit', 1, 1.4);
+        // Rebote: las chispas salen hacia el atacante
+        const away = l.owner === 'player' ? -Math.PI / 2 : Math.PI / 2;
         fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: 30, life: 500 });
-        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, PALETTE.white], count: 14, speed: 40, gravity: 20, size: [1, 2], life: 600 });
+        fx.emit({ kind: 'particles', x: l.x, y: l.y + (l.owner === 'player' ? -20 : 20), colors: [VOLT, PALETTE.white], count: 14, speed: 44, gravity: 0, spread: Math.PI * 0.7, angle: away, size: [1, 2], life: 500 });
         fx.emit({ kind: 'text', x: l.x, y: l.y - 18, text: t.fx_block, bg: VOLT_BG, size: 11, life: 1000 });
+        later((SHIELD_BREAK_S - IMPACT_DELAY_S) * 1000, () => {
+          playSfx('crush', 0.7, 1.5);
+          playSfx('sparkle', 0.6);
+          fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: 36, life: 420 });
+          // Pedazos de escudo que caen
+          fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, '#4FC414', '#D8FF9A'], count: 22, speed: 50, gravity: 90, size: [2, 3], life: 800 });
+        });
       });
       // Sello de vida: la carta cae pero devuelve una vida a su dueño
       victims.filter(l => l.slot.card?.seal === 'life').forEach((l, i) => later(220 + i * 90, () => {
         playSfx('score', 0.8, 1.1);
-        fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: '+1', bg: VOLT_BG, size: 16, life: 1100 });
-        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, PALETTE.white], count: 12, speed: 30, gravity: -30, size: [1, 2], life: 800 });
+        fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: 28, life: 500 });
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: t.fx_life, bg: VOLT_BG, size: 14, life: 1300 });
+        // El alma de la carta sube hacia las vidas
+        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, '#D8FF9A', PALETTE.white], count: 20, speed: 26, gravity: -70, spread: Math.PI * 0.6, angle: -Math.PI / 2, size: [1, 3], life: 1100 });
       }));
 
       const impact = victims.length + hits.length;

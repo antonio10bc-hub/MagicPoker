@@ -74,6 +74,9 @@ export const recordBossDefeat = (index: number): Unlock[] => {
   return index === 0 ? [{ kind: 'collection' }] : seal ? [{ kind: 'seal', seal }] : [];
 };
 
+/** Vuelve al primer boss: se pierden los bosses vencidos y sus sellos */
+export const resetProgress = () => save({ ...EMPTY });
+
 // --- MAZOS ---
 
 /** Tu mazo: el estándar más una carta de cada sello desbloqueado */

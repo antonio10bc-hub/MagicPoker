@@ -1,17 +1,16 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { clsx } from 'clsx';
 import { useTranslations, Translations } from '@/lib/i18n';
+import { useUiStore } from '@/store/useUiStore';
 import { BOSSES, currentBossIndex, getProgress, getServerProgress, subscribeProgress } from '@/lib/bosses';
-import { INK } from '@/theme/tokens';
-import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { SEAL_ICONS } from '@/components/pixel/sprites';
 import { BossFigure } from '@/components/game/BossFigure';
 import { playSfx } from '@/lib/sounds';
 
 // --- LISTA DE BOSSES (menú) ---
 // Una página por boss, deslizable en horizontal (con imán). Empieza en el boss a
-// derrotar: grande, en naranja y con su sello verde. Los vencidos dicen VENCIDO; los
-// futuros salen apagados y sin nombre, pero con su premio a la vista.
+// derrotar: grande, en naranja y con su sello verde. Los vencidos dicen VENCIDO y se
+// pueden repetir (JUGAR juega contra el que está en pantalla); los futuros salen
+// apagados y sin nombre.
 
 export const BossCarousel = ({ left, top, width, height }: { left: number; top: number; width: number; height: number }) => {
   const t = useTranslations();
@@ -19,13 +18,15 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
   const current = currentBossIndex(progress);
   const ref = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(current);
+  const setMenuBoss = useUiStore(s => s.setMenuBoss);
 
   // Al abrir el menú (o al vencer a uno) se coloca en el boss actual
   useLayoutEffect(() => {
     if (ref.current) ref.current.scrollLeft = current * width;
-  }, [current, width]);
+    setMenuBoss(current);
+  }, [current, width, setMenuBoss]);
 
-  const figureH = Math.min(126, height - 46);
+  const figureH = Math.min(100, height - 40);
 
   return (
     <div className="absolute z-20" style={{ left, top, width, height }}>
@@ -35,7 +36,7 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
         style={{ scrollSnapType: 'x mandatory', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
         onScroll={e => {
           const p = Math.round(e.currentTarget.scrollLeft / width);
-          if (p !== page) { setPage(p); playSfx('flip', 0.5, 1.2); }
+          if (p !== page) { setPage(p); setMenuBoss(p); playSfx('flip', 0.5, 1.2); }
         }}
       >
         {BOSSES.map((boss, i) => {
@@ -54,16 +55,6 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
               </div>
               <span className="text-outline" style={{ fontSize: 12, lineHeight: '12px' }}>
                 {locked ? '???' : t[`boss_${boss.id}` as keyof Translations]}
-              </span>
-              {/* Premio: su sello (o la colección, con el primero) */}
-              <span className="flex items-center gap-[3px]" style={{ color: 'var(--ink-mint)', fontSize: 9, lineHeight: '9px' }}>
-                {t.reward}:
-                {boss.seal ? (
-                  <>
-                    <PixelSprite sprite={SEAL_ICONS[boss.seal]} tint={INK.volt} className="bloom-volt-shape" />
-                    <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t[`seal_${boss.seal}` as keyof Translations]}</span>
-                  </>
-                ) : <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.reward_collection}</span>}
               </span>
             </div>
           );

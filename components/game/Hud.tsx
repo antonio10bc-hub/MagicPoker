@@ -38,11 +38,19 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
   const last = useRef(lives);
   const shake = useAnimationControls();
   const [lost, setLost] = useState<{ id: number; indices: number[] } | null>(null);
+  // Vidas recuperadas (sello de vida): brillan en verde un momento
+  const [gained, setGained] = useState<{ from: number; to: number } | null>(null);
 
   useEffect(() => {
     const prev = last.current;
     last.current = lives;
-    if (lives >= prev) return;
+    if (lives > prev) {
+      playSfx('sparkle');
+      const raf = requestAnimationFrame(() => setGained({ from: prev, to: lives }));
+      const off = setTimeout(() => setGained(null), 1400);
+      return () => { cancelAnimationFrame(raf); clearTimeout(off); };
+    }
+    if (lives === prev) return;
     // Golpe: sonido, vibración, sacudida del panel y corazones que salen volando
     playSfx(owner === 'player' ? 'hurt' : 'score');
     if (owner === 'player') haptic('lifeLost');
@@ -55,18 +63,22 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
   const critical = owner === 'player' && lives === 1;
   return (
     <motion.div animate={shake} className="relative flex gap-[1px]">
-      {Array.from({ length: max }, (_, i) => (
-        <motion.div
-          key={`${i}-${i < lives}`}
-          className={critical && i < lives ? 'anim-heartbeat' : undefined}
-          initial={i < lives ? false : { scale: 0.2 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 14 }}
-        >
-          {/* Vida: brasa que brilla; perdida: hueco apagado */}
-          <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={i < lives ? INK.orange : INK.slate} className={i < lives ? 'bloom-shape' : undefined} />
-        </motion.div>
-      ))}
+      {Array.from({ length: max }, (_, i) => {
+        const healed = !!gained && i >= gained.from && i < gained.to && i < lives;
+        return (
+          <motion.div
+            key={`${i}-${i < lives}`}
+            className={critical && i < lives ? 'anim-heartbeat' : undefined}
+            initial={i < lives ? (healed ? { scale: 2.2, y: -8 } : false) : { scale: 0.2 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 14 }}
+          >
+            {/* Vida: brasa que brilla; perdida: hueco apagado; recuperada: verde un momento */}
+            <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={healed ? INK.volt : i < lives ? INK.orange : INK.slate}
+              className={healed ? 'bloom-volt-shape' : i < lives ? 'bloom-shape' : undefined} />
+          </motion.div>
+        );
+      })}
       {lost?.indices.map(i => <FlyingHeart key={`${lost.id}-${i}`} index={i} />)}
     </motion.div>
   );

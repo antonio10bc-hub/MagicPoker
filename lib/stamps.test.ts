@@ -10,7 +10,7 @@ const combat = (over: Partial<CombatResult>): CombatResult => ({
 });
 
 const end = (over: Partial<MatchEnd>): MatchEnd => ({
-  result: 'win', difficulty: 'normal', rounds: 5, livesLeft: 2, startingLives: 4, streak: 1, totalGames: 3,
+  result: 'win', finalBoss: false, rounds: 5, livesLeft: 2, startingLives: 4, streak: 1, totalGames: 3,
   track: newMatchTrack(), ...over,
 });
 
@@ -27,7 +27,7 @@ describe('roundStamps', () => {
 
 describe('endStamps', () => {
   it('a flawless fast win on hard earns several stamps', () => {
-    const got = endStamps(end({ livesLeft: 4, rounds: 3, difficulty: 'hard', streak: 3 }));
+    const got = endStamps(end({ livesLeft: 4, rounds: 3, finalBoss: true, streak: 3 }));
     expect(got).toEqual(expect.arrayContaining(['first_win', 'flawless', 'lightning', 'hard_win', 'streak3']));
     expect(got).not.toContain('comeback');
   });

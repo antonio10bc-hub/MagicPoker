@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, animate, useMotionValue } from 'framer-motion';
+import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Card as CardType, Owner } from '@/types';
@@ -16,7 +17,7 @@ import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
-import { ARROW_HOLD_S, Card, SealBadge } from './Card';
+import { ARROW_HOLD_S, Card, DOUBLE_LUNGE_S, SealBadge } from './Card';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
 import { AttackArrows, useArrowsVisible } from './AttackArrows';
@@ -90,25 +91,53 @@ interface PlacedCardProps {
   /** Flechas de ataque encendidas para esta carta */
   arrowsOn: boolean;
   onToggleArrows: (cardId: string) => void;
+  /** Llega desde otro hueco movida por un sello (CAMBIO o ¡ROBO!): desplazamiento de origen */
+  from: Shift | null;
 }
+
+/** De dónde viene una carta que un sello ha cambiado de sitio (cross: ha cambiado de bando) */
+type Shift = { dx: number; dy: number; cross: boolean };
+
+/** Al salir de un hueco: si la carta solo se ha movido a otro, desaparece sin animación */
+const exitVariants = {
+  gone: ({ moved, voided, owner }: { moved: boolean; voided: boolean; owner: Owner }) =>
+    moved ? { opacity: 0, transition: { duration: 0 } }
+      : voided ? { scale: 0, rotateZ: 360, opacity: 0, transition: { duration: 0.45, ease: 'backIn' as const } }
+        : { y: 18, scale: 0.6, rotateZ: owner === 'player' ? -25 : 25, opacity: 0, transition: { duration: 0.35, ease: 'easeIn' as const } },
+};
 
 /**
  * Carta en mesa: aparece sobre su propio hueco, cae un poco, se "aplasta" al aterrizar
  * y levanta polvo. No vuela desde la mano: viajar dentro del tablero inclinado en 3D
  * se pinta mal en Safari de iOS (la carta salía diminuta en una esquina).
  */
-const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows }: PlacedCardProps) => {
+const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows, from: shift }: PlacedCardProps) => {
+  // Solo cuenta al aparecer: luego el tablero cambia y no debe repetir la entrada
+  const [from] = useState(shift);
   const dead = card.isTakingDamage || card.isVoided;
-  const landed = useRef(false);
+  // Movida por un sello: no "aterriza", se desliza desde su hueco anterior
+  const landed = useRef(!!from);
+  // El sello de ataque golpea dos veces: doble embestida
+  const double = card.seal === 'double';
 
   return (
     <motion.div
-      className="absolute z-10"
+      className={clsx('absolute', from ? 'z-[12]' : 'z-10')}
       style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height }}
+      variants={exitVariants}
       // Solo 2D (translate, escala, giro y opacidad) sobre su hueco
-      initial={{ y: -22, scale: 1.12, rotateZ: owner === 'player' ? -3 : 4, opacity: 0 }}
-      animate={{ y: [-22, -26, 0], scale: [1.12, 1.16, 1], rotateZ: [owner === 'player' ? -3 : 4, owner === 'player' ? -1 : 2, 0], opacity: [0, 1, 1] }}
-      transition={{ duration: 0.3, times: [0, 0.35, 1], ease: [0.3, 0.1, 0.4, 1] }}
+      {...(from ? {
+        // ¡ROBO!: cruza el tablero en arco; CAMBIO: se desliza de lado
+        initial: { x: from.dx, y: from.dy, scale: 1, opacity: 1 },
+        animate: from.cross
+          ? { x: [from.dx, from.dx / 2 + 26, 0], y: [from.dy, from.dy / 2, 0], scale: [1, 1.25, 1], rotateZ: [0, 14, 0] }
+          : { x: [from.dx, 0], y: [from.dy, 0], scale: [1, 1.12, 1], rotateZ: [0, from.dx > 0 ? -6 : 6, 0] },
+        transition: { duration: 0.5, ease: 'easeInOut' },
+      } : {
+        initial: { y: -22, scale: 1.12, rotateZ: owner === 'player' ? -3 : 4, opacity: 0 },
+        animate: { y: [-22, -26, 0], scale: [1.12, 1.16, 1], rotateZ: [owner === 'player' ? -3 : 4, owner === 'player' ? -1 : 2, 0], opacity: [0, 1, 1] },
+        transition: { duration: 0.3, times: [0, 0.35, 1], ease: [0.3, 0.1, 0.4, 1] },
+      })}
       onAnimationStart={() => { if (!landed.current) playSfx('whoosh', 0.8); }}
       onAnimationComplete={() => {
         if (landed.current) return;
@@ -118,12 +147,13 @@ const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows }: Plac
         fx.shake(owner === 'player' ? 1.2 : 0.8);
         if (owner === 'player') haptic('place');
       }}
-      exit={
-        card.isVoided
-          ? { scale: 0, rotateZ: 360, opacity: 0, transition: { duration: 0.45, ease: 'backIn' } }
-          : { y: 18, scale: 0.6, rotateZ: owner === 'player' ? -25 : 25, opacity: 0, transition: { duration: 0.35, ease: 'easeIn' } }
-      }
+      exit="gone"
     >
+      {/* Estela verde mientras un sello la mueve */}
+      {from && (
+        <motion.div className="absolute pointer-events-none px-round-2 bloom-volt" style={{ inset: -2, boxShadow: '0 0 0 2px var(--ink-volt), 0 0 14px 5px rgba(125,255,43,0.6)' }}
+          initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.4, delay: 0.45 }} />
+      )}
       {/* Sombra: crece al acercarse al suelo */}
       <motion.div
         className="absolute"
@@ -139,10 +169,15 @@ const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows }: Plac
         style={{ transformOrigin: '50% 100%' }}
         initial={lunge ? { x: 0, y: 0 } : { scaleY: 1, scaleX: 1 }}
         animate={lunge
-          ? { x: [0, -lunge.dx * 0.15, lunge.dx, 0], y: [0, -lunge.dy * 0.2, lunge.dy, 0], rotateZ: [0, -2, 4, 0] }
-          : { scaleY: [1, 1, 0.82, 1.06, 1], scaleX: [1, 1, 1.12, 0.97, 1] }}
+          ? double
+            // Dos golpes: el primero llega a la vez que los demás, el segundo justo después
+            ? { x: [0, -lunge.dx * 0.15, lunge.dx, lunge.dx * 0.2, lunge.dx, 0], y: [0, -lunge.dy * 0.2, lunge.dy, lunge.dy * 0.15, lunge.dy * 1.1, 0], rotateZ: [0, -2, 4, -3, 5, 0] }
+            : { x: [0, -lunge.dx * 0.15, lunge.dx, 0], y: [0, -lunge.dy * 0.2, lunge.dy, 0], rotateZ: [0, -2, 4, 0] }
+          : from ? { scaleY: 1, scaleX: 1 } : { scaleY: [1, 1, 0.82, 1.06, 1], scaleX: [1, 1, 1.12, 0.97, 1] }}
         transition={lunge
-          ? { duration: 0.4, times: [0, 0.3, 0.55, 1], ease: 'easeInOut', delay: ARROW_HOLD_S }
+          ? double
+            ? { duration: DOUBLE_LUNGE_S, times: [0, 0.2, 0.36, 0.55, 0.75, 1], ease: 'easeInOut', delay: ARROW_HOLD_S }
+            : { duration: 0.4, times: [0, 0.3, 0.55, 1], ease: 'easeInOut', delay: ARROW_HOLD_S }
           : { duration: 0.62, times: [0, 0.66, 0.76, 0.88, 1] }}
       >
         {/* Flotación suave en la mesa (se detiene durante el combate) */}
@@ -243,6 +278,33 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
   const origin = `${d.x + d.w / 2}px ${d.y + d.h / 2}px`;
   const pitch = geo.slots.player[1].x - geo.slots.player[0].x;
 
+  // Cartas que un sello acaba de mover: se compara con el tablero anterior
+  type Boards = Record<Owner, BoardSlot[]>;
+  const [boards, setBoards] = useState<{ now: Boards; before: Boards | null }>({ now: { player: playerBoard, opponent: opponentBoard }, before: null });
+  if (boards.now.player !== playerBoard || boards.now.opponent !== opponentBoard) {
+    setBoards({ now: { player: playerBoard, opponent: opponentBoard }, before: boards.now });
+  }
+  const before = boards.before;
+  const lastPos = useMemo(() => {
+    const pos = new Map<string, { owner: Owner; index: number }>();
+    if (before) (['player', 'opponent'] as Owner[]).forEach(owner =>
+      before[owner].forEach(s => { if (s.card) pos.set(s.card.id, { owner, index: s.index }); }));
+    return pos;
+  }, [before]);
+  const currentIds = new Set([...playerBoard, ...opponentBoard].flatMap(s => (s.card ? [s.card.id] : [])));
+  const shiftFor = (slot: BoardSlot, owner: Owner): Shift | null => {
+    const prev = slot.card && lastPos.get(slot.card.id);
+    if (!prev || (prev.owner === owner && prev.index === slot.index)) return null;
+    const a = geo.slots[prev.owner][prev.index];
+    const b = geo.slots[owner][slot.index];
+    return { dx: a.x - b.x, dy: a.y - b.y, cross: prev.owner !== owner };
+  };
+  /** Cómo sale la carta que había en este hueco: movida (sin animación), anulada o rota */
+  const exitFor = (owner: Owner, index: number) => {
+    const old = before?.[owner][index].card;
+    return { moved: !!old && currentIds.has(old.id), voided: !!old?.isVoided, owner };
+  };
+
   // Embestidas: cada carta con patrón de ataque se lanza hacia su objetivo
   const lungeFor = (slot: BoardSlot, owner: Owner) => {
     if (!combat || combat.voidedCardIds.length > 0 || !slot.card || !RANKS[slot.card.rank].attack) return null;
@@ -303,9 +365,10 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
               )}
             </button>
           )}
-          <AnimatePresence>
+          <AnimatePresence custom={exitFor(owner, slot.index)}>
             {slot.card && (
               <PlacedCard
+                from={shiftFor(slot, owner)}
                 key={slot.card.id}
                 card={slot.card}
                 owner={owner}

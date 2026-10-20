@@ -14,7 +14,7 @@ import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
 import { BossCarousel } from './BossCarousel';
-import { getProgress, getServerProgress, isCollectionUnlocked, subscribeProgress } from '@/lib/bosses';
+import { currentBossIndex, getProgress, getServerProgress, isCollectionUnlocked, subscribeProgress } from '@/lib/bosses';
 import { INK } from '@/theme/tokens';
 import { useMenuLayout, useStage } from '@/components/pixel/Stage';
 
@@ -105,6 +105,8 @@ export const Mascot = ({ rank, owner, x, y, delay = 0 }: { rank: Rank; owner: Ow
 export const MenuScreen = () => {
   const t = useTranslations();
   const startGame = useGameStore(s => s.startGame);
+  // JUGAR juega contra el boss que está en pantalla (si ya lo has alcanzado)
+  const menuBoss = useUiStore(s => s.menuBoss);
 
   // Empieza la partida y, si es la primera vez, abre el tutorial
   const handleStartGame = () => {
@@ -112,13 +114,16 @@ export const MenuScreen = () => {
     // La primera vez se juega el tutorial guiado (si no se completó antes)
     const first = consumeFirstPlay();
     if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
-    else startGame();
+    else startGame(selected);
   };
 
   const { cx, logoX, logoW, logoY, playY, board, bossY, bossH } = useMenuLayout();
   const stage = useStage();
   const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
   const collection = isCollectionUnlocked(progress);
+  const current = currentBossIndex(progress);
+  const selected = menuBoss ?? current;
+  const locked = selected > current;
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
   const resumeGame = useGameStore(s => s.resumeGame);
@@ -148,7 +153,7 @@ export const MenuScreen = () => {
       <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}
         initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.9 }}>
-        <PxButton tone="yellow" onClick={handleStartGame} className="text-title w-full h-full overflow-hidden anim-breathe">
+        <PxButton tone="yellow" onClick={handleStartGame} disabled={locked} className={locked ? 'text-title w-full h-full overflow-hidden opacity-40' : 'text-title w-full h-full overflow-hidden anim-breathe'}>
           {t.play}
         </PxButton>
       </motion.div>

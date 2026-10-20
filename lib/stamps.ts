@@ -1,7 +1,7 @@
 // --- SELLOS (logros) ---
 // Cada sello se gana haciendo algo concreto. Las condiciones son funciones puras sobre
 // lo que pasó en una pelea o en la partida, así se pueden probar sin interfaz.
-import { CombatResult, Difficulty, GameResult, Rank } from '@/types';
+import { CombatResult, GameResult, Rank } from '@/types';
 
 export const STAMP_IDS = [
   'first_win', 'republicana', 'flawless', 'comeback', 'massacre', 'barrage',
@@ -31,7 +31,8 @@ export const roundStamps = (result: CombatResult): StampId[] => {
 
 export interface MatchEnd {
   result: GameResult;
-  difficulty: Difficulty;
+  /** La partida era contra el último boss */
+  finalBoss: boolean;
   rounds: number;
   livesLeft: number;
   startingLives: number;
@@ -48,7 +49,7 @@ export const endStamps = (m: MatchEnd): StampId[] => {
     if (m.livesLeft === m.startingLives) out.push('flawless');
     if (m.livesLeft === 1) out.push('comeback');
     if (m.rounds <= 3) out.push('lightning');
-    if (m.difficulty === 'hard') out.push('hard_win');
+    if (m.finalBoss) out.push('hard_win');
     if (m.streak >= 3) out.push('streak3');
   }
   if (m.result === 'draw') out.push('stalemate');

@@ -9,7 +9,7 @@ import { haptic, playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/s
 import { GrainLevel, updateSettings } from '@/lib/settings';
 import { useSettings } from '@/hooks/useSettings';
 import { useMuted } from '@/hooks/useMuted';
-import { Difficulty, Rank } from '@/types';
+import { Rank } from '@/types';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { INK } from '@/theme/tokens';
@@ -17,7 +17,7 @@ import { useStage } from '@/components/pixel/Stage';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
-import { BOSSES, unlockedSeals } from '@/lib/bosses';
+import { BOSSES, resetProgress, unlockedSeals } from '@/lib/bosses';
 
 const closeWithClick = () => {
   playSound('click');
@@ -119,8 +119,6 @@ const ConfirmExitModal = () => {
 };
 
 // --- ESTADÍSTICAS ---
-const WIN_COLORS: Record<Difficulty, string> = { easy: 'var(--ink-cream)', normal: 'var(--ink-ember)', hard: 'var(--ink-orange)' };
-
 const Section = ({ title, children, className }: { title: string; children: ReactNode; className?: string }) => (
   <div className={clsx('px-inset p-[5px]', className)}>
     <div className="mb-[4px] pb-[2px] uppercase" style={{ color: 'var(--c-ui-muted)', boxShadow: '0 1px 0 0 var(--c-ui-panel-light)' }}>{title}</div>
@@ -134,6 +132,7 @@ const StatsModal = () => {
   const [stats] = useState(getStats);
   const [picked, setPicked] = useState<StampId | null>(null);
 
+  // Las victorias antiguas por dificultad cuentan todas juntas
   const totalWins = stats.wins.easy + stats.wins.normal + stats.wins.hard;
   const finished = totalWins + stats.losses + stats.draws;
   const favorite = (Object.entries(stats.rankPlayed) as [Rank, number][]).sort((a, b) => b[1] - a[1])[0];
@@ -161,18 +160,19 @@ const StatsModal = () => {
   return (
     <Dialog title={t.stats_title} width={250} height={232}>
       <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[12px]">
-        <Section title={t.wins}>
-          <div className="grid grid-cols-3 text-center">
-            {(Object.keys(WIN_COLORS) as Difficulty[]).map(d => (
-              <div key={d}>
-                <div>{t[d]}</div>
-                <div className="text-title" style={{ color: WIN_COLORS[d] }}>{stats.wins[d]}</div>
+        <Section title={t.results}>
+          <div className="grid gap-x-[3px] text-center" style={{ gridTemplateColumns: "1fr 1fr 1fr 0.7fr" }}>
+            {([
+              [t.wins, totalWins, 'var(--ink-orange)'],
+              [t.losses, stats.losses, 'var(--ink-cream)'],
+              [t.draws, stats.draws, 'var(--ink-teal)'],
+              ['%', `${finished ? Math.round((totalWins / finished) * 100) : 0}%`, 'var(--ink-ember)'],
+            ] as const).map(([label, value, color]) => (
+              <div key={label}>
+                <div style={{ color: 'var(--ink-mint)', fontSize: 8 }}>{label}</div>
+                <div className="text-title" style={{ color }}>{value}</div>
               </div>
             ))}
-          </div>
-          <div className="flex justify-between mt-[3px]" style={{ color: 'var(--ink-mint)' }}>
-            <span>{t.losses} {stats.losses}</span><span>{t.draws} {stats.draws}</span>
-            <span>{t.winrate} {finished ? Math.round((totalWins / finished) * 100) : 0}%</span>
           </div>
           {/* Últimas partidas: punto naranja = victoria, pizarra = derrota, teal = empate */}
           {stats.history.length > 0 && (
@@ -221,7 +221,7 @@ const CollectionModal = () => {
   const [seals] = useState(() => unlockedSeals());
   return (
     <Dialog title={t.collection_title} width={250} height={220}>
-      <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[6px] leading-[11px]">
+      <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[6px] leading-[10px]" style={{ fontSize: 9 }}>
         {seals.length === 0 && <p style={{ color: 'var(--ink-mint)' }}>{t.collection_empty}</p>}
         {BOSSES.filter(b => b.seal).map(boss => {
           const seal = boss.seal!;
@@ -278,12 +278,33 @@ const Slider = ({ value, onChange, label }: { value: number; onChange: (v: numbe
   </>
 );
 
+/** Borra la progresión de bosses y sellos; pide un segundo toque para confirmar */
+const ResetProgress = () => {
+  const t = useTranslations();
+  const [step, setStep] = useState<'idle' | 'confirm' | 'done'>('idle');
+  return (
+    <PxButton className="h-[16px]" disabled={step === 'done'}
+      style={step === 'confirm' ? { boxShadow: '0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : undefined}
+      onClick={() => {
+        if (step === 'idle') { playSfx('select', 0.6); setStep('confirm'); return; }
+        playSound('click');
+        resetProgress();
+        useUiStore.getState().setMenuBoss(0);
+        setStep('done');
+      }}>
+      <span style={{ color: step === 'confirm' ? 'var(--ink-orange)' : step === 'done' ? 'var(--ink-teal)' : undefined }}>
+        {step === 'confirm' ? t.reset_confirm : step === 'done' ? t.reset_done : t.reset_progress}
+      </span>
+    </PxButton>
+  );
+};
+
 const SettingsModal = () => {
   const t = useTranslations();
   const settings = useSettings();
   const isMuted = useMuted();
   return (
-    <Dialog title={t.settings_title} width={236} height={196}>
+    <Dialog title={t.settings_title} width={236} height={218}>
       <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[12px]">
         <Row label={t.set_sound}>
           <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
@@ -310,6 +331,7 @@ const SettingsModal = () => {
           useUiStore.getState().closeModal();
           useGameStore.getState().startTutorial();
         }}>{t.replay_tutorial}</PxButton>
+        <ResetProgress />
       </div>
     </Dialog>
   );

@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
+import { useUiStore } from '@/store/useUiStore';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GameResult } from '@/types';
 import { PALETTE } from '@/theme/tokens';
 import { useMenuLayout, useStage } from '@/components/pixel/Stage';
@@ -77,12 +78,15 @@ const TitleLetters = ({ text }: { text: string }) => (
 
 export const EndScreen = () => {
   const t = useTranslations();
-  const wasTutorial = useGameStore(s => s.tutorialStep !== null);
-  const { gameResult, startGame, exitToMenu } = useGameStore(useShallow(s => ({
-    gameResult: s.gameResult ?? 'loss',
+  const [wasTutorial] = useState(() => useGameStore.getState().tutorialStep !== null);
+  const { result, bossIndex, startGame, exitToMenu } = useGameStore(useShallow(s => ({
+    result: s.gameResult ?? 'loss',
+    bossIndex: s.bossIndex,
     startGame: s.startGame,
     exitToMenu: s.exitToMenu,
   })));
+  // Se fija al aparecer: al salir, la partida ya se ha reiniciado (sin resultado)
+  const [gameResult] = useState(result);
   const ui = RESULT_UI[gameResult];
   const { cx, board, mascotY } = useMenuLayout();
   // El panel de resultado va centrado sobre el tapete
@@ -91,37 +95,42 @@ export const EndScreen = () => {
 
   const isWin = gameResult === 'win';
   const isLoss = gameResult === 'loss';
+  // Orden de celebraciones: sello de carta > logros > resultado. El panel espera a que
+  // se hayan mostrado los desbloqueos y los logros pendientes.
+  const waiting = useUiStore(s => s.unlockQueue.length + s.stampQueue.length > 0);
 
   useEffect(() => { if (gameResult !== 'draw') haptic(gameResult === 'win' ? 'win' : 'loss'); }, [gameResult]);
 
   useEffect(() => {
-    if (!isWin) return;
+    if (!isWin || waiting) return;
     const pops = [0, 1, 2, 3, 4].map(i => setTimeout(() => playSfx('pop', 0.8, 1 + i * 0.12), 500 + i * 90));
     const sparkle = setTimeout(() => playSfx('sparkle'), 900);
     return () => { pops.forEach(clearTimeout); clearTimeout(sparkle); };
-  }, [isWin]);
+  }, [isWin, waiting]);
 
   return (
     <div className="absolute inset-0">
       <MenuBackground />
       {isLoss && <div className="absolute inset-0 z-[4]" style={{ background: 'rgba(11, 13, 12, 0.55)' }} />}
-      {isWin && <Rays x={cx} y={panelY + 48} />}
-      {isWin && <Confetti />}
+      {isWin && !waiting && <Rays x={cx} y={panelY + 48} />}
+      {isWin && !waiting && <Confetti />}
       <Mascot rank={gameResult === 'loss' ? 'K' : 'J'} owner={gameResult === 'loss' ? 'opponent' : 'player'} x={cx - 16} y={board.diorama.y + 6} />
 
-      <motion.div
+      {!waiting && <motion.div
         className="absolute z-10"
         style={{ left: cx - Math.floor(panelWidth / 2), top: panelY }}
         initial={{ y: -200, rotate: isLoss ? 8 : -6 }}
         animate={isLoss ? { y: 0, rotate: [8, -3, 2, 0], x: [0, -4, 4, -2, 0] } : { y: 0, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: isLoss ? 500 : 260, damping: isLoss ? 20 : 12, delay: 0.25 }}
+        // Derrota: caída seca con temblor (varios fotogramas: sin muelle); victoria: muelle
+        transition={isLoss ? { duration: 0.6, ease: 'easeOut', delay: 0.25 } : { type: 'spring', stiffness: 260, damping: 12, delay: 0.25 }}
       >
       <Panel title={<TitleLetters text={t[ui.title]} />} band={ui.band} style={{ width: panelWidth, height: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
         <p className="text-center leading-[12px]">{wasTutorial ? t.tut_done : t[ui.sub]}</p>
-        <PxButton tone="yellow" onClick={() => { playSound('click'); startGame(); }} className="h-[20px]">{t.play_again}</PxButton>
+        {/* Si ganas, al siguiente boss; si no, revancha contra el mismo */}
+        <PxButton tone="yellow" onClick={() => { playSound('click'); startGame(isWin || wasTutorial ? undefined : bossIndex); }} className="h-[20px]">{t.play_again}</PxButton>
         <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
       </Panel>
-      </motion.div>
+      </motion.div>}
     </div>
   );
 };

@@ -17,6 +17,9 @@ interface UiState {
   unlockQueue: Unlock[];
   pushUnlock: (u: Unlock) => void;
   shiftUnlock: () => void;
+  /** Boss que se ve en el carrusel del menú (null = el actual) */
+  menuBoss: number | null;
+  setMenuBoss: (i: number) => void;
 }
 
 export const useUiStore = create<UiState>(set => ({
@@ -29,4 +32,6 @@ export const useUiStore = create<UiState>(set => ({
   unlockQueue: [],
   pushUnlock: u => set(s => ({ unlockQueue: [...s.unlockQueue, u] })),
   shiftUnlock: () => set(s => ({ unlockQueue: s.unlockQueue.slice(1) })),
+  menuBoss: null,
+  setMenuBoss: menuBoss => set({ menuBoss }),
 }));

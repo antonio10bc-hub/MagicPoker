@@ -1,4 +1,4 @@
-import { memo, ReactNode } from 'react';
+import { memo, ReactNode, useEffect, useState } from 'react';
 import { Card as CardType, Owner } from '@/types';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
@@ -100,13 +100,24 @@ const LOOK: Record<Owner, { body: string; window: string; glow: string }> = {
   },
 };
 
+/** Carta con sello: toda ella se tiñe de verde voltio (cuerpo, ventana y dorso) */
+const VOLT_WASH = 'linear-gradient(rgba(125,255,43,0.6), rgba(125,255,43,0.6))';
+const SEALED_LOOK = {
+  body: 'radial-gradient(ellipse 80% 70% at 50% 45%, #B6FF7A 0%, var(--ink-volt) 55%, #4FC414 100%)',
+  window: (owner: Owner) => `radial-gradient(ellipse 60% 55% at 50% 60%, rgba(237,255,214,0.6) 0%, rgba(125,255,43,0) 70%), ${VOLT_WASH}, ${
+    owner === 'opponent' ? patternUri('card-back', CARD_BACK_TILE, 'opponent') : patternUri('window', WINDOW_TILE)}`,
+};
+
 // --- DORSO ---
 // Sin dibujo: una masa de grano del color del bando cuyos bordes se deshacen
-const CardBack = ({ owner }: { owner: Owner }) => (
-  <div className={clsx('px-round-2 absolute inset-0', owner === 'opponent' && 'bloom')} style={{ background: owner === 'opponent' ? 'rgba(255,74,28,0.35)' : 'var(--ink-slate)' }}>
+const CardBack = ({ owner, sealed }: { owner: Owner; sealed?: boolean }) => (
+  <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : owner === 'opponent' && 'bloom')}
+    style={{ background: sealed ? 'var(--ink-volt-dark)' : owner === 'opponent' ? 'rgba(255,74,28,0.35)' : 'var(--ink-slate)' }}>
     <div className="absolute inset-0" style={{
-      backgroundImage: `radial-gradient(ellipse 55% 50% at 50% 50%, ${owner === 'opponent' ? 'rgba(237,235,224,0.45)' : 'rgba(94,122,118,0.35)'} 0%, transparent 70%), ${patternUri('card-back', CARD_BACK_TILE, owner)}`,
-      backgroundSize: '100% 100%, 16px',
+      backgroundImage: sealed
+        ? `radial-gradient(ellipse 55% 50% at 50% 50%, rgba(216,255,154,0.6) 0%, transparent 70%), ${VOLT_WASH}, ${patternUri('card-back', CARD_BACK_TILE, owner)}`
+        : `radial-gradient(ellipse 55% 50% at 50% 50%, ${owner === 'opponent' ? 'rgba(237,235,224,0.45)' : 'rgba(94,122,118,0.35)'} 0%, transparent 70%), ${patternUri('card-back', CARD_BACK_TILE, owner)}`,
+      backgroundSize: sealed ? '100% 100%, 100% 100%, 16px' : '100% 100%, 16px',
       WebkitMaskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
       maskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
     }} />
@@ -118,16 +129,19 @@ const CardBack = ({ owner }: { owner: Owner }) => (
 );
 
 // --- ANVERSO ---
-const CardFace = ({ card }: { card: CardType }) => {
+const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
   if (card.rank === 'SEAL' && card.seal) return <SealCardFace seal={card.seal} />;
   const look = LOOK[card.owner];
   const character = CHARACTERS[card.rank];
+  const tile = card.owner === 'opponent' ? '16px' : '8px';
   return (
-    <div className={clsx('px-round-2 absolute inset-0', look.glow)} style={{ background: look.body, boxShadow: card.owner === 'player' ? '0 0 6px 1px rgba(237,235,224,0.14)' : undefined }}>
+    <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : look.glow)}
+      style={{ background: sealed ? SEALED_LOOK.body : look.body, boxShadow: !sealed && card.owner === 'player' ? '0 0 6px 1px rgba(237,235,224,0.14)' : undefined }}>
       {/* Ventana de ilustración (ocupa casi toda la carta) */}
       <div className="absolute overflow-hidden" style={{
         left: 3, top: 3, width: 34, height: 39, borderRadius: 2,
-        backgroundImage: look.window, backgroundSize: card.owner === 'opponent' ? '100% 100%, 16px' : '100% 100%, 8px',
+        backgroundImage: sealed ? SEALED_LOOK.window(card.owner) : look.window,
+        backgroundSize: sealed ? `100% 100%, 100% 100%, ${tile}` : `100% 100%, ${tile}`,
       }}>
         {character ? (
           // Personaje: silueta casi negra, lectura por contorno
@@ -212,12 +226,26 @@ const DamageStamp = ({ source }: { source: NonNullable<CardType['damageSource']>
  */
 export const ARROW_HOLD_S = 0.6;
 export const IMPACT_DELAY_S = ARROW_HOLD_S + 0.22;
+/** Doble embestida (sello de ataque): el segundo golpe llega SECOND_HIT_S después del primero */
+export const DOUBLE_LUNGE_S = 0.62;
+export const SECOND_HIT_S = DOUBLE_LUNGE_S * (0.75 - 0.36);
 
 const faceStyle = { backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as const;
+
+/** Momento en que el escudo, tras parar los golpes, se rompe */
+export const SHIELD_BREAK_S = IMPACT_DELAY_S + 0.65;
 
 const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: CardProps) => {
   const isDamage = !!card.isTakingDamage;
   const isVoided = !!card.isVoided;
+  // El escudo ha parado los golpes: al romperse la carta pierde el verde
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    if (!card.isShielded) return;
+    const id = setTimeout(() => setBroken(true), SHIELD_BREAK_S * 1000);
+    return () => { clearTimeout(id); setBroken(false); };
+  }, [card.isShielded]);
+  const sealed = !!card.seal && card.rank !== 'SEAL' && !(card.isShielded && broken);
 
   return (
     <motion.div
@@ -245,8 +273,8 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
         animate={{ rotateY: card.isFaceUp ? 0 : 180 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       >
-        <div className="absolute inset-0" style={faceStyle}><CardFace card={card} /></div>
-        <div className="absolute inset-0" style={{ ...faceStyle, transform: 'rotateY(180deg)' }}><CardBack owner={card.owner} /></div>
+        <div className="absolute inset-0" style={faceStyle}><CardFace card={card} sealed={sealed} /></div>
+        <div className="absolute inset-0" style={{ ...faceStyle, transform: 'rotateY(180deg)' }}><CardBack owner={card.owner} sealed={sealed} /></div>
       </motion.div>
 
       {/* Golpe: destello blanco y velo rojo que late */}
@@ -266,17 +294,34 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: IMPACT_DELAY_S }} />
       )}
       {/* Sello puesto (se ve aunque la carta esté boca abajo) */}
-      {card.seal && card.rank !== 'SEAL' && <SealBadge seal={card.seal} />}
-      {/* El sello de defensa ha parado los golpes: destello verde */}
-      {card.isShielded && (
-        <motion.div className="px-round-2 absolute inset-0 pointer-events-none"
-          style={{ boxShadow: '0 0 0 2px var(--ink-volt), 0 0 14px 4px rgba(125,255,43,0.7)', background: 'rgba(125,255,43,0.18)' }}
-          initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.6] }} transition={{ duration: 0.6, delay: IMPACT_DELAY_S }} />
-      )}
+      {card.seal && card.rank !== 'SEAL' && !(card.isShielded && broken) && <SealBadge seal={card.seal} />}
+      {/* Sello de defensa: una burbuja verde se levanta, encaja los golpes temblando y estalla */}
+      {card.isShielded && <ShieldBubble />}
       {card.damageSource && (isDamage || isVoided) && <DamageStamp source={card.damageSource} />}
     </motion.div>
   );
 };
+
+/** Burbuja del escudo: aparece con las flechas, encaja el golpe y se rompe */
+const ShieldBubble = () => (
+  <motion.div className="absolute pointer-events-none z-30"
+    style={{ left: -6, top: -6, right: -6, bottom: -6, borderRadius: '50% / 45%',
+      background: 'radial-gradient(ellipse at 50% 45%, rgba(125,255,43,0.05) 40%, rgba(125,255,43,0.35) 85%)',
+      boxShadow: '0 0 0 1.5px var(--ink-volt), 0 0 12px 4px rgba(125,255,43,0.55)' }}
+    initial={{ opacity: 0, scale: 0.6 }}
+    animate={{
+      opacity: [0, 1, 1, 1, 1, 1, 0],
+      scale: [0.6, 1, 1, 0.86, 1.08, 1, 1.35],
+      x: [0, 0, 0, -2, 2, 0, 0],
+    }}
+    transition={{
+      duration: SHIELD_BREAK_S - (ARROW_HOLD_S - 0.25) + 0.2,
+      delay: ARROW_HOLD_S - 0.25,
+      // Sube, espera, golpe (aplasta y rebota), aguanta, estalla
+      times: [0, 0.15, 0.34, 0.4, 0.48, 0.82, 1],
+    }}
+  />
+);
 
 /** Grietas que se dibujan sobre la carta destruida */
 const Cracks = () => (
