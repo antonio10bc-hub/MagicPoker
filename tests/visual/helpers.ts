@@ -48,8 +48,11 @@ export const startScenario = async (page: Page, s: Scenario) => {
     localStorage.setItem('magic_poker_save', JSON.stringify(saved));
   }, [s.defeated ?? 6, save] as const);
   await page.goto('/');
-  await page.getByText(/continuar partida/i).click({ force: true });
-  await page.waitForFunction(() => (window as unknown as { __game?: { getState: () => { phase: string } } }).__game?.getState().phase === 'placement');
+  // Igual que "Continuar partida" (sin depender de cuándo se puede pulsar el botón)
+  await page.waitForFunction(() => !!(window as unknown as { __game?: unknown }).__game);
+  await page.getByText(/continuar partida/i).waitFor();
+  await page.evaluate(() => (window as unknown as { __game: { getState: () => { resumeGame: () => boolean } } }).__game.getState().resumeGame());
+  await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
   await page.waitForTimeout(600);
 };
 
