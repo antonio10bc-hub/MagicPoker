@@ -16,7 +16,8 @@ import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
-import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
+import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { BOSSES, unlockedSeals } from '@/lib/bosses';
 
 const closeWithClick = () => {
   playSound('click');
@@ -38,6 +39,7 @@ export const Modals = () => {
       {modal === 'stats' && <StatsModal key="stats" />}
       {modal === 'rules' && <RulesModal key="rules" />}
       {modal === 'settings' && <SettingsModal key="settings" />}
+      {modal === 'collection' && <CollectionModal key="collection" />}
     </AnimatePresence>
   );
 };
@@ -208,6 +210,40 @@ const StatsModal = () => {
         </Section>
         <Section title={t.records}>{rows(records)}</Section>
         <Section title={t.global}>{rows(globals)}</Section>
+      </div>
+    </Dialog>
+  );
+};
+
+// --- COLECCIÓN DE SELLOS ---
+const CollectionModal = () => {
+  const t = useTranslations();
+  const [seals] = useState(() => unlockedSeals());
+  return (
+    <Dialog title={t.collection_title} width={250} height={220}>
+      <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[6px] leading-[11px]">
+        {seals.length === 0 && <p style={{ color: 'var(--ink-mint)' }}>{t.collection_empty}</p>}
+        {BOSSES.filter(b => b.seal).map(boss => {
+          const seal = boss.seal!;
+          const owned = seals.includes(seal);
+          return (
+            <div key={seal} className="flex gap-[6px] items-start px-inset p-[5px]"
+              style={{ boxShadow: owned ? 'inset 0 0 0 1px rgba(125,255,43,0.45)' : undefined }}>
+              <div className={owned ? 'shrink-0 flex items-center justify-center rounded-full bloom-volt' : 'shrink-0 flex items-center justify-center rounded-full'}
+                style={{ width: 22, height: 22, background: owned ? 'var(--ink-volt)' : 'var(--ink-slate)' }}>
+                <PixelSprite sprite={SEAL_ICONS[seal]} tint={owned ? INK.black : INK.teal} />
+              </div>
+              <div className="flex flex-col gap-[2px] min-w-0">
+                <span className={owned ? 'glow-volt' : undefined} style={{ color: owned ? 'var(--ink-volt)' : 'var(--ink-teal)' }}>
+                  {owned ? t[`seal_${seal}` as keyof Translations] : '???'}
+                </span>
+                <span style={{ color: owned ? 'var(--ink-cream)' : 'var(--ink-teal)' }}>
+                  {owned ? t[`seal_${seal}_desc` as keyof Translations] : t.collection_locked.replace('{boss}', t[`boss_${boss.id}` as keyof Translations])}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </Dialog>
   );

@@ -16,7 +16,7 @@ import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
-import { ARROW_HOLD_S, Card } from './Card';
+import { ARROW_HOLD_S, Card, SealBadge } from './Card';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
 import { AttackArrows, useArrowsVisible } from './AttackArrows';
@@ -225,10 +225,11 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
   const arrowsVisible = useArrowsVisible(combat);
   const isFighting = phase === 'combat' || phase === 'combat-reveal';
   const isTargeting = !!selectedCard && isPlacementPhase;
+  const sealing = selectedCard?.rank === 'SEAL';
   const activeSlot = dragOverSlot ?? hoveredSlot;
   const preview = useMemo(
-    () => (isTargeting && selectedCard && activeSlot !== null && !playerBoard[activeSlot].card ? { card: selectedCard, slotIndex: activeSlot } : null),
-    [isTargeting, selectedCard, activeSlot, playerBoard]
+    () => (isTargeting && selectedCard && !sealing && activeSlot !== null && !playerBoard[activeSlot].card ? { card: selectedCard, slotIndex: activeSlot } : null),
+    [isTargeting, selectedCard, sealing, activeSlot, playerBoard]
   );
 
   // Cámara: se inclina más durante la pelea (spring suave)
@@ -254,12 +255,14 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
   const renderSide = (cards: BoardSlot[], owner: Owner) =>
     cards.map(slot => {
       const { x, y } = geo.slots[owner][slot.index];
-      const canTarget = owner === 'player' && !slot.card && isTargeting && (onlySlot === undefined || onlySlot === slot.index);
+      // Carta normal → hueco vacío; carta de sello → carta propia sin sello
+      const fits = sealing ? !!slot.card && !slot.card.seal : !slot.card;
+      const canTarget = owner === 'player' && fits && isTargeting && (onlySlot === undefined || onlySlot === slot.index);
       const tutorialHint = owner === 'player' && onlySlot === slot.index && !slot.card && isPlacementPhase;
       const showGhost = canTarget && activeSlot === slot.index && selectedCard;
       return (
         <div key={`${owner}-${slot.index}`}>
-          <SlotTile x={x} y={y} highlight={canTarget} />
+          <SlotTile x={x} y={y} highlight={canTarget && !sealing} />
           {/* Tutorial: "aquí" — marco que late sobre el hueco que pide el paso */}
           {tutorialHint && (
             <div className="absolute pointer-events-none px-round anim-pulse z-[19]"
@@ -278,11 +281,17 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
             >
               {/* El contenido no captura el puntero: el clic siempre llega al botón,
                   aunque al pasar por encima cambie de cursor a vista previa */}
-              {showGhost
+              {sealing && selectedCard?.seal ? (
+                // Sello: contorno verde que late sobre la carta; al apuntarla, el sello ya puesto
+                <div className={showGhost ? 'absolute inset-0 pointer-events-none px-round' : 'absolute inset-0 pointer-events-none px-round anim-pulse'}
+                  style={{ inset: -2, boxShadow: showGhost ? '0 0 0 2px var(--ink-volt), 0 0 12px 4px rgba(125,255,43,0.6)' : '0 0 0 1px var(--ink-volt), 0 0 8px 2px rgba(125,255,43,0.4)' }}>
+                  {showGhost && <SealBadge seal={selectedCard.seal} pulse />}
+                </div>
+              ) : showGhost
                 ? <div className="pointer-events-none" style={{ opacity: 0.55 }}><Card card={selectedCard} /></div>
                 : <span className="anim-bob pointer-events-none">{selectedCard && <PatternGlyph card={selectedCard} />}</span>}
               {/* Destino confirmado: marco verde suave que late sobre la vista previa */}
-              {showGhost && (
+              {showGhost && !sealing && (
                 <motion.div
                   className="absolute pointer-events-none px-round"
                   style={{ inset: -2, boxShadow: '0 0 0 1px rgba(255,74,28,0.9), 0 0 10px 3px rgba(255,74,28,0.55), inset 0 0 8px rgba(242,101,42,0.45)',

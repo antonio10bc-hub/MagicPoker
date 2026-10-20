@@ -60,12 +60,14 @@ export const StampToasts = () => {
   const current = useUiStore(s => s.stampQueue[0]);
   const shift = useUiStore(s => s.shiftStamp);
   const busy = useGameStore(s => s.phase === 'combat');
-  const show = current && !busy;
+  // El premio del boss (sello o colección) se celebra antes
+  const unlockPending = useUiStore(s => s.unlockQueue.length > 0);
+  const show = current && !busy && !unlockPending;
 
   useEffect(() => {
     if (!show) return;
     const slam = setTimeout(() => { playSfx('crush', 0.7, 1.2); playSfx('sparkle'); haptic('stamp'); }, 180);
-    const done = setTimeout(shift, 2800);
+    const done = setTimeout(shift, 2300);
     return () => { clearTimeout(slam); clearTimeout(done); };
   }, [show, current, shift]);
 

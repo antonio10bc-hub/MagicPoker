@@ -36,6 +36,7 @@ los dos.
 | Bermellón | `#FF4A1C` | **acento**: rival, peligro, objetivos, vidas |
 | Brasa | `#F2652A` | acento secundario: interacción, núcleos de luz |
 | Musgo | `#6F8F5A` | solo transición en halos (niebla, pelea) |
+| Voltio | `#7DFF2B` | **exclusivo de los sellos**: verde eléctrico (amarillo verdoso) que brilla como el naranja |
 
 **El naranja es el único color saturado y se reserva para lo importante.** Nunca hay
 dos fuentes de color compitiendo: el decorado es negro y grises fríos.
@@ -296,6 +297,34 @@ se mueve rápido y una vibración leve a las masas naranjas.
     (`defeat`).
   Cada reproducción lleva una ligera variación de tono para que no canse.
 - **Vibración** con significado (ver "Movimiento y game feel").
+
+### Sellos y bosses
+
+- **Todo lo relacionado con los sellos es verde eléctrico** (`--ink-volt`, `.bloom-volt`,
+  `.glow-volt`): las cartas de sello, la insignia del sello puesto en una carta, los
+  contornos de objetivo al aplicarlo, los efectos de pelea y la colección.
+- **Carta de sello:** masa verde con el icono del sello en silueta negra y su nombre
+  (DEFENSA, ATAQUE, CAMBIO, ROBO, VIDA). Se suelta sobre una carta tuya sin sello.
+- **Sello puesto:** insignia redonda verde en la esquina de la carta, visible aunque
+  esté boca abajo (los del rival se ven).
+- **Efectos en la pelea:** "CAMBIO" y "¡ROBO!" cuando las cartas cambian de sitio o de
+  bando antes del choque; "x2" en el ataque doble; "¡BLOQUEO!" y destello verde cuando
+  la defensa para los golpes; "+1" cuando el sello de vida devuelve una vida.
+- **Bosses** (`components/pixel/bosses.ts`, `components/game/BossFigure.tsx`): siluetas
+  grandes en naranja con su sello en verde como objeto (escudo, amuleto, anillo,
+  colgante, corazón). Su forma cuenta su sello: El Muro (defensa) es enorme y fuerte,
+  La Duelista (ataque) lleva dos espadas, El Trilero (cambio) tiene un anillo girando,
+  La Ladrona (robo) va agachada con un saco, La Matriarca (vida) lleva un bastón con
+  un corazón. El Forastero, el primero, no tiene sello.
+- **Menú:** el boss a derrotar, grande sobre el tapete y respirando; la lista se
+  desliza en horizontal (con imán y puntos de página): los vencidos dicen VENCIDO y
+  los futuros salen apagados y sin nombre, con su premio a la vista.
+- **En partida:** la silueta del boss (negra sobre la banda naranja) en el panel del
+  rival, con tantos corazones como vidas tenga (algunos tienen 5).
+- **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes
+  que los logros. El primero desbloquea la colección (botón verde en el menú).
+- Los logros (antes también llamados "sellos") se llaman **Logros** para no
+  confundirlos con las cartas de sello.
 
 ### Meta: ajustes, sellos, estadísticas y app
 

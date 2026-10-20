@@ -7,6 +7,7 @@ import { JOKER_DRAW_BONUS, TIMINGS } from '@/lib/constants';
 import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, IMPACT_DELAY_S } from './Card';
+import { useTranslations } from '@/lib/i18n';
 
 // --- DIRECTOR DE COMBATE ---
 // No dibuja nada: escucha los estados que ya publica la lógica (fase y resultado del
@@ -26,9 +27,39 @@ const locate = (geo: BoardGeometry, boards: Record<Owner, BoardSlot[]>): Located
     })
   );
 
+const VOLT = '#7DFF2B';
+const VOLT_BG = 'var(--ink-volt)';
+
 export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
+  const t = useTranslations();
   const phase = useGameStore(s => s.phase);
   const combat = useGameStore(s => s.pendingCombatResult);
+  const sealFx = useGameStore(s => s.sealFx);
+
+  // 0. Sellos de antes del choque: cambios de sitio (CAMBIO) y de bando (¡ROBO!)
+  useEffect(() => {
+    if (!sealFx) return;
+    const center = (owner: Owner, i: number) => {
+      const p = geo.slots[owner][i];
+      return { x: p.x + CARD_SIZE.width / 2, y: p.y + CARD_SIZE.height / 2 };
+    };
+    sealFx.events.forEach((e, n) => setTimeout(() => {
+      if (e.kind === 'shift') {
+        const c = center(e.owner, e.to);
+        playSfx('whoosh', 0.9, 1.2);
+        fx.emit({ kind: 'text', x: c.x, y: c.y - 18, text: t.fx_shift, bg: VOLT_BG, size: 10, life: 900 });
+        fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 22, life: 450 });
+      } else {
+        const a = center('player', e.index);
+        const b = center('opponent', e.index);
+        playSfx('swing', 1, 1.3);
+        playSfx('sparkle');
+        fx.flash(0.25);
+        fx.emit({ kind: 'text', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, text: t.fx_swap, bg: VOLT_BG, size: 14, life: 1000 });
+        [a, b].forEach(c => fx.emit({ kind: 'particles', x: c.x, y: c.y, colors: [VOLT, PALETTE.white], count: 12, speed: 34, gravity: -10, size: [1, 2], life: 600 }));
+      }
+    }, n * 160));
+  }, [sealFx, geo, t]);
 
   // 1. Arranca la pelea: tambor, sacudida, zoom; luego volteo de cartas rivales y Jokers
   useEffect(() => {
@@ -83,6 +114,9 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
 
     const attackers = cards.filter(l => l.slot.card && l.slot.card.rank !== 'JOKER');
     if (attackers.length > 0) later(HOLD_MS, () => playSfx('swing'));
+    // Sello de ataque: "x2" sobre la carta que golpea dos veces
+    attackers.filter(l => l.slot.card?.seal === 'double').forEach(l => later(HOLD_MS - 150, () =>
+      fx.emit({ kind: 'text', x: l.x, y: l.y - 22, text: t.fx_double, bg: VOLT_BG, size: 12, life: 800 })));
 
     // Cámara de pelea: se acerca a donde va a pasar algo (cartas que caen y golpes
     // directos) mientras se ven las flechas, y se suelta tras el impacto
@@ -124,6 +158,21 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         fx.emit({ kind: 'text', x, y, text: `-${h.amount}`, bg: h.owner === 'player' ? 'var(--c-mult)' : 'var(--c-gold)', size: 20, life: 1200 });
       }));
 
+      // Sello de defensa: la carta aguanta y el sello estalla en verde
+      const shielded = new Set(combat.shieldedIds);
+      cards.filter(l => l.slot.card && shielded.has(l.slot.card.id)).forEach(l => {
+        playSfx('hit', 1, 1.4);
+        fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: 30, life: 500 });
+        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, PALETTE.white], count: 14, speed: 40, gravity: 20, size: [1, 2], life: 600 });
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 18, text: t.fx_block, bg: VOLT_BG, size: 11, life: 1000 });
+      });
+      // Sello de vida: la carta cae pero devuelve una vida a su dueño
+      victims.filter(l => l.slot.card?.seal === 'life').forEach((l, i) => later(220 + i * 90, () => {
+        playSfx('score', 0.8, 1.1);
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: '+1', bg: VOLT_BG, size: 16, life: 1100 });
+        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, PALETTE.white], count: 12, speed: 30, gravity: -30, size: [1, 2], life: 800 });
+      }));
+
       const impact = victims.length + hits.length;
       if (impact > 0) {
         fx.shake(Math.min(4.5, 1.5 + impact * 0.6));
@@ -139,7 +188,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     });
 
     return () => timers.forEach(clearTimeout);
-  }, [combat, geo]);
+  }, [combat, geo, t]);
 
   return null;
 };

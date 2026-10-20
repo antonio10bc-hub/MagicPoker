@@ -6,7 +6,9 @@ import { RANKS } from '@/lib/game-utils';
 import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { CARD_SIZE, INK, TEAM } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, EMBLEM_OPPONENT, EMBLEM_PLAYER, PIP, STAR } from '@/components/pixel/sprites';
+import { CHARACTERS, EMBLEM_OPPONENT, EMBLEM_PLAYER, PIP, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { useTranslations, Translations } from '@/lib/i18n';
+import { SealId } from '@/types';
 import { CARD_BACK_TILE, WINDOW_TILE, patternUri } from '@/components/pixel/patterns';
 
 interface CardProps {
@@ -117,6 +119,7 @@ const CardBack = ({ owner }: { owner: Owner }) => (
 
 // --- ANVERSO ---
 const CardFace = ({ card }: { card: CardType }) => {
+  if (card.rank === 'SEAL' && card.seal) return <SealCardFace seal={card.seal} />;
   const look = LOOK[card.owner];
   const character = CHARACTERS[card.rank];
   return (
@@ -157,6 +160,35 @@ const CardFace = ({ card }: { card: CardType }) => {
     </div>
   );
 };
+
+// --- SELLOS (verde eléctrico) ---
+export const sealTag = (t: Translations, seal: SealId) => t[`seal_tag_${seal}` as keyof Translations];
+
+/** Carta de sello: masa verde que brilla, con el icono en silueta y su nombre */
+const SealCardFace = ({ seal }: { seal: SealId }) => {
+  const t = useTranslations();
+  return (
+    <div className="px-round-2 absolute inset-0 bloom-volt" style={{
+      background: 'radial-gradient(ellipse 70% 60% at 50% 42%, #D8FF9A 0%, var(--ink-volt) 45%, #4FC414 100%)',
+    }}>
+      <div className="absolute flex items-center justify-center" style={{ left: 3, top: 6, width: 34, height: 30 }}>
+        <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.black} scale={2} />
+      </div>
+      <div className="absolute left-0 right-0 flex justify-center font-display" style={{ top: 40, fontSize: 9, lineHeight: '9px', color: 'var(--ink-black)' }}>
+        {sealTag(t, seal)}
+      </div>
+      <div className="absolute flex items-center justify-center rounded-full" style={{ left: 15, top: 2, width: 10, height: 3, background: 'rgba(11,13,12,0.35)' }} />
+    </div>
+  );
+};
+
+/** Sello puesto sobre una carta de la mesa: insignia verde en la esquina superior derecha */
+export const SealBadge = ({ seal, pulse }: { seal: SealId; pulse?: boolean }) => (
+  <div className={clsx('absolute z-20 flex items-center justify-center rounded-full bloom-volt pointer-events-none', pulse && 'anim-throb')}
+    style={{ right: -4, top: -4, width: 13, height: 13, background: 'var(--ink-volt)' }}>
+    <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.black} />
+  </div>
+);
 
 /** Sello del atacante sobre la carta destruida (K/Q/J o el As) */
 const DamageStamp = ({ source }: { source: NonNullable<CardType['damageSource']> }) => (
@@ -232,6 +264,14 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
       {isVoided && (
         <motion.div className="px-round-2 absolute inset-0 pointer-events-none" style={{ background: 'rgba(11,13,12,0.6)' }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: IMPACT_DELAY_S }} />
+      )}
+      {/* Sello puesto (se ve aunque la carta esté boca abajo) */}
+      {card.seal && card.rank !== 'SEAL' && <SealBadge seal={card.seal} />}
+      {/* El sello de defensa ha parado los golpes: destello verde */}
+      {card.isShielded && (
+        <motion.div className="px-round-2 absolute inset-0 pointer-events-none"
+          style={{ boxShadow: '0 0 0 2px var(--ink-volt), 0 0 14px 4px rgba(125,255,43,0.7)', background: 'rgba(125,255,43,0.18)' }}
+          initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.6] }} transition={{ duration: 0.6, delay: IMPACT_DELAY_S }} />
       )}
       {card.damageSource && (isDamage || isVoided) && <DamageStamp source={card.damageSource} />}
     </motion.div>

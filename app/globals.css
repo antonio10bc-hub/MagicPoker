@@ -14,6 +14,9 @@
   --ink-orange: #FF4A1C;
   --ink-ember: #F2652A;
   --ink-moss: #6F8F5A;
+  /* Exclusivo de los sellos */
+  --ink-volt: #7DFF2B;
+  --ink-volt-dark: #2E6A0E;
 
   --c-outline: var(--ink-black);
   --c-stone-dark: var(--ink-slate);
@@ -167,6 +170,9 @@ html, body {
 .bloom { box-shadow: 0 0 5px 1px rgba(255, 74, 28, 0.6), 0 0 14px 3px rgba(242, 101, 42, 0.25); }
 .bloom-shape { filter: drop-shadow(0 0 2px rgba(255, 74, 28, 0.85)); }
 .bloom-cream { filter: drop-shadow(0 0 2px rgba(237, 235, 224, 0.6)); }
+.bloom-volt { box-shadow: 0 0 5px 1px rgba(125, 255, 43, 0.65), 0 0 14px 3px rgba(125, 255, 43, 0.25); }
+.bloom-volt-shape { filter: drop-shadow(0 0 2px rgba(125, 255, 43, 0.9)); }
+.glow-volt { text-shadow: 0 0 4px rgba(125, 255, 43, 0.85), 0 0 10px rgba(125, 255, 43, 0.4); }
 .glow-text { text-shadow: 0 0 4px rgba(255, 74, 28, 0.8), 0 0 10px rgba(242, 101, 42, 0.4); }
 
 /* ===== POSTPROCESADO ===== */
@@ -179,6 +185,9 @@ html, body {
 .px-range::-moz-range-progress { height: 3px; border-radius: 2px; background: var(--ink-ember); }
 .px-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 8px; margin-top: -2.5px; border-radius: 50%; background: var(--ink-orange); box-shadow: 0 0 4px rgba(255, 74, 28, 0.8); }
 .px-range::-moz-range-thumb { width: 8px; height: 8px; border: 0; border-radius: 50%; background: var(--ink-orange); box-shadow: 0 0 4px rgba(255, 74, 28, 0.8); }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 .px-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ink-teal) transparent; }
 .px-scroll::-webkit-scrollbar { width: 3px; }

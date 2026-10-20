@@ -1,4 +1,4 @@
-import { Rank } from '@/types';
+import { Rank, SealId } from '@/types';
 import { Sprite } from './PixelSprite';
 
 // --- SPRITES ORIGINALES ---
@@ -219,6 +219,70 @@ export const STAR = s(
   '.oyoyo.',
   '.oo.oo.',
 );
+
+// --- SELLOS (9×9): se pintan en verde eléctrico ---
+export const SEAL_ICONS: Record<SealId, Sprite> = {
+  /** Defensa: escudo */
+  shield: s(
+    'ooooooooo',
+    'ooo...ooo',
+    'ooooooooo',
+    'ooooooooo',
+    '.ooooooo.',
+    '.ooooooo.',
+    '..ooooo..',
+    '...ooo...',
+    '....o....',
+  ),
+  /** Ataque doble: dos flechas */
+  double: s(
+    '..o...o..',
+    '.ooo.ooo.',
+    'ooooooooo',
+    '..o...o..',
+    '..o...o..',
+    '..o...o..',
+    '..o...o..',
+    '..o...o..',
+    '..o...o..',
+  ),
+  /** Cambio: flecha hacia la derecha */
+  shift: s(
+    '.........',
+    '....o....',
+    '....oo...',
+    'ooooooo..',
+    'oooooooo.',
+    'ooooooo..',
+    '....oo...',
+    '....o....',
+    '.........',
+  ),
+  /** Cambio con enemigo: flechas arriba y abajo */
+  swap: s(
+    '..o......',
+    '.ooo.....',
+    'ooooo....',
+    '..o...o..',
+    '..o...o..',
+    '..o...o..',
+    '....ooooo',
+    '.....ooo.',
+    '......o..',
+  ),
+  /** Vida: corazón */
+  life: s(
+    '.oo...oo.',
+    'oooo.oooo',
+    'ooooooooo',
+    'ooooooooo',
+    'ooooooooo',
+    '.ooooooo.',
+    '..ooooo..',
+    '...ooo...',
+    '....o....',
+  ),
+};
 
 // --- PERSONAJES (19×23, se dibujan como siluetas: cuenta el contorno, no el detalle) ---
 /** K — El Rey: corona de tres puntas, barba, capa ancha y cetro */

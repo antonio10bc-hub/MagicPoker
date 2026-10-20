@@ -15,6 +15,8 @@ import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { Rect } from '@/theme/layout';
 import { Card } from './Card';
 import { deckSummary, forecastFight } from './forecast';
+import { BossFigure } from './BossFigure';
+import { BOSSES } from '@/lib/bosses';
 import { haptic, playSfx } from '@/lib/sounds';
 
 // --- PIEZAS DEL HUD ---
@@ -32,7 +34,7 @@ const FlyingHeart = ({ index }: { index: number }) => (
   </motion.div>
 );
 
-const Lives = ({ lives, owner }: { lives: number; owner: Owner }) => {
+const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: Owner; max?: number }) => {
   const last = useRef(lives);
   const shake = useAnimationControls();
   const [lost, setLost] = useState<{ id: number; indices: number[] } | null>(null);
@@ -53,7 +55,7 @@ const Lives = ({ lives, owner }: { lives: number; owner: Owner }) => {
   const critical = owner === 'player' && lives === 1;
   return (
     <motion.div animate={shake} className="relative flex gap-[1px]">
-      {Array.from({ length: STARTING_LIVES }, (_, i) => (
+      {Array.from({ length: max }, (_, i) => (
         <motion.div
           key={`${i}-${i < lives}`}
           className={critical && i < lives ? 'anim-heartbeat' : undefined}
@@ -99,12 +101,13 @@ const TEAM_BAND_TEXT: Record<Owner, string> = { player: 'text-outline', opponent
 
 const usePlayerHud = (owner: Owner) => useGameStore(useShallow(s => ({
   lives: s[owner].lives,
+  maxLives: s[owner].maxLives ?? STARTING_LIVES,
   deckCount: s[owner].deck.length,
   handCount: s[owner].hand.length,
 })));
 
 /** Panel horizontal (móvil): etiqueta del bando a la izquierda y datos en fila */
-const CompactPanel = ({ label, owner, rect, children }: { label: string; owner: Owner; rect: Rect; children: ReactNode }) => (
+const CompactPanel = ({ label, owner, rect, children }: { label: ReactNode; owner: Owner; rect: Rect; children: ReactNode }) => (
   <div className="px-panel px-round absolute flex items-center gap-[6px] pr-[5px]" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}>
     <div className={clsx(TEAM_BAND_TEXT[owner], 'h-full flex items-center px-[5px] pt-[1px] shrink-0 rounded-l-[3px]')}
       style={{ background: TEAM_BAND[owner] }}>
@@ -132,20 +135,24 @@ const RivalHand = ({ count }: { count: number }) => (
 export const RivalPanel = () => {
   const t = useTranslations();
   const { rivalPanel: rect, compactPanels } = useGameLayout();
-  const { lives, deckCount, handCount } = usePlayerHud('opponent');
+  const { lives, maxLives, deckCount, handCount } = usePlayerHud('opponent');
+  // El boss de esta partida (en el tutorial, un rival sin nombre)
+  const boss = useGameStore(s => (s.tutorialStep === null ? BOSSES[s.bossIndex] : null));
+  const name = boss ? t[`boss_${boss.id}` as keyof typeof t] : t.rival;
 
   if (compactPanels) {
     return (
-      <CompactPanel label={t.rival} owner="opponent" rect={rect}>
-        <Lives lives={lives} owner="opponent" />
+      <CompactPanel label={boss ? <BossFigure id={boss.id} height={22} dark glow={false} /> : t.rival} owner="opponent" rect={rect}>
+        <Lives lives={lives} max={maxLives} owner="opponent" />
         <RivalHand count={handCount} />
         <div className="ml-auto"><DeckCount owner="opponent" count={deckCount} /></div>
       </CompactPanel>
     );
   }
   return (
-    <Panel title={t.rival} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
-      <Lives lives={lives} owner="opponent" />
+    <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
+      {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><BossFigure id={boss.id} height={26} /></div>}
+      <Lives lives={lives} max={maxLives} owner="opponent" />
       <RivalHand count={handCount} />
       <DeckCount owner="opponent" count={deckCount} />
     </Panel>
@@ -321,9 +328,12 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
   // Mantener pulsado (táctil) o dejar el ratón encima muestra la ficha de la carta
   const infoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoShown = useRef(false);
-  const startInfo = (ms: number) => {
+  // Solo la pulsación larga (táctil) "se come" el toque siguiente; la ficha por pasar
+  // el ratón por encima no debe impedir hacer clic
+  const infoByPress = useRef(false);
+  const startInfo = (ms: number, press: boolean) => {
     if (infoTimer.current) clearTimeout(infoTimer.current);
-    infoTimer.current = setTimeout(() => { infoShown.current = true; handlers.onInfo(card.id); }, ms);
+    infoTimer.current = setTimeout(() => { infoShown.current = true; infoByPress.current = press; handlers.onInfo(card.id); }, ms);
   };
   const stopInfo = () => {
     if (infoTimer.current) clearTimeout(infoTimer.current);
@@ -334,7 +344,7 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
 
   const handleClick = useCallback(() => {
     // Tras una pulsación larga no seleccionamos: solo se quería leer la ficha
-    if (infoShown.current) { infoShown.current = false; return; }
+    if (infoShown.current && infoByPress.current) { infoShown.current = false; infoByPress.current = false; return; }
     handlers.onSelect(card.id);
   }, [handlers, card.id]);
   const [entered, setEntered] = useState(false);
@@ -379,8 +389,8 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
       exit={{ opacity: 0, transition: { duration: 0 } }}
       transition={{ ...SPRING, delay: entered ? 0 : initialDelay }}
       onAnimationComplete={() => setEntered(true)}
-      onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS); }}
-      onPointerDown={e => { if (e.pointerType !== 'mouse') startInfo(LONG_PRESS_MS); }}
+      onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS, false); }}
+      onPointerDown={e => { if (e.pointerType !== 'mouse') startInfo(LONG_PRESS_MS, true); }}
       onPointerUp={() => { if (infoTimer.current) clearTimeout(infoTimer.current); if (infoShown.current) handlers.onInfo(null); }}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
@@ -450,6 +460,8 @@ interface HandProps {
 
 export const Hand = ({ selectedCardId, canPlay, onlyCardId, handlers }: HandProps) => {
   const hand = useGameStore(s => s.player.hand);
+  // Una carta de sello necesita una carta propia sin sello en la mesa
+  const canSeal = useGameStore(s => s.player.board.some(b => b.card && !b.card.seal));
   const area = useGameLayout().hand;
   const cardW = Math.round(CARD_SIZE.width * area.scale);
   // Las cartas se solapan si no caben en el hueco
@@ -470,7 +482,7 @@ export const Hand = ({ selectedCardId, canPlay, onlyCardId, handlers }: HandProp
           fan={hand.length > 1 ? (i - (hand.length - 1) / 2) / ((hand.length - 1) / 2) : 0}
           enterDelay={(i % 4) * 0.08}
           isSelected={selectedCardId === card.id}
-          canPlay={canPlay && (!onlyCardId || card.id === onlyCardId)}
+          canPlay={canPlay && (!onlyCardId || card.id === onlyCardId) && (card.rank !== 'SEAL' || canSeal)}
           hinted={onlyCardId === card.id && selectedCardId !== card.id}
           handlers={handlers}
         />

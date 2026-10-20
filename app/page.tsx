@@ -10,6 +10,7 @@ import { GameScreen } from '@/components/screens/GameScreen';
 import { EndScreen } from '@/components/screens/EndScreen';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
+import { UnlockToasts } from '@/components/game/UnlockToasts';
 
 const SCREENS = { menu: MenuScreen, game: GameScreen, end: EndScreen };
 
@@ -60,6 +61,7 @@ export default function Home() {
       </AnimatePresence>
       <Modals />
       <StampToasts />
+      <UnlockToasts />
     </Stage>
   );
 }

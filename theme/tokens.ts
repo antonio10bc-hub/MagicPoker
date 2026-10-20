@@ -14,6 +14,9 @@ export const INK = {
   orange: '#FF4A1C',  // Bermellón: ACENTO (rival, peligro, objetivo)
   ember: '#F2652A',   // Naranja cálido: acento secundario (interacción)
   moss: '#6F8F5A',    // Musgo apagado: solo transición en halos
+  // Exclusivo de los sellos: verde eléctrico (amarillo verdoso) que brilla como el naranja
+  volt: '#7DFF2B',
+  voltDark: '#2E6A0E',
 } as const;
 
 export const PALETTE = {

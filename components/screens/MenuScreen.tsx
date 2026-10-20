@@ -12,9 +12,11 @@ import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, ICONS } from '@/components/pixel/sprites';
+import { CHARACTERS, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { BossCarousel } from './BossCarousel';
+import { getProgress, getServerProgress, isCollectionUnlocked, subscribeProgress } from '@/lib/bosses';
 import { INK } from '@/theme/tokens';
-import { useMenuLayout } from '@/components/pixel/Stage';
+import { useMenuLayout, useStage } from '@/components/pixel/Stage';
 
 const noSubscribe = () => () => {};
 const hasSavedGame = () => loadGame() !== null;
@@ -71,8 +73,8 @@ const LogoWord = ({ word, color, offset, glow }: { word: string; color: string; 
   </div>
 );
 
-export const Logo = ({ y }: { y: number }) => (
-  <div className="absolute left-0 right-0 flex flex-col items-center z-20" style={{ top: y }}>
+export const Logo = ({ x = 0, w, y }: { x?: number; w?: number; y: number }) => (
+  <div className="absolute flex flex-col items-center z-20" style={{ top: y, left: x, width: w ?? '100%' }}>
     <LogoWord word="MAGIC" color="var(--ink-orange)" offset={0} glow />
     <LogoWord word="POKER" color="var(--ink-cream)" offset={5} />
   </div>
@@ -113,7 +115,10 @@ export const MenuScreen = () => {
     else startGame();
   };
 
-  const { cx, logoY, playY, mascotY } = useMenuLayout();
+  const { cx, logoX, logoW, logoY, playY, board, bossY, bossH } = useMenuLayout();
+  const stage = useStage();
+  const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
+  const collection = isCollectionUnlocked(progress);
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
   const resumeGame = useGameStore(s => s.resumeGame);
@@ -122,15 +127,23 @@ export const MenuScreen = () => {
     <div className="absolute inset-0">
       <MenuBackground />
       {/* Reglas, estadísticas y ajustes también desde el menú */}
-      <div className="absolute z-30 flex gap-[3px]" style={{ right: 4, top: 4 }}>
+      {/* En horizontal, debajo del logo; en vertical, arriba a la derecha */}
+      <div className="absolute z-30 flex gap-[3px]" style={stage.mode === 'landscape'
+        ? { left: logoX + logoW / 2 - (collection ? 41 : 31), top: logoY + 84 }
+        : { right: 4, top: 4 }}>
+        {collection && (
+          <PxButton aria-label="collection" className="w-[18px] h-[18px]" style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.4)' }}
+            onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
+            <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} className="bloom-volt-shape" />
+          </PxButton>
+        )}
         <IconButton icon={ICONS.info} aria-label="rules" onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
         <IconButton icon={ICONS.trophy} aria-label="stats" onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
         <IconButton icon={ICONS.gear} aria-label="settings" onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
       </div>
-      <Logo y={logoY} />
-      {/* Las dos siluetas, frente a frente en el centro del tapete */}
-      <Mascot rank="J" owner="player" x={cx - 44} y={mascotY} />
-      <Mascot rank="K" owner="opponent" x={cx + 8} y={mascotY} delay={0.3} />
+      <Logo x={logoX} w={logoW} y={logoY} />
+      {/* El boss a derrotar, grande en el centro del tapete; se desliza para ver la lista */}
+      <BossCarousel left={board.diorama.x + 4} top={bossY} width={board.diorama.w - 8} height={bossH} />
 
       <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}
         initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}

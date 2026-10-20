@@ -167,8 +167,16 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
 
 export interface MenuLayout {
   board: BoardGeometry;
+  /** Centro horizontal del tapete (boss y botones) */
   cx: number;
+  /** Zona del logo (centrado en [logoX, logoX + logoW]) */
+  logoX: number;
+  logoW: number;
   logoY: number;
+  /** Boss del menú: escala de la silueta y alto de la zona deslizable */
+  bossScale: number;
+  bossY: number;
+  bossH: number;
   /** Botón JUGAR (y debajo, CONTINUAR PARTIDA) */
   playY: number;
   /** Base de las dos siluetas, de pie en el centro del tapete */
@@ -179,7 +187,12 @@ const LOGO_HEIGHT = 76;
 
 export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): MenuLayout => {
   if (mode === 'landscape') {
-    return { board: computeBoard(70, 24, 240), cx: W / 2, logoY: 34, mascotY: 112, playY: 184 };
+    // Horizontal: logo a la izquierda; tapete con el boss a la derecha y JUGAR debajo
+    const board = computeBoard(150, 14, 222, false, 204);
+    return {
+      board, cx: 150 + 111, logoX: 4, logoW: 142, logoY: 96,
+      bossScale: 3, bossY: 26, bossH: 180, mascotY: 92, playY: 226,
+    };
   }
   // Vertical: logo arriba, tapete en el centro con las siluetas, JUGAR debajo
   const BUTTONS_H = 48;
@@ -192,7 +205,13 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
   return {
     board: computeBoard(M, boardY, W - 2 * M, true, boardH),
     cx: Math.floor(W / 2),
+    logoX: 0,
+    logoW: W,
     logoY: top,
+    // El boss, grande y centrado sobre el tapete (×3 si cabe con su nombre debajo)
+    bossScale: boardH >= 42 * 3 + 30 ? 3 : 2,
+    bossY: boardY + 4,
+    bossH: boardH - 8,
     mascotY: boardY + Math.round(boardH / 2) - 26,
     playY: boardY + boardH + DIORAMA_SHADOW + 10,
   };

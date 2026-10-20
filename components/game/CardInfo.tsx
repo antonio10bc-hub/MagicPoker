@@ -6,7 +6,7 @@ import { RANKS } from '@/lib/game-utils';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { INK } from '@/theme/tokens';
-import { CHARACTERS } from '@/components/pixel/sprites';
+import { CHARACTERS, SEAL_ICONS } from '@/components/pixel/sprites';
 
 // --- FICHA DE CARTA ---
 // Al mantener pulsada una carta de la mano (o dejar el ratón encima) aparece una ficha
@@ -41,7 +41,26 @@ export const CardInfo = ({ cardId }: { cardId: string | null }) => {
 
   return (
     <AnimatePresence>
-      {card && (
+      {card?.rank === 'SEAL' && card.seal && (
+        // Carta de sello: icono verde, nombre, qué hace y cómo se juega
+        <motion.div
+          key={card.id}
+          className="absolute z-[95] px-panel px-round pointer-events-none flex gap-[6px] p-[5px]"
+          style={{ left: Math.round(hand.x + hand.w / 2 - w / 2), top: hand.y - 62, width: w, boxShadow: '0 0 0 1px rgba(125,255,43,0.5)' }}
+          initial={{ y: 10, scale: 0.8, opacity: 0 }}
+          animate={{ y: 0, scale: 1, opacity: 1 }}
+          exit={{ y: 6, scale: 0.9, opacity: 0, transition: { duration: 0.12 } }}
+          transition={{ type: 'spring', stiffness: 500, damping: 24 }}
+        >
+          <PixelSprite sprite={SEAL_ICONS[card.seal]} tint={INK.volt} scale={2} className="shrink-0 bloom-volt-shape" />
+          <div className="flex flex-col gap-[3px] leading-[11px] min-w-0">
+            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t[`seal_${card.seal}` as keyof Translations]}</span>
+            <span className="whitespace-normal">{t[`seal_${card.seal}_desc` as keyof Translations]}</span>
+            <span style={{ color: 'var(--ink-teal)' }}>{t.seal_apply_hint}</span>
+          </div>
+        </motion.div>
+      )}
+      {card && card.rank !== 'SEAL' && (
         <motion.div
           key={card.id}
           className="absolute z-[95] px-panel px-round pointer-events-none flex gap-[5px] p-[5px]"
