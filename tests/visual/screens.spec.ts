@@ -137,3 +137,26 @@ test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ 
   }
   noErrors();
 });
+
+test('al vencer a un jefe: SIGUIENTE JEFE y VOLVER AL MENÚ', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await openMenu(page, { defeated: 2 });
+  await page.getByText('JUGAR', { exact: true }).click({ force: true });
+  type G = { __game: { getState: () => { phase: string; bossIndex: number; debugWin: () => void } } };
+  await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
+  await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
+  // Los avisos de desbloqueo y logros van antes: se cierran tocándolos
+  const next = page.getByText('¡SIGUIENTE JEFE!');
+  for (let i = 0; i < 12 && !(await next.isVisible()); i++) {
+    const vp = page.viewportSize()!;
+    await page.mouse.click(vp.width / 2, vp.height * 0.35);
+    await page.waitForTimeout(700);
+  }
+  await expect(next).toBeVisible();
+  await expect(page.getByText('Volver al menú')).toBeVisible();
+  await shot(page, info, 'victoria');
+  await next.click({ force: true });
+  await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
+  expect(await page.evaluate(() => (window as unknown as G).__game.getState().bossIndex)).toBe(3);
+  noErrors();
+});
