@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CombatResult } from '@/types';
+import { Card, CombatResult } from '@/types';
 import { endStamps, MatchEnd, newMatchTrack, roundStamps } from '@/lib/stamps';
 
 const combat = (over: Partial<CombatResult>): CombatResult => ({
   playerDamageTaken: 0, opponentDamageTaken: 0, deadCardIds: [], voidedCardIds: [],
   playerEmptySlotsHit: {}, opponentEmptySlotsHit: {}, damageSources: {}, cardsDestroyedCount: 0,
-  deadByOwner: { player: 0, opponent: 0 }, shieldedIds: [],
+  deadByOwner: { player: 0, opponent: 0 }, shieldedIds: [], shieldHits: {}, reflected: [], poisonedIds: [],
   isRepublicanaTriggered: false, ...over,
 });
 
@@ -39,5 +39,25 @@ describe('endStamps', () => {
 
   it('draw and veteran', () => {
     expect(endStamps(end({ result: 'draw', totalGames: 25 }))).toEqual(['stalemate', 'veteran']);
+  });
+});
+
+describe('logros de sellos', () => {
+  it('muralla, reflejo y veneno de reyes al resolver la pelea', () => {
+    const mine = new Set(['p1', 'p2', 'p3']);
+    const cards = new Map([['o1', { id: 'o1', rank: 'K' }], ['o2', { id: 'o2', rank: '5' }]]) as unknown as Map<string, Card>;
+    expect(roundStamps(combat({ shieldHits: { p1: 3 } }), mine)).toContain('bulwark');
+    expect(roundStamps(combat({ shieldHits: { p1: 2, o9: 4 } }), mine)).not.toContain('bulwark');
+    expect(roundStamps(combat({ reflected: [{ mirrorId: 'p2', attackerId: 'o2' }] }), mine)).toContain('reflex');
+    expect(roundStamps(combat({ poisonedIds: ['o1'] }), mine, cards)).toContain('venom');
+    expect(roundStamps(combat({ poisonedIds: ['o2'] }), mine, cards)).not.toContain('venom');
+  });
+
+  it('revancha y purista al ganar', () => {
+    const track = { ...newMatchTrack(), sealsPlayed: 0 };
+    expect(endStamps(end({ rematch: true, track }))).toContain('rematch');
+    expect(endStamps(end({ sealsInDeck: 2, track }))).toContain('purist');
+    expect(endStamps(end({ sealsInDeck: 2, track: { ...track, sealsPlayed: 1 } }))).not.toContain('purist');
+    expect(endStamps(end({ sealsInDeck: 0, track }))).not.toContain('purist');
   });
 });

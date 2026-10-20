@@ -3,6 +3,7 @@ import { Card as CardType, Owner } from '@/types';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { RANKS } from '@/lib/game-utils';
+import { gameTimeout } from '@/lib/clock';
 import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { CARD_SIZE, INK, TEAM } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
@@ -77,11 +78,20 @@ const AttackBadge = ({ card }: { card: CardType }) => {
   );
 };
 
-/** Insignia de valor: píldora negra con la cifra crema (máximo contraste) */
-const ValueBadge = ({ value }: { value: number }) => (
-  <div className="absolute flex items-center justify-center font-display text-outline"
-    style={{ left: 3, top: 44, width: 17, height: 10, borderRadius: 2, background: 'rgba(11,13,12,0.85)', fontSize: 11 }}>
-    <span className="leading-[10px] pt-[2px]">{value}</span>
+/** Insignia de valor: píldora negra con la cifra crema (máximo contraste). Expuesta
+ *  (sello de revelar): la cifra baja en uno y la píldora se enciende en brasa. */
+const ValueBadge = ({ value, exposed }: { value: number; exposed?: boolean }) => (
+  <div className={clsx('absolute flex items-center justify-center font-display', exposed ? 'text-ink' : 'text-outline')}
+    style={{ left: 3, top: 44, width: 17, height: 10, borderRadius: 2, background: exposed ? 'var(--ink-ember)' : 'rgba(11,13,12,0.85)', fontSize: 11 }}>
+    <span className="leading-[10px] pt-[2px]">{exposed ? value - 1 : value}</span>
+  </div>
+);
+
+/** Ojo sobre una carta expuesta por un sello de revelar */
+const ExposedEye = () => (
+  <div className="absolute z-20 flex items-center justify-center rounded-full anim-throb pointer-events-none"
+    style={{ left: -4, top: -4, width: 13, height: 13, background: 'var(--ink-ember)', boxShadow: '0 0 6px rgba(242,101,42,0.8)' }}>
+    <PixelSprite sprite={SEAL_ICONS.reveal} tint={INK.black} />
   </div>
 );
 
@@ -169,7 +179,7 @@ const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
           {card.rank}
         </div>
       )}
-      <ValueBadge value={card.value} />
+      <ValueBadge value={card.value} exposed={card.isExposed} />
       <AttackBadge card={card} />
     </div>
   );
@@ -238,14 +248,15 @@ export const SHIELD_BREAK_S = IMPACT_DELAY_S + 0.65;
 const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: CardProps) => {
   const isDamage = !!card.isTakingDamage;
   const isVoided = !!card.isVoided;
-  // El escudo ha parado los golpes: al romperse la carta pierde el verde
+  // El escudo (o el espejo) ha parado el golpe: al romperse la carta pierde el verde
+  const spent = !!card.isShielded || !!card.isReflecting;
   const [broken, setBroken] = useState(false);
   useEffect(() => {
-    if (!card.isShielded) return;
-    const id = setTimeout(() => setBroken(true), SHIELD_BREAK_S * 1000);
-    return () => { clearTimeout(id); setBroken(false); };
-  }, [card.isShielded]);
-  const sealed = !!card.seal && card.rank !== 'SEAL' && !(card.isShielded && broken);
+    if (!spent) return;
+    const cancel = gameTimeout(() => setBroken(true), SHIELD_BREAK_S * 1000);
+    return () => { cancel(); setBroken(false); };
+  }, [spent]);
+  const sealed = !!card.seal && card.rank !== 'SEAL' && !(spent && broken);
 
   return (
     <motion.div
@@ -294,13 +305,26 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: IMPACT_DELAY_S }} />
       )}
       {/* Sello puesto (se ve aunque la carta esté boca abajo) */}
-      {card.seal && card.rank !== 'SEAL' && !(card.isShielded && broken) && <SealBadge seal={card.seal} />}
+      {sealed && <SealBadge seal={card.seal!} />}
+      {card.isExposed && card.isFaceUp && <ExposedEye />}
+      {/* Espejo: un destello cruza la carta al devolver el golpe */}
+      {card.isReflecting && <MirrorSheen />}
       {/* Sello de defensa: una burbuja verde se levanta, encaja los golpes temblando y estalla */}
       {card.isShielded && <ShieldBubble />}
       {card.damageSource && (isDamage || isVoided) && <DamageStamp source={card.damageSource} />}
     </motion.div>
   );
 };
+
+/** Destello del espejo: una franja de luz cruza la carta en el momento del golpe */
+const MirrorSheen = () => (
+  <div className="px-round-2 absolute inset-0 overflow-hidden pointer-events-none z-30">
+    <motion.div className="absolute" style={{ top: -10, bottom: -10, width: 14, background: 'linear-gradient(90deg, transparent, rgba(237,255,214,0.95), rgba(125,255,43,0.8), transparent)', rotate: 20 }}
+      initial={{ x: -24 }} animate={{ x: [-24, 50, 50] }} transition={{ duration: 0.5, delay: IMPACT_DELAY_S - 0.1, times: [0, 0.7, 1] }} />
+    <motion.div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 0 2px var(--ink-volt), 0 0 14px 4px rgba(125,255,43,0.7)' }}
+      initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 0.6, delay: IMPACT_DELAY_S }} />
+  </div>
+);
 
 /** Burbuja del escudo: aparece con las flechas, encaja el golpe y se rompe */
 const ShieldBubble = () => (

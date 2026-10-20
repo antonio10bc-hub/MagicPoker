@@ -13,10 +13,12 @@ export interface Settings {
   grain: GrainLevel;
   /** Pedir confirmación (con el pronóstico) al plantarse */
   confirmStand: boolean;
+  /** Velocidad de la partida (x1 o x2) */
+  speed: 1 | 2;
 }
 
 const KEY = 'magic_poker_settings';
-const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full', confirmStand: true };
+const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full', confirmStand: true, speed: 1 };
 
 const listeners = new Set<() => void>();
 let current: Settings = DEFAULTS;

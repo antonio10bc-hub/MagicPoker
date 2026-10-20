@@ -12,6 +12,8 @@ export interface SavedGame {
   roundNumber: number;
   /** Boss contra el que se jugaba (partidas antiguas: el actual) */
   bossIndex?: number;
+  /** Partida de revancha */
+  rematch?: boolean;
   player: PlayerState;
   opponent: PlayerState;
 }

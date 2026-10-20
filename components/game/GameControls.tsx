@@ -7,6 +7,8 @@ import { useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
 import { isBoardEmpty } from '@/lib/game-utils';
 import { COMBAT_REVEAL_SECONDS } from '@/lib/constants';
+import { gameTimeout, setSpeed } from '@/lib/clock';
+import { useSettings } from '@/hooks/useSettings';
 import { IconButton, PxButton, TextBox, WavyText } from '@/components/pixel/ui';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { ICONS } from '@/components/pixel/sprites';
@@ -99,9 +101,9 @@ const ContinueButton = () => {
   const [remaining, setRemaining] = useState(COMBAT_REVEAL_SECONDS);
 
   useEffect(() => {
-    const timer = setInterval(() => setRemaining(r => Math.max(0, r - 1)), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    // Con el reloj de la partida: se para en pausa y corre el doble a x2
+    return gameTimeout(() => setRemaining(r => Math.max(0, r - 1)), 1000);
+  }, [remaining]);
 
   useEffect(() => {
     if (remaining === 0) finishCombatPhase();
@@ -237,11 +239,22 @@ export const MenuButtons = () => {
     else exitToMenu();
   };
 
+  // Velocidad x1/x2: se guarda en ajustes y se aplica al reloj de la partida
+  const speed = useSettings().speed;
+  useEffect(() => {
+    setSpeed(speed);
+  }, [speed]);
+  useEffect(() => () => setSpeed(1), []);
+
   return (
     <div className="absolute flex gap-[3px]" style={{ left: pos.x, top: pos.y }}>
       <IconButton icon={ICONS.home} onClick={handleHome} aria-label="home" style={sized} />
-      <IconButton icon={ICONS.info} onClick={() => { playSound('click'); openModal('rules'); }} aria-label="rules" style={sized} />
-      <IconButton icon={ICONS.trophy} onClick={() => { playSound('click'); openModal('stats'); }} aria-label="stats" style={sized} />
+      {/* Pausa: reglas, estadísticas y seguir */}
+      <IconButton icon={ICONS.pause} onClick={() => { playSound('click'); openModal('pause'); }} aria-label="pause" style={sized} />
+      <PxButton aria-label="speed" style={{ ...sized, ...(speed === 2 ? { boxShadow: '0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : {}) }}
+        onClick={() => { playSfx('select', 0.6); updateSettings({ speed: speed === 2 ? 1 : 2 }); }}>
+        <span className="font-display" style={{ fontSize: size >= 18 ? 10 : 8, lineHeight: '8px', paddingTop: 1, color: speed === 2 ? 'var(--ink-orange)' : 'var(--ink-cream)' }}>x{speed}</span>
+      </PxButton>
       <IconButton icon={ICONS.gear} onClick={() => { playSound('click'); openModal('settings'); }} aria-label="settings" style={sized} />
     </div>
   );

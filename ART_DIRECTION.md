@@ -315,16 +315,36 @@ se mueve rápido y una vibración leve a las masas naranjas.
   - Defensa: una burbuja verde se levanta, encaja el golpe (aplasta y rebota, chispas
     hacia el atacante, "¡BLOQUEO!") y luego estalla en pedazos.
   - Vida: "+1 VIDA" y chispas que suben; el corazón recuperado entra en verde.
+  - Espejo: una franja de luz cruza la carta, "¡ESPEJO!" y un rayo de chispas hasta el
+    atacante, que cae.
+  - Veneno: "¡VENENO!" y vapor verde que sube de la carta que cae envenenada.
+  - Eco: "ECO → 2" con ondas verdes; al seguir, un 2 cae en el hueco.
+  - Ancla: "¡ANCLADA!" con un golpe seco y polvo verde; la carta no se mueve.
+  - Revelar: "¡TE VEO!", la carta rival se da la vuelta y lleva un ojo brasa en la
+    esquina; su valor se enciende en brasa con uno menos.
 - **Bosses** (`components/pixel/bosses.ts`, `components/game/BossFigure.tsx`): siluetas
   grandes en naranja con su sello en verde como objeto (escudo, amuleto, anillo,
   colgante, corazón). Su forma cuenta su sello: El Muro (defensa) es enorme y fuerte,
   La Duelista (ataque) lleva dos espadas, El Trilero (cambio) tiene un anillo girando,
   La Ladrona (robo) va agachada con un saco, La Matriarca (vida) lleva un bastón con
-  un corazón. El Forastero, el primero, no tiene sello.
+  un corazón, El Espejista (espejo) lleva gorguera y un espejo de mano, La Envenenadora
+  (veneno) una capucha y un frasco que gotea, El Bardo (eco) un laúd y ondas, El
+  Marinero (ancla) un ancla al hombro y La Vidente (revelar) una bola con un ojo. El
+  Forastero, el primero, no tiene sello. El Soberano, jefe secreto, es enorme, con
+  corona de gemas verdes y un cinturón de sellos: lleva todos.
+- **Bocadillo del boss:** al empezar cada ronda dice una frase con su personalidad en
+  un bocadillo crema con contorno negro junto a su panel (entrada, perdiendo,
+  ganando o una de las de siempre).
 - **Menú:** el boss a derrotar, grande sobre el tapete y respirando; la lista se
   desliza en horizontal (con imán y puntos de página): los vencidos dicen VENCIDO y
   los futuros salen apagados y sin nombre. JUGAR juega contra el boss en pantalla
   (los vencidos se pueden repetir, sin premio; con uno bloqueado, JUGAR se apaga).
+  Con un vencido aparece debajo REVANCHA (botón con contorno verde): vuelve con una
+  vida más y un segundo sello; ganarla lo marca en verde ("REVANCHA GANADA"). El jefe
+  secreto no sale en la lista hasta que has vencido a los demás.
+- **Editor de mazo:** al vencer a todos (también al secreto) aparece en el menú un
+  botón naranja con un mazo; dentro se eligen las copias de cada sello y se quitan
+  cartas bajas.
 - **En partida:** la silueta del boss (negra sobre la banda naranja) en el panel del
   rival, con tantos corazones como vidas tenga (algunos tienen 5).
 - **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes

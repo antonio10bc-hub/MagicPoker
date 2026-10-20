@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoardSlot, Card, Owner, Rank, SealId } from '@/types';
 import {
   applyPreCombatSeals, calculateCombat, clearDefeatedCards, createEmptyBoard, createPlayerState, createSealCard,
-  lifeGains, markCombatResult, playCardToSlot, RANKS,
+  applyReveal, lifeGains, markCombatResult, playCardToSlot, RANKS,
 } from '@/lib/game-utils';
 import { chooseOpponentMove } from '@/lib/ai';
 
@@ -109,5 +109,87 @@ describe('IA con sellos', () => {
     const seal = createSealCard('opponent', 'shield');
     const move = chooseOpponentMove([seal, card('7', 'opponent', 'c')], board('opponent', [null, null, null, null]), board('player', [null, null, null, null]), 'hard', () => 0);
     expect(move?.cardId).toBe('c');
+  });
+});
+
+describe('espejo', () => {
+  it('devuelve el primer golpe que la mataría: muere el atacante y el sello se rompe', () => {
+    const me = board('player', [null, ['3', 'mirror'], null, null]);
+    const rival = board('opponent', [null, ['9'], null, null]);
+    const r = calculateCombat(me, rival);
+    expect(r.deadCardIds).toEqual(['opponent-1']);
+    expect(r.reflected).toEqual([{ mirrorId: 'player-1', attackerId: 'opponent-1' }]);
+    const after = clearDefeatedCards(markCombatResult(me, r));
+    expect(after[1].card?.rank).toBe('3');
+    expect(after[1].card?.seal).toBeUndefined();
+  });
+
+  it('solo el primero: el segundo golpe la mata', () => {
+    const me = board('player', [null, ['3', 'mirror'], null, null]);
+    const rival = board('opponent', [null, ['9'], ['Q'], null]); // 9 de frente y Reina en diagonal
+    const r = calculateCombat(me, rival);
+    expect(r.deadCardIds).toContain('player-1');
+    expect(r.reflected).toEqual([]);
+  });
+});
+
+describe('veneno', () => {
+  it('quien la mata muere con ella', () => {
+    const r = calculateCombat(board('player', [['3', 'poison'], null, null, null]), board('opponent', [['9'], null, null, null]));
+    expect(r.deadCardIds.sort()).toEqual(['opponent-0', 'player-0']);
+    expect(r.poisonedIds).toEqual(['opponent-0']);
+  });
+
+  it('la defensa aguanta el veneno', () => {
+    const r = calculateCombat(board('player', [['3', 'poison'], null, null, null]), board('opponent', [['9', 'shield'], null, null, null]));
+    expect(r.deadCardIds).toEqual(['player-0']);
+    expect(r.shieldedIds).toEqual(['opponent-0']);
+  });
+});
+
+describe('eco', () => {
+  it('al morir en un choque deja un 2 boca arriba en su hueco', () => {
+    const me = board('player', [['5', 'echo'], null, null, null]);
+    const r = calculateCombat(me, board('opponent', [['9'], null, null, null]));
+    const after = clearDefeatedCards(markCombatResult(me, r));
+    expect(after[0].card?.rank).toBe('2');
+    expect(after[0].card?.owner).toBe('player');
+    expect(after[0].card?.isFaceUp).toBe(true);
+  });
+
+  it('con el As no deja nada', () => {
+    const me = board('player', [['5', 'echo'], null, null, null]);
+    const r = calculateCombat(me, board('opponent', [['A'], null, null, null]));
+    expect(clearDefeatedCards(markCombatResult(me, r))[0].card).toBeNull();
+  });
+});
+
+describe('ancla', () => {
+  it('no se la pueden robar', () => {
+    const pre = applyPreCombatSeals(board('player', [['5', 'anchor'], null, null, null]), board('opponent', [['K', 'swap'], null, null, null]));
+    expect(pre.player[0].card?.id).toBe('player-0');
+    expect(pre.opponent[0].card?.seal).toBe('swap');
+    expect(pre.events).toEqual([{ kind: 'anchor', owner: 'player', index: 0 }]);
+  });
+
+  it('un CAMBIO no la mueve', () => {
+    const pre = applyPreCombatSeals(board('player', [['5', 'shift'], ['7', 'anchor'], null, null]), board('opponent', [null, null, null, null]));
+    expect(pre.player[0].card?.id).toBe('player-0');
+    expect(pre.player[1].card?.id).toBe('player-1');
+  });
+});
+
+describe('revelar', () => {
+  it('expone la carta de enfrente: se da la vuelta y vale 1 menos en la pelea', () => {
+    const rival = board('opponent', [null, ['9'], ['5'], null]).map(s => (s.card ? { ...s, card: { ...s.card, isFaceUp: false } } : s));
+    const r = applyReveal(rival, 1)!;
+    expect(r.index).toBe(1);
+    expect(r.board[1].card).toMatchObject({ isFaceUp: true, isExposed: true });
+    // Un 9 expuesto (vale 8) empata con un 8: caen los dos
+    const fight = calculateCombat(board('player', [null, ['8'], null, null]), r.board);
+    expect(fight.deadCardIds.sort()).toEqual(['opponent-1', 'player-1']);
+    // Sin carta enfrente, la más cercana
+    expect(applyReveal(rival, 3)!.index).toBe(2);
+    expect(applyReveal(board('opponent', [null, null, null, null]), 0)).toBeNull();
   });
 });

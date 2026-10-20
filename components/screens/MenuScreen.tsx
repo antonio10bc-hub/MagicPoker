@@ -14,7 +14,7 @@ import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
 import { BossCarousel } from './BossCarousel';
-import { currentBossIndex, getProgress, getServerProgress, isCollectionUnlocked, subscribeProgress } from '@/lib/bosses';
+import { currentBossIndex, getProgress, getServerProgress, isCollectionUnlocked, isEditorUnlocked, subscribeProgress } from '@/lib/bosses';
 import { INK } from '@/theme/tokens';
 import { useMenuLayout, useStage } from '@/components/pixel/Stage';
 
@@ -109,23 +109,29 @@ export const MenuScreen = () => {
   const menuBoss = useUiStore(s => s.menuBoss);
 
   // Empieza la partida y, si es la primera vez, abre el tutorial
-  const handleStartGame = () => {
+  const handleStartGame = (rematch = false) => {
     playSound('click');
     // La primera vez se juega el tutorial guiado (si no se completó antes)
     const first = consumeFirstPlay();
     if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
-    else startGame(selected);
+    else startGame(selected, rematch);
   };
 
   const { cx, logoX, logoW, logoY, playY, board, bossY, bossH } = useMenuLayout();
   const stage = useStage();
   const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
   const collection = isCollectionUnlocked(progress);
+  const editor = isEditorUnlocked(progress);
+  const buttons = 3 + Number(collection) + Number(editor);
   const current = currentBossIndex(progress);
   const selected = menuBoss ?? current;
   const locked = selected > current;
+  // Revancha: solo contra un boss ya vencido
+  const canRematch = selected < progress.defeated;
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
+  // Con revancha y partida guardada a la vez, van lado a lado bajo JUGAR
+  const both = canRematch && hasSave;
   const resumeGame = useGameStore(s => s.resumeGame);
 
   return (
@@ -134,12 +140,18 @@ export const MenuScreen = () => {
       {/* Reglas, estadísticas y ajustes también desde el menú */}
       {/* En horizontal, debajo del logo; en vertical, arriba a la derecha */}
       <div className="absolute z-30 flex gap-[3px]" style={stage.mode === 'landscape'
-        ? { left: logoX + logoW / 2 - (collection ? 41 : 31), top: logoY + 84 }
+        ? { left: logoX + logoW / 2 - Math.round((buttons * 18 + (buttons - 1) * 3) / 2), top: logoY + 84 }
         : { right: 4, top: 4 }}>
         {collection && (
           <PxButton aria-label="collection" className="w-[18px] h-[18px]" style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.4)' }}
             onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
             <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} className="bloom-volt-shape" />
+          </PxButton>
+        )}
+        {editor && (
+          <PxButton aria-label="deck" className="w-[18px] h-[18px]" style={{ boxShadow: '0 0 0 1px rgba(255,74,28,0.7), 0 0 6px rgba(255,74,28,0.45)' }}
+            onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
+            <PixelSprite sprite={ICONS.deck} tint={INK.orange} className="bloom-shape" />
           </PxButton>
         )}
         <IconButton icon={ICONS.info} aria-label="rules" onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
@@ -153,13 +165,25 @@ export const MenuScreen = () => {
       <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}
         initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.9 }}>
-        <PxButton tone="yellow" onClick={handleStartGame} disabled={locked} className={locked ? 'text-title w-full h-full overflow-hidden opacity-40' : 'text-title w-full h-full overflow-hidden anim-breathe'}>
+        <PxButton tone="yellow" onClick={() => handleStartGame()} disabled={locked} className={locked ? 'text-title w-full h-full overflow-hidden opacity-40' : 'text-title w-full h-full overflow-hidden anim-breathe'}>
           {t.play}
         </PxButton>
       </motion.div>
 
+      {/* Revancha: el boss vencido vuelve más fuerte */}
+      {canRematch && (
+        <motion.div key={selected} className="absolute z-20 flex flex-col items-center" style={{ left: cx - 50, top: playY + 32, width: both ? 48 : 100 }}
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+          <PxButton onClick={() => handleStartGame(true)} className="w-full h-[16px]"
+            style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.35)' }}>
+            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch}</span>
+          </PxButton>
+          {!both && <span className="mt-[2px]" style={{ color: 'var(--ink-mint)', fontSize: 8, lineHeight: '9px' }}>{t.rematch_hint}</span>}
+        </motion.div>
+      )}
+
       {hasSave && (
-        <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY + 32, width: 100, height: 16 }}
+        <motion.div className="absolute z-20" style={{ left: both ? cx + 2 : cx - 50, top: playY + 32, width: both ? 48 : 100, height: 16 }}
           initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }}>
           <PxButton onClick={() => { playSound('click'); resumeGame(); }} className="w-full h-full">{t.continue_game}</PxButton>
         </motion.div>

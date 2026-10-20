@@ -15,6 +15,28 @@ const load = async () => {
 };
 
 describe('progresión de bosses', () => {
+  it('el jefe secreto aparece al vencer al último normal y desbloquea el editor', async () => {
+    const b = await load();
+    const secret = b.BOSSES.length - 1;
+    expect(b.isBossVisible(secret)).toBe(false);
+    for (let i = 0; i < secret - 1; i++) b.recordBossDefeat(i);
+    expect(b.recordBossDefeat(secret - 1)).toEqual([{ kind: 'seal', seal: 'reveal' }, { kind: 'secret' }]);
+    expect(b.isBossVisible(secret)).toBe(true);
+    expect(b.isEditorUnlocked()).toBe(false);
+    expect(b.recordBossDefeat(secret)).toEqual([{ kind: 'editor' }]);
+    expect(b.isEditorUnlocked()).toBe(true);
+  });
+
+  it('revancha: una vida más y un segundo sello; el secreto lleva todos', async () => {
+    const b = await load();
+    expect(b.bossLives(b.BOSSES[1], true)).toBe(b.BOSSES[1].lives + 1);
+    expect(new Set(b.bossSeals(b.BOSSES[1], true))).toEqual(new Set(['shield', 'double']));
+    expect(b.bossSeals(b.BOSSES[0], true)).toEqual(['shield', 'shield']);
+    expect(new Set(b.bossSeals(b.BOSSES[b.BOSSES.length - 1]))).toEqual(new Set(b.ALL_SEALS));
+    expect(b.recordRematchWin(1)).toBe(true);
+    expect(b.recordRematchWin(1)).toBe(false);
+  });
+
   beforeEach(() => store.clear());
 
   it('el primero no tiene sello y desbloquea la colección; el resto, su sello', async () => {
@@ -34,7 +56,8 @@ describe('progresión de bosses', () => {
     b.BOSSES.forEach((_, i) => b.recordBossDefeat(i));
     expect(b.recordBossDefeat(b.BOSSES.length - 1)).toEqual([]);
     expect(b.currentBossIndex()).toBe(b.BOSSES.length - 1);
-    expect(b.unlockedSeals()).toEqual(['shield', 'double', 'shift', 'swap', 'life']);
+    expect(b.unlockedSeals()).toEqual(['shield', 'double', 'shift', 'swap', 'life', 'mirror', 'poison', 'echo', 'anchor', 'reveal']);
+    expect(b.isEditorUnlocked()).toBe(true);
   });
 
   it('tu mazo lleva una carta por sello y el del boss dos copias del suyo', async () => {

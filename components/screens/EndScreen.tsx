@@ -79,9 +79,10 @@ const TitleLetters = ({ text }: { text: string }) => (
 export const EndScreen = () => {
   const t = useTranslations();
   const [wasTutorial] = useState(() => useGameStore.getState().tutorialStep !== null);
-  const { result, bossIndex, startGame, exitToMenu } = useGameStore(useShallow(s => ({
+  const { result, bossIndex, rematch, startGame, exitToMenu } = useGameStore(useShallow(s => ({
     result: s.gameResult ?? 'loss',
     bossIndex: s.bossIndex,
+    rematch: s.rematch,
     startGame: s.startGame,
     exitToMenu: s.exitToMenu,
   })));
@@ -127,7 +128,7 @@ export const EndScreen = () => {
       <Panel title={<TitleLetters text={t[ui.title]} />} band={ui.band} style={{ width: panelWidth, height: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
         <p className="text-center leading-[12px]">{wasTutorial ? t.tut_done : t[ui.sub]}</p>
         {/* Si ganas, al siguiente boss; si no, revancha contra el mismo */}
-        <PxButton tone="yellow" onClick={() => { playSound('click'); startGame(isWin || wasTutorial ? undefined : bossIndex); }} className="h-[20px]">{t.play_again}</PxButton>
+        <PxButton tone="yellow" onClick={() => { playSound('click'); startGame(wasTutorial || isWin ? undefined : bossIndex, rematch && !isWin); }} className="h-[20px]">{t.play_again}</PxButton>
         <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
       </Panel>
       </motion.div>}

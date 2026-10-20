@@ -123,6 +123,7 @@ const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows, from: 
   return (
     <motion.div
       className={clsx('absolute', from ? 'z-[12]' : 'z-10')}
+      data-card={card.id}
       style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height }}
       variants={exitVariants}
       // Solo 2D (translate, escala, giro y opacidad) sobre su hueco

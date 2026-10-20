@@ -1,11 +1,15 @@
 import { create } from 'zustand';
-import { CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen } from '@/types';
+import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen } from '@/types';
 import {
-  applyPreCombatSeals, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState,
+  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState,
   drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, revealBoard, SealEvent,
 } from '@/lib/game-utils';
-import { BOSSES, buildBossDeck, buildPlayerDeck, currentBossIndex, recordBossDefeat } from '@/lib/bosses';
+import {
+  ALL_SEALS, BOSSES, bossLives, buildBossDeck, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, unlockedSeals,
+} from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
+import { buildMatchDeck } from '@/lib/deck';
+import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSound } from '@/lib/sounds';
 import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStamp } from '@/lib/stats';
 import { endStamps, newMatchTrack, roundStamps, StampId } from '@/lib/stamps';
@@ -27,6 +31,8 @@ interface GameState {
   gameResult: GameResult | null;
   /** Boss contra el que se juega esta partida (índice en BOSSES) */
   bossIndex: number;
+  /** Revancha: el boss (ya vencido) vuelve con una vida más y un segundo sello */
+  rematch: boolean;
   /** Efectos de sello de antes del choque (cambios de sitio), para animarlos */
   sealFx: { id: number; events: SealEvent[] } | null;
   /** Paso del tutorial guiado (null = partida normal) */
@@ -34,7 +40,7 @@ interface GameState {
 
   setDifficulty: (diff: Difficulty) => void;
   /** Empieza contra un boss ya alcanzado (por defecto, el actual) */
-  startGame: (bossIndex?: number) => void;
+  startGame: (bossIndex?: number, rematch?: boolean) => void;
   /** Retoma la partida guardada (si la hay) */
   resumeGame: () => boolean;
   /** Partida guionizada que enseña a jugar */
@@ -53,26 +59,42 @@ interface GameState {
 
 // --- TEMPORIZADORES ---
 // Todos los retardos de la partida pasan por aquí para poder cancelarlos al
-// reiniciar o salir; si no, un turno del rival pendiente "se cuela" en la siguiente partida.
-let pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+// reiniciar o salir; si no, un turno del rival pendiente "se cuela" en la siguiente
+// partida. Van con el reloj de la partida (pausa y velocidad x2).
+let pendingTimers = new Set<() => void>();
 
 const schedule = (fn: () => void, ms: number) => {
-  const id = setTimeout(() => {
-    pendingTimers.delete(id);
+  const cancel = gameTimeout(() => {
+    pendingTimers.delete(cancel);
     fn();
   }, ms);
-  pendingTimers.add(id);
+  pendingTimers.add(cancel);
 };
 
 const cancelScheduled = () => {
-  pendingTimers.forEach(clearTimeout);
+  pendingTimers.forEach(cancel => cancel());
   pendingTimers = new Set();
 };
 
-// --- SEGUIMIENTO DE LA PARTIDA (para sellos) ---
+// --- SEGUIMIENTO DE LA PARTIDA (para logros) ---
 let track = newMatchTrack();
+/** Cartas de sello en tu mazo al empezar la partida */
+let deckSeals = 0;
+const sealsInDeck = () => deckSeals;
+const countSeals = (cards: Card[]) => cards.filter(c => c.rank === 'SEAL').length;
 
 /** Concede un sello y, si es nuevo, lo pone en la cola para celebrarlo */
+/**
+ * Sello de revelar recién puesto en `slot`: expone una carta del rival. Devuelve el
+ * estado rival nuevo y el efecto que animar (o nada si no aplica).
+ */
+const revealFor = (played: Card | undefined, slot: number, enemy: PlayerState, enemyOwner: Owner) => {
+  if (played?.seal !== 'reveal') return null;
+  const r = applyReveal(enemy.board, slot);
+  if (!r) return null;
+  return { enemy: { ...enemy, board: r.board }, fx: { id: Date.now(), events: [{ kind: 'reveal' as const, owner: enemyOwner, index: r.index }] } };
+};
+
 const award = (ids: StampId[]) => ids.forEach(id => { if (unlockStamp(id)) useUiStore.getState().pushStamp(id); });
 
 const initialMatchState = () => ({
@@ -82,6 +104,7 @@ const initialMatchState = () => ({
   pendingCombatResult: null,
   gameResult: null,
   bossIndex: 0,
+  rematch: false,
   sealFx: null,
   tutorialStep: null,
   player: createPlayerState(),
@@ -104,9 +127,15 @@ export const useGameStore = create<GameState>((set, get) => {
     } else {
       const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
       // Boss vencido: se desbloquea su sello (o la colección, con el primero)
-      if (gameResult === 'win') recordBossDefeat(get().bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
+      const { bossIndex, rematch } = get();
+      if (gameResult === 'win') {
+        if (rematch) recordRematchWin(bossIndex);
+        else recordBossDefeat(bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
+        // Todos los sellos desbloqueados
+        if (unlockedSeals().length === ALL_SEALS.length) award(['collector']);
+      }
       award(endStamps({
-        result: gameResult, finalBoss: get().bossIndex === BOSSES.length - 1, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
+        result: gameResult, finalBoss: get().bossIndex === BOSSES.length - 1, rematch, sealsInDeck: sealsInDeck(), rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
         streak: stats.currentStreak, totalGames: stats.totalGames, track,
       }));
     }
@@ -121,7 +150,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   setDifficulty: (difficulty) => set({ difficulty }),
 
-  startGame: (pick) => {
+  startGame: (pick, wantRematch = false) => {
     cancelScheduled();
     playSound('shuffle', 0.6);
     incrementStat('totalGames');
@@ -131,14 +160,19 @@ export const useGameStore = create<GameState>((set, get) => {
     const current = currentBossIndex();
     const bossIndex = pick !== undefined && pick >= 0 && pick <= current ? pick : current;
     const boss = BOSSES[bossIndex];
+    // Solo hay revancha contra un boss ya vencido
+    const rematch = wantRematch && bossIndex < getProgress().defeated;
+    const playerDeck = buildMatchDeck();
+    deckSeals = countSeals(playerDeck);
 
     set({
       ...initialMatchState(),
       screen: 'game',
       phase: 'placement',
       bossIndex,
-      player: createPlayerState(buildPlayerDeck(), STARTING_HAND_SIZE, true),
-      opponent: createPlayerState(buildBossDeck(boss), STARTING_HAND_SIZE, false, boss.lives),
+      rematch,
+      player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
+      opponent: createPlayerState(buildBossDeck(boss, rematch), STARTING_HAND_SIZE, false, bossLives(boss, rematch)),
     });
   },
 
@@ -153,6 +187,7 @@ export const useGameStore = create<GameState>((set, get) => {
     if (!saved) return false;
     cancelScheduled();
     track = newMatchTrack();
+    deckSeals = countSeals([...saved.player.hand, ...saved.player.deck]);
     playSound('shuffle', 0.5);
     set({
       ...initialMatchState(),
@@ -162,6 +197,7 @@ export const useGameStore = create<GameState>((set, get) => {
       difficulty: saved.difficulty,
       roundNumber: saved.roundNumber,
       bossIndex: saved.bossIndex ?? currentBossIndex(),
+      rematch: !!saved.rematch,
       player: saved.player,
       opponent: saved.opponent,
     });
@@ -208,8 +244,11 @@ export const useGameStore = create<GameState>((set, get) => {
     if (played) {
       recordCardPlayed(played.rank);
       track.ranksPlayed.push(played.rank);
+      if (played.rank === 'SEAL') track.sealsPlayed++;
     }
 
+    const reveal = revealFor(played, slotIndex, opponent, 'opponent');
+    if (reveal) set({ opponent: reveal.enemy, sealFx: reveal.fx });
     // Si el rival ya se plantó, sigues jugando tú
     set({ player: nextPlayer, turn: opponent.isPassed ? 'player' : 'opponent' });
     if (!opponent.isPassed) schedule(get().opponentTurnAction, TIMINGS.opponentThink);
@@ -257,6 +296,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     playSound('click', 0.4);
     set({ opponent: nextOpponent });
+    const reveal = revealFor(opponent.hand.find(c => c.id === move!.cardId), move!.slotIndex, player, 'player');
+    if (reveal) set({ player: reveal.enemy, sealFx: reveal.fx });
 
     schedule(() => {
       // Si te has plantado, el rival sigue colocando hasta que no pueda más
@@ -284,6 +325,8 @@ export const useGameStore = create<GameState>((set, get) => {
           opponent: { ...s.opponent, board: pre.opponent },
           sealFx: { id: Date.now(), events: pre.events },
         }));
+        // Logro: robar un As con el sello de robo
+        if (get().tutorialStep === null && pre.events.some(e => e.kind === 'swap' && e.initiator === 'player' && pre.player[e.index].card?.rank === 'A')) award(['heist']);
       }
 
       // 3. Se calcula el choque y se marcan las cartas afectadas
@@ -294,7 +337,9 @@ export const useGameStore = create<GameState>((set, get) => {
 
         if (!tutorial) {
           recordRound(result.cardsDestroyedCount, result.opponentDamageTaken, result.playerDamageTaken);
-          award(roundStamps(result));
+          const mine = new Set(player.board.flatMap(s => (s.card ? [s.card.id] : [])));
+          const cards = new Map([...player.board, ...opponent.board].flatMap(s => (s.card ? [[s.card.id, s.card] as const] : [])));
+          award(roundStamps(result, mine, cards));
         }
         if (result.voidedCardIds.length > 0) playSound('as_reveal', 0.8);
 
@@ -369,6 +414,21 @@ export const useGameStore = create<GameState>((set, get) => {
 };
 });
 
+// Tests visuales (Playwright): en desarrollo el estado se puede leer desde la página
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  (window as unknown as { __game: typeof useGameStore }).__game = useGameStore;
+}
+
+// --- PAUSA ---
+// Con cualquier ventana abierta durante la partida (pausa, reglas, ajustes…) el
+// reloj de la partida se detiene
+if (typeof window !== 'undefined') {
+  useUiStore.subscribe((ui, prev) => {
+    if (!!ui.modal !== !!prev.modal) setPaused(!!ui.modal && useGameStore.getState().screen === 'game');
+  });
+  useGameStore.subscribe((state, prev) => { if (state.screen !== prev.screen) setPaused(false); });
+}
+
 // --- GUARDADO AUTOMÁTICO ---
 // En tu turno de colocar el estado es estable: se guarda. Al terminar la partida o
 // volver al menú desde una partida, se borra.
@@ -376,7 +436,7 @@ if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
     if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
-      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, player: state.player, opponent: state.opponent });
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, player: state.player, opponent: state.opponent });
     }
     if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
   });

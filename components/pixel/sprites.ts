@@ -75,6 +75,28 @@ export const ICONS = {
     '.nnnnnnn.',
     '...n.n...',
   ),
+  /** Mazo: cartas apiladas */
+  deck: s(
+    '..nnnnnn.',
+    '..n....n.',
+    'nnnnnn.n.',
+    'n....n.n.',
+    'n....n.n.',
+    'n....n.n.',
+    'n....nnn.',
+    'n....n...',
+    'nnnnnn...',
+  ),
+  /** Pausa: dos barras */
+  pause: s(
+    'nnn.nnn',
+    'nnn.nnn',
+    'nnn.nnn',
+    'nnn.nnn',
+    'nnn.nnn',
+    'nnn.nnn',
+    'nnn.nnn',
+  ),
   close: s(
     'nn...nn',
     'nnn.nnn',
@@ -281,6 +303,66 @@ export const SEAL_ICONS: Record<SealId, Sprite> = {
     '..ooooo..',
     '...ooo...',
     '....o....',
+  ),
+  /** Espejo: espejo de mano con reflejo */
+  mirror: s(
+    '..ooooo..',
+    '.oo...oo.',
+    '.o.o...o.',
+    '.o..o..o.',
+    '.oo...oo.',
+    '..ooooo..',
+    '....o....',
+    '....o....',
+    '...ooo...',
+  ),
+  /** Veneno: gota */
+  poison: s(
+    '....o....',
+    '....o....',
+    '...ooo...',
+    '..ooooo..',
+    '.ooo.ooo.',
+    '.oo..ooo.',
+    '.ooooooo.',
+    '..ooooo..',
+    '...ooo...',
+  ),
+  /** Eco: ondas que se repiten */
+  echo: s(
+    'o..o..o..',
+    '.o..o..o.',
+    '.o..o..o.',
+    '..o..o..o',
+    '..o..o..o',
+    '..o..o..o',
+    '.o..o..o.',
+    '.o..o..o.',
+    'o..o..o..',
+  ),
+  /** Ancla */
+  anchor: s(
+    '...ooo...',
+    '...o.o...',
+    '...ooo...',
+    '.ooooooo.',
+    '....o....',
+    'o...o...o',
+    'oo..o..oo',
+    '.ooooooo.',
+    '...ooo...',
+  ),
+  /** Revelar: ojo */
+  reveal: s(
+    '.........',
+    '...ooo...',
+    '.oo...oo.',
+    'o..ooo..o',
+    'o.oo.oo.o',
+    'o..ooo..o',
+    '.oo...oo.',
+    '...ooo...',
+    '.........',
   ),
 };
 

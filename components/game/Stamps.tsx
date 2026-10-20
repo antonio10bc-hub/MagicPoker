@@ -7,7 +7,7 @@ import { haptic, playSfx } from '@/lib/sounds';
 import { StampId } from '@/lib/stamps';
 import { INK } from '@/theme/tokens';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { ALERT, BURST, CHARACTERS, CROSS, HEART, HEART_LOST, ICONS, STAR } from '@/components/pixel/sprites';
+import { ALERT, BURST, CHARACTERS, CROSS, HEART, HEART_LOST, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { useStage } from '@/components/pixel/Stage';
 
 // --- SELLOS ---
@@ -27,6 +27,13 @@ const ICON: Record<StampId, Sprite> = {
   full_court: CHARACTERS.JOKER!,
   stalemate: CROSS,
   veteran: CHARACTERS.J!,
+  bulwark: SEAL_ICONS.shield,
+  heist: SEAL_ICONS.swap,
+  purist: CROSS,
+  reflex: SEAL_ICONS.mirror,
+  venom: SEAL_ICONS.poison,
+  rematch: SEAL_ICONS.double,
+  collector: SEAL_ICONS.anchor,
 };
 
 export const stampName = (t: Translations, id: StampId) => t[`stamp_${id}` as keyof Translations];

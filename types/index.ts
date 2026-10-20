@@ -9,8 +9,14 @@ export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 
  *  shift  · al empezar cada pelea se cambia con el hueco de su derecha
  *  swap   · al empezar la pelea se cambia de bando con la carta de enfrente y se rompe
  *  life   · al morir la carta, su dueño recupera una vida
+ *  mirror · devuelve el primer golpe que la mataría (muere el atacante) y se rompe
+ *  poison · si muere en un choque, la carta que la ha matado también muere
+ *  echo   · al morir en un choque deja un 2 en su hueco
+ *  anchor · no la pueden mover ni robar (CAMBIO y ¡ROBO! no le afectan)
+ *  reveal · al ponerla, la carta rival de enfrente se da la vuelta y queda expuesta
+ *           (vale 1 menos en la próxima pelea)
  */
-export type SealId = 'shield' | 'double' | 'shift' | 'swap' | 'life';
+export type SealId = 'shield' | 'double' | 'shift' | 'swap' | 'life' | 'mirror' | 'poison' | 'echo' | 'anchor' | 'reveal';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type Screen = 'menu' | 'game';
 export type GameResult = 'win' | 'loss' | 'draw';
@@ -35,6 +41,10 @@ export interface Card {
   seal?: SealId;
   /** Su sello de defensa le ha salvado en esta pelea */
   isShielded?: boolean;
+  /** Su sello de espejo ha devuelto un golpe en esta pelea (luego se rompe) */
+  isReflecting?: boolean;
+  /** Expuesta por un sello de revelar: vale 1 menos en la próxima pelea */
+  isExposed?: boolean;
 }
 
 export interface BoardSlot {
@@ -67,6 +77,12 @@ export interface CombatResult {
   deadByOwner: Record<Owner, number>;
   /** Cartas que su sello de defensa ha salvado (el sello se rompe) */
   shieldedIds: string[];
+  /** Golpes que ha parado cada carta con defensa */
+  shieldHits: Record<string, number>;
+  /** Golpes devueltos por un espejo: la carta con el espejo y el atacante que muere */
+  reflected: { mirrorId: string; attackerId: string }[];
+  /** Cartas que mueren envenenadas (por matar a una carta con veneno) */
+  poisonedIds: string[];
   /** Logro "La Republicana": el jugador usa un As contra J, Q y K rivales */
   isRepublicanaTriggered: boolean;
 }

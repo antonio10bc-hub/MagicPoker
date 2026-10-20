@@ -32,6 +32,9 @@ export interface OpponentMove {
 // --- SELLOS DEL RIVAL (bosses) ---
 // Cada sello busca la carta propia donde rinde más. Devuelve null si no conviene.
 const value = (s: BoardSlot) => s.card?.value ?? 0;
+/** La carta tuya más fuerte que golpea a este hueco (la de enfrente o las vecinas) */
+const threat = (s: BoardSlot, pb: BoardSlot[]) =>
+  Math.max(0, ...[s.index - 1, s.index, s.index + 1].map(i => pb[i]?.card?.value ?? 0));
 const SEAL_TARGET: Record<SealId, (targets: BoardSlot[], playerBoard: BoardSlot[]) => BoardSlot | null> = {
   // Defensa: la carta que más arriesga (tiene una tuya delante), y si no, la mejor
   shield: (t, pb) => [...t].sort((a, b) => Number(!!pb[b.index].card) - Number(!!pb[a.index].card) || value(b) - value(a))[0],
@@ -43,6 +46,16 @@ const SEAL_TARGET: Record<SealId, (targets: BoardSlot[], playerBoard: BoardSlot[
   swap: (t, pb) => [...t].filter(s => pb[s.index].card).sort((a, b) => value(pb[b.index]) - value(pb[a.index]))[0] ?? null,
   // Vida: la carta con más números de caer (la más débil)
   life: t => [...t].sort((a, b) => value(a) - value(b))[0],
+  // Espejo: la que tiene delante la carta tuya más fuerte (le devolverá el golpe)
+  mirror: (t, pb) => [...t].filter(s => threat(s, pb) > 0).sort((a, b) => threat(b, pb) - threat(a, pb))[0] ?? null,
+  // Veneno: la que va a caer (tiene delante una tuya más fuerte), para llevársela
+  poison: (t, pb) => [...t].filter(s => threat(s, pb) >= value(s)).sort((a, b) => value(a) - value(b))[0] ?? null,
+  // Eco: la más débil, que dejará un 2 al caer
+  echo: t => [...t].sort((a, b) => value(a) - value(b))[0],
+  // Ancla: la mejor, para que no se la quiten
+  anchor: t => [...t].sort((a, b) => value(b) - value(a))[0],
+  // Revelar: solo si tienes alguna carta en la mesa (la expone)
+  reveal: (t, pb) => (pb.some(s => s.card) ? [...t].sort((a, b) => value(pb[b.index]) - value(pb[a.index]))[0] : null),
 };
 
 const sealMove = (hand: Card[], opponentBoard: BoardSlot[], playerBoard: BoardSlot[]): OpponentMove | null => {

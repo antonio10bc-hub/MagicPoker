@@ -88,7 +88,33 @@ export const getSealTargets = (board: BoardSlot[]): number[] =>
 
 export type SealEvent =
   | { kind: 'shift'; owner: Owner; from: number; to: number }
-  | { kind: 'swap'; index: number; initiator: Owner };
+  | { kind: 'swap'; index: number; initiator: Owner }
+  /** Un ancla ha impedido que la muevan o la roben */
+  | { kind: 'anchor'; owner: Owner; index: number }
+  /** Un sello de revelar ha expuesto esta carta */
+  | { kind: 'reveal'; owner: Owner; index: number };
+
+/** Valor en combate: una carta expuesta vale 1 menos */
+export const combatValue = (card: Card): number => card.value - (card.isExposed ? 1 : 0);
+
+/**
+ * Sello de revelar: al ponerlo en el hueco `index`, se expone la carta rival de
+ * enfrente; si no hay, la más cercana (antes las que están boca abajo). Devuelve el
+ * tablero rival nuevo y el hueco expuesto, o null si no hay ninguna carta rival.
+ */
+export const applyReveal = (enemyBoard: BoardSlot[], index: number): { board: BoardSlot[]; index: number } | null => {
+  const candidates = enemyBoard.filter(s => s.card && !s.card.isExposed)
+    .sort((a, b) => Math.abs(a.index - index) - Math.abs(b.index - index) || Number(a.card!.isFaceUp) - Number(b.card!.isFaceUp));
+  const target = candidates[0];
+  if (!target) return null;
+  const board = enemyBoard.map(s => (s.index === target.index ? { ...s, card: { ...s.card!, isFaceUp: true, isExposed: true } } : s));
+  return { board, index: target.index };
+};
+
+/** Carta que deja un sello de eco al morir: un 2 boca arriba */
+export const createEchoCard = (owner: Owner): Card => ({
+  id: `${owner}-2-echo-${++nextCardId}`, rank: '2', suit: 'standard', value: RANKS['2'].value, isFaceUp: true, owner,
+});
 
 /**
  * Efectos de sello que ocurren al empezar la pelea, antes del choque:
@@ -113,6 +139,11 @@ export const applyPreCombatSeals = (playerBoard: BoardSlot[], opponentBoard: Boa
       const from = board.findIndex(s => s.card?.id === id);
       const to = (from + 1) % board.length;
       const other = board[to].card;
+      // Ancla: no se mueve, así que el cambio no se hace
+      if (other?.seal === 'anchor') {
+        events.push({ kind: 'anchor', owner, index: to });
+        return;
+      }
       board[to] = { index: to, card: board[from].card };
       board[from] = { index: from, card: other };
       moved.add(id);
@@ -128,6 +159,11 @@ export const applyPreCombatSeals = (playerBoard: BoardSlot[], opponentBoard: Boa
       const mine = slot.card;
       const theirs = boards[enemy][i].card;
       if (mine?.seal !== 'swap' || !theirs || swapped.has(i)) return;
+      // Ancla: no te la pueden robar (el sello de robo espera)
+      if (theirs.seal === 'anchor') {
+        events.push({ kind: 'anchor', owner: enemy, index: i });
+        return;
+      }
       swapped.add(i);
       // Su carta pasa a ser mía y la mía (sin el sello, que se rompe) pasa a ser suya
       boards[owner][i] = { index: i, card: { ...theirs, owner, isFaceUp: true } };
@@ -232,6 +268,9 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       cardsDestroyedCount: 0,
       deadByOwner: { player: 0, opponent: 0 },
       shieldedIds: [],
+      shieldHits: {},
+      reflected: [],
+      poisonedIds: [],
       isRepublicanaTriggered,
     };
   }
@@ -240,9 +279,34 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
   const deadIds = new Set<string>();
   // Sello de defensa: los golpes de toda la pelea no la matan (llegan a la vez)
   const shielded = new Set<string>();
-  const kill = (card: Card) => {
-    if (card.seal === 'shield') shielded.add(card.id);
-    else deadIds.add(card.id);
+  const shieldHits: Record<string, number> = {};
+  const usedMirrors = new Map<string, string>();
+  const reflected: CombatResult['reflected'] = [];
+  const poisoned: string[] = [];
+  /**
+   * Golpe que mataría a `card`, dado por `by` (null: devuelto por un espejo o veneno,
+   * que no se pueden devolver otra vez).
+   */
+  const kill = (card: Card, by: Card | null, byPoison = false) => {
+    if (deadIds.has(card.id)) return;
+    if (card.seal === 'shield') {
+      shielded.add(card.id);
+      shieldHits[card.id] = (shieldHits[card.id] ?? 0) + 1;
+      return;
+    }
+    // Espejo: el primer golpe se devuelve al atacante (en un cara a cara, todo el
+    // intercambio con esa carta cuenta como un solo golpe)
+    if (card.seal === 'mirror' && by && usedMirrors.get(card.id) === by.id) return;
+    if (card.seal === 'mirror' && by && !usedMirrors.has(card.id)) {
+      usedMirrors.set(card.id, by.id);
+      reflected.push({ mirrorId: card.id, attackerId: by.id });
+      kill(by, null);
+      return;
+    }
+    deadIds.add(card.id);
+    if (byPoison) poisoned.push(card.id);
+    // Veneno: quien la mata, muere con ella
+    if (card.seal === 'poison' && by) kill(by, null, true);
   };
   const emptyHits: Record<Owner, Record<number, number>> = { player: {}, opponent: {} };
   const damageTaken: Record<Owner, number> = { player: 0, opponent: 0 };
@@ -254,13 +318,15 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       emptyHits[defenderOwner][target.index] = (emptyHits[defenderOwner][target.index] ?? 0) + 1;
       return;
     }
-    if (attacker.value >= defender.value) {
-      kill(defender);
-      if (attacker.value > defender.value && RANKS[attacker.rank].marksVictims && defender.seal !== 'shield') {
+    const a = combatValue(attacker);
+    const d = combatValue(defender);
+    if (a >= d) {
+      kill(defender, attacker);
+      if (a > d && RANKS[attacker.rank].marksVictims && deadIds.has(defender.id)) {
         damageSources[defender.id] = { rank: attacker.rank, owner: attacker.owner };
       }
     }
-    if (attacker.value <= defender.value) kill(attacker);
+    if (a <= d) kill(attacker, defender);
   };
 
   const attack = (attackBoard: BoardSlot[], defenseBoard: BoardSlot[], defenderOwner: Owner) => {
@@ -300,6 +366,9 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       opponent: opponentCards.filter(c => deadIds.has(c.id)).length,
     },
     shieldedIds: Array.from(shielded).filter(id => !deadIds.has(id)),
+    shieldHits,
+    reflected: reflected.filter(r => !deadIds.has(r.mirrorId)),
+    poisonedIds: poisoned,
     isRepublicanaTriggered,
   };
 };
@@ -309,9 +378,11 @@ export const markCombatResult = (board: BoardSlot[], result: CombatResult): Boar
   const dead = new Set(result.deadCardIds);
   const voided = new Set(result.voidedCardIds);
   const shielded = new Set(result.shieldedIds);
+  const mirrored = new Set(result.reflected.map(r => r.mirrorId));
   return board.map(slot => {
     const card = slot.card;
     if (card && shielded.has(card.id)) return { ...slot, card: { ...card, isShielded: true } };
+    if (card && mirrored.has(card.id)) return { ...slot, card: { ...card, isReflecting: true } };
     if (!card || (!dead.has(card.id) && !voided.has(card.id))) return slot;
     return {
       ...slot,
@@ -324,12 +395,18 @@ export const markCombatResult = (board: BoardSlot[], result: CombatResult): Boar
   });
 };
 
-/** Tras la pelea: se retiran las cartas caídas y se rompen los sellos de defensa usados */
+/**
+ * Tras la pelea: se retiran las cartas caídas (el eco deja un 2), se rompen los sellos
+ * de defensa y espejo usados y se acaba la exposición del sello de revelar.
+ */
 export const clearDefeatedCards = (board: BoardSlot[]): BoardSlot[] =>
   board.map(slot => {
     const card = slot.card;
-    if (card?.isTakingDamage || card?.isVoided) return { ...slot, card: null };
-    if (card?.isShielded) return { ...slot, card: { ...card, isShielded: false, seal: undefined } };
+    if (!card) return slot;
+    if (card.isTakingDamage && card.seal === 'echo') return { ...slot, card: createEchoCard(card.owner) };
+    if (card.isTakingDamage || card.isVoided) return { ...slot, card: null };
+    if (card.isShielded || card.isReflecting) return { ...slot, card: { ...card, isShielded: false, isReflecting: false, isExposed: false, seal: undefined } };
+    if (card.isExposed) return { ...slot, card: { ...card, isExposed: false } };
     return slot;
   });
 

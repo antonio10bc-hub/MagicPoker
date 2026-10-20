@@ -6,6 +6,7 @@ import { CARD_SIZE, TEAM } from '@/theme/tokens';
 import { Attack, collectAttacks, facingOutcomes } from './forecast';
 import { useStage } from '@/components/pixel/Stage';
 import { ARROW_HOLD_S } from './Card';
+import { gameTimeout } from '@/lib/clock';
 
 // --- FLECHAS DE ATAQUE ---
 // Cada carta dibuja una flecha hacia cada hueco que golpeará, del color de su bando
@@ -57,8 +58,8 @@ export const useArrowsVisible = (combat: CombatResult | null) => {
   const [expired, setExpired] = useState<CombatResult | null>(null);
   useEffect(() => {
     if (!combat) return;
-    const t = setTimeout(() => setExpired(combat), ARROW_HOLD_S * 1000);
-    return () => clearTimeout(t);
+    const cancel = gameTimeout(() => setExpired(combat), ARROW_HOLD_S * 1000);
+    return cancel;
   }, [combat]);
   return !combat || expired !== combat;
 };

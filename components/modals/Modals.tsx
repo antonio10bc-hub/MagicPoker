@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
@@ -18,11 +18,8 @@ import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { BOSSES, resetProgress, unlockedSeals } from '@/lib/bosses';
-
-const closeWithClick = () => {
-  playSound('click');
-  useUiStore.getState().closeModal();
-};
+import { closeWithClick, Dialog, Overlay, Section } from './Dialog';
+import { CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
@@ -40,56 +37,10 @@ export const Modals = () => {
       {modal === 'rules' && <RulesModal key="rules" />}
       {modal === 'settings' && <SettingsModal key="settings" />}
       {modal === 'collection' && <CollectionModal key="collection" />}
+      {modal === 'deck' && <DeckEditorModal key="deck" />}
+      {modal === 'cards' && <CardCatalogModal key="cards" />}
+      {modal === 'pause' && <PauseModal key="pause" />}
     </AnimatePresence>
-  );
-};
-
-// --- CAPA DE FONDO + VENTANA ---
-const Overlay = ({ onClose, children }: { onClose?: () => void; children: ReactNode }) => (
-  <motion.div
-    className="absolute inset-0 z-[200] flex items-center justify-center"
-    style={{ background: 'rgba(11,13,12,0.7)' }}
-    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    transition={{ duration: 0.2 }}
-    onClick={onClose}
-  >
-    <motion.div
-      onClick={e => e.stopPropagation()}
-      initial={{ scale: 0.6, y: 30, rotateX: 40, opacity: 0 }}
-      animate={{ scale: 1, y: 0, rotateX: 0, opacity: 1 }}
-      exit={{ scale: 0.8, y: 20, opacity: 0, transition: { duration: 0.15 } }}
-      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-      style={{ transformPerspective: 500 }}
-    >
-      {children}
-    </motion.div>
-  </motion.div>
-);
-
-/** Ventana con cabecera. En móvil vertical se ensancha y alarga para aprovechar la pantalla. */
-const Dialog = ({ title, width, height, actions, children }: { title: string; width: number; height: number; actions?: ReactNode; children: ReactNode }) => {
-  const stage = useStage();
-  const w = Math.min(width, stage.width - 12);
-  const h = stage.mode === 'portrait' ? Math.min(stage.height - 40, Math.max(height, 360)) : Math.min(height, stage.height - 16);
-  return (
-    <Overlay onClose={closeWithClick}>
-      <Panel
-        title={
-          <div className="flex items-center justify-between">
-            <span>{title}</span>
-          </div>
-        }
-        band="var(--c-chip)"
-        style={{ width: w, height: h }}
-        bodyClassName="flex flex-col"
-      >
-        <div className="absolute flex gap-[3px] z-10" style={{ right: 3, top: -14 }}>
-          {actions}
-          <IconButton icon={ICONS.close} onClick={closeWithClick} aria-label="close" className="!w-[13px] !h-[12px]" />
-        </div>
-        {children}
-      </Panel>
-    </Overlay>
   );
 };
 
@@ -119,12 +70,6 @@ const ConfirmExitModal = () => {
 };
 
 // --- ESTADÍSTICAS ---
-const Section = ({ title, children, className }: { title: string; children: ReactNode; className?: string }) => (
-  <div className={clsx('px-inset p-[5px]', className)}>
-    <div className="mb-[4px] pb-[2px] uppercase" style={{ color: 'var(--c-ui-muted)', boxShadow: '0 1px 0 0 var(--c-ui-panel-light)' }}>{title}</div>
-    {children}
-  </div>
-);
 
 const StatsModal = () => {
   const t = useTranslations();
@@ -304,7 +249,7 @@ const SettingsModal = () => {
   const settings = useSettings();
   const isMuted = useMuted();
   return (
-    <Dialog title={t.settings_title} width={236} height={218}>
+    <Dialog title={t.settings_title} width={236} height={238}>
       <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[12px]">
         <Row label={t.set_sound}>
           <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
@@ -331,6 +276,7 @@ const SettingsModal = () => {
           useUiStore.getState().closeModal();
           useGameStore.getState().startTutorial();
         }}>{t.replay_tutorial}</PxButton>
+        <PxButton className="h-[16px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('cards'); }}>{t.cards_button}</PxButton>
         <ResetProgress />
       </div>
     </Dialog>

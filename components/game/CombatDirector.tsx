@@ -8,6 +8,7 @@ import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, IMPACT_DELAY_S, SECOND_HIT_S, SHIELD_BREAK_S } from './Card';
 import { getTargetIndices } from '@/lib/game-utils';
+import { gameTimeout } from '@/lib/clock';
 import { useTranslations } from '@/lib/i18n';
 
 // --- DIRECTOR DE COMBATE ---
@@ -44,7 +45,8 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       const p = geo.slots[owner][i];
       return { x: p.x + CARD_SIZE.width / 2, y: p.y + CARD_SIZE.height / 2 };
     };
-    sealFx.events.forEach((e, n) => setTimeout(() => {
+    const cancels: (() => void)[] = [];
+    sealFx.events.forEach((e, n) => cancels.push(gameTimeout(() => {
       if (e.kind === 'shift') {
         const c = center(e.owner, e.to);
         playSfx('whoosh', 0.9, 1.2);
@@ -52,8 +54,24 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 22, life: 450 });
         // Estela entre los dos huecos
         const o = center(e.owner, e.from);
-        [0.2, 0.4, 0.6, 0.8].forEach((k, j) => setTimeout(() =>
-          fx.emit({ kind: 'particles', x: o.x + (c.x - o.x) * k, y: o.y + (c.y - o.y) * k, colors: [VOLT, '#D8FF9A'], count: 5, speed: 10, gravity: -6, size: [1, 2], life: 500 }), j * 90));
+        [0.2, 0.4, 0.6, 0.8].forEach((k, j) => cancels.push(gameTimeout(() =>
+          fx.emit({ kind: 'particles', x: o.x + (c.x - o.x) * k, y: o.y + (c.y - o.y) * k, colors: [VOLT, '#D8FF9A'], count: 5, speed: 10, gravity: -6, size: [1, 2], life: 500 }), j * 90)));
+      } else if (e.kind === 'anchor') {
+        // Ancla: la carta no se mueve
+        const c = center(e.owner, e.index);
+        playSfx('hit', 0.9, 0.7);
+        fx.shake(1.2);
+        fx.emit({ kind: 'text', x: c.x, y: c.y - 18, text: t.fx_anchor, bg: VOLT_BG, size: 10, life: 1000 });
+        fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 24, life: 500 });
+        fx.emit({ kind: 'particles', x: c.x, y: c.y + 22, colors: [VOLT, PALETTE.white], count: 10, speed: 22, gravity: 40, spread: Math.PI * 0.8, angle: Math.PI / 2, size: [1, 2], life: 500 });
+      } else if (e.kind === 'reveal') {
+        // Revelar: la carta se da la vuelta y queda expuesta
+        const c = center(e.owner, e.index);
+        playSfx('sparkle');
+        playSfx('flip', 0.9, 0.9);
+        fx.emit({ kind: 'text', x: c.x, y: c.y - 20, text: t.fx_reveal, bg: VOLT_BG, size: 11, life: 1100 });
+        fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 28, life: 550 });
+        fx.emit({ kind: 'ring', x: c.x, y: c.y, color: PALETTE.white, radius: 18, life: 400 });
       } else {
         const a = center('player', e.index);
         const b = center('opponent', e.index);
@@ -63,7 +81,8 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         fx.emit({ kind: 'text', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, text: t.fx_swap, bg: VOLT_BG, size: 14, life: 1000 });
         [a, b].forEach(c => fx.emit({ kind: 'particles', x: c.x, y: c.y, colors: [VOLT, PALETTE.white], count: 12, speed: 34, gravity: -10, size: [1, 2], life: 600 }));
       }
-    }, n * 160));
+    }, n * 160)));
+    return () => cancels.forEach(c => c());
   }, [sealFx, geo, t]);
 
   // 1. Arranca la pelea: tambor, sacudida, zoom; luego volteo de cartas rivales y Jokers
@@ -74,9 +93,9 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     fx.shake(1.6);
     fx.punch(0.045);
 
-    const reveal = setTimeout(() => {
+    const cancelReveal = gameTimeout(() => {
       const { player, opponent } = useGameStore.getState();
-      opponent.board.forEach((s, i) => { if (s.card) setTimeout(() => playSfx('flip', 0.8, 1 + i * 0.06), i * 60); });
+      opponent.board.forEach((s, i) => { if (s.card) gameTimeout(() => playSfx('flip', 0.8, 1 + i * 0.06), i * 60); });
       locate(geo, { player: player.board, opponent: opponent.board })
         .filter(l => l.slot.card?.rank === 'JOKER')
         .forEach(l => {
@@ -85,14 +104,14 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
           fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [PALETTE.yellow, PALETTE.white], count: 14, speed: 30, gravity: -10, size: [1, 2], life: 800 });
         });
     }, TIMINGS.combatFlip + 20);
-    return () => clearTimeout(reveal);
+    return cancelReveal;
   }, [phase, geo]);
 
   // 2. Resultado: embestidas → impacto (cartas rotas, daño directo, As)
   useEffect(() => {
     if (!combat) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const later = (ms: number, f: () => void) => timers.push(setTimeout(f, ms));
+    const timers: (() => void)[] = [];
+    const later = (ms: number, f: () => void) => timers.push(gameTimeout(f, ms));
     const { player, opponent } = useGameStore.getState();
     const cards = locate(geo, { player: player.board, opponent: opponent.board });
 
@@ -114,7 +133,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         cards.filter(l => l.slot.card).forEach(l =>
           fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [PALETTE.cyan, PALETTE.white, PALETTE.navy], count: 12, speed: 40, gravity: -20, life: 800 }));
       });
-      return () => timers.forEach(clearTimeout);
+      return () => timers.forEach(c => c());
     }
 
     const attackers = cards.filter(l => l.slot.card && l.slot.card.rank !== 'JOKER');
@@ -199,6 +218,33 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
           fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, '#4FC414', '#D8FF9A'], count: 22, speed: 50, gravity: 90, size: [2, 3], life: 800 });
         });
       });
+      // Espejo: el golpe vuelve al atacante (rayo de la carta con espejo al atacante)
+      combat.reflected.forEach(({ mirrorId, attackerId }, i) => {
+        const m = cards.find(l => l.slot.card?.id === mirrorId);
+        const a = cards.find(l => l.slot.card?.id === attackerId);
+        if (!m) return;
+        later(i * 80, () => {
+          playSfx('zap', 0.9, 1.4);
+          fx.emit({ kind: 'text', x: m.x, y: m.y - 18, text: t.fx_mirror, bg: VOLT_BG, size: 11, life: 1000 });
+          fx.emit({ kind: 'ring', x: m.x, y: m.y, color: VOLT, radius: 26, life: 420 });
+          if (a) [0.25, 0.5, 0.75, 1].forEach((k, j) => later(j * 40, () =>
+            fx.emit({ kind: 'particles', x: m.x + (a.x - m.x) * k, y: m.y + (a.y - m.y) * k, colors: [VOLT, PALETTE.white], count: 5, speed: 12, gravity: 0, size: [1, 2], life: 350 })));
+        });
+      });
+      // Veneno: quien mató a la carta envenenada cae con ella
+      const poisoned = new Set(combat.poisonedIds);
+      cards.filter(l => l.slot.card && poisoned.has(l.slot.card.id)).forEach((l, i) => later(160 + i * 90, () => {
+        playSfx('crush', 0.6, 0.7);
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 18, text: t.fx_poison, bg: VOLT_BG, size: 11, life: 1100 });
+        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, '#4FC414', PALETTE.outline], count: 16, speed: 20, gravity: -25, size: [1, 3], life: 900 });
+      }));
+      // Eco: la carta caída dejará un 2 en su hueco
+      victims.filter(l => l.slot.card?.seal === 'echo').forEach((l, i) => later(260 + i * 90, () => {
+        playSfx('sparkle', 0.7);
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: `${t.fx_echo} → 2`, bg: VOLT_BG, size: 11, life: 1200 });
+        [14, 22, 30].forEach((r, j) => later(j * 110, () => fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: r, life: 450 })));
+      }));
+
       // Sello de vida: la carta cae pero devuelve una vida a su dueño
       victims.filter(l => l.slot.card?.seal === 'life').forEach((l, i) => later(220 + i * 90, () => {
         playSfx('score', 0.8, 1.1);
@@ -222,7 +268,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       }
     });
 
-    return () => timers.forEach(clearTimeout);
+    return () => timers.forEach(c => c());
   }, [combat, geo, t]);
 
   return null;

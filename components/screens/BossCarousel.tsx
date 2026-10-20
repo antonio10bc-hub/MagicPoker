@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { clsx } from 'clsx';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { useUiStore } from '@/store/useUiStore';
-import { BOSSES, currentBossIndex, getProgress, getServerProgress, subscribeProgress } from '@/lib/bosses';
+import { BOSSES, currentBossIndex, getProgress, getServerProgress, isBossVisible, subscribeProgress } from '@/lib/bosses';
 import { BossFigure } from '@/components/game/BossFigure';
 import { playSfx } from '@/lib/sounds';
 
@@ -27,6 +27,8 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
   }, [current, width, setMenuBoss]);
 
   const figureH = Math.min(100, height - 40);
+  // El jefe secreto no sale hasta que lo alcanzas
+  const shown = BOSSES.filter((_, i) => isBossVisible(i, progress));
 
   return (
     <div className="absolute z-20" style={{ left, top, width, height }}>
@@ -39,16 +41,17 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
           if (p !== page) { setPage(p); setMenuBoss(p); playSfx('flip', 0.5, 1.2); }
         }}
       >
-        {BOSSES.map((boss, i) => {
+        {shown.map((boss, i) => {
           const beaten = i < progress.defeated;
+          const rematchWon = !!progress.rematches?.includes(boss.id);
           const isCurrent = i === current;
           const locked = i > current;
           return (
             <div key={boss.id} className="shrink-0 flex flex-col items-center justify-center gap-[3px]"
               style={{ width, height, scrollSnapAlign: 'center' }}>
-              <span className={clsx('font-display', isCurrent && !beaten && 'glow-text')}
-                style={{ fontSize: 10, lineHeight: '10px', color: isCurrent && !beaten ? 'var(--ink-orange)' : 'var(--ink-teal)' }}>
-                {isCurrent && !beaten ? t.next_rival : beaten ? (isCurrent ? t.rematch : t.beaten) : `${i + 1} / ${BOSSES.length}`}
+              <span className={clsx('font-display', isCurrent && !beaten && 'glow-text', rematchWon && 'glow-volt')}
+                style={{ fontSize: 10, lineHeight: '10px', color: rematchWon ? 'var(--ink-volt)' : isCurrent && !beaten ? 'var(--ink-orange)' : 'var(--ink-teal)' }}>
+                {rematchWon ? `${t.beaten} · ${t.rematch_won}` : isCurrent && !beaten ? (boss.secret ? t.secret_boss : t.next_rival) : beaten ? t.beaten : `${i + 1} / ${shown.length}`}
               </span>
               <div className={isCurrent ? 'anim-breathe' : undefined} style={{ opacity: beaten && !isCurrent ? 0.55 : 1 }}>
                 <BossFigure id={boss.id} height={figureH} dim={locked} />
@@ -62,7 +65,7 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
       </div>
       {/* Puntos de página */}
       <div className="absolute left-0 right-0 flex justify-center gap-[3px] pointer-events-none" style={{ bottom: -6 }}>
-        {BOSSES.map((b, i) => (
+        {shown.map((b, i) => (
           <span key={b.id} className="rounded-full" style={{
             width: 4, height: 4,
             background: i === page ? 'var(--ink-orange)' : i < progress.defeated ? 'var(--ink-teal)' : 'var(--ink-slate)',

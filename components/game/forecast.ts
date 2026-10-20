@@ -1,5 +1,5 @@
 import { BoardSlot, Card, Owner, Rank } from '@/types';
-import { getTargetIndices, RANKS } from '@/lib/game-utils';
+import { combatValue, getTargetIndices, RANKS } from '@/lib/game-utils';
 
 // --- PRONÓSTICOS CON INFORMACIÓN VISIBLE ---
 // Ayudas de lectura para el jugador. Usan las mismas reglas que lib/game-utils (solo
@@ -102,8 +102,8 @@ export const facingOutcomes = (attacks: Attack[]) => {
   attacks.forEach(a => {
     const rival = attacks.find(b => b.owner !== a.owner && b.index === a.target && b.target === a.index && !b.maybe && !a.maybe);
     if (!rival) return;
-    if (a.card.value < rival.card.value) losing.add(a);
-    else if (a.card.value === rival.card.value) clashing.add(a);
+    if (combatValue(a.card) < combatValue(rival.card)) losing.add(a);
+    else if (combatValue(a.card) === combatValue(rival.card)) clashing.add(a);
   });
   return { losing, clashing };
 };

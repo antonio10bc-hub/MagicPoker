@@ -6,6 +6,7 @@ import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
 import { Hand, HandHandlers, PlayerPanel, RivalPanel, Sidebar } from '@/components/game/Hud';
 import { CardInfo } from '@/components/game/CardInfo';
+import { BossTaunt } from '@/components/game/BossTaunt';
 import { TutorialCoach, useTutorialGate } from '@/components/game/TutorialCoach';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
@@ -67,6 +68,7 @@ export const GameScreen = () => {
       <Board selectedCardId={selectedCardId} onSlotClick={handleSlotClick} dragOverSlot={dragOverSlot} onlySlot={tutorial.slot} />
       <Sidebar />
       <RivalPanel />
+      <BossTaunt />
       <PlayerPanel />
       <MenuButtons />
       <TurnBox />

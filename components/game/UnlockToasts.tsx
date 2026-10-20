@@ -6,7 +6,8 @@ import { useTranslations, Translations } from '@/lib/i18n';
 import { haptic, playSfx } from '@/lib/sounds';
 import { INK } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { SEAL_ICONS } from '@/components/pixel/sprites';
+import { ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { BossFigure } from './BossFigure';
 import { useStage } from '@/components/pixel/Stage';
 
 // --- DESBLOQUEOS DE BOSS ---
@@ -31,11 +32,15 @@ export const UnlockToasts = () => {
 
   const w = Math.min(200, width - 16);
   const seal = current?.kind === 'seal' ? current.seal : null;
+  const kind = current?.kind ?? 'collection';
+  const title = { seal: t.unlock_seal, collection: t.unlock_collection, secret: t.unlock_secret, editor: t.unlock_editor }[kind];
+  const desc = seal ? `${t[`seal_${seal}_desc` as keyof Translations]} ${t.unlock_seal_desc}`
+    : { seal: '', collection: t.unlock_collection_desc, secret: t.unlock_secret_desc, editor: t.unlock_editor_desc }[kind];
   return (
     <AnimatePresence>
       {show && (
         <motion.button
-          key={seal ?? 'collection'}
+          key={seal ?? kind}
           className="absolute z-[300] flex flex-col items-center gap-[8px] cursor-pointer"
           style={{ left: (width - w) / 2, top: Math.round(height * 0.22), width: w }}
           onClick={shift}
@@ -49,18 +54,20 @@ export const UnlockToasts = () => {
               initial={{ scale: 3, rotate: -30, opacity: 0, filter: 'blur(4px)' }}
               animate={{ scale: 1, rotate: 0, opacity: 1, filter: 'blur(0px)' }}
               transition={{ type: 'spring', stiffness: 480, damping: 15 }}>
-              <PixelSprite sprite={SEAL_ICONS[seal ?? 'shield']} tint={INK.black} scale={3} />
+              {kind === 'secret'
+                ? <BossFigure id="sovereign" height={44} dark glow={false} />
+                : <PixelSprite sprite={kind === 'editor' ? ICONS.gear : SEAL_ICONS[seal ?? 'shield']} tint={INK.black} scale={kind === 'editor' ? 4 : 3} />}
             </motion.div>
           </div>
           <motion.div className="px-panel px-round px-[8px] py-[6px] flex flex-col items-center gap-[3px] w-full" data-popover
             style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.55), 0 0 14px 2px rgba(125,255,43,0.25)' }}
             initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
             <span className="glow-volt font-display" style={{ color: 'var(--ink-volt)', fontSize: 12 }}>
-              {seal ? t.unlock_seal : t.unlock_collection}
+              {title}
             </span>
             {seal && <span className="text-title text-outline">{t[`seal_${seal}` as keyof Translations]}</span>}
             <span className="text-center leading-[11px]" style={{ color: 'var(--ink-mint)' }}>
-              {seal ? `${t[`seal_${seal}_desc` as keyof Translations]} ${t.unlock_seal_desc}` : t.unlock_collection_desc}
+              {desc}
             </span>
           </motion.div>
         </motion.button>
