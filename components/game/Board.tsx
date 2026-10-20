@@ -17,7 +17,6 @@ import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, Card } from './Card';
-import { CardOrigin, cardOrigins } from './cardOrigins';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
 import { AttackArrows, useArrowsVisible } from './AttackArrows';
@@ -86,8 +85,6 @@ interface PlacedCardProps {
   owner: Owner;
   x: number;
   y: number;
-  /** De dónde viene volando (coordenadas del escenario) y a qué escala se veía */
-  origin: CardOrigin;
   /** Embestida hacia el objetivo durante el combate */
   lunge: { dx: number; dy: number } | null;
   /** Flechas de ataque encendidas para esta carta */
@@ -96,27 +93,22 @@ interface PlacedCardProps {
 }
 
 /**
- * Carta en mesa: llega volando en arco desde la mano (o desde el rival), se acerca a
- * la cámara a mitad de vuelo, se "aplasta" al aterrizar y levanta polvo.
+ * Carta en mesa: aparece sobre su propio hueco, cae un poco, se "aplasta" al aterrizar
+ * y levanta polvo. No vuela desde la mano: viajar dentro del tablero inclinado en 3D
+ * se pinta mal en Safari de iOS (la carta salía diminuta en una esquina).
  */
-const PlacedCard = ({ card, owner, x, y, origin, lunge, arrowsOn, onToggleArrows }: PlacedCardProps) => {
-  // Se alinean los centros: la carta arranca exactamente donde se veía, a su tamaño
-  const s0 = origin.scale ?? 1.15;
-  const dx = origin.x + (CARD_SIZE.width * s0) / 2 - (x + CARD_SIZE.width / 2);
-  const dy = origin.y + (CARD_SIZE.height * s0) / 2 - (y + CARD_SIZE.height / 2);
-  const spin = owner === 'player' ? -8 : 10;
+const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows }: PlacedCardProps) => {
   const dead = card.isTakingDamage || card.isVoided;
   const landed = useRef(false);
 
   return (
     <motion.div
       className="absolute z-10"
-      style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height, transformPerspective: 400 }}
-      // El rival no "vuela" desde su panel: su carta cae en su hueco apareciendo
-      initial={{ x: dx, y: dy, scale: s0, rotateZ: owner === 'player' ? 0 : spin, rotateX: -TILT_IDLE, opacity: owner === 'player' ? 1 : 0 }}
-      // Ghosting: la carta vuela borrosa y se enfoca al aterrizar
-      animate={{ x: [dx, dx * 0.45, 0], y: [dy, dy * 0.45 - 30, 0], scale: [s0, Math.max(s0, 1) * 1.18, 1], rotateZ: [owner === 'player' ? 0 : spin, spin * 0.4, 0], rotateX: [-TILT_IDLE, -6, 0], opacity: owner === 'player' ? 1 : [0, 1, 1], filter: ['blur(0px)', 'blur(1.2px)', 'blur(0px)'], transitionEnd: { filter: 'none' } }}
-      transition={{ duration: 0.42, times: [0, 0.5, 1], ease: [0.3, 0.1, 0.4, 1] }}
+      style={{ left: x, top: y, width: CARD_SIZE.width, height: CARD_SIZE.height }}
+      // Solo 2D (translate, escala, giro y opacidad) sobre su hueco
+      initial={{ y: -22, scale: 1.12, rotateZ: owner === 'player' ? -3 : 4, opacity: 0 }}
+      animate={{ y: [-22, -26, 0], scale: [1.12, 1.16, 1], rotateZ: [owner === 'player' ? -3 : 4, owner === 'player' ? -1 : 2, 0], opacity: [0, 1, 1] }}
+      transition={{ duration: 0.3, times: [0, 0.35, 1], ease: [0.3, 0.1, 0.4, 1] }}
       onAnimationStart={() => { if (!landed.current) playSfx('whoosh', 0.8); }}
       onAnimationComplete={() => {
         if (landed.current) return;
@@ -210,7 +202,7 @@ interface BoardProps {
 }
 
 export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: BoardProps) => {
-  const { board: geo, hand: handArea } = useGameLayout();
+  const { board: geo } = useGameLayout();
   const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
   // Cartas de la mesa con las flechas encendidas (se enciende/apaga tocándolas)
   const [arrowCards, setArrowCards] = useState<ReadonlySet<string>>(() => new Set());
@@ -248,9 +240,6 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
 
   const d = geo.diorama;
   const origin = `${d.x + d.w / 2}px ${d.y + d.h / 2}px`;
-  // Carta del rival: cae sobre su propio hueco desde un poco más arriba
-  const rivalOrigin = (x: number, y: number): CardOrigin => ({ x: x - 2, y: y - 26, scale: 1.1 });
-  const handOrigin = { x: handArea.x + handArea.w / 2 - CARD_SIZE.width / 2, y: handArea.y };
   const pitch = geo.slots.player[1].x - geo.slots.player[0].x;
 
   // Embestidas: cada carta con patrón de ataque se lanza hacia su objetivo
@@ -313,7 +302,6 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
                 owner={owner}
                 x={x}
                 y={y}
-                origin={owner === 'player' ? cardOrigins.get(slot.card.id) ?? handOrigin : rivalOrigin(x, y)}
                 lunge={lungeFor(slot, owner)}
                 arrowsOn={arrowCards.has(slot.card.id) && arrowsVisible}
                 onToggleArrows={id => { playSfx(arrowCards.has(id) ? 'deselect' : 'select', 0.7); toggleArrows(id); }}

@@ -231,9 +231,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
   "punch" de zoom y flash crema. La intensidad escala con lo que pasa en pantalla.
 - **Cartas:**
   - volteo real en 3D (rotateY, dos caras con `backface-visibility`);
-  - al jugarse vuelan en arco desde su posición en la mano (o desde el rival),
-    borrosas (*ghosting*), se acercan a la cámara a mitad de vuelo, se enfocan y
-    aplastan al aterrizar y levantan polvo;
+  - al jugarse aparecen sobre su propio hueco, caen un poco, se aplastan al aterrizar
+    y levantan polvo. No vuelan desde la mano: un vuelo dentro del tablero inclinado
+    en 3D se pinta mal en Safari de iOS (la carta salía diminuta en una esquina);
   - en la pelea embisten hacia su objetivo y el golpe llega `IMPACT_DELAY_S` después;
   - al morir se agrietan, sueltan esquirlas y caen al retirarse.
 - **Mano:**

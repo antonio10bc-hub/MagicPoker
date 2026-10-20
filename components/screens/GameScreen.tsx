@@ -7,7 +7,6 @@ import { Board } from '@/components/game/Board';
 import { Hand, HandHandlers, PlayerPanel, RivalPanel, Sidebar } from '@/components/game/Hud';
 import { CardInfo } from '@/components/game/CardInfo';
 import { TutorialCoach, useTutorialGate } from '@/components/game/TutorialCoach';
-import { captureOrigin } from '@/components/game/cardOrigins';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { AmbientDust, LowHealth } from '@/components/fx/Ambient';
@@ -39,7 +38,6 @@ export const GameScreen = () => {
 
   const handleSlotClick = useCallback((slotIndex: number) => {
     if (!selectedCardId) return;
-    captureOrigin(selectedCardId);
     placeCard(selectedCardId, slotIndex);
     setSelectedCardId(null);
   }, [selectedCardId, placeCard]);
@@ -55,7 +53,6 @@ export const GameScreen = () => {
     onDrop: (id, slotIndex) => {
       setDragOverSlot(null);
       if (slotIndex === null) return;
-      captureOrigin(id);
       placeCard(id, slotIndex);
       setSelectedCardId(null);
     },

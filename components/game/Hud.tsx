@@ -14,7 +14,6 @@ import { HEART, HEART_LOST } from '@/components/pixel/sprites';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { Rect } from '@/theme/layout';
 import { Card } from './Card';
-import { cardOrigins } from './cardOrigins';
 import { deckSummary, forecastFight } from './forecast';
 import { haptic, playSfx } from '@/lib/sounds';
 
@@ -343,7 +342,6 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
   const rx = useMotionValue(0);
   const ry = useMotionValue(0);
 
-  useEffect(() => { cardOrigins.set(card.id, { x, y }); }, [card.id, x, y]);
   // El retraso solo importa al llegar a la mano (luego la carta puede cambiar de posición)
   const [initialDelay] = useState(enterDelay);
   useEffect(() => {
