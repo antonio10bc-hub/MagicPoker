@@ -169,31 +169,32 @@ export interface MenuLayout {
   board: BoardGeometry;
   cx: number;
   logoY: number;
+  /** Botón JUGAR (y debajo, CONTINUAR PARTIDA) */
   playY: number;
-  /** Panel de dificultad */
-  difficultyY: number;
-  panelW: number;
+  /** Base de las dos siluetas, de pie en el centro del tapete */
+  mascotY: number;
 }
 
 const LOGO_HEIGHT = 76;
 
 export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): MenuLayout => {
   if (mode === 'landscape') {
-    return { board: computeBoard(70, 24, 240), cx: W / 2, logoY: 34, playY: 126, difficultyY: 176, panelW: 180 };
+    return { board: computeBoard(70, 24, 240), cx: W / 2, logoY: 34, mascotY: 112, playY: 184 };
   }
-  // Vertical: logo arriba, tapete en el centro con el botón JUGAR, dificultad debajo
-  const PANEL_H = 44;
-  const boardH = boardMinHeight(true) + 16;
-  const block = LOGO_HEIGHT + DIORAMA_OVERHANG + boardH + DIORAMA_SHADOW + 10 + PANEL_H;
-  const top = Math.max(M, Math.floor((H - block) / 2));
+  // Vertical: logo arriba, tapete en el centro con las siluetas, JUGAR debajo
+  const BUTTONS_H = 48;
+  // En pantallas bajas el tapete crece menos para que todo quepa
+  const boardH = boardMinHeight(true) + (H < 360 ? 4 : 16);
+  const block = LOGO_HEIGHT + DIORAMA_OVERHANG + boardH + DIORAMA_SHADOW + 10 + BUTTONS_H;
+  // Nunca por encima de la fila de iconos (reglas, estadísticas, ajustes)
+  const top = Math.max(22, Math.floor((H - block) / 2));
   const boardY = top + LOGO_HEIGHT + DIORAMA_OVERHANG;
   return {
     board: computeBoard(M, boardY, W - 2 * M, true, boardH),
     cx: Math.floor(W / 2),
     logoY: top,
-    playY: boardY + Math.round(boardH / 2) - 14,
-    difficultyY: boardY + boardH + DIORAMA_SHADOW + 10,
-    panelW: Math.min(180, W - 16),
+    mascotY: boardY + Math.round(boardH / 2) - 26,
+    playY: boardY + boardH + DIORAMA_SHADOW + 10,
   };
 };
 

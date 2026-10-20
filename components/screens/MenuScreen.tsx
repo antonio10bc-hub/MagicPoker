@@ -1,23 +1,21 @@
 import { CSSProperties, useSyncExternalStore } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { useTranslations } from '@/lib/i18n';
-import { playSfx, playSound } from '@/lib/sounds';
+import { playSound } from '@/lib/sounds';
 import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
 import { loadGame } from '@/lib/savegame';
 import { isTutorialDone } from '@/lib/tutorial';
-import { Difficulty, Owner, Rank } from '@/types';
+import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
-import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
+import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, ICONS } from '@/components/pixel/sprites';
 import { INK } from '@/theme/tokens';
 import { useMenuLayout } from '@/components/pixel/Stage';
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
 const noSubscribe = () => () => {};
 const hasSavedGame = () => loadGame() !== null;
 const { Backdrop, Diorama } = ACTIVE_THEME;
@@ -104,11 +102,7 @@ export const Mascot = ({ rank, owner, x, y, delay = 0 }: { rank: Rank; owner: Ow
 
 export const MenuScreen = () => {
   const t = useTranslations();
-  const { difficulty, setDifficulty, startGame } = useGameStore(useShallow(s => ({
-    difficulty: s.difficulty,
-    setDifficulty: s.setDifficulty,
-    startGame: s.startGame,
-  })));
+  const startGame = useGameStore(s => s.startGame);
 
   // Empieza la partida y, si es la primera vez, abre el tutorial
   const handleStartGame = () => {
@@ -119,7 +113,7 @@ export const MenuScreen = () => {
     else startGame();
   };
 
-  const { cx, logoY, playY, difficultyY, panelW } = useMenuLayout();
+  const { cx, logoY, playY, mascotY } = useMenuLayout();
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
   const resumeGame = useGameStore(s => s.resumeGame);
@@ -134,8 +128,9 @@ export const MenuScreen = () => {
         <IconButton icon={ICONS.gear} aria-label="settings" onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
       </div>
       <Logo y={logoY} />
-      <Mascot rank="J" owner="player" x={cx - 92} y={playY - 8} />
-      <Mascot rank="K" owner="opponent" x={cx + 56} y={playY - 8} delay={0.3} />
+      {/* Las dos siluetas, frente a frente en el centro del tapete */}
+      <Mascot rank="J" owner="player" x={cx - 44} y={mascotY} />
+      <Mascot rank="K" owner="opponent" x={cx + 8} y={mascotY} delay={0.3} />
 
       <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}
         initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
@@ -152,22 +147,6 @@ export const MenuScreen = () => {
         </motion.div>
       )}
 
-      <motion.div className="absolute z-20" style={{ left: cx - Math.floor(panelW / 2), top: difficultyY }}
-        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18, delay: 1 }}>
-      <Panel title={t.difficulty} band="var(--c-orange)" style={{ width: panelW, height: 44 }} bodyClassName="flex gap-[4px] p-[5px]">
-        {DIFFICULTIES.map(d => (
-          <PxButton
-            key={d}
-            tone={difficulty === d ? 'roof' : 'white'}
-            data-pressed={difficulty === d}
-            onClick={() => { playSound('click'); playSfx('select', 0.6); setDifficulty(d); }}
-            className="flex-1 h-[16px]"
-          >
-            <span className={difficulty === d ? 'text-outline' : undefined}>{t[d]}</span>
-          </PxButton>
-        ))}
-      </Panel>
-      </motion.div>
     </div>
   );
 };

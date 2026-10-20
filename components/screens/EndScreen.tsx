@@ -84,7 +84,9 @@ export const EndScreen = () => {
     exitToMenu: s.exitToMenu,
   })));
   const ui = RESULT_UI[gameResult];
-  const { cx, board, playY } = useMenuLayout();
+  const { cx, board, mascotY } = useMenuLayout();
+  // El panel de resultado va centrado sobre el tapete
+  const panelY = mascotY - 2;
   const panelWidth = Math.min(200, useStage().width - 16);
 
   const isWin = gameResult === 'win';
@@ -103,13 +105,13 @@ export const EndScreen = () => {
     <div className="absolute inset-0">
       <MenuBackground />
       {isLoss && <div className="absolute inset-0 z-[4]" style={{ background: 'rgba(11, 13, 12, 0.55)' }} />}
-      {isWin && <Rays x={cx} y={playY + 34} />}
+      {isWin && <Rays x={cx} y={panelY + 48} />}
       {isWin && <Confetti />}
       <Mascot rank={gameResult === 'loss' ? 'K' : 'J'} owner={gameResult === 'loss' ? 'opponent' : 'player'} x={cx - 16} y={board.diorama.y + 6} />
 
       <motion.div
         className="absolute z-10"
-        style={{ left: cx - Math.floor(panelWidth / 2), top: playY - 14 }}
+        style={{ left: cx - Math.floor(panelWidth / 2), top: panelY }}
         initial={{ y: -200, rotate: isLoss ? 8 : -6 }}
         animate={isLoss ? { y: 0, rotate: [8, -3, 2, 0], x: [0, -4, 4, -2, 0] } : { y: 0, rotate: 0 }}
         transition={{ type: 'spring', stiffness: isLoss ? 500 : 260, damping: isLoss ? 20 : 12, delay: 0.25 }}

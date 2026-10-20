@@ -86,7 +86,8 @@ const END_SOUNDS: Record<GameResult, [Parameters<typeof playSound>[0], number]> 
 
 export const useGameStore = create<GameState>((set, get) => ({
   screen: 'menu',
-  difficulty: 'normal',
+  // Sin selector: siempre se juega contra el rival difícil
+  difficulty: 'hard',
   ...initialMatchState(),
 
   setDifficulty: (difficulty) => set({ difficulty }),
