@@ -178,7 +178,7 @@ export const MenuScreen = () => {
             style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.35)' }}>
             <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch}</span>
           </PxButton>
-          {!both && <span className="mt-[2px]" style={{ color: 'var(--ink-mint)', fontSize: 8, lineHeight: '9px' }}>{t.rematch_hint}</span>}
+          {!both && stage.mode === 'portrait' && <span className="mt-[2px]" style={{ color: 'var(--ink-mint)', fontSize: 8, lineHeight: '9px' }}>{t.rematch_hint}</span>}
         </motion.div>
       )}
 

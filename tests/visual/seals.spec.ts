@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { card, filmFight, finish, fight, sealCard, shot, startScenario, state, waitPhase, watchErrors } from './helpers';
+import { card, filmFight, finish, fight, sealCard, shot, startScenario, state, waitFought, watchErrors } from './helpers';
 
 // --- PELEAS CON CADA SELLO ---
 // Cada test prepara una mesa, juega la pelea, guarda capturas de la coreografía y
@@ -21,7 +21,7 @@ test('robo + ataque doble + defensa: la carta robada no vuelve a caer', async ({
   });
   await page.evaluate(() => document.querySelector('[data-card="player-5-a"]')?.setAttribute('data-mark', '1'));
   await filmFight(page, info, 'pelea');
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   expect(await page.locator('[data-card="player-5-a"][data-mark="1"]').count()).toBe(1);
   const s = await state(page);
   expect(s.result!.shieldedIds).toContain('player-7-b');
@@ -36,7 +36,7 @@ test('cambio y vida: se desliza al hueco de la derecha y recupera una vida', asy
   });
   await fight(page);
   await filmFight(page, info, 'pelea');
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   let s = await state(page);
   expect(s.player.board[1].card?.id).toBe('player-5-a');
   await finish(page);
@@ -56,7 +56,7 @@ test('espejo: devuelve el golpe y muere el atacante', async ({ page }, info) => 
   });
   await fight(page);
   await filmFight(page, info, 'pelea');
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   const s = await state(page);
   expect(s.result!.deadCardIds).toEqual(['opponent-9-b']);
   expect(s.result!.reflected).toHaveLength(1);
@@ -71,7 +71,7 @@ test('veneno: quien la mata cae con ella', async ({ page }, info) => {
   });
   await fight(page);
   await filmFight(page, info, 'pelea');
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   const s = await state(page);
   expect(s.result!.deadCardIds.sort()).toEqual(['opponent-9-b', 'player-3-a']);
   expect(s.result!.poisonedIds).toEqual(['opponent-9-b']);
@@ -86,7 +86,7 @@ test('eco: al caer deja un 2', async ({ page }, info) => {
   });
   await fight(page);
   await filmFight(page, info, 'pelea');
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   await finish(page);
   const s = await state(page);
   expect(s.player.board[0].card?.rank).toBe('2');
@@ -103,7 +103,7 @@ test('ancla: no te la pueden robar', async ({ page }, info) => {
   });
   await fight(page);
   await filmFight(page, info, 'pelea', 5);
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   const s = await state(page);
   // Sin robo: el 9 rival mata a tu 5
   expect(s.result!.deadCardIds).toEqual(['player-5-a']);
@@ -116,15 +116,14 @@ test('revelar: al ponerlo se da la vuelta la carta de enfrente y vale 1 menos', 
     player: { board: [null, card('player', '8', 'a')], hand: [sealCard('player', 'reveal', 'r')] },
     opponent: { board: [null, card('opponent', '9', 'b', { isFaceUp: false })] },
   });
-  await page.locator('[data-hand-card="player-SEAL-reveal-r"] div.cursor-pointer').first().click({ force: true });
-  await page.locator('button[data-slot="1"]').click({ force: true });
+  await page.evaluate(() => (window as unknown as { __game: { getState: () => { placeCard: (id: string, slot: number) => void } } }).__game.getState().placeCard('player-SEAL-reveal-r', 1));
   await page.waitForTimeout(700);
   await shot(page, info, 'revelada');
   let s = await state(page);
   expect(s.opponent.board[1].card).toMatchObject({ isFaceUp: true, isExposed: true });
   await fight(page);
   await filmFight(page, info, 'pelea', 5);
-  await waitPhase(page, 'combat-reveal');
+  await waitFought(page);
   s = await state(page);
   // Un 9 expuesto vale 8: empata con tu 8 y caen los dos
   expect(s.result!.deadCardIds.sort()).toEqual(['opponent-9-b', 'player-8-a']);

@@ -78,3 +78,8 @@ export const setSpeed = (value: GameSpeed) => {
   syncCss();
   if (speed !== 1) cssSync = setInterval(syncCss, 150);
 };
+
+// Tests visuales: en desarrollo se puede consultar el reloj desde la página
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  (window as unknown as { __clock: object }).__clock = { isPaused, getSpeed, pending: () => timers.size };
+}

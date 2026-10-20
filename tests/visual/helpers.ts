@@ -53,6 +53,12 @@ export const startScenario = async (page: Page, s: Scenario) => {
   await page.getByText(/continuar partida/i).waitFor();
   await page.evaluate(() => (window as unknown as { __game: { getState: () => { resumeGame: () => boolean } } }).__game.getState().resumeGame());
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
+  // Se guarda el último resultado de pelea: la cuenta atrás de CONTINUAR puede cerrar
+  // la pelea mientras se hacen las capturas
+  await page.evaluate(() => {
+    const w = window as unknown as { __game: { subscribe: (f: (s: { pendingCombatResult: unknown }) => void) => void }; __lastResult?: unknown };
+    w.__game.subscribe(s => { if (s.pendingCombatResult) w.__lastResult = s.pendingCombatResult; });
+  });
   await page.waitForTimeout(600);
 };
 
@@ -60,7 +66,8 @@ type GameWindow = { __game: { getState: () => Record<string, unknown> & { passTu
 
 export const state = (page: Page) => page.evaluate(() => {
   const s = (window as unknown as GameWindow).__game.getState();
-  return JSON.parse(JSON.stringify({ phase: s.phase, player: s.player, opponent: s.opponent, result: s.pendingCombatResult })) as {
+  const last = (window as unknown as { __lastResult?: unknown }).__lastResult;
+  return JSON.parse(JSON.stringify({ phase: s.phase, player: s.player, opponent: s.opponent, result: s.pendingCombatResult ?? last ?? null })) as {
     phase: string; player: PlayerState; opponent: PlayerState;
     result: { deadCardIds: string[]; reflected: { mirrorId: string }[]; poisonedIds: string[]; shieldedIds: string[] } | null;
   };
@@ -69,11 +76,21 @@ export const state = (page: Page) => page.evaluate(() => {
 /** Te plantas (el rival ya está plantado) y empieza la pelea */
 export const fight = (page: Page) => page.evaluate(() => (window as unknown as GameWindow).__game.getState().passTurn());
 
-export const waitPhase = (page: Page, phase: string) =>
-  page.waitForFunction(p => (window as unknown as GameWindow).__game.getState().phase === p, phase, { timeout: 15_000 });
+/** Espera a que la pelea esté resuelta (o ya cerrada por la cuenta atrás) */
+export const waitFought = (page: Page) =>
+  page.waitForFunction(() => {
+    const w = window as unknown as GameWindow & { __lastResult?: unknown };
+    return !!w.__lastResult && w.__game.getState().phase !== 'combat';
+  }, undefined, { timeout: 15_000 });
 
-/** Continuar tras la pelea */
-export const finish = (page: Page) => page.evaluate(() => (window as unknown as GameWindow).__game.getState().finishCombatPhase());
+/** Continuar tras la pelea (si la cuenta atrás no lo ha hecho ya) */
+export const finish = async (page: Page) => {
+  await page.evaluate(() => {
+    const g = (window as unknown as GameWindow).__game.getState();
+    if (g.phase === 'combat-reveal') g.finishCombatPhase();
+  });
+  await page.waitForFunction(() => (window as unknown as GameWindow).__game.getState().phase === 'placement');
+};
 
 /** Captura para revisar a ojo (se adjunta al informe y se guarda en test-results) */
 export const shot = async (page: Page, info: TestInfo, name: string) => {

@@ -20,7 +20,7 @@ export default defineConfig({
     launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : undefined,
   },
   projects: [
-    { name: 'movil', use: { ...devices['Pixel 7'], viewport: { width: 390, height: 760 } } },
+    { name: 'movil', use: { ...devices['Pixel 7'], viewport: { width: 390, height: 760 }, deviceScaleFactor: 1 } },
     { name: 'horizontal', use: { viewport: { width: 1280, height: 800 } } },
   ],
   webServer: {
