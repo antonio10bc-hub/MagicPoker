@@ -11,6 +11,21 @@
 
 export type MusicStyle = 'menu' | 'game';
 
+/** Variación del tema (cada jefe tiene la suya, ver lib/bossMusic) */
+export interface MusicVariant {
+  /** Semitonos respecto a La */
+  transpose?: number;
+  bpm?: number;
+  /** Timbre de la guitarra */
+  voice?: OscillatorType;
+  /** Velocidad del trémolo (Hz) */
+  tremolo?: number;
+  /** Probabilidad de nota en cada corchea */
+  chance?: number;
+  /** Tensión mínima (el Castillo nunca está en calma) */
+  heat?: number;
+}
+
 export interface MusicHandle {
   stop: (fadeSeconds: number) => void;
   /** 0 = calma, 1 = pelea */
@@ -59,8 +74,11 @@ const tapeCurve = () => {
   return curve;
 };
 
-export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle, volume: number): MusicHandle => {
-  const cfg = STYLE[style];
+export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle, volume: number, variant: MusicVariant = {}): MusicHandle => {
+  const base = STYLE[style];
+  const cfg = { ...base, bpm: variant.bpm ?? base.bpm, noteChance: variant.chance ?? base.noteChance };
+  const shift = variant.transpose ?? 0;
+  const minHeat = variant.heat ?? 0;
   const t0 = ctx.currentTime;
   const nodes: AudioScheduledSourceNode[] = [];
 
@@ -128,7 +146,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       const o = ctx.createOscillator();
       o.type = i === 0 ? 'sawtooth' : 'triangle';
       o.detune.value = detune;
-      o.frequency.value = midi(ROOTS[0] + interval);
+      o.frequency.value = midi(ROOTS[0] + shift + interval);
       o.connect(g);
       o.start();
       nodes.push(o);
@@ -141,7 +159,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
 
   // --- Guitarra con trémolo: una nota = dos osciladores + filtro con envolvente
   const pluck = (when: number, note: number, accent: number) => {
-    const f = midi(note);
+    const f = midi(note + shift);
     const g = ctx.createGain();
     const filt = ctx.createBiquadFilter();
     filt.type = 'lowpass';
@@ -156,13 +174,13 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
     const trem = ctx.createGain();
     trem.gain.value = 1;
     const tremLfo = ctx.createOscillator();
-    tremLfo.frequency.value = 5.2;
+    tremLfo.frequency.value = variant.tremolo ?? 5.2;
     const tremDepth = ctx.createGain();
     tremDepth.gain.value = 0.35;
     tremLfo.connect(tremDepth).connect(trem.gain);
     const pan = ctx.createStereoPanner();
     pan.pan.value = (Math.random() * 2 - 1) * 0.4;
-    [['triangle', 0], ['sawtooth', 7]].forEach(([type, detune]) => {
+    [[variant.voice ?? 'triangle', 0], ['sawtooth', 7]].forEach(([type, detune]) => {
       const o = ctx.createOscillator();
       o.type = type as OscillatorType;
       o.frequency.value = f;
@@ -205,7 +223,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       // Cambio de acorde cada 4 compases: el bordón se desliza a la nueva raíz
       if (step % 32 === 0) {
         const root = ROOTS[(bar / 4) % ROOTS.length];
-        droneVoices.forEach(v => v.oscs.forEach(o => o.frequency.setTargetAtTime(midi(root + v.interval), nextTime, 0.8)));
+        droneVoices.forEach(v => v.oscs.forEach(o => o.frequency.setTargetAtTime(midi(root + shift + v.interval), nextTime, 0.8)));
       }
       const onBeat = step % 2 === 0;
       // Guitarra: frases cortas con silencios; más notas en tiempo fuerte
@@ -230,7 +248,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
 
   return {
     setHeat: (h: number) => {
-      heat = Math.max(0, Math.min(1, h));
+      heat = Math.max(minHeat, Math.min(1, h));
       const t = ctx.currentTime;
       droneVoices[2].gain.gain.setTargetAtTime(heat * 0.25, t, 0.6);
       droneFilter.frequency.setTargetAtTime(320 + heat * 500, t, 0.6);

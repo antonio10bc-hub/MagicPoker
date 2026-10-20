@@ -19,7 +19,7 @@ import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { BOSSES, resetProgress, unlockedSeals } from '@/lib/bosses';
 import { closeWithClick, Dialog, Overlay, Section } from './Dialog';
-import { CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
+import { BackGallery, BoonsModal, CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
@@ -40,6 +40,7 @@ export const Modals = () => {
       {modal === 'deck' && <DeckEditorModal key="deck" />}
       {modal === 'cards' && <CardCatalogModal key="cards" />}
       {modal === 'pause' && <PauseModal key="pause" />}
+      {modal === 'boons' && <BoonsModal key="boons" />}
     </AnimatePresence>
   );
 };
@@ -164,8 +165,19 @@ const StatsModal = () => {
 const CollectionModal = () => {
   const t = useTranslations();
   const [seals] = useState(() => unlockedSeals());
+  const [tab, setTab] = useState<'seals' | 'backs'>('seals');
   return (
     <Dialog title={t.collection_title} width={250} height={220}>
+      {/* Pestañas: sellos y dorsos */}
+      <div className="flex gap-[3px] px-[6px] pt-[5px]">
+        {(['seals', 'backs'] as const).map(k => (
+          <PxButton key={k} tone={tab === k ? 'roof' : 'white'} data-pressed={tab === k} className="h-[15px] flex-1"
+            onClick={() => { playSfx('select', 0.6); setTab(k); }}>
+            <span className={tab === k ? 'text-outline' : undefined}>{k === 'seals' ? t.tab_seals : t.tab_backs}</span>
+          </PxButton>
+        ))}
+      </div>
+      {tab === 'backs' ? <BackGallery /> : (
       <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[6px] leading-[10px]" style={{ fontSize: 9 }}>
         {seals.length === 0 && <p style={{ color: 'var(--ink-mint)' }}>{t.collection_empty}</p>}
         {BOSSES.filter(b => b.seal).map(boss => {
@@ -190,6 +202,7 @@ const CollectionModal = () => {
           );
         })}
       </div>
+      )}
     </Dialog>
   );
 };

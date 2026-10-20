@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buildDeckFrom, defaultDeckConfig, MAX_SEALS, sanitizeDeckConfig, totalSeals } from '@/lib/deck';
 
 describe('editor de mazo', () => {
@@ -21,5 +21,27 @@ describe('editor de mazo', () => {
     expect(deck.some(c => c.rank === '2' || c.rank === '3')).toBe(false);
     expect(deck.filter(c => c.seal === 'shield')).toHaveLength(2);
     expect(deck).toHaveLength(14 - 2 + 2);
+  });
+});
+
+describe('mazos guardados', () => {
+  it('tres ranuras: cada una guarda su mazo y la activa es la que se juega', async () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, v); },
+      removeItem: (k: string) => { store.delete(k); },
+    });
+    vi.resetModules();
+    const d = await import('@/lib/deck');
+    d.saveDeckConfig({ seals: { shield: 2 }, removed: [] });
+    d.setActiveSlot(1);
+    expect(d.getDeckConfig()).toBeNull();
+    d.saveDeckConfig({ seals: {}, removed: ['K'] });
+    expect(d.savedSlots()).toEqual([true, true, false]);
+    d.setActiveSlot(0);
+    expect(d.getDeckConfig()?.seals.shield).toBe(2);
+    vi.unstubAllGlobals();
   });
 });

@@ -17,6 +17,9 @@ export const INK = {
   // Exclusivo de los sellos: verde eléctrico (amarillo verdoso) que brilla como el naranja
   volt: '#7DFF2B',
   voltDark: '#2E6A0E',
+  // Exclusivo del Castillo: rojo eléctrico de los jefes evolucionados
+  crimson: '#FF1F4B',
+  gold: '#E8B64A',
 } as const;
 
 export const PALETTE = {

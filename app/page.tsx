@@ -8,6 +8,8 @@ import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { EndScreen } from '@/components/screens/EndScreen';
+import { BOSSES } from '@/lib/bosses';
+import { bossMusic } from '@/lib/bossMusic';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
 import { UnlockToasts } from '@/components/game/UnlockToasts';
@@ -43,11 +45,14 @@ export default function Home() {
   }, []);
 
   // --- CONTROL DE MÚSICA SEGÚN PANTALLA ---
+  // Cada jefe suena a lo suyo (en el tutorial, el tema de siempre)
+  const musicBoss = useGameStore(s => (s.tutorialStep === null ? BOSSES[s.bossIndex]?.id : undefined));
+  const inCastle = useGameStore(s => !!s.castle);
   useEffect(() => {
     if (screen === 'menu') playMusic('menu_music', 0.55);
     else if (isEnd) stopMusic();
-    else playMusic('game_music', 0.4);
-  }, [screen, isEnd]);
+    else playMusic('game_music', 0.4, musicBoss ? bossMusic(musicBoss, inCastle) : undefined);
+  }, [screen, isEnd, musicBoss, inCastle]);
 
   // La música se tensa durante la pelea
   useEffect(() => { setMusicHeat(isFight ? 1 : 0); }, [isFight]);

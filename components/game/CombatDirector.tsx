@@ -5,6 +5,7 @@ import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
 import { JOKER_DRAW_BONUS, TIMINGS } from '@/lib/constants';
 import { duckMusic, haptic, playSfx } from '@/lib/sounds';
+import { SEAL_SFX } from '@/lib/synth';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, IMPACT_DELAY_S, SECOND_HIT_S, SHIELD_BREAK_S } from './Card';
 import { getTargetIndices } from '@/lib/game-utils';
@@ -50,6 +51,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       if (e.kind === 'shift') {
         const c = center(e.owner, e.to);
         playSfx('whoosh', 0.9, 1.2);
+        playSfx(SEAL_SFX.shift);
         fx.emit({ kind: 'text', x: c.x, y: c.y - 18, text: t.fx_shift, bg: VOLT_BG, size: 10, life: 900 });
         fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 22, life: 450 });
         // Estela entre los dos huecos
@@ -59,7 +61,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       } else if (e.kind === 'anchor') {
         // Ancla: la carta no se mueve
         const c = center(e.owner, e.index);
-        playSfx('hit', 0.9, 0.7);
+        playSfx(SEAL_SFX.anchor);
         fx.shake(1.2);
         fx.emit({ kind: 'text', x: c.x, y: c.y - 18, text: t.fx_anchor, bg: VOLT_BG, size: 10, life: 1000 });
         fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 24, life: 500 });
@@ -67,7 +69,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       } else if (e.kind === 'reveal') {
         // Revelar: la carta se da la vuelta y queda expuesta
         const c = center(e.owner, e.index);
-        playSfx('sparkle');
+        playSfx(SEAL_SFX.reveal);
         playSfx('flip', 0.9, 0.9);
         fx.emit({ kind: 'text', x: c.x, y: c.y - 20, text: t.fx_reveal, bg: VOLT_BG, size: 11, life: 1100 });
         fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 28, life: 550 });
@@ -76,7 +78,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         const a = center('player', e.index);
         const b = center('opponent', e.index);
         playSfx('swing', 1, 1.3);
-        playSfx('sparkle');
+        playSfx(SEAL_SFX.swap);
         fx.flash(0.25);
         fx.emit({ kind: 'text', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, text: t.fx_swap, bg: VOLT_BG, size: 14, life: 1000 });
         [a, b].forEach(c => fx.emit({ kind: 'particles', x: c.x, y: c.y, colors: [VOLT, PALETTE.white], count: 12, speed: 34, gravity: -10, size: [1, 2], life: 600 }));
@@ -148,7 +150,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         ? [targets.reduce((a, b) => a + b, 0) / Math.max(1, targets.length)]
         : targets;
       [0, SECOND_HIT_S * 1000].forEach((delay, hit) => later(IMPACT_MS + delay, () => {
-        if (hit === 1) { playSfx('swing', 0.8, 1.25); playSfx('hit', 0.9, 1.2); fx.shake(1.4); }
+        if (hit === 1) { playSfx(SEAL_SFX.double); playSfx('hit', 0.9, 1.2); fx.shake(1.4); }
         spots.forEach(i => {
           const a = geo.slots[foe][Math.floor(i)];
           const b = geo.slots[foe][Math.ceil(i)];
@@ -204,7 +206,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       // Sello de defensa: la burbuja encaja el golpe (chispas que rebotan) y luego se rompe
       const shielded = new Set(combat.shieldedIds);
       cards.filter(l => l.slot.card && shielded.has(l.slot.card.id)).forEach(l => {
-        playSfx('hit', 1, 1.4);
+        playSfx(SEAL_SFX.shield);
         // Rebote: las chispas salen hacia el atacante
         const away = l.owner === 'player' ? -Math.PI / 2 : Math.PI / 2;
         fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: 30, life: 500 });
@@ -224,7 +226,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         const a = cards.find(l => l.slot.card?.id === attackerId);
         if (!m) return;
         later(i * 80, () => {
-          playSfx('zap', 0.9, 1.4);
+          playSfx(SEAL_SFX.mirror);
           fx.emit({ kind: 'text', x: m.x, y: m.y - 18, text: t.fx_mirror, bg: VOLT_BG, size: 11, life: 1000 });
           fx.emit({ kind: 'ring', x: m.x, y: m.y, color: VOLT, radius: 26, life: 420 });
           if (a) [0.25, 0.5, 0.75, 1].forEach((k, j) => later(j * 40, () =>
@@ -234,20 +236,38 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       // Veneno: quien mató a la carta envenenada cae con ella
       const poisoned = new Set(combat.poisonedIds);
       cards.filter(l => l.slot.card && poisoned.has(l.slot.card.id)).forEach((l, i) => later(160 + i * 90, () => {
-        playSfx('crush', 0.6, 0.7);
+        playSfx(SEAL_SFX.poison);
         fx.emit({ kind: 'text', x: l.x, y: l.y - 18, text: t.fx_poison, bg: VOLT_BG, size: 11, life: 1100 });
         fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [VOLT, '#4FC414', PALETTE.outline], count: 16, speed: 20, gravity: -25, size: [1, 3], life: 900 });
       }));
       // Eco: la carta caída dejará un 2 en su hueco
       victims.filter(l => l.slot.card?.seal === 'echo').forEach((l, i) => later(260 + i * 90, () => {
-        playSfx('sparkle', 0.7);
+        playSfx(SEAL_SFX.echo);
         fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: `${t.fx_echo} → 2`, bg: VOLT_BG, size: 11, life: 1200 });
         [14, 22, 30].forEach((r, j) => later(j * 110, () => fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: r, life: 450 })));
       }));
 
+      // Bomba: estalla al caer y golpea los huecos rivales de al lado
+      const exploded = new Set(combat.explodedIds ?? []);
+      cards.filter(l => l.slot.card && exploded.has(l.slot.card.id)).forEach((l, i) => later(140 + i * 120, () => {
+        playSfx('wipe', 0.7, 1.4);
+        fx.shake(3);
+        fx.flash(0.3);
+        fx.emit({ kind: 'ring', x: l.x, y: l.y, color: PALETTE.yellow, radius: 46, life: 450 });
+        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [PALETTE.yellow, PALETTE.roof, PALETTE.white, PALETTE.outline], count: 26, speed: 60, gravity: 40, size: [1, 3], life: 700 });
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 18, text: t.fx_bomb, bg: 'var(--c-gold)', size: 12, life: 900 });
+      }));
+      // Sacerdotisa: si sigue en pie, una vida para su dueño
+      const blessed = new Set(combat.blessedIds ?? []);
+      cards.filter(l => l.slot.card && blessed.has(l.slot.card.id)).forEach((l, i) => later(300 + i * 90, () => {
+        playSfx('score', 0.7, 1.3);
+        fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: t.fx_life, bg: 'var(--ink-cream)', size: 12, life: 1200 });
+        fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [PALETTE.white, PALETTE.yellow], count: 14, speed: 24, gravity: -60, spread: Math.PI * 0.6, angle: -Math.PI / 2, size: [1, 2], life: 1000 });
+      }));
+
       // Sello de vida: la carta cae pero devuelve una vida a su dueño
       victims.filter(l => l.slot.card?.seal === 'life').forEach((l, i) => later(220 + i * 90, () => {
-        playSfx('score', 0.8, 1.1);
+        playSfx(SEAL_SFX.life);
         fx.emit({ kind: 'ring', x: l.x, y: l.y, color: VOLT, radius: 28, life: 500 });
         fx.emit({ kind: 'text', x: l.x, y: l.y - 16, text: t.fx_life, bg: VOLT_BG, size: 14, life: 1300 });
         // El alma de la carta sube hacia las vidas

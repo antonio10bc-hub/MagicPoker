@@ -14,6 +14,9 @@ import { CHARACTERS, SEAL_ICONS } from '@/components/pixel/sprites';
 
 const SPECIAL_TEXT: Partial<Record<Rank, keyof Translations>> = {
   A: 'special_ace', K: 'special_king', Q: 'special_queen', J: 'special_jack', JOKER: 'special_joker',
+  // Cartas del Castillo
+  JESTER: 'idea_jester_desc', TOWER: 'idea_tower_desc', BOMB: 'idea_bomb_desc', SPY: 'idea_spy_desc',
+  KNIGHT: 'idea_knight_desc', PRIESTESS: 'idea_priestess_desc',
 };
 
 /** Mini diagrama: 3 casillas (izquierda, frente, derecha) y las que golpea */
@@ -41,7 +44,7 @@ export const CardInfo = ({ cardId }: { cardId: string | null }) => {
 
   return (
     <AnimatePresence>
-      {card?.rank === 'SEAL' && card.seal && (
+      {card?.rank === 'SEAL' && (
         // Carta de sello: icono verde, nombre, qué hace y cómo se juega
         <motion.div
           key={card.id}
@@ -52,10 +55,11 @@ export const CardInfo = ({ cardId }: { cardId: string | null }) => {
           exit={{ y: 6, scale: 0.9, opacity: 0, transition: { duration: 0.12 } }}
           transition={{ type: 'spring', stiffness: 500, damping: 24 }}
         >
-          <PixelSprite sprite={SEAL_ICONS[card.seal]} tint={INK.volt} scale={2} className="shrink-0 bloom-volt-shape" />
+          {card.seal ? <PixelSprite sprite={SEAL_ICONS[card.seal]} tint={INK.volt} scale={2} className="shrink-0 bloom-volt-shape" />
+            : <span className="shrink-0 font-display glow-volt" style={{ color: 'var(--ink-volt)', fontSize: 20 }}>?</span>}
           <div className="flex flex-col gap-[3px] leading-[11px] min-w-0">
-            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t[`seal_${card.seal}` as keyof Translations]}</span>
-            <span className="whitespace-normal">{t[`seal_${card.seal}_desc` as keyof Translations]}</span>
+            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{card.seal ? t[`seal_${card.seal}` as keyof Translations] : t.idea_wild_seal}</span>
+            <span className="whitespace-normal">{card.seal ? t[`seal_${card.seal}_desc` as keyof Translations] : t.idea_wild_seal_desc}</span>
             <span style={{ color: 'var(--ink-teal)' }}>{t.seal_apply_hint}</span>
           </div>
         </motion.div>

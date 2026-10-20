@@ -1,16 +1,18 @@
 import { create } from 'zustand';
-import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen } from '@/types';
+import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
   applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState,
   drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, revealBoard, SealEvent,
 } from '@/lib/game-utils';
 import {
-  ALL_SEALS, BOSSES, bossLives, buildBossDeck, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, unlockedSeals,
+  ALL_SEALS, BOSSES, bossLives, buildBossDeck, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, rematchLevel, unlockedSeals,
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
+import { buildRunDeck, CastleOutcome, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin } from '@/lib/castle';
 import { gameTimeout, setPaused } from '@/lib/clock';
-import { playSound } from '@/lib/sounds';
+import { playSfx, playSound } from '@/lib/sounds';
+import { SEAL_SFX } from '@/lib/synth';
 import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStamp } from '@/lib/stats';
 import { endStamps, newMatchTrack, roundStamps, StampId } from '@/lib/stamps';
 import { clearGame, loadGame, saveGame } from '@/lib/savegame';
@@ -33,12 +35,24 @@ interface GameState {
   bossIndex: number;
   /** Revancha: el boss (ya vencido) vuelve con una vida más y un segundo sello */
   rematch: boolean;
+  /** Nivel de la revancha (1 a 4; 0 si no lo es): cuanto más alto, más fuerte el jefe */
+  rematchLevel: number;
+  /** Pelea del Castillo en curso (piso = índice del jefe) */
+  castle: { stage: number } | null;
+  /** Cómo acabó la última pelea del Castillo (para la pantalla final) */
+  castleOutcome: CastleOutcome | null;
+  /** Presentación del jefe al empezar una partida nueva (id del momento) */
+  intro: number | null;
+  /** Espía: carta de la mano del rival que acabas de ver */
+  spyFx: { id: number; rank: Card['rank'] } | null;
   /** Efectos de sello de antes del choque (cambios de sitio), para animarlos */
   sealFx: { id: number; events: SealEvent[] } | null;
   /** Paso del tutorial guiado (null = partida normal) */
   tutorialStep: number | null;
 
   setDifficulty: (diff: Difficulty) => void;
+  /** Entra en el Castillo: la pelea del piso en el que vas (o una subida nueva) */
+  startCastle: () => void;
   /** Empieza contra un boss ya alcanzado (por defecto, el actual) */
   startGame: (bossIndex?: number, rematch?: boolean) => void;
   /** Retoma la partida guardada (si la hay) */
@@ -47,7 +61,8 @@ interface GameState {
   startTutorial: () => void;
 
   exitToMenu: () => void;
-  placeCard: (cardId: string, slotIndex: number) => void;
+  /** Juega una carta en un hueco (el comodín de sello necesita saber qué sello es) */
+  placeCard: (cardId: string, slotIndex: number, wildSeal?: SealId) => void;
   passTurn: () => void;
   opponentTurnAction: () => void;
   resolveCombatPhase: () => void;
@@ -105,7 +120,12 @@ const initialMatchState = () => ({
   gameResult: null,
   bossIndex: 0,
   rematch: false,
+  rematchLevel: 0,
+  castle: null,
+  castleOutcome: null,
+  intro: null,
   sealFx: null,
+  spyFx: null,
   tutorialStep: null,
   player: createPlayerState(),
   opponent: createPlayerState(),
@@ -127,9 +147,14 @@ export const useGameStore = create<GameState>((set, get) => {
     } else {
       const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
       // Boss vencido: se desbloquea su sello (o la colección, con el primero)
-      const { bossIndex, rematch } = get();
-      if (gameResult === 'win') {
-        if (rematch) recordRematchWin(bossIndex);
+      const { bossIndex, rematch, castle } = get();
+      if (castle) {
+        // Castillo: subes un piso (y eliges mejora) o se acaba la subida
+        const outcome = gameResult === 'win' ? recordCastleWin(nextPlayer.lives) : recordCastleLoss();
+        if (outcome.kind === 'conquered') award(['castle']);
+        set({ castleOutcome: outcome });
+      } else if (gameResult === 'win') {
+        if (rematch) recordRematchWin(bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
         else recordBossDefeat(bossIndex).forEach(u => {
           useUiStore.getState().pushUnlock(u);
           if (u.kind === 'seal') includeNewSeal(u.seal);
@@ -153,6 +178,29 @@ export const useGameStore = create<GameState>((set, get) => {
 
   setDifficulty: (difficulty) => set({ difficulty }),
 
+  startCastle: () => {
+    cancelScheduled();
+    playSound('shuffle', 0.6);
+    incrementStat('totalGames');
+    track = newMatchTrack();
+    const run = ensureRun();
+    const boss = BOSSES[run.stage];
+    const level = castleBossLevel(run.stage);
+    const playerDeck = buildRunDeck(run);
+    deckSeals = countSeals(playerDeck);
+    set({
+      ...initialMatchState(),
+      screen: 'game',
+      phase: 'placement',
+      bossIndex: run.stage,
+      rematchLevel: level,
+      castle: { stage: run.stage },
+      intro: Date.now(),
+      player: { ...createPlayerState(playerDeck, STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
+      opponent: createPlayerState(buildBossDeck(boss, level), STARTING_HAND_SIZE, false, castleBossLives(run)),
+    });
+  },
+
   startGame: (pick, wantRematch = false) => {
     cancelScheduled();
     playSound('shuffle', 0.6);
@@ -165,6 +213,7 @@ export const useGameStore = create<GameState>((set, get) => {
     const boss = BOSSES[bossIndex];
     // Solo hay revancha contra un boss ya vencido
     const rematch = wantRematch && bossIndex < getProgress().defeated;
+    const level = rematch ? rematchLevel(bossIndex) : 0;
     const playerDeck = buildMatchDeck();
     deckSeals = countSeals(playerDeck);
 
@@ -174,8 +223,10 @@ export const useGameStore = create<GameState>((set, get) => {
       phase: 'placement',
       bossIndex,
       rematch,
+      rematchLevel: level,
+      intro: Date.now(),
       player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
-      opponent: createPlayerState(buildBossDeck(boss, rematch), STARTING_HAND_SIZE, false, bossLives(boss, rematch)),
+      opponent: createPlayerState(buildBossDeck(boss, level), STARTING_HAND_SIZE, false, bossLives(boss, level)),
     });
   },
 
@@ -201,6 +252,8 @@ export const useGameStore = create<GameState>((set, get) => {
       roundNumber: saved.roundNumber,
       bossIndex: saved.bossIndex ?? currentBossIndex(),
       rematch: !!saved.rematch,
+      rematchLevel: saved.rematchLevel ?? (saved.rematch ? 1 : 0),
+      castle: saved.castle ? { stage: saved.bossIndex ?? 0 } : null,
       player: saved.player,
       opponent: saved.opponent,
     });
@@ -216,7 +269,7 @@ export const useGameStore = create<GameState>((set, get) => {
     set(state => ({ [target]: drawCards(state[target], amount, target === 'player') }));
   },
 
-  placeCard: (cardId, slotIndex) => {
+  placeCard: (cardId, slotIndex, wildSeal) => {
     const { player, opponent, turn, phase, tutorialStep } = get();
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
 
@@ -224,7 +277,7 @@ export const useGameStore = create<GameState>((set, get) => {
     const step = tutorialStep !== null ? TUTORIAL_STEPS[tutorialStep] : undefined;
     if (tutorialStep !== null && (step?.kind !== 'play' || step.slot !== slotIndex || stepCard(player.hand, step)?.id !== cardId)) return;
 
-    const nextPlayer = playCardToSlot(player, cardId, slotIndex, true);
+    const nextPlayer = playCardToSlot(player, cardId, slotIndex, true, wildSeal);
     if (!nextPlayer) return;
 
     if (step?.kind === 'play') {
@@ -244,6 +297,9 @@ export const useGameStore = create<GameState>((set, get) => {
 
     playSound('click', 0.5);
     const played = player.hand.find(c => c.id === cardId);
+    // Cada sello suena a lo suyo al ponerlo
+    const sealPut = played?.rank === 'SEAL' ? (played.wild ? wildSeal : played.seal) : undefined;
+    if (sealPut) playSfx(SEAL_SFX[sealPut]);
     if (played) {
       recordCardPlayed(played.rank);
       track.ranksPlayed.push(played.rank);
@@ -252,6 +308,10 @@ export const useGameStore = create<GameState>((set, get) => {
 
     const reveal = revealFor(played, slotIndex, opponent, 'opponent');
     if (reveal) set({ opponent: reveal.enemy, sealFx: reveal.fx });
+    // Espía: ves una carta de la mano del rival (al azar)
+    if (played?.rank === 'SPY' && opponent.hand.length > 0) {
+      set({ spyFx: { id: Date.now(), rank: opponent.hand[Math.floor(Math.random() * opponent.hand.length)].rank } });
+    }
     // Si el rival ya se plantó, sigues jugando tú
     set({ player: nextPlayer, turn: opponent.isPassed ? 'player' : 'opponent' });
     if (!opponent.isPassed) schedule(get().opponentTurnAction, TIMINGS.opponentThink);
@@ -299,6 +359,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     playSound('click', 0.4);
     set({ opponent: nextOpponent });
+    const rivalSeal = opponent.hand.find(c => c.id === move!.cardId)?.seal;
+    if (rivalSeal && opponent.hand.find(c => c.id === move!.cardId)?.rank === 'SEAL') playSfx(SEAL_SFX[rivalSeal]);
     const reveal = revealFor(opponent.hand.find(c => c.id === move!.cardId), move!.slotIndex, player, 'player');
     if (reveal) set({ player: reveal.enemy, sealFx: reveal.fx });
 
@@ -439,7 +501,7 @@ if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
     if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
-      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, player: state.player, opponent: state.opponent });
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, player: state.player, opponent: state.opponent });
     }
     if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
   });

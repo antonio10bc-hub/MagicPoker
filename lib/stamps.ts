@@ -8,6 +8,8 @@ export const STAMP_IDS = [
   'lightning', 'hard_win', 'streak3', 'full_court', 'stalemate', 'veteran',
   // Ligados a los sellos
   'bulwark', 'heist', 'purist', 'reflex', 'venom', 'rematch', 'collector',
+  // El Castillo
+  'castle',
 ] as const;
 
 export type StampId = typeof STAMP_IDS[number];

@@ -11,6 +11,10 @@ import { CHARACTERS, EMBLEM_OPPONENT, EMBLEM_PLAYER, PIP, SEAL_ICONS, STAR } fro
 import { useTranslations, Translations } from '@/lib/i18n';
 import { SealId } from '@/types';
 import { CARD_BACK_TILE, WINDOW_TILE, patternUri } from '@/components/pixel/patterns';
+import { BOSS_SPRITES } from '@/components/pixel/bosses';
+import { BOSSES } from '@/lib/bosses';
+import { DEFAULT_BACK, usePlayerBack } from '@/lib/cosmetics';
+import { useGameStore } from '@/store/useGameStore';
 
 interface CardProps {
   card: CardType;
@@ -50,10 +54,20 @@ const Pips = ({ value }: { value: number }) => (
 const AttackBadge = ({ card }: { card: CardType }) => {
   const def = RANKS[card.rank];
   let content: ReactNode;
+  const text = (v: string) => <span className="text-outline font-display leading-[10px] pt-[1px]">{v}</span>;
   if (def.wipesBoard) {
     content = <PixelSprite sprite={STAR} tint={INK.cream} />;
+  } else if (card.rank === 'JOKER') {
+    content = text(`+${JOKER_DRAW_BONUS}`);
   } else if (!def.attack) {
-    content = <span className="text-outline font-display leading-[10px] pt-[1px]">+{JOKER_DRAW_BONUS}</span>;
+    // Torre: no ataca
+    content = text('–');
+  } else if (def.copiesFront) {
+    // Bufón: copia el ataque de la de enfrente
+    content = text('?');
+  } else if (def.attack.offsets.some(o => Math.abs(o) > 1)) {
+    // Caballero: salta dos huecos
+    content = text('±2');
   } else {
     // Golpe seguro: brasa; al azar (J): menta
     const fill = def.attack.mode === 'random-one' ? 'var(--ink-mint)' : 'var(--ink-ember)';
@@ -120,9 +134,21 @@ const SEALED_LOOK = {
 
 // --- DORSO ---
 // Sin dibujo: una masa de grano del color del bando cuyos bordes se deshacen
-const CardBack = ({ owner, sealed }: { owner: Owner; sealed?: boolean }) => (
-  <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : owner === 'opponent' && 'bloom')}
-    style={{ background: sealed ? 'var(--ink-volt-dark)' : owner === 'opponent' ? 'rgba(255,74,28,0.35)' : 'var(--ink-slate)' }}>
+/** Dorso dorado del jefe secreto */
+const GOLD = 'radial-gradient(ellipse 70% 60% at 50% 45%, #FFE9A8 0%, #E8B64A 50%, #9A6B1C 100%)';
+
+/**
+ * Dorso: masa de grano del color del bando. Con un dorso de jefe (`back`), en vez del
+ * emblema lleva la silueta de ese jefe y su sello en una esquina; el del jefe
+ * secreto, además, es dorado.
+ */
+export const CardBack = ({ owner, sealed, back = DEFAULT_BACK }: { owner: Owner; sealed?: boolean; back?: string }) => {
+  const boss = back !== DEFAULT_BACK ? BOSSES.find(b => b.id === back) : undefined;
+  const gold = !!boss?.secret && !sealed;
+  const sprite = boss && BOSS_SPRITES[boss.id];
+  return (
+  <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : gold ? 'bloom-gold' : owner === 'opponent' && 'bloom')}
+    style={{ background: sealed ? 'var(--ink-volt-dark)' : gold ? GOLD : owner === 'opponent' ? 'rgba(255,74,28,0.35)' : 'var(--ink-slate)' }}>
     <div className="absolute inset-0" style={{
       backgroundImage: sealed
         ? `radial-gradient(ellipse 55% 50% at 50% 50%, rgba(216,255,154,0.6) 0%, transparent 70%), ${VOLT_WASH}, ${patternUri('card-back', CARD_BACK_TILE, owner)}`
@@ -131,16 +157,48 @@ const CardBack = ({ owner, sealed }: { owner: Owner; sealed?: boolean }) => (
       WebkitMaskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
       maskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
     }} />
-    {/* Emblema del bando en silueta */}
-    <div className="absolute flex items-center justify-center" style={{ left: 12, top: 20, width: 16, height: 16 }}>
-      <PixelSprite sprite={EMBLEMS[owner]} tint={INK.black} />
-    </div>
+    {sprite ? (
+      <>
+        {/* Dorso de jefe: su silueta, un marco fino y su sello en la esquina */}
+        <div className="absolute inset-[3px] rounded-[2px]" style={{ boxShadow: `inset 0 0 0 1px ${gold ? 'rgba(11,13,12,0.55)' : 'rgba(237,235,224,0.35)'}` }} />
+        <PixelSprite sprite={sprite.body} tint={INK.black} style={{ position: 'absolute', left: 9, top: 10, width: 22, height: 28 }} />
+        {boss.seal && (
+          <div className="absolute" style={{ right: 4, bottom: 4, opacity: 0.85 }}>
+            <PixelSprite sprite={SEAL_ICONS[boss.seal]} tint={owner === 'opponent' || gold ? INK.black : INK.cream} />
+          </div>
+        )}
+        {boss.secret && (
+          <div className="absolute" style={{ left: 4, bottom: 4 }}>
+            <PixelSprite sprite={STAR} tint={INK.black} />
+          </div>
+        )}
+      </>
+    ) : (
+      // Emblema del bando en silueta
+      <div className="absolute flex items-center justify-center" style={{ left: 12, top: 20, width: 16, height: 16 }}>
+        <PixelSprite sprite={EMBLEMS[owner]} tint={INK.black} />
+      </div>
+    )}
   </div>
-);
+  );
+};
+
+/** Dorso que llevan las cartas: el tuyo el que elijas, el rival el de su jefe */
+const useCardBack = (owner: Owner) => {
+  const mine = usePlayerBack();
+  const theirs = useGameStore(s => (s.tutorialStep === null && s.screen === 'game' ? BOSSES[s.bossIndex]?.id : undefined));
+  return owner === 'player' ? mine : theirs ?? DEFAULT_BACK;
+};
 
 // --- ANVERSO ---
+/** Nombre corto de las cartas del Castillo (Bufón, Torre…) */
+const CASTLE_NAME: Partial<Record<CardType['rank'], keyof Translations>> = {
+  JESTER: 'idea_jester', TOWER: 'idea_tower', BOMB: 'idea_bomb', SPY: 'idea_spy', KNIGHT: 'idea_knight', PRIESTESS: 'idea_priestess',
+};
+
 const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
-  if (card.rank === 'SEAL' && card.seal) return <SealCardFace seal={card.seal} />;
+  const t = useTranslations();
+  if (card.rank === 'SEAL') return <SealCardFace seal={card.seal} />;
   const look = LOOK[card.owner];
   const character = CHARACTERS[card.rank];
   const tile = card.owner === 'opponent' ? '16px' : '8px';
@@ -171,12 +229,13 @@ const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
       {character && (
         <div className="absolute font-display flex items-center justify-center"
           style={{
-            left: 3, top: 3, height: card.rank === 'JOKER' ? 11 : 17, padding: '0 3px',
-            fontSize: card.rank === 'JOKER' ? 11 : 20, lineHeight: card.rank === 'JOKER' ? '11px' : '17px',
-            paddingTop: card.rank === 'JOKER' ? 2 : 3,
+            left: 3, top: 3, height: card.rank === 'JOKER' ? 11 : CASTLE_NAME[card.rank] ? 9 : 17, padding: '0 3px',
+            fontSize: card.rank === 'JOKER' ? 11 : CASTLE_NAME[card.rank] ? 7 : 20,
+            lineHeight: card.rank === 'JOKER' ? '11px' : CASTLE_NAME[card.rank] ? '9px' : '17px',
+            paddingTop: card.rank === 'JOKER' ? 2 : CASTLE_NAME[card.rank] ? 1 : 3,
             color: 'var(--ink-black)', borderRadius: '2px 0 3px 0',
           }}>
-          {card.rank}
+          {CASTLE_NAME[card.rank] ? t[CASTLE_NAME[card.rank]!] : card.rank}
         </div>
       )}
       <ValueBadge value={card.value} exposed={card.isExposed} />
@@ -188,18 +247,20 @@ const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
 // --- SELLOS (verde eléctrico) ---
 export const sealTag = (t: Translations, seal: SealId) => t[`seal_tag_${seal}` as keyof Translations];
 
-/** Carta de sello: masa verde que brilla, con el icono en silueta y su nombre */
-const SealCardFace = ({ seal }: { seal: SealId }) => {
+/** Carta de sello: masa verde que brilla, con el icono en silueta y su nombre. El
+ *  comodín (sin sello fijo) lleva un interrogante. */
+const SealCardFace = ({ seal }: { seal?: SealId }) => {
   const t = useTranslations();
   return (
     <div className="px-round-2 absolute inset-0 bloom-volt" style={{
       background: 'radial-gradient(ellipse 70% 60% at 50% 42%, #D8FF9A 0%, var(--ink-volt) 45%, #4FC414 100%)',
     }}>
       <div className="absolute flex items-center justify-center" style={{ left: 3, top: 6, width: 34, height: 30 }}>
-        <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.black} scale={2} />
+        {seal ? <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.black} scale={2} />
+          : <span className="font-display" style={{ fontSize: 26, lineHeight: '26px', color: 'var(--ink-black)' }}>?</span>}
       </div>
       <div className="absolute left-0 right-0 flex justify-center font-display" style={{ top: 40, fontSize: 9, lineHeight: '9px', color: 'var(--ink-black)' }}>
-        {sealTag(t, seal)}
+        {seal ? sealTag(t, seal) : t.seal_tag_wild}
       </div>
       <div className="absolute flex items-center justify-center rounded-full" style={{ left: 15, top: 2, width: 10, height: 3, background: 'rgba(11,13,12,0.35)' }} />
     </div>
@@ -257,6 +318,7 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
     return () => { cancel(); setBroken(false); };
   }, [spent]);
   const sealed = !!card.seal && card.rank !== 'SEAL' && !(spent && broken);
+  const back = useCardBack(card.owner);
 
   return (
     <motion.div
@@ -285,7 +347,7 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       >
         <div className="absolute inset-0" style={faceStyle}><CardFace card={card} sealed={sealed} /></div>
-        <div className="absolute inset-0" style={{ ...faceStyle, transform: 'rotateY(180deg)' }}><CardBack owner={card.owner} sealed={sealed} /></div>
+        <div className="absolute inset-0" style={{ ...faceStyle, transform: 'rotateY(180deg)' }}><CardBack owner={card.owner} sealed={sealed} back={back} /></div>
       </motion.div>
 
       {/* Golpe: destello blanco y velo rojo que late */}

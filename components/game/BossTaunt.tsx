@@ -39,6 +39,8 @@ export const BossTaunt = () => {
   // Una frase por ronda: se decide al empezarla
   useEffect(() => {
     if (!placement || !boss) return;
+    // La frase de entrada ya la dice la presentación del jefe
+    if (round === 1 && useGameStore.getState().intro !== null) return;
     const mood: Mood = round === 1 ? 'intro' : bossLives <= 2 ? 'low' : playerLives <= 2 ? 'win' : 'mid';
     const text = bossLine(t, boss.id, mood, round);
     const show = pausableTimeout(() => { setShown({ round, text }); playSfx('pop', 0.5, 0.8); }, SHOW_DELAY_MS);
@@ -69,6 +71,33 @@ export const BossTaunt = () => {
             : { left: -4, top: 8, width: 8, height: 8, background: 'var(--ink-cream)', transform: 'rotate(45deg)' }} />
           <span className="relative">{shown.text}</span>
         </motion.button>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/** Espía: bocadillo con la carta de la mano del rival que has visto */
+export const SpyBubble = () => {
+  const t = useTranslations();
+  const { rivalPanel: rect, compactPanels } = useGameLayout();
+  const spy = useGameStore(s => s.spyFx);
+  const [hidden, setHidden] = useState<number | null>(null);
+  useEffect(() => {
+    if (!spy) return;
+    playSfx('sparkle');
+    return pausableTimeout(() => setHidden(spy.id), 3200);
+  }, [spy]);
+  const show = spy && hidden !== spy.id;
+  const name = spy ? (spy.rank === 'JOKER' ? 'Joker' : spy.rank === 'SEAL' ? t.seal_tag_wild : spy.rank) : '';
+  const pos = compactPanels ? { left: rect.x + rect.w - 120, top: rect.y + rect.h + 6 } : { left: rect.x + rect.w + 6, top: rect.y + 36 };
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div key={spy.id} className="absolute z-[90] px-[6px] py-[4px] rounded-[4px] pointer-events-none"
+          style={{ ...pos, background: 'var(--ink-black)', color: 'var(--ink-cream)', boxShadow: '0 0 0 1px var(--ink-cream), 0 0 10px rgba(237,235,224,0.35)' }}
+          initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>
+          {t.spy_saw.replace('{card}', name)}
+        </motion.div>
       )}
     </AnimatePresence>
   );

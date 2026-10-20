@@ -28,22 +28,53 @@ export const defaultDeckConfig = (seals: SealId[] = unlockedSeals()): DeckConfig
   removed: [],
 });
 
-export const getDeckConfig = (): DeckConfig | null => {
-  if (typeof window === 'undefined') return null;
+// --- MAZOS GUARDADOS ---
+// Tres ranuras (Mazo 1, 2 y 3): el editor cambia la activa y la partida usa esa.
+export const DECK_SLOTS = 3;
+const SLOTS_KEY = 'magic_poker_decks';
+
+interface DeckSlots { active: number; slots: (DeckConfig | null)[] }
+
+const readSlots = (): DeckSlots => {
+  const empty: DeckSlots = { active: 0, slots: Array(DECK_SLOTS).fill(null) };
+  if (typeof window === 'undefined') return empty;
   try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as DeckConfig) : null;
-  } catch {
-    return null;
-  }
+    const raw = localStorage.getItem(SLOTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as DeckSlots;
+      return { active: Math.min(DECK_SLOTS - 1, Math.max(0, parsed.active | 0)), slots: Array.from({ length: DECK_SLOTS }, (_, i) => parsed.slots?.[i] ?? null) };
+    }
+    // Antes había un solo mazo: pasa a la ranura 1
+    const old = localStorage.getItem(KEY);
+    if (old) return { ...empty, slots: [JSON.parse(old) as DeckConfig, null, null] };
+  } catch { /* datos rotos: ranuras vacías */ }
+  return empty;
+};
+
+const writeSlots = (slots: DeckSlots) => {
+  try { localStorage.setItem(SLOTS_KEY, JSON.stringify(slots)); } catch { /* sin almacenamiento */ }
+};
+
+export const getActiveSlot = () => readSlots().active;
+export const setActiveSlot = (i: number) => writeSlots({ ...readSlots(), active: i });
+/** Ranuras con algo guardado */
+export const savedSlots = () => readSlots().slots.map(s => s !== null);
+
+/** Configuración del mazo activo (null si esa ranura está vacía) */
+export const getDeckConfig = (): DeckConfig | null => {
+  const { active, slots } = readSlots();
+  return slots[active];
 };
 
 export const saveDeckConfig = (config: DeckConfig) => {
-  try { localStorage.setItem(KEY, JSON.stringify(config)); } catch { /* sin almacenamiento */ }
+  const state = readSlots();
+  writeSlots({ ...state, slots: state.slots.map((s, i) => (i === state.active ? config : s)) });
 };
 
+/** Vacía la ranura activa (vuelve al mazo por defecto) */
 export const clearDeckConfig = () => {
-  try { localStorage.removeItem(KEY); } catch { /* sin almacenamiento */ }
+  const state = readSlots();
+  writeSlots({ ...state, slots: state.slots.map((s, i) => (i === state.active ? null : s)) });
 };
 
 export const totalSeals = (config: DeckConfig) => Object.values(config.seals).reduce((a, n) => a + (n ?? 0), 0);

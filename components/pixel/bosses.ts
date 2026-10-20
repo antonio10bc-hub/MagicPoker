@@ -567,3 +567,88 @@ export const BOSS_SPRITES: Record<string, BossSprite> = {
   seer: SEER,
   sovereign: SOVEREIGN,
 };
+
+// --- JEFES EVOLUCIONADOS (Castillo) ---
+// Una capa en rojo eléctrico sacada de la propia silueta: los huecos de la cabeza
+// (ojos) se encienden y le salen púas por arriba y por los lados, como si hubiera
+// mutado. Se calcula una vez por jefe.
+const evolvedCache = new Map<string, Sprite>();
+
+export const evolvedLayer = (id: string): Sprite => {
+  const cached = evolvedCache.get(id);
+  if (cached) return cached;
+  const rows = BOSS_SPRITES[id].body.rows;
+  const h = rows.length;
+  const w = rows[0].length;
+  const isBody = (x: number, y: number) => y >= 0 && y < h && x >= 0 && x < w && rows[y][x] === 'o';
+  const out = rows.map(r => r.split('').map(() => '.'));
+  const near = (x: number, y: number, dx: number, dy: number) => [1, 2, 3].some(k => isBody(x + dx * k, y + dy * k));
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Ojos: huecos encerrados por el cuerpo en la parte alta
+      if (!isBody(x, y) && y < h * 0.45 && near(x, y, -1, 0) && near(x, y, 1, 0) && near(x, y, 0, -1) && near(x, y, 0, 1)) out[y][x] = 'o';
+    }
+  }
+  // Púas: encima del contorno superior, cada pocas columnas
+  for (let x = 1; x < w - 1; x++) {
+    const top = rows.findIndex(r => r[x] === 'o');
+    if (top <= 0 || x % 3 !== 1) continue;
+    out[top - 1][x] = 'o';
+    if (top > 1 && x % 6 === 1) out[top - 2][x] = 'o';
+  }
+  // Púas laterales en la mitad del cuerpo
+  for (let y = Math.floor(h * 0.3); y < h * 0.75; y += 4) {
+    const left = rows[y].indexOf('o');
+    const right = rows[y].lastIndexOf('o');
+    if (left > 0) out[y][left - 1] = 'o';
+    if (right >= 0 && right < w - 1) out[y][right + 1] = 'o';
+  }
+  const sprite: Sprite = { rows: out.map(r => r.join('')) };
+  evolvedCache.set(id, sprite);
+  return sprite;
+};
+
+/** El Castillo (32×41): torres con tejado en punta, muralla y puerta; se pinta en rojo eléctrico */
+export const CASTLE_SPRITE: Sprite = { rows: [
+  '...............oo...............',
+  '..............ooo...............',
+  '..............oooo..............',
+  '..............ooooo.............',
+  '.............oooooo.............',
+  '..........oo.oo.oo.oo...........',
+  '.....oo...oo.oo.oo.oo....oo.....',
+  '.....oo...oo.oo.oo.oo....oo.....',
+  '....oooo..oooooooooooo..oooo....',
+  '....oooo..oooooooooooo..oooo....',
+  '...oooooo.oooooooooooo.oooooo...',
+  '...oooooo.oooooooooooo.oooooo...',
+  '..oooooooooooo....oooooooooooo..',
+  '..oooooooooooo....oooooooooooo..',
+  '..oooooooooooo....oooooooooooo..',
+  '..oooooooooooo....oooooooooooo..',
+  '..oooooooooooo....oooooooooooo..',
+  '..oooooooooooooooooooooooooooo..',
+  '..oooooooooooooooooooooooooooo..',
+  '..oooooooooooooooooooooooooooo..',
+  '..ooo..oooooooooooooooooo..ooo..',
+  '..ooo..oooooooooooooooooo..ooo..',
+  '..ooo..oooooooooooooooooo..ooo..',
+  '..ooo..oooooooooooooooooo..ooo..',
+  'oooooooooooooooooooooooooooooo..',
+  'oooooooooooooooooooooooooooooo..',
+  'oooooooooooooooooooooooooooooooo',
+  'oooooooooooooooooooooooooooooooo',
+  'oooooooooooooooooooooooooooooooo',
+  'oooooooooooooooooooooooooooooooo',
+  'oooooooooooooooooooooooooooooooo',
+  'oooooooooooooo...ooooooooooooooo',
+  'ooooooooooooo.....oooooooooooooo',
+  'oooooooooooo.......ooooooooooooo',
+  'oooooooooooo.......ooooooooooooo',
+  'oooooooooooo.......ooooooooooooo',
+  'oooooooooooo.......ooooooooooooo',
+  'oooooooooooo........oooooooooooo',
+  'oooooooooooo........oooooooooooo',
+  'oooooooooooo........oooooooooooo',
+  'oooooooooooo........oooooooooooo',
+] };

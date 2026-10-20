@@ -6,7 +6,9 @@ import { ACTIVE_THEME } from '@/themes';
 import { Board } from '@/components/game/Board';
 import { Hand, HandHandlers, PlayerPanel, RivalPanel, Sidebar } from '@/components/game/Hud';
 import { CardInfo } from '@/components/game/CardInfo';
-import { BossTaunt } from '@/components/game/BossTaunt';
+import { BossTaunt, SpyBubble } from '@/components/game/BossTaunt';
+import { BossIntro } from '@/components/game/BossIntro';
+import { WildSealPicker } from '@/components/game/WildSealPicker';
 import { TutorialCoach, useTutorialGate } from '@/components/game/TutorialCoach';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
@@ -37,11 +39,20 @@ export const GameScreen = () => {
     setSelectedCardId(deselect ? null : id);
   }, [canPlay, selectedCardId, tutorial.cardId]);
 
+  // Comodín de sello: antes de jugarlo se elige qué sello es
+  const [wildPick, setWildPick] = useState<{ cardId: string; slot: number } | null>(null);
+  const play = useCallback((cardId: string, slot: number) => {
+    const card = useGameStore.getState().player.hand.find(c => c.id === cardId);
+    const target = useGameStore.getState().player.board[slot]?.card;
+    if (card?.wild) { if (target && !target.seal) setWildPick({ cardId, slot }); }
+    else placeCard(cardId, slot);
+  }, [placeCard]);
+
   const handleSlotClick = useCallback((slotIndex: number) => {
     if (!selectedCardId) return;
-    placeCard(selectedCardId, slotIndex);
+    play(selectedCardId, slotIndex);
     setSelectedCardId(null);
-  }, [selectedCardId, placeCard]);
+  }, [selectedCardId, play]);
 
   const handHandlers = useMemo<HandHandlers>(() => ({
     onSelect: handleSelectCard,
@@ -54,11 +65,11 @@ export const GameScreen = () => {
     onDrop: (id, slotIndex) => {
       setDragOverSlot(null);
       if (slotIndex === null) return;
-      placeCard(id, slotIndex);
+      play(id, slotIndex);
       setSelectedCardId(null);
     },
     onInfo: setInfoCardId,
-  }), [handleSelectCard, canPlay, selectedCardId, placeCard]);
+  }), [handleSelectCard, canPlay, selectedCardId, play]);
 
   // Capas: fondo → tablero 3D (diorama + cartas + efectos) → interfaz → efectos de UI → modales
   return (
@@ -69,6 +80,8 @@ export const GameScreen = () => {
       <Sidebar />
       <RivalPanel />
       <BossTaunt />
+      <BossIntro />
+      <SpyBubble />
       <PlayerPanel />
       <MenuButtons />
       <TurnBox />
@@ -79,6 +92,7 @@ export const GameScreen = () => {
       <FxLayer layer="ui" />
       <RoundAnnouncer />
       <LowHealth active={lowHealth} />
+      {wildPick && <WildSealPicker onPick={seal => { placeCard(wildPick.cardId, wildPick.slot, seal); setWildPick(null); }} onCancel={() => setWildPick(null)} />}
     </div>
   );
 };

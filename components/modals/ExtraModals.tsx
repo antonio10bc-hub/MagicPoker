@@ -4,9 +4,12 @@ import { useGameStore } from '@/store/useGameStore';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
 import { isBoardEmpty } from '@/lib/game-utils';
-import { ALL_SEALS, unlockedSeals } from '@/lib/bosses';
+import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
+import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
+import { CardBack } from '@/components/game/Card';
+import { BoonChooser } from '@/components/game/BoonChooser';
 import {
-  clearDeckConfig, DeckConfig, defaultDeckConfig, getDeckConfig, MAX_COPIES, MAX_REMOVED, MAX_SEALS, REMOVABLE,
+  clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
   sanitizeDeckConfig, saveDeckConfig, totalSeals,
 } from '@/lib/deck';
 import { updateSettings } from '@/lib/settings';
@@ -71,7 +74,17 @@ export const PauseModal = () => {
 export const DeckEditorModal = () => {
   const t = useTranslations();
   const [owned] = useState(() => unlockedSeals());
-  const [config, setConfig] = useState<DeckConfig>(() => sanitizeDeckConfig(getDeckConfig() ?? defaultDeckConfig(owned), owned));
+  const load = () => sanitizeDeckConfig(getDeckConfig() ?? defaultDeckConfig(owned), owned);
+  const [config, setConfig] = useState<DeckConfig>(load);
+  const [slot, setSlot] = useState(getActiveSlot);
+  // Cambiar de mazo guardado: la partida usará el que esté activo
+  const switchSlot = (i: number) => {
+    if (i === slot) return;
+    playSfx('flip', 0.7);
+    setActiveSlot(i);
+    setSlot(i);
+    setConfig(load());
+  };
   const total = totalSeals(config);
   const size = 14 - config.removed.length + total;
 
@@ -92,8 +105,17 @@ export const DeckEditorModal = () => {
   };
 
   return (
-    <Dialog title={t.deck_title} width={250} height={240}>
+    <Dialog title={t.deck_title} width={250} height={260}>
       <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[11px]">
+        {/* Mazos guardados */}
+        <div className="flex gap-[3px]">
+          {Array.from({ length: DECK_SLOTS }, (_, i) => (
+            <PxButton key={i} aria-label={`deck slot ${i + 1}`} tone={slot === i ? 'roof' : 'white'} data-pressed={slot === i} className="h-[15px] flex-1"
+              onClick={() => switchSlot(i)}>
+              <span className={slot === i ? 'text-outline' : undefined}>{t.deck_slot.replace('{n}', String(i + 1))}</span>
+            </PxButton>
+          ))}
+        </div>
         <div className="text-center" style={{ color: 'var(--ink-orange)' }}>{t.deck_size.replace('{n}', String(size))}</div>
         <Section title={`${t.deck_removed} · ${config.removed.length}/${MAX_REMOVED}`}>
           <div className="mb-[3px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_removed_hint}</div>
@@ -138,6 +160,9 @@ export const DeckEditorModal = () => {
 // Lista completa: las del juego (cartas y sellos) y las ideas aún sin hacer, para
 // valorar cuáles meter en el futuro.
 const IDEAS = ['jester', 'tower', 'wild_seal', 'bomb', 'spy', 'knight', 'priestess'] as const;
+const IDEA_RANK: Partial<Record<typeof IDEAS[number], Rank>> = {
+  jester: 'JESTER', tower: 'TOWER', bomb: 'BOMB', spy: 'SPY', knight: 'KNIGHT', priestess: 'PRIESTESS',
+};
 const BASE: { rank: Rank; text: keyof Translations }[] = [
   { rank: 'J', text: 'special_jack' },
   { rank: 'Q', text: 'special_queen' },
@@ -146,13 +171,14 @@ const BASE: { rank: Rank; text: keyof Translations }[] = [
   { rank: 'JOKER', text: 'special_joker' },
 ];
 
+/** Etiqueta: en el juego (naranja) o solo en el Castillo (rojo eléctrico) */
 const Tag = ({ idea }: { idea?: boolean }) => {
   const t = useTranslations();
   return (
     <span className="shrink-0 px-[3px] rounded-[2px] font-display" style={{
       fontSize: 8, lineHeight: '10px', paddingTop: 1,
-      background: idea ? 'var(--ink-slate)' : 'var(--ink-orange)', color: idea ? 'var(--ink-mint)' : 'var(--ink-black)',
-    }}>{idea ? t.cards_idea : t.cards_in_game}</span>
+      background: idea ? 'var(--ink-crimson)' : 'var(--ink-orange)', color: 'var(--ink-black)',
+    }}>{idea ? t.cards_castle : t.cards_in_game}</span>
   );
 };
 
@@ -186,10 +212,60 @@ export const CardCatalogModal = () => {
         </Section>
         <Section title={t.cards_section_ideas} className="flex flex-col gap-[3px]">
           {IDEAS.map(id => (
-            <Entry key={id} idea icon={<span className="font-display" style={{ fontSize: 14, color: 'var(--ink-teal)' }}>?</span>}
+            <Entry key={id} idea icon={IDEA_RANK[id] ? <PixelSprite sprite={CHARACTERS[IDEA_RANK[id]!]!} tint={INK.crimson} className="bloom-crimson-shape" />
+              : <span className="font-display" style={{ fontSize: 14, color: 'var(--ink-volt)' }}>?</span>}
               name={t[`idea_${id}` as keyof Translations]} desc={t[`idea_${id}_desc` as keyof Translations]} />
           ))}
         </Section>
+      </div>
+    </Dialog>
+  );
+};
+
+// --- DORSOS ---
+// El clásico y uno por jefe: se gana al vencerle 5 veces. El del jefe secreto es dorado.
+export const BackGallery = () => {
+  const t = useTranslations();
+  const progress = getProgress();
+  const owned = new Set(unlockedBacks(progress));
+  const current = usePlayerBack();
+  const pick = (id: string) => { playSfx('select', 0.7); setBack(id); };
+  const items = [{ id: DEFAULT_BACK, index: -1 }, ...BOSSES.map((b, index) => ({ id: b.id, index }))];
+  return (
+    <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[10px]" style={{ fontSize: 9 }}>
+      <p style={{ color: 'var(--ink-teal)' }}>{t.backs_hint}</p>
+      <div className="grid grid-cols-4 gap-x-[4px] gap-y-[6px] justify-items-center">
+        {items.map(({ id, index }) => {
+          const has = id === DEFAULT_BACK || owned.has(id);
+          const visible = index < 0 || isBossVisible(index, progress);
+          const wins = index < 0 ? 0 : bossWins(index, progress);
+          const on = current === id;
+          return (
+            <button key={id} aria-label={`back ${id}`} disabled={!has} onClick={() => pick(id)}
+              className={has ? 'flex flex-col items-center gap-[2px] cursor-pointer' : 'flex flex-col items-center gap-[2px]'}>
+              <div className="relative" style={{ width: 40, height: 56, opacity: has ? 1 : 0.35, filter: has ? undefined : 'grayscale(1)',
+                outline: on ? '1px solid var(--ink-cream)' : undefined, outlineOffset: 2, borderRadius: 3 }}>
+                <CardBack owner="player" back={visible ? id : DEFAULT_BACK} />
+              </div>
+              <span className="text-center" style={{ color: on ? 'var(--ink-cream)' : has ? 'var(--ink-mint)' : 'var(--ink-teal)', fontSize: 8, lineHeight: '9px' }}>
+                {on ? t.back_equipped : index < 0 ? t.back_default : !visible ? '???' : has ? t[`boss_${id}` as keyof Translations] : t.wins_count.replace('{n}', String(Math.min(wins, WINS_FOR_BACK)))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- MEJORA PENDIENTE DEL CASTILLO ---
+// Si saliste al menú sin elegir mejora, se elige al volver a entrar
+export const BoonsModal = () => {
+  const t = useTranslations();
+  return (
+    <Dialog title={t.castle_title} width={230} height={200}>
+      <div className="flex-1 p-[6px] flex items-center">
+        <BoonChooser onChosen={() => { useUiStore.getState().closeModal(); useGameStore.getState().startCastle(); }} />
       </div>
     </Dialog>
   );

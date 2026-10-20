@@ -1,6 +1,8 @@
 export type Owner = 'player' | 'opponent';
 export type Suit = 'standard' | 'joker' | 'seal';
-export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A' | 'JOKER' | 'SEAL';
+export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A' | 'JOKER' | 'SEAL'
+  // Cartas del Castillo (solo salen allí)
+  | 'JESTER' | 'TOWER' | 'BOMB' | 'SPY' | 'KNIGHT' | 'PRIESTESS';
 
 /**
  * Sellos: se aplican sobre una carta propia de la mesa.
@@ -45,6 +47,10 @@ export interface Card {
   isReflecting?: boolean;
   /** Expuesta por un sello de revelar: vale 1 menos en la próxima pelea */
   isExposed?: boolean;
+  /** Comodín de sello (carta de sello sin sello fijo): eliges cuál al jugarlo */
+  wild?: boolean;
+  /** Mejora del Castillo: puntos de valor de más */
+  bonus?: number;
 }
 
 export interface BoardSlot {
@@ -83,6 +89,11 @@ export interface CombatResult {
   reflected: { mirrorId: string; attackerId: string }[];
   /** Cartas que mueren envenenadas (por matar a una carta con veneno) */
   poisonedIds: string[];
+  /** Bombas que estallan al caer (id) y cartas que mata la explosión */
+  explodedIds?: string[];
+  bombVictimIds?: string[];
+  /** Sacerdotisas que sobreviven: su dueño recupera una vida */
+  blessedIds?: string[];
   /** Logro "La Republicana": el jugador usa un As contra J, Q y K rivales */
   isRepublicanaTriggered: boolean;
 }

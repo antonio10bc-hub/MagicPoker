@@ -283,6 +283,54 @@ export const SYNTHS = {
     bell(ctx, out, N.A4 * p, { start: 0.2, peak: 0.08 * v, decay: 2.2 });
     bell(ctx, out, N.E4 * p, { start: 0.2, peak: 0.06 * v, decay: 2.2 });
   },
+  // --- SELLOS: cada uno con su timbre ---
+  /** Defensa: golpe metálico sordo de escudo */
+  seal_shield: (ctx, out, v, p) => {
+    drum(ctx, out, { peak: 0.45 * v, from: 140 * p, decay: 0.3, reverb: 0.3 });
+    bell(ctx, out, N.E4 * p, { peak: 0.06 * v, decay: 0.9 });
+    bell(ctx, out, N.Bb3 * p, { start: 0.01, peak: 0.05 * v, decay: 0.9 });
+  },
+  /** Ataque doble: dos tajos seguidos */
+  seal_double: (ctx, out, v, p) => [0, 0.12].forEach(start =>
+    noise(ctx, out, { filter: 'bandpass', from: 3800 * p, to: 900 * p, q: 1.5, start, attack: 0.01, decay: 0.12, peak: 0.2 * v, reverb: 0.2 })),
+  /** Cambio: cuerda que se desliza hacia arriba */
+  seal_shift: (ctx, out, v, p) => tone(ctx, out, { type: 'triangle', from: N.A3 * p, to: N.E4 * p, attack: 0.01, decay: 0.45, peak: 0.12 * v, cutoff: 1800, reverb: 0.4 }),
+  /** Robo: dos ráfagas que se cruzan y un punteo pícaro */
+  seal_swap: (ctx, out, v, p) => {
+    noise(ctx, out, { filter: 'lowpass', from: 600 * p, to: 2600 * p, q: 0.8, attack: 0.06, decay: 0.12, peak: 0.16 * v });
+    noise(ctx, out, { filter: 'lowpass', from: 2600 * p, to: 600 * p, q: 0.8, start: 0.1, attack: 0.04, decay: 0.14, peak: 0.16 * v });
+    pluck(ctx, out, N.C4 * p, { start: 0.18, peak: 0.1 * v, decay: 0.5 });
+  },
+  /** Vida: latido y campana cálida */
+  seal_life: (ctx, out, v, p) => {
+    tone(ctx, out, { from: 75, to: 48, decay: 0.12, peak: 0.45 * v });
+    tone(ctx, out, { from: 70, to: 44, start: 0.15, decay: 0.12, peak: 0.35 * v });
+    bell(ctx, out, N.A4 * p, { start: 0.2, peak: 0.06 * v, decay: 1.4 });
+  },
+  /** Espejo: cristal, campanitas agudas que tiemblan */
+  seal_mirror: (ctx, out, v, p) => [N.A5 * 2, N.E5 * 2, N.A5 * 1.5, N.C5 * 4].forEach((f, i) =>
+    bell(ctx, out, f * p, { start: i * 0.035, peak: 0.03 * v, decay: 0.9, reverb: 0.7 })),
+  /** Veneno: burbujeo grave que baja */
+  seal_poison: (ctx, out, v, p) => [0, 0.08, 0.17, 0.24].forEach((start, i) =>
+    tone(ctx, out, { from: (320 - i * 50) * p, to: (180 - i * 30) * p, start, attack: 0.005, decay: 0.08, peak: 0.12 * v, reverb: 0.3 })),
+  /** Eco: la misma campana que se repite y se apaga */
+  seal_echo: (ctx, out, v, p) => [0, 0.22, 0.44, 0.66].forEach((start, i) =>
+    bell(ctx, out, N.E5 * p, { start, peak: (0.07 / (i + 1)) * v, decay: 1, reverb: 0.6 })),
+  /** Ancla: cadena y golpe de hierro grave */
+  seal_anchor: (ctx, out, v, p) => {
+    [0, 0.05, 0.1].forEach(start => noise(ctx, out, { from: 2400 * p, q: 6, start, attack: 0.002, decay: 0.05, peak: 0.12 * v }));
+    drum(ctx, out, { start: 0.14, peak: 0.6 * v, from: 80 * p, decay: 0.6, reverb: 0.4 });
+    bell(ctx, out, N.A2 * p, { start: 0.14, peak: 0.08 * v, decay: 1.4 });
+  },
+  /** Revelar: carillón que sube, como abrir los ojos */
+  seal_reveal: (ctx, out, v, p) => [N.A4, N.C5, N.E5, N.A5].forEach((f, i) =>
+    bell(ctx, out, f * p, { start: i * 0.07, peak: 0.045 * v, decay: 1.2, reverb: 0.6 })),
 } satisfies Record<string, Synth>;
 
 export type SynthName = keyof typeof SYNTHS;
+
+/** Sonido de cada sello (al ponerlo y al actuar en la pelea) */
+export const SEAL_SFX = {
+  shield: 'seal_shield', double: 'seal_double', shift: 'seal_shift', swap: 'seal_swap', life: 'seal_life',
+  mirror: 'seal_mirror', poison: 'seal_poison', echo: 'seal_echo', anchor: 'seal_anchor', reveal: 'seal_reveal',
+} as const satisfies Record<import('@/types').SealId, SynthName>;

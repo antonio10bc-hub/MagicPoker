@@ -34,6 +34,7 @@ const ICON: Record<StampId, Sprite> = {
   venom: SEAL_ICONS.poison,
   rematch: SEAL_ICONS.double,
   collector: SEAL_ICONS.anchor,
+  castle: CHARACTERS.TOWER!,
 };
 
 export const stampName = (t: Translations, id: StampId) => t[`stamp_${id}` as keyof Translations];
@@ -69,7 +70,8 @@ export const StampToasts = () => {
   const { width, height } = useStage();
   const current = useUiStore(s => s.stampQueue[0]);
   const shift = useUiStore(s => s.shiftStamp);
-  const busy = useGameStore(s => s.phase === 'combat');
+  // Espera a que termine la pelea (también el repaso del resultado) para no taparla
+  const busy = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
   // El premio del boss (sello o colección) se celebra antes
   const unlockPending = useUiStore(s => s.unlockQueue.length > 0);
   const ready = current && !busy && !unlockPending;

@@ -9,7 +9,7 @@
 // - Los volúmenes de música y efectos y la vibración salen de los ajustes.
 
 import { SYNTHS, SynthName } from './synth';
-import { MusicHandle, startMusic } from './music';
+import { MusicHandle, MusicVariant, startMusic } from './music';
 import { getSettings, subscribeSettings } from './settings';
 
 // Único efecto en archivo: barajar (encaja con la estética). El resto de nombres de
@@ -40,9 +40,10 @@ interface Engine {
 let engine: Engine | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 
-interface MusicTrack { name: MusicName; handle: MusicHandle }
+type TrackVariant = MusicVariant & { key: string };
+interface MusicTrack { name: MusicName; key?: string; handle: MusicHandle }
 let currentTrack: MusicTrack | null = null;
-let desiredMusic: { name: MusicName; volume: number } | null = null;
+let desiredMusic: { name: MusicName; volume: number; variant?: TrackVariant } | null = null;
 
 const MASTER_VOLUME = 0.9;
 const MUSIC_FADE_S = 0.6;
@@ -79,7 +80,7 @@ const getEngine = (): Engine | null => {
 const unlock = () => {
   const e = getEngine();
   if (e && e.ctx.state === 'suspended') e.ctx.resume().catch(() => {});
-  if (desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume);
+  if (desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume, desiredMusic.variant);
 };
 if (isBrowser()) {
   ['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
@@ -129,7 +130,7 @@ export const toggleMute = (): boolean => {
   isMuted = !isMuted;
   const e = getEngine();
   if (e) e.master.gain.setTargetAtTime(isMuted ? 0 : MASTER_VOLUME, e.ctx.currentTime, 0.05);
-  if (!isMuted && desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume);
+  if (!isMuted && desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume, desiredMusic.variant);
   muteListeners.forEach(l => l());
   return isMuted;
 };
@@ -209,18 +210,19 @@ export const haptic = (name: keyof typeof HAPTICS) => vibrate(HAPTICS[name]);
 // --- MÚSICA (generativa, con fundido cruzado entre estilos) ---
 let musicHeat = 0;
 
-export const playMusic = (name: MusicName, volume = 0.3) => {
+/** `variant` (con su `key`) cambia el tema: cada jefe suena a lo suyo */
+export const playMusic = (name: MusicName, volume = 0.3, variant?: TrackVariant) => {
   if (!isBrowser()) return;
-  desiredMusic = { name, volume };
-  if (currentTrack?.name === name) return;
+  desiredMusic = { name, volume, variant };
+  if (currentTrack?.name === name && currentTrack.key === variant?.key) return;
 
   const e = getEngine();
   if (!e || e.ctx.state !== 'running') return; // arrancará al desbloquear el audio
 
   currentTrack?.handle.stop(MUSIC_FADE_S * 2);
-  const handle = startMusic(e.ctx, e.musicFilter, MUSIC_STYLES[name], volume);
+  const handle = startMusic(e.ctx, e.musicFilter, MUSIC_STYLES[name], volume, variant);
   handle.setHeat(musicHeat);
-  currentTrack = { name, handle };
+  currentTrack = { name, key: variant?.key, handle };
 };
 
 export const stopMusic = (fadeSeconds = 0.8) => {

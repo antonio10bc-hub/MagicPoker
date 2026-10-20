@@ -3,16 +3,25 @@ import { card, shot, startScenario, watchErrors } from './helpers';
 
 // --- MENÚ, VENTANAS Y PAUSA ---
 
-const openMenu = async (page: Page, progress: { defeated: number; rematches?: string[] }) => {
-  await page.addInitScript(p => {
+/** Cierra la presentación del jefe (tocándola) si está a la vista */
+const dismissIntro = async (page: Page) => {
+  await page.waitForTimeout(700);
+  const vp = page.viewportSize()!;
+  await page.mouse.click(vp.width / 2, vp.height / 2);
+  await page.waitForTimeout(400);
+};
+
+const openMenu = async (page: Page, progress: { defeated: number; rematches?: string[]; wins?: Record<string, number> }, extra: Record<string, string> = {}) => {
+  await page.addInitScript((p: { progress: object; extra: Record<string, string> }) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.clear();
     localStorage.setItem('has_played_before', 'true');
     localStorage.setItem('magic_poker_tutorial_done', '1');
     localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
-    localStorage.setItem('magic_poker_progress', JSON.stringify(p));
-  }, progress);
+    localStorage.setItem('magic_poker_progress', JSON.stringify(p.progress));
+    Object.entries(p.extra).forEach(([k, v]) => localStorage.setItem(k, v));
+  }, { progress, extra });
   await page.goto('/');
   await page.waitForTimeout(1800);
 };
@@ -40,9 +49,9 @@ test('revancha: botón bajo JUGAR con un boss vencido', async ({ page }, info) =
   // Se desliza el carrusel hasta El Muro (vencido)
   await page.locator('.no-scrollbar').first().evaluate(e => { e.scrollLeft = e.clientWidth; });
   await page.waitForTimeout(600);
-  await expect(page.getByText('REVANCHA', { exact: true })).toBeVisible();
+  await expect(page.getByText('REVANCHA NV.2')).toBeVisible();
   await shot(page, info, 'menu-revancha');
-  await page.getByText('REVANCHA', { exact: true }).click({ force: true });
+  await page.getByText('REVANCHA NV.2').click({ force: true });
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { rematch: boolean } } }).__game.getState().rematch);
   await page.waitForTimeout(2500);
   await shot(page, info, 'partida-revancha');
@@ -60,7 +69,8 @@ test('editor de mazo (con el primer sello)', async ({ page }, info) => {
   await page.locator('[aria-label="remove 2"]').click({ force: true });
   await expect(page.getByText('Tu mazo: 16 cartas')).toBeVisible();
   await shot(page, info, 'editor');
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_deck') ?? 'null'));
+  // Se guarda en la ranura activa (Mazo 1)
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_decks') ?? 'null')?.slots?.[0]);
   expect(saved.seals.shield).toBe(2);
   expect(saved.removed).toEqual(['K', '2']);
   noErrors();
@@ -111,6 +121,7 @@ test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ 
   await openMenu(page, { defeated: 4 });
   await page.getByText('JUGAR', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
+  await dismissIntro(page);
   await page.locator('[aria-label=speed]').click();
   type G = { __game: { getState: () => { phase: string; turn: string; player: { hand: { id: string; rank: string }[]; board: { index: number; card: unknown }[] }; opponent: { board: { card: unknown }[] }; placeCard: (id: string, s: number) => void; passTurn: () => void } } };
   for (let round = 0; round < 3; round++) {

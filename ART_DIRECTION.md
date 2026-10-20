@@ -37,6 +37,8 @@ los dos.
 | Brasa | `#F2652A` | acento secundario: interacción, núcleos de luz |
 | Musgo | `#6F8F5A` | solo transición en halos (niebla, pelea) |
 | Voltio | `#7DFF2B` | **exclusivo de los sellos**: verde eléctrico (amarillo verdoso) que brilla como el naranja |
+| Carmesí | `#FF1F4B` | **exclusivo del Castillo**: rojo eléctrico de los jefes evolucionados, su página y sus mejoras |
+| Oro | `#E8B64A` | solo el dorso del jefe secreto (El Soberano) |
 
 **El naranja es el único color saturado y se reserva para lo importante.** Nunca hay
 dos fuentes de color compitiendo: el decorado es negro y grises fríos.
@@ -351,7 +353,38 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes
   que los logros. El primero desbloquea la colección (botón verde en el menú).
 - **Orden de los avisos:** sello de carta > logros > panel de final de partida. Cada
-  uno espera a que se cierre el anterior.
+  uno espera a que se cierre el anterior, y ninguno sale mientras se ve la pelea
+  (ni durante el repaso del resultado).
+- **Presentación del jefe:** al empezar una partida nueva el jefe cae a pantalla
+  completa sobre un fondo oscuro: silueta grande que aplasta el suelo, una raya del
+  color del modo (naranja; verde en revancha; carmesí en el Castillo), su nombre, sus
+  vidas, sus sellos y su frase de entrada en el bocadillo crema.
+- **Revanchas:** cada revancha ganada sube el nivel del jefe (NV.1 a NV.4: más vidas
+  y más sellos). En la lista, cada jefe vencido lleva su contador de victorias
+  (n/5, verde; dorado al llegar a 5).
+- **Dorsos:** cada jefe tiene un dorso temático: el grano del color del bando con su
+  silueta en negro, un marco fino y su sello en la esquina. Sus cartas lo usan siempre;
+  tú lo ganas con 5 victorias contra él y te lo pones en la colección (pestaña Dorsos).
+  El del jefe secreto es dorado, con una estrella.
+- **Música y sonido:** cada jefe tiene su variación del tema de partida (tono, tempo,
+  timbre y trémolo); en el Castillo, más grave, más rápida y siempre tensa. Cada sello
+  suena a lo suyo al ponerlo y al actuar (cristal el espejo, campana que se repite el
+  eco, cadena y hierro el ancla, burbujeo el veneno…).
+
+### El Castillo
+
+- **Rojo eléctrico (`--ink-crimson`)** marca todo lo del Castillo: su página al final
+  de la lista de jefes (un castillo de torres en punta), el botón ENTRAR / SEGUIR, el
+  piso (n/12) en el panel del rival, las mejoras y la presentación.
+- **Jefes evolucionados:** la misma silueta con una capa carmesí sacada de ella
+  (ojos encendidos, púas por arriba y a los lados) y un halo carmesí en vez del naranja.
+- **Mejoras entre jefes:** tres botones con contorno carmesí, cada uno con su icono
+  (corazón, carta, sello en verde, +2, −, estrella del pacto), título y descripción.
+- **Cartas del Castillo** (Bufón, Torre, Bomba, Espía, Caballero, Sacerdotisa): figuras
+  en silueta como J/Q/K, con su nombre en pequeño arriba. La insignia de ataque usa
+  "?" (Bufón, copia), "–" (Torre, no ataca) y "±2" (Caballero, salta). El comodín de
+  sello es una carta de sello con un interrogante; al jugarlo se elige el sello en una
+  rejilla verde.
 - Los logros (antes también llamados "sellos") se llaman **Logros** para no
   confundirlos con las cartas de sello.
 

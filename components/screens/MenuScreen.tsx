@@ -1,7 +1,7 @@
 import { CSSProperties, useSyncExternalStore } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
-import { useTranslations } from '@/lib/i18n';
+import { Translations, useTranslations } from '@/lib/i18n';
 import { playSound } from '@/lib/sounds';
 import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
@@ -14,7 +14,8 @@ import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
 import { BossCarousel } from './BossCarousel';
-import { currentBossIndex, getProgress, getServerProgress, isCollectionUnlocked, isEditorUnlocked, subscribeProgress } from '@/lib/bosses';
+import { BOSSES, currentBossIndex, getProgress, getServerProgress, isCastleUnlocked, isCollectionUnlocked, isEditorUnlocked, rematchLevel, subscribeProgress } from '@/lib/bosses';
+import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
 import { INK } from '@/theme/tokens';
 import { useMenuLayout, useStage } from '@/components/pixel/Stage';
 
@@ -114,7 +115,11 @@ export const MenuScreen = () => {
     // La primera vez se juega el tutorial guiado (si no se completó antes)
     const first = consumeFirstPlay();
     if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
-    else startGame(selected, rematch);
+    else if (castleSel) {
+      // Castillo: si quedó una mejora por elegir, primero eso
+      if (getCastle().run?.offer) useUiStore.getState().openModal('boons');
+      else useGameStore.getState().startCastle();
+    } else startGame(selected, rematch);
   };
 
   const { cx, logoX, logoW, logoY, playY, board, bossY, bossH } = useMenuLayout();
@@ -125,9 +130,13 @@ export const MenuScreen = () => {
   const buttons = 3 + Number(collection) + Number(editor);
   const current = currentBossIndex(progress);
   const selected = menuBoss ?? current;
-  const locked = selected > current;
+  // La página de después del último jefe es el Castillo
+  const castleSel = selected === BOSSES.length && isCastleUnlocked(progress);
+  const castleRun = useSyncExternalStore(subscribeCastle, getCastle, getServerCastle).run;
+  const locked = !castleSel && selected > current;
   // Revancha: solo contra un boss ya vencido
   const canRematch = selected < progress.defeated;
+  const level = canRematch ? rematchLevel(selected, progress) : 0;
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
   // Con revancha y partida guardada a la vez, van lado a lado bajo JUGAR
@@ -165,8 +174,9 @@ export const MenuScreen = () => {
       <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}
         initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.9 }}>
-        <PxButton tone="yellow" onClick={() => handleStartGame()} disabled={locked} className={locked ? 'text-title w-full h-full overflow-hidden opacity-40' : 'text-title w-full h-full overflow-hidden anim-breathe'}>
-          {t.play}
+        <PxButton tone="yellow" onClick={() => handleStartGame()} disabled={locked} className={locked ? 'text-title w-full h-full overflow-hidden opacity-40' : 'text-title w-full h-full overflow-hidden anim-breathe'}
+          style={castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : undefined}>
+          {castleSel ? (castleRun ? t.castle_continue.replace('{n}', String(castleRun.stage + 1)).replace('{total}', String(BOSSES.length)) : t.castle_enter) : t.play}
         </PxButton>
       </motion.div>
 
@@ -176,9 +186,9 @@ export const MenuScreen = () => {
           initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
           <PxButton onClick={() => handleStartGame(true)} className="w-full h-[16px]"
             style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.35)' }}>
-            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch}</span>
+            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch_level.replace('{n}', String(level))}</span>
           </PxButton>
-          {!both && stage.mode === 'portrait' && <span className="mt-[2px]" style={{ color: 'var(--ink-mint)', fontSize: 8, lineHeight: '9px' }}>{t.rematch_hint}</span>}
+          {!both && stage.mode === 'portrait' && <span className="mt-[2px]" style={{ color: 'var(--ink-mint)', fontSize: 8, lineHeight: '9px' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>}
         </motion.div>
       )}
 

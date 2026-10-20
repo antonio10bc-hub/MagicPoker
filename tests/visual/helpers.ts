@@ -5,7 +5,10 @@ import type { BoardSlot, Card, PlayerState, Rank, SealId } from '@/types';
 // Partidas preparadas: se escribe una partida guardada en localStorage y se retoma con
 // "Continuar partida". El estado del juego se lee con window.__game (solo en desarrollo).
 
-const VALUES: Partial<Record<Rank, number>> = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, J: 11, Q: 12, K: 13, A: 14 };
+const VALUES: Partial<Record<Rank, number>> = {
+  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, J: 11, Q: 12, K: 13, A: 14,
+  JESTER: 6, TOWER: 15, BOMB: 4, SPY: 3, KNIGHT: 9, PRIESTESS: 5,
+};
 
 export const card = (owner: 'player' | 'opponent', rank: Rank, id: string, extra: Partial<Card> = {}): Card => ({
   id: `${owner}-${rank}-${id}`, rank, owner, suit: 'standard', value: VALUES[rank] ?? 0, isFaceUp: owner === 'player', ...extra,
@@ -33,7 +36,7 @@ export interface Scenario {
 /** Abre el juego con una partida preparada y la retoma */
 export const startScenario = async (page: Page, s: Scenario) => {
   const save = {
-    v: 1, difficulty: 'hard', roundNumber: 2, bossIndex: s.bossIndex ?? 1,
+    v: 2, difficulty: 'hard', roundNumber: 2, bossIndex: s.bossIndex ?? 1,
     player: side(s.player.lives ?? 3, s.player.board, s.player.hand ?? [card('player', '3', 'h1')]),
     opponent: { ...side(s.opponent.lives ?? 5, s.opponent.board, [], true), maxLives: 5 },
   };

@@ -344,11 +344,11 @@ export const Board = ({ selectedCardId, onSlotClick, dragOverSlot, onlySlot }: B
             >
               {/* El contenido no captura el puntero: el clic siempre llega al botón,
                   aunque al pasar por encima cambie de cursor a vista previa */}
-              {sealing && selectedCard?.seal ? (
+              {sealing && selectedCard ? (
                 // Sello: contorno verde que late sobre la carta; al apuntarla, el sello ya puesto
                 <div className={showGhost ? 'absolute inset-0 pointer-events-none px-round' : 'absolute inset-0 pointer-events-none px-round anim-pulse'}
                   style={{ inset: -2, boxShadow: showGhost ? '0 0 0 2px var(--ink-volt), 0 0 12px 4px rgba(125,255,43,0.6)' : '0 0 0 1px var(--ink-volt), 0 0 8px 2px rgba(125,255,43,0.4)' }}>
-                  {showGhost && <SealBadge seal={selectedCard.seal} pulse />}
+                  {showGhost && selectedCard.seal && <SealBadge seal={selectedCard.seal} pulse />}
                 </div>
               ) : showGhost
                 ? <div className="pointer-events-none" style={{ opacity: 0.55 }}><Card card={selectedCard} /></div>

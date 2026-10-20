@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { currentBossIndex } from '@/lib/bosses';
+import { BoonChooser } from '@/components/game/BoonChooser';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { useEffect, useState } from 'react';
@@ -97,6 +98,8 @@ export const EndScreen = () => {
 
   const isWin = gameResult === 'win';
   // Tras vencer a un jefe hay otro esperando (el siguiente de la lista)
+  const [castleOutcome] = useState(() => useGameStore.getState().castleOutcome);
+  const startCastle = useGameStore(s => s.startCastle);
   const [hasNextBoss] = useState(() => result === 'win' && useGameStore.getState().tutorialStep === null && currentBossIndex() !== useGameStore.getState().bossIndex);
   const isLoss = gameResult === 'loss';
   // Orden de celebraciones: sello de carta > logros > resultado. El panel espera a que
@@ -128,6 +131,22 @@ export const EndScreen = () => {
         // Derrota: caída seca con temblor (varios fotogramas: sin muelle); victoria: muelle
         transition={isLoss ? { duration: 0.6, ease: 'easeOut', delay: 0.25 } : { type: 'spring', stiffness: 260, damping: 12, delay: 0.25 }}
       >
+      {castleOutcome ? (
+        // Castillo: elegir mejora y subir, o fin de la subida (conquistado o caído)
+        <Panel title={<TitleLetters text={castleOutcome.kind === 'conquered' ? t.castle_conquered : t[ui.title]} />}
+          band={castleOutcome.kind === 'fallen' ? ui.band : 'var(--ink-crimson)'}
+          style={{ width: panelWidth, minHeight: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
+          {castleOutcome.kind === 'next' ? <BoonChooser /> : (
+            <>
+              <p className="text-center leading-[12px]">
+                {castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1))}
+              </p>
+              <PxButton tone="yellow" onClick={() => { playSound('click'); startCastle(); }} className="h-[20px]">{t.castle_again}</PxButton>
+            </>
+          )}
+          <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
+        </Panel>
+      ) : (
       <Panel title={<TitleLetters text={t[ui.title]} />} band={ui.band} style={{ width: panelWidth, height: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
         <p className="text-center leading-[12px]">{wasTutorial ? t.tut_done : t[ui.sub]}</p>
         {/* Si ganas, al siguiente jefe; si no, revancha contra el mismo */}
@@ -136,6 +155,7 @@ export const EndScreen = () => {
         </PxButton>
         <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
       </Panel>
+      )}
       </motion.div>}
     </div>
   );

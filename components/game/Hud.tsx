@@ -163,13 +163,21 @@ export const RivalPanel = () => {
   // El boss de esta partida (en el tutorial, un rival sin nombre)
   const boss = useGameStore(s => (s.tutorialStep === null ? BOSSES[s.bossIndex] : null));
   const name = boss ? t[`boss_${boss.id}` as keyof typeof t] : t.rival;
+  // En el Castillo: jefe evolucionado y el piso por el que vas
+  const castle = useGameStore(s => s.castle);
+  const floor = castle && (
+    <span className="font-display glow-crimson" style={{ color: 'var(--ink-crimson)', fontSize: 9, lineHeight: '9px' }}>
+      {castle.stage + 1}/{BOSSES.length}
+    </span>
+  );
 
   if (compactPanels) {
     return (
       <>
-        <CompactPanel label={boss ? <BossFigure id={boss.id} height={22} dark glow={false} /> : t.rival} owner="opponent" rect={rect}>
+        <CompactPanel label={boss ? <BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /> : t.rival} owner="opponent" rect={rect}>
           <Lives lives={lives} max={maxLives} owner="opponent" />
           <RivalHand count={handCount} />
+          {floor}
           <div className="ml-auto"><DeckCount owner="opponent" count={deckCount} /></div>
         </CompactPanel>
         <SecretWin rect={{ ...rect, w: 36 }} />
@@ -179,10 +187,11 @@ export const RivalPanel = () => {
   return (
     <>
       <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
-        {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><BossFigure id={boss.id} height={26} /></div>}
+        {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><BossFigure id={boss.id} height={26} evolved={!!castle} /></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
         <RivalHand count={handCount} />
         <DeckCount owner="opponent" count={deckCount} />
+        {floor}
       </Panel>
       <SecretWin rect={rect} />
     </>

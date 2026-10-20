@@ -15,6 +15,10 @@ export interface AttackPattern {
 interface RankDefinition {
   value: number;
   attack: AttackPattern | null;
+  /** Cartas del Castillo: no están en el mazo estándar */
+  castle?: boolean;
+  /** Bufón: copia el patrón de ataque de la carta de enfrente */
+  copiesFront?: boolean;
   /** El As limpia el tablero entero */
   wipesBoard?: boolean;
   /** Las figuras muestran su sello sobre las cartas que destruyen */
@@ -40,10 +44,36 @@ export const RANKS: Record<Rank, RankDefinition> = {
   'JOKER': { value: 0, attack: null },
   // Carta de sello: no se coloca en un hueco, se aplica sobre una carta propia
   'SEAL': { value: 0, attack: null },
+  // --- Cartas del Castillo ---
+  // Bufón: copia el ataque de la carta de enfrente (si no hay, ataca de frente)
+  'JESTER': { value: 6, attack: FRONT, castle: true, copiesFront: true },
+  // Torre: no ataca, pero vale 15: frena a cualquiera
+  'TOWER': { value: 15, attack: null, castle: true },
+  // Bomba: al caer en un choque, golpea los huecos rivales de al lado
+  'BOMB': { value: 4, attack: FRONT, castle: true },
+  // Espía: al ponerla, ves una carta de la mano del rival
+  'SPY': { value: 3, attack: FRONT, castle: true },
+  // Caballero: salta, golpea los huecos a dos de distancia
+  'KNIGHT': { value: 9, attack: { offsets: [-2, 2], mode: 'all' }, castle: true },
+  // Sacerdotisa: si sobrevive a la pelea, recuperas una vida
+  'PRIESTESS': { value: 5, attack: FRONT, castle: true },
 };
 
-/** Rangos del mazo estándar (los sellos se añaden aparte) */
-export const DECK_RANKS = (Object.keys(RANKS) as Rank[]).filter(r => r !== 'SEAL');
+/** Cartas del Castillo (las ideas del catálogo hechas realidad) */
+export const CASTLE_RANKS: Rank[] = ['JESTER', 'TOWER', 'BOMB', 'SPY', 'KNIGHT', 'PRIESTESS'];
+
+/** Rangos del mazo estándar (los sellos y las cartas del Castillo se añaden aparte) */
+export const DECK_RANKS = (Object.keys(RANKS) as Rank[]).filter(r => r !== 'SEAL' && !RANKS[r].castle);
+
+/** Una carta suelta (para las cartas nuevas del Castillo) */
+export const createCard = (owner: Owner, rank: Rank, extra: Partial<Card> = {}): Card => ({
+  id: `${owner}-${rank}-${++nextCardId}`, rank, suit: 'standard', value: RANKS[rank].value + (extra.bonus ?? 0), isFaceUp: false, owner, ...extra,
+});
+
+/** Comodín de sello: carta de sello sin sello fijo */
+export const createWildSealCard = (owner: Owner): Card => ({
+  id: `${owner}-SEAL-wild-${++nextCardId}`, rank: 'SEAL', suit: 'seal', value: 0, isFaceUp: false, owner, wild: true,
+});
 
 export const getCardValue = (rank: Rank): number => RANKS[rank].value;
 
@@ -175,10 +205,14 @@ export const applyPreCombatSeals = (playerBoard: BoardSlot[], opponentBoard: Boa
   return { player: boards.player, opponent: boards.opponent, events };
 };
 
-/** Vidas que recupera cada bando por sus cartas con sello de vida que han muerto */
+/**
+ * Vidas que recupera cada bando: sus cartas con sello de vida que han muerto y sus
+ * Sacerdotisas que siguen en pie
+ */
 export const lifeGains = (board: BoardSlot[], result: CombatResult): number => {
   const dead = new Set(result.deadCardIds);
-  return board.filter(s => s.card?.seal === 'life' && dead.has(s.card.id)).length;
+  const blessed = new Set(result.blessedIds ?? []);
+  return board.filter(s => (s.card?.seal === 'life' && dead.has(s.card.id)) || (s.card && blessed.has(s.card.id))).length;
 };
 
 // --- ESTADO DE JUGADOR (helpers puros) ---
@@ -206,15 +240,17 @@ export const drawCards = (state: PlayerState, amount: number, faceUp: boolean): 
  * vacío; una de sello se aplica sobre la carta propia (sin sello) de ese hueco.
  * Devuelve null si no es posible.
  */
-export const playCardToSlot = (state: PlayerState, cardId: string, slotIndex: number, faceUp: boolean): PlayerState | null => {
+export const playCardToSlot = (state: PlayerState, cardId: string, slotIndex: number, faceUp: boolean, wildSeal?: SealId): PlayerState | null => {
   const card = state.hand.find(c => c.id === cardId);
   const slot = state.board[slotIndex];
   if (!card || !slot) return null;
 
   if (isSealCard(card)) {
-    if (!slot.card || slot.card.seal) return null;
+    // Comodín de sello: hay que decir qué sello es
+    const seal = card.wild ? wildSeal : card.seal;
+    if (!seal || !slot.card || slot.card.seal) return null;
     const board = [...state.board];
-    board[slotIndex] = { ...slot, card: { ...slot.card, seal: card.seal } };
+    board[slotIndex] = { ...slot, card: { ...slot.card, seal } };
     return { ...state, hand: state.hand.filter(c => c.id !== cardId), board };
   }
   if (slot.card) return null;
@@ -234,10 +270,18 @@ export const isBoardEmpty = (board: BoardSlot[]): boolean => board.every(s => s.
 
 // --- COMBATE ---
 
+const targetsOf = (index: number, pattern: AttackPattern): number[] =>
+  pattern.offsets.map(offset => index + offset).filter(i => i >= 0 && i < BOARD_SIZE);
+
 export const getTargetIndices = (index: number, rank: Rank): number[] =>
-  (RANKS[rank].attack?.offsets ?? [])
-    .map(offset => index + offset)
-    .filter(i => i >= 0 && i < BOARD_SIZE);
+  RANKS[rank].attack ? targetsOf(index, RANKS[rank].attack!) : [];
+
+/** Patrón de ataque de una carta. El Bufón copia el de la carta que tiene enfrente. */
+export const attackPattern = (card: Card, front: Card | null): AttackPattern | null => {
+  const def = RANKS[card.rank];
+  if (def.copiesFront && front && !RANKS[front.rank].copiesFront) return RANKS[front.rank].attack ?? def.attack;
+  return def.attack;
+};
 
 const boardCards = (board: BoardSlot[]): Card[] =>
   board.flatMap(s => (s.card ? [s.card] : []));
@@ -332,10 +376,10 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
   const attack = (attackBoard: BoardSlot[], defenseBoard: BoardSlot[], defenderOwner: Owner) => {
     attackBoard.forEach(slot => {
       const attacker = slot.card;
-      const pattern = attacker && RANKS[attacker.rank].attack;
+      const pattern = attacker && attackPattern(attacker, defenseBoard[slot.index]?.card ?? null);
       if (!attacker || !pattern) return;
 
-      const targets = getTargetIndices(slot.index, attacker.rank);
+      const targets = targetsOf(slot.index, pattern);
       if (targets.length === 0) return;
 
       // Sello de ataque: ataca dos veces (el Príncipe elige objetivo cada vez)
@@ -351,6 +395,35 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
 
   attack(playerBoard, opponentBoard, 'opponent');
   attack(opponentBoard, playerBoard, 'player');
+
+  // Bombas: la que cae estalla y golpea los huecos rivales de al lado (cartas que mueren,
+  // huecos vacíos que pierden una vida). Una bomba alcanzada también estalla.
+  const exploded = new Set<string>();
+  const bombVictims: string[] = [];
+  const boards: Record<Owner, BoardSlot[]> = { player: playerBoard, opponent: opponentBoard };
+  for (let changed = true; changed;) {
+    changed = false;
+    (['player', 'opponent'] as Owner[]).forEach(owner => {
+      const enemy: Owner = owner === 'player' ? 'opponent' : 'player';
+      boards[owner].forEach(slot => {
+        const bomb = slot.card;
+        if (bomb?.rank !== 'BOMB' || !deadIds.has(bomb.id) || exploded.has(bomb.id)) return;
+        exploded.add(bomb.id);
+        changed = true;
+        [slot.index - 1, slot.index + 1].filter(i => i >= 0 && i < BOARD_SIZE).forEach(i => {
+          const victim = boards[enemy][i].card;
+          if (!victim) {
+            damageTaken[enemy]++;
+            emptyHits[enemy][i] = (emptyHits[enemy][i] ?? 0) + 1;
+            return;
+          }
+          const wasDead = deadIds.has(victim.id);
+          kill(victim, null);
+          if (!wasDead && deadIds.has(victim.id)) bombVictims.push(victim.id);
+        });
+      });
+    });
+  }
 
   return {
     playerDamageTaken: damageTaken.player,
@@ -369,6 +442,10 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     shieldHits,
     reflected: reflected.filter(r => !deadIds.has(r.mirrorId)),
     poisonedIds: poisoned,
+    explodedIds: Array.from(exploded),
+    bombVictimIds: bombVictims,
+    // Sacerdotisas que siguen en pie: su dueño recupera una vida
+    blessedIds: allCards.filter(c => c.rank === 'PRIESTESS' && !deadIds.has(c.id)).map(c => c.id),
     isRepublicanaTriggered,
   };
 };
