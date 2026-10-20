@@ -15,16 +15,14 @@ const load = async () => {
 };
 
 describe('progresión de bosses', () => {
-  it('el jefe secreto aparece al vencer al último normal y desbloquea el editor', async () => {
+  it('el jefe secreto aparece al vencer al último normal', async () => {
     const b = await load();
     const secret = b.BOSSES.length - 1;
     expect(b.isBossVisible(secret)).toBe(false);
     for (let i = 0; i < secret - 1; i++) b.recordBossDefeat(i);
     expect(b.recordBossDefeat(secret - 1)).toEqual([{ kind: 'seal', seal: 'reveal' }, { kind: 'secret' }]);
     expect(b.isBossVisible(secret)).toBe(true);
-    expect(b.isEditorUnlocked()).toBe(false);
-    expect(b.recordBossDefeat(secret)).toEqual([{ kind: 'editor' }]);
-    expect(b.isEditorUnlocked()).toBe(true);
+    expect(b.recordBossDefeat(secret)).toEqual([]);
   });
 
   it('revancha: una vida más y un segundo sello; el secreto lleva todos', async () => {
@@ -46,7 +44,10 @@ describe('progresión de bosses', () => {
     expect(b.recordBossDefeat(0)).toEqual([{ kind: 'collection' }]);
     expect(b.isCollectionUnlocked()).toBe(true);
     expect(b.unlockedSeals()).toEqual([]);
-    expect(b.recordBossDefeat(1)).toEqual([{ kind: 'seal', seal: 'shield' }]);
+    expect(b.isEditorUnlocked()).toBe(false);
+    // Con el primer sello llega el editor de mazo
+    expect(b.recordBossDefeat(1)).toEqual([{ kind: 'seal', seal: 'shield' }, { kind: 'editor' }]);
+    expect(b.isEditorUnlocked()).toBe(true);
     expect(b.unlockedSeals()).toEqual(['shield']);
     expect(b.currentBossIndex()).toBe(2);
   });

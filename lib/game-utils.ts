@@ -43,7 +43,7 @@ export const RANKS: Record<Rank, RankDefinition> = {
 };
 
 /** Rangos del mazo estándar (los sellos se añaden aparte) */
-const DECK_RANKS = (Object.keys(RANKS) as Rank[]).filter(r => r !== 'SEAL');
+export const DECK_RANKS = (Object.keys(RANKS) as Rank[]).filter(r => r !== 'SEAL');
 
 export const getCardValue = (rank: Rank): number => RANKS[rank].value;
 

@@ -342,9 +342,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
   Con un vencido aparece debajo REVANCHA (botón con contorno verde): vuelve con una
   vida más y un segundo sello; ganarla lo marca en verde ("REVANCHA GANADA"). El jefe
   secreto no sale en la lista hasta que has vencido a los demás.
-- **Editor de mazo:** al vencer a todos (también al secreto) aparece en el menú un
-  botón naranja con un mazo; dentro se eligen las copias de cada sello y se quitan
-  cartas bajas.
+- **Editor de mazo:** llega con el primer sello (al vencer al segundo boss): botón
+  naranja con un mazo en el menú. Arriba, las 14 cartas del mazo (se pueden quitar
+  hasta 3, tachadas); debajo, los sellos desbloqueados (hasta 5 en total, 2 copias de
+  cada uno). Un sello nuevo entra solo en el mazo si aún cabe.
 - **En partida:** la silueta del boss (negra sobre la banda naranja) en el panel del
   rival, con tantos corazones como vidas tenga (algunos tienen 5).
 - **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes

@@ -1,9 +1,10 @@
 // --- EDITOR DE MAZO ---
-// Se desbloquea al vencer a todos los jefes. Eliges cuántas copias llevas de cada sello
-// (hasta 2, con un máximo en total) y puedes quitar algunas cartas bajas. Sin editar,
-// el mazo es el de siempre: el estándar más una carta de cada sello desbloqueado.
+// Se desbloquea con el primer sello. Puedes quitar hasta 3 cartas cualesquiera del
+// mazo y elegir qué sellos llevas: hasta 2 copias de cada uno y 5 en total. Sin
+// editar, llevas una copia de cada sello desbloqueado (hasta llenar los 5).
+// Cada sello nuevo entra solo en el mazo si aún cabe.
 import { Card, Rank, SealId } from '@/types';
-import { createDeck, createSealCard, shuffle } from '@/lib/game-utils';
+import { createDeck, createSealCard, DECK_RANKS, shuffle } from '@/lib/game-utils';
 import { buildPlayerDeck, isEditorUnlocked, unlockedSeals } from '@/lib/bosses';
 
 const KEY = 'magic_poker_deck';
@@ -11,14 +12,14 @@ const KEY = 'magic_poker_deck';
 export interface DeckConfig {
   /** Copias de cada sello (0–MAX_COPIES) */
   seals: Partial<Record<SealId, number>>;
-  /** Cartas bajas que has quitado del mazo */
+  /** Cartas que has quitado del mazo */
   removed: Rank[];
 }
 
 export const MAX_COPIES = 2;
-export const MAX_SEALS = 10;
-/** Solo se pueden quitar cartas bajas, y pocas */
-export const REMOVABLE: Rank[] = ['2', '3', '4', '5'];
+export const MAX_SEALS = 5;
+/** Se puede quitar cualquier carta del mazo, hasta 3 */
+export const REMOVABLE: Rank[] = DECK_RANKS;
 export const MAX_REMOVED = 3;
 
 /** Mazo por defecto: una copia de cada sello desbloqueado, sin quitar nada */
@@ -67,8 +68,15 @@ export const buildDeckFrom = (config: DeckConfig): Card[] => {
   return shuffle([...createDeck('player').filter(c => !removed.has(c.rank)), ...seals]);
 };
 
+/** Un sello recién desbloqueado entra en el mazo editado si aún cabe */
+export const includeNewSeal = (seal: SealId) => {
+  const config = getDeckConfig();
+  if (!config || totalSeals(config) >= MAX_SEALS || config.seals[seal]) return;
+  saveDeckConfig({ ...config, seals: { ...config.seals, [seal]: 1 } });
+};
+
 /** Tu mazo para la próxima partida: el editado (si tienes el editor) o el de siempre */
 export const buildMatchDeck = (): Card[] => {
-  const config = isEditorUnlocked() ? getDeckConfig() : null;
-  return config ? buildDeckFrom(sanitizeDeckConfig(config)) : buildPlayerDeck();
+  if (!isEditorUnlocked()) return buildPlayerDeck();
+  return buildDeckFrom(sanitizeDeckConfig(getDeckConfig() ?? defaultDeckConfig()));
 };

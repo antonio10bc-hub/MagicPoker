@@ -8,7 +8,7 @@ import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, IMPACT_DELAY_S, SECOND_HIT_S, SHIELD_BREAK_S } from './Card';
 import { getTargetIndices } from '@/lib/game-utils';
-import { gameTimeout } from '@/lib/clock';
+import { pausableTimeout } from '@/lib/clock';
 import { useTranslations } from '@/lib/i18n';
 
 // --- DIRECTOR DE COMBATE ---
@@ -46,7 +46,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       return { x: p.x + CARD_SIZE.width / 2, y: p.y + CARD_SIZE.height / 2 };
     };
     const cancels: (() => void)[] = [];
-    sealFx.events.forEach((e, n) => cancels.push(gameTimeout(() => {
+    sealFx.events.forEach((e, n) => cancels.push(pausableTimeout(() => {
       if (e.kind === 'shift') {
         const c = center(e.owner, e.to);
         playSfx('whoosh', 0.9, 1.2);
@@ -54,7 +54,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         fx.emit({ kind: 'ring', x: c.x, y: c.y, color: VOLT, radius: 22, life: 450 });
         // Estela entre los dos huecos
         const o = center(e.owner, e.from);
-        [0.2, 0.4, 0.6, 0.8].forEach((k, j) => cancels.push(gameTimeout(() =>
+        [0.2, 0.4, 0.6, 0.8].forEach((k, j) => cancels.push(pausableTimeout(() =>
           fx.emit({ kind: 'particles', x: o.x + (c.x - o.x) * k, y: o.y + (c.y - o.y) * k, colors: [VOLT, '#D8FF9A'], count: 5, speed: 10, gravity: -6, size: [1, 2], life: 500 }), j * 90)));
       } else if (e.kind === 'anchor') {
         // Ancla: la carta no se mueve
@@ -93,9 +93,9 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
     fx.shake(1.6);
     fx.punch(0.045);
 
-    const cancelReveal = gameTimeout(() => {
+    const cancelReveal = pausableTimeout(() => {
       const { player, opponent } = useGameStore.getState();
-      opponent.board.forEach((s, i) => { if (s.card) gameTimeout(() => playSfx('flip', 0.8, 1 + i * 0.06), i * 60); });
+      opponent.board.forEach((s, i) => { if (s.card) pausableTimeout(() => playSfx('flip', 0.8, 1 + i * 0.06), i * 60); });
       locate(geo, { player: player.board, opponent: opponent.board })
         .filter(l => l.slot.card?.rank === 'JOKER')
         .forEach(l => {
@@ -111,7 +111,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
   useEffect(() => {
     if (!combat) return;
     const timers: (() => void)[] = [];
-    const later = (ms: number, f: () => void) => timers.push(gameTimeout(f, ms));
+    const later = (ms: number, f: () => void) => timers.push(pausableTimeout(f, ms));
     const { player, opponent } = useGameStore.getState();
     const cards = locate(geo, { player: player.board, opponent: opponent.board });
 

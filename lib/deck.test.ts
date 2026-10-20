@@ -6,13 +6,14 @@ describe('editor de mazo', () => {
     expect(defaultDeckConfig(['shield', 'life'])).toEqual({ seals: { shield: 1, life: 1 }, removed: [] });
   });
 
-  it('respeta los límites: 2 copias por sello, sellos desbloqueados, máximo total y cartas bajas', () => {
-    const c = sanitizeDeckConfig({ seals: { shield: 5, double: 2, mirror: 2 }, removed: ['2', '3', 'K', '4', '5'] }, ['shield', 'double']);
+  it('respeta los límites: 2 copias por sello, sellos desbloqueados, 5 en total y 3 cartas fuera', () => {
+    const c = sanitizeDeckConfig({ seals: { shield: 5, double: 2, mirror: 2 }, removed: ['A', 'K', 'JOKER', '4', '5'] }, ['shield', 'double']);
     expect(c.seals).toEqual({ shield: 2, double: 2 });
-    expect(c.removed).toEqual(['2', '3', '4']);
-    const many = sanitizeDeckConfig({ seals: { shield: 2, double: 2, shift: 2, swap: 2, life: 2, mirror: 2 }, removed: [] },
-      ['shield', 'double', 'shift', 'swap', 'life', 'mirror']);
+    // Cualquier carta del mazo, hasta 3
+    expect(c.removed).toEqual(['A', 'K', 'JOKER']);
+    const many = sanitizeDeckConfig({ seals: { shield: 2, double: 2, shift: 2, swap: 2 }, removed: [] }, ['shield', 'double', 'shift', 'swap']);
     expect(totalSeals(many)).toBe(MAX_SEALS);
+    expect(MAX_SEALS).toBe(5);
   });
 
   it('construye el mazo sin las cartas quitadas y con los sellos elegidos', () => {

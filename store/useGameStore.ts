@@ -8,7 +8,7 @@ import {
   ALL_SEALS, BOSSES, bossLives, buildBossDeck, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, unlockedSeals,
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
-import { buildMatchDeck } from '@/lib/deck';
+import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
 import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSound } from '@/lib/sounds';
 import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStamp } from '@/lib/stats';
@@ -130,7 +130,10 @@ export const useGameStore = create<GameState>((set, get) => {
       const { bossIndex, rematch } = get();
       if (gameResult === 'win') {
         if (rematch) recordRematchWin(bossIndex);
-        else recordBossDefeat(bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
+        else recordBossDefeat(bossIndex).forEach(u => {
+          useUiStore.getState().pushUnlock(u);
+          if (u.kind === 'seal') includeNewSeal(u.seal);
+        });
         // Todos los sellos desbloqueados
         if (unlockedSeals().length === ALL_SEALS.length) award(['collector']);
       }

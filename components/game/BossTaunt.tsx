@@ -5,7 +5,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { BOSSES } from '@/lib/bosses';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx } from '@/lib/sounds';
-import { gameTimeout } from '@/lib/clock';
+import { pausableTimeout } from '@/lib/clock';
 import { useGameLayout } from '@/components/pixel/Stage';
 
 // --- BOCADILLO DEL BOSS ---
@@ -41,8 +41,8 @@ export const BossTaunt = () => {
     if (!placement || !boss) return;
     const mood: Mood = round === 1 ? 'intro' : bossLives <= 2 ? 'low' : playerLives <= 2 ? 'win' : 'mid';
     const text = bossLine(t, boss.id, mood, round);
-    const show = gameTimeout(() => { setShown({ round, text }); playSfx('pop', 0.5, 0.8); }, SHOW_DELAY_MS);
-    const hide = gameTimeout(() => setShown(null), SHOW_DELAY_MS + SHOW_MS);
+    const show = pausableTimeout(() => { setShown({ round, text }); playSfx('pop', 0.5, 0.8); }, SHOW_DELAY_MS);
+    const hide = pausableTimeout(() => setShown(null), SHOW_DELAY_MS + SHOW_MS);
     return () => { show(); hide(); };
     // Solo al cambiar de ronda (las vidas se leen en ese momento)
     // eslint-disable-next-line react-hooks/exhaustive-deps

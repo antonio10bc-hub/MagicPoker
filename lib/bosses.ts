@@ -1,8 +1,8 @@
 // --- BOSSES Y PROGRESIÓN ---
 // Cada partida es contra el boss actual. Al vencerlo se desbloquea su sello (una
 // copia entra en tu mazo) y aparece el siguiente. El primero no tiene sello: vencerlo
-// desbloquea la colección de sellos. Tras el último normal aparece un jefe secreto que
-// usa todos los sellos; vencerlo desbloquea el editor de mazo.
+// desbloquea la colección de sellos; con el primer sello llega el editor de mazo. Tras
+// el último normal aparece un jefe secreto que usa todos los sellos.
 // Revancha: un boss ya vencido vuelve con una vida más y un segundo sello.
 import { Card, SealId } from '@/types';
 import { createDeck, createSealCard, shuffle } from '@/lib/game-utils';
@@ -96,8 +96,8 @@ export type Unlock = { kind: 'collection' } | { kind: 'seal'; seal: SealId } | {
 
 /** El jefe secreto (el último) solo se ve cuando ya has vencido a los demás */
 export const isBossVisible = (index: number, p: Progress = getProgress()) => !BOSSES[index].secret || p.defeated >= index;
-/** El editor de mazo se desbloquea al vencer a todos los jefes (también al secreto) */
-export const isEditorUnlocked = (p: Progress = getProgress()) => p.defeated >= BOSSES.length;
+/** El editor de mazo se desbloquea con el primer sello (al vencer al segundo boss) */
+export const isEditorUnlocked = (p: Progress = getProgress()) => p.defeated >= 2;
 
 /** Registra la victoria contra un boss. Devuelve lo que se desbloquea (si es nuevo). */
 export const recordBossDefeat = (index: number): Unlock[] => {
@@ -106,8 +106,9 @@ export const recordBossDefeat = (index: number): Unlock[] => {
   save({ ...p, defeated: p.defeated + 1 });
   const boss = BOSSES[index];
   if (index === 0) return [{ kind: 'collection' }];
-  if (boss.secret) return [{ kind: 'editor' }];
   const out: Unlock[] = boss.seal ? [{ kind: 'seal', seal: boss.seal }] : [];
+  // Con el primer sello llega el editor de mazo
+  if (index === 1) out.push({ kind: 'editor' });
   // Tras el último normal aparece el jefe secreto
   if (BOSSES[index + 1]?.secret) out.push({ kind: 'secret' });
   return out;

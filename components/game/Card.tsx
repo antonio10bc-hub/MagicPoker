@@ -3,7 +3,7 @@ import { Card as CardType, Owner } from '@/types';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { RANKS } from '@/lib/game-utils';
-import { gameTimeout } from '@/lib/clock';
+import { pausableTimeout } from '@/lib/clock';
 import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { CARD_SIZE, INK, TEAM } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
@@ -253,7 +253,7 @@ const CardComponent = ({ card, onClick, isSelected, isDisabled, className }: Car
   const [broken, setBroken] = useState(false);
   useEffect(() => {
     if (!spent) return;
-    const cancel = gameTimeout(() => setBroken(true), SHIELD_BREAK_S * 1000);
+    const cancel = pausableTimeout(() => setBroken(true), SHIELD_BREAK_S * 1000);
     return () => { cancel(); setBroken(false); };
   }, [spent]);
   const sealed = !!card.seal && card.rank !== 'SEAL' && !(spent && broken);

@@ -49,20 +49,20 @@ test('revancha: botón bajo JUGAR con un boss vencido', async ({ page }, info) =
   noErrors();
 });
 
-test('editor de mazo (todos los jefes vencidos)', async ({ page }, info) => {
+test('editor de mazo (con el primer sello)', async ({ page }, info) => {
   const noErrors = watchErrors(page);
-  await openMenu(page, { defeated: 12 });
+  await openMenu(page, { defeated: 4 });
   await page.locator('[aria-label=deck]').click({ force: true });
   await page.waitForTimeout(500);
-  // Por defecto lleva un sello de cada (10, el máximo): se quita uno para poder subir otro
-  await page.locator('[aria-label="less double"]').click({ force: true });
+  // Por defecto lleva un sello de cada uno desbloqueado (defensa, ataque y cambio)
   await page.locator('[aria-label="more shield"]').click({ force: true });
+  await page.locator('[aria-label="remove K"]').click({ force: true });
   await page.locator('[aria-label="remove 2"]').click({ force: true });
-  await expect(page.getByText('Tu mazo: 23 cartas')).toBeVisible();
+  await expect(page.getByText('Tu mazo: 16 cartas')).toBeVisible();
   await shot(page, info, 'editor');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_deck') ?? 'null'));
   expect(saved.seals.shield).toBe(2);
-  expect(saved.removed).toEqual(['2']);
+  expect(saved.removed).toEqual(['K', '2']);
   noErrors();
 });
 
@@ -103,5 +103,37 @@ test('pausa: el rival no juega mientras está abierta y x2 se guarda', async ({ 
   const after = await page.evaluate(() => (window as unknown as { __game: { getState: () => { opponent: { board: { card: unknown }[] } } } }).__game.getState().opponent.board.filter(s => s.card).length);
   expect(after).toBe(1);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_settings')!).speed)).toBe(2);
+  noErrors();
+});
+
+test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await openMenu(page, { defeated: 4 });
+  await page.getByText('JUGAR', { exact: true }).click({ force: true });
+  await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
+  await page.locator('[aria-label=speed]').click();
+  type G = { __game: { getState: () => { phase: string; turn: string; player: { hand: { id: string; rank: string }[]; board: { index: number; card: unknown }[] }; opponent: { board: { card: unknown }[] }; placeCard: (id: string, s: number) => void; passTurn: () => void } } };
+  for (let round = 0; round < 3; round++) {
+    // Juegas una carta y te plantas; la cuenta atrás de CONTINUAR cierra la pelea sola
+    await page.evaluate(() => {
+      const g = (window as unknown as G).__game.getState();
+      const c = g.player.hand.find(x => x.rank !== 'SEAL');
+      const f = g.player.board.find(s => !s.card);
+      if (c && f) g.placeCard(c.id, f.index);
+    });
+    await page.waitForFunction(() => { const g = (window as unknown as G).__game.getState(); return (g.phase === 'placement' && g.turn === 'player') || g.phase === 'end'; }, undefined, { timeout: 15_000 });
+    await page.evaluate(() => (window as unknown as G).__game.getState().passTurn());
+    await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'combat-reveal', undefined, { timeout: 15_000 });
+    await page.waitForFunction(() => ['placement', 'end'].includes((window as unknown as G).__game.getState().phase), undefined, { timeout: 15_000 });
+    if (await page.evaluate(() => (window as unknown as G).__game.getState().phase === 'end')) break;
+    await page.waitForTimeout(800);
+    // Las cartas caídas han salido de verdad de la mesa
+    const counts = await page.evaluate(() => {
+      const g = (window as unknown as G).__game.getState();
+      return { dom: document.querySelectorAll('[data-card]').length, store: [...g.player.board, ...g.opponent.board].filter(s => s.card).length };
+    });
+    expect(counts.dom).toBe(counts.store);
+    await shot(page, info, `ronda-${round}`);
+  }
   noErrors();
 });

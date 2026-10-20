@@ -95,6 +95,22 @@ export const DeckEditorModal = () => {
     <Dialog title={t.deck_title} width={250} height={240}>
       <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[11px]">
         <div className="text-center" style={{ color: 'var(--ink-orange)' }}>{t.deck_size.replace('{n}', String(size))}</div>
+        <Section title={`${t.deck_removed} · ${config.removed.length}/${MAX_REMOVED}`}>
+          <div className="mb-[3px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_removed_hint}</div>
+          <div className="grid grid-cols-7 gap-[3px] justify-items-center">
+            {REMOVABLE.map(rank => {
+              const out = config.removed.includes(rank);
+              return (
+                <PxButton key={rank} aria-label={`remove ${rank}`} data-pressed={out} tone={out ? 'roof' : 'white'} className="w-[24px] h-[22px]"
+                  disabled={!out && config.removed.length >= MAX_REMOVED} onClick={() => toggleRank(rank)}>
+                  <span className="font-display" style={{ fontSize: rank === 'JOKER' || rank === '10' ? 10 : 13, textDecoration: out ? 'line-through' : undefined, opacity: out ? 0.6 : 1 }}>
+                    {rank === 'JOKER' ? 'JK' : rank}
+                  </span>
+                </PxButton>
+              );
+            })}
+          </div>
+        </Section>
         <Section title={`${t.deck_seals} · ${total}/${MAX_SEALS}`}>
           <div className="mb-[3px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_hint}</div>
           <div className="flex flex-col gap-[3px]">
@@ -108,19 +124,6 @@ export const DeckEditorModal = () => {
                   <span className="font-display w-[10px] text-center">{n}</span>
                   <PxButton aria-label={`more ${seal}`} className="w-[14px] h-[14px]" disabled={n >= MAX_COPIES || total >= MAX_SEALS} onClick={() => step(seal, 1)}>+</PxButton>
                 </div>
-              );
-            })}
-          </div>
-        </Section>
-        <Section title={`${t.deck_removed} · ${config.removed.length}/${MAX_REMOVED}`}>
-          <div className="mb-[3px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_removed_hint}</div>
-          <div className="flex gap-[4px] justify-center">
-            {REMOVABLE.map(rank => {
-              const out = config.removed.includes(rank);
-              return (
-                <PxButton key={rank} aria-label={`remove ${rank}`} data-pressed={out} tone={out ? 'roof' : 'white'} className="w-[22px] h-[22px]" onClick={() => toggleRank(rank)}>
-                  <span className="font-display" style={{ fontSize: 14, textDecoration: out ? 'line-through' : undefined, opacity: out ? 0.6 : 1 }}>{rank}</span>
-                </PxButton>
               );
             })}
           </div>
