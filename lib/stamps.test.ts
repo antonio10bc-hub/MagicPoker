@@ -5,6 +5,7 @@ import { endStamps, MatchEnd, newMatchTrack, roundStamps } from '@/lib/stamps';
 const combat = (over: Partial<CombatResult>): CombatResult => ({
   playerDamageTaken: 0, opponentDamageTaken: 0, deadCardIds: [], voidedCardIds: [],
   playerEmptySlotsHit: {}, opponentEmptySlotsHit: {}, damageSources: {}, cardsDestroyedCount: 0,
+  deadByOwner: { player: 0, opponent: 0 }, shieldedIds: [],
   isRepublicanaTriggered: false, ...over,
 });
 
@@ -15,8 +16,8 @@ const end = (over: Partial<MatchEnd>): MatchEnd => ({
 
 describe('roundStamps', () => {
   it('massacre needs 3 rival cards destroyed, not yours', () => {
-    expect(roundStamps(combat({ cardsDestroyedCount: 3, deadCardIds: ['opponent-K-1', 'opponent-2-2', 'opponent-5-3'] }))).toContain('massacre');
-    expect(roundStamps(combat({ cardsDestroyedCount: 3, deadCardIds: ['player-K-1', 'opponent-2-2', 'player-5-3'] }))).not.toContain('massacre');
+    expect(roundStamps(combat({ cardsDestroyedCount: 3, deadByOwner: { player: 0, opponent: 3 } }))).toContain('massacre');
+    expect(roundStamps(combat({ cardsDestroyedCount: 3, deadByOwner: { player: 2, opponent: 1 } }))).not.toContain('massacre');
   });
 
   it('barrage and republicana', () => {

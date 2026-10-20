@@ -1,6 +1,16 @@
 export type Owner = 'player' | 'opponent';
-export type Suit = 'standard' | 'joker';
-export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A' | 'JOKER';
+export type Suit = 'standard' | 'joker' | 'seal';
+export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A' | 'JOKER' | 'SEAL';
+
+/**
+ * Sellos: se aplican sobre una carta propia de la mesa.
+ *  shield · aguanta todos los golpes de una pelea y se rompe
+ *  double · la carta ataca dos veces
+ *  shift  · al empezar cada pelea se cambia con el hueco de su derecha
+ *  swap   · al empezar la pelea se cambia de bando con la carta de enfrente y se rompe
+ *  life   · al morir la carta, su dueño recupera una vida
+ */
+export type SealId = 'shield' | 'double' | 'shift' | 'swap' | 'life';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type Screen = 'menu' | 'game';
 export type GameResult = 'win' | 'loss' | 'draw';
@@ -21,6 +31,10 @@ export interface Card {
   isTakingDamage?: boolean;
   isVoided?: boolean;
   damageSource?: DamageSource;
+  /** Carta de sello: qué sello es. Carta de la mesa: sello que lleva puesto */
+  seal?: SealId;
+  /** Su sello de defensa le ha salvado en esta pelea */
+  isShielded?: boolean;
 }
 
 export interface BoardSlot {
@@ -34,6 +48,8 @@ export interface PlayerState {
   board: BoardSlot[];
   deck: Card[];
   isPassed: boolean;
+  /** Vidas máximas (el sello de vida no puede superarlas). Por defecto STARTING_LIVES */
+  maxLives?: number;
 }
 
 export interface CombatResult {
@@ -47,6 +63,10 @@ export interface CombatResult {
   damageSources: Record<string, DamageSource>;
   /** Cartas destruidas en choque (las anuladas por el As no cuentan) */
   cardsDestroyedCount: number;
+  /** Cartas destruidas de cada bando */
+  deadByOwner: Record<Owner, number>;
+  /** Cartas que su sello de defensa ha salvado (el sello se rompe) */
+  shieldedIds: string[];
   /** Logro "La Republicana": el jugador usa un As contra J, Q y K rivales */
   isRepublicanaTriggered: boolean;
 }

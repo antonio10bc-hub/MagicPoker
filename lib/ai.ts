@@ -1,5 +1,5 @@
-import { BoardSlot, Card, Difficulty, Rng } from '@/types';
-import { getAvailableSlots } from '@/lib/game-utils';
+import { BoardSlot, Card, Difficulty, Rng, SealId } from '@/types';
+import { getAvailableSlots, getSealTargets, isSealCard, RANKS } from '@/lib/game-utils';
 
 const pickRandom = <T,>(items: T[], rng: Rng): T => items[Math.floor(rng() * items.length)];
 
@@ -29,6 +29,32 @@ export interface OpponentMove {
   slotIndex: number;
 }
 
+// --- SELLOS DEL RIVAL (bosses) ---
+// Cada sello busca la carta propia donde rinde más. Devuelve null si no conviene.
+const value = (s: BoardSlot) => s.card?.value ?? 0;
+const SEAL_TARGET: Record<SealId, (targets: BoardSlot[], playerBoard: BoardSlot[]) => BoardSlot | null> = {
+  // Defensa: la carta que más arriesga (tiene una tuya delante), y si no, la mejor
+  shield: (t, pb) => [...t].sort((a, b) => Number(!!pb[b.index].card) - Number(!!pb[a.index].card) || value(b) - value(a))[0],
+  // Ataque doble: la carta más fuerte que ataque
+  double: t => [...t].filter(s => RANKS[s.card!.rank].attack).sort((a, b) => value(b) - value(a))[0] ?? null,
+  // Cambio: cualquiera (la de menor valor, para recolocarla)
+  shift: t => [...t].sort((a, b) => value(a) - value(b))[0],
+  // Cambio con enemigo: robarte tu mejor carta, si hay alguna delante de las suyas
+  swap: (t, pb) => [...t].filter(s => pb[s.index].card).sort((a, b) => value(pb[b.index]) - value(pb[a.index]))[0] ?? null,
+  // Vida: la carta con más números de caer (la más débil)
+  life: t => [...t].sort((a, b) => value(a) - value(b))[0],
+};
+
+const sealMove = (hand: Card[], opponentBoard: BoardSlot[], playerBoard: BoardSlot[]): OpponentMove | null => {
+  const targets = getSealTargets(opponentBoard).map(i => opponentBoard[i]);
+  if (targets.length === 0) return null;
+  for (const card of hand.filter(isSealCard)) {
+    const target = SEAL_TARGET[card.seal!](targets, playerBoard);
+    if (target) return { cardId: card.id, slotIndex: target.index };
+  }
+  return null;
+};
+
 /** Decide qué carta juega el rival y dónde. Devuelve null si debe plantarse. */
 export const chooseOpponentMove = (
   hand: Card[],
@@ -37,7 +63,11 @@ export const chooseOpponentMove = (
   difficulty: Difficulty,
   rng: Rng = Math.random
 ): OpponentMove | null => {
-  const card = hand[0];
+  // Los bosses usan su sello en cuanto tienen dónde ponerlo
+  const seal = sealMove(hand, opponentBoard, playerBoard);
+  if (seal) return seal;
+
+  const card = hand.find(c => !isSealCard(c));
   const available = getAvailableSlots(opponentBoard);
   if (!card || available.length === 0) return null;
 

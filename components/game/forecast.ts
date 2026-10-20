@@ -42,8 +42,9 @@ const hitsOnEmpty = (attackers: BoardSlot[], defenders: BoardSlot[]): Forecast =
     const attack = RANKS[s.card.rank].attack;
     if (!attack) return;
     const empty = getTargetIndices(s.index, s.card.rank).filter(i => !defenders[i].card);
-    if (attack.mode === 'random-one') out.maybe += empty.length > 0 ? 1 : 0;
-    else out.sure += empty.length;
+    const times = s.card.seal === 'double' ? 2 : 1;
+    if (attack.mode === 'random-one') out.maybe += empty.length > 0 ? times : 0;
+    else out.sure += empty.length * times;
   });
   return out;
 };
@@ -126,9 +127,10 @@ export const aimAtOpponent = (board: BoardSlot[], preview: Preview | null, shown
       return;
     }
     if (!def.attack) return;
+    const times = card.seal === 'double' ? 2 : 1;
     getTargetIndices(index, card.rank).forEach(t => {
-      if (def.attack!.mode === 'random-one') aims[t].maybe++;
-      else aims[t].sure++;
+      if (def.attack!.mode === 'random-one') aims[t].maybe += times;
+      else aims[t].sure += times;
       aims[t].previewOnly &&= isPreview;
     });
   });

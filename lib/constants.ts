@@ -14,6 +14,7 @@ export const TIMINGS = {
   combatFlip: 300,         // Hasta que se revelan las cartas rivales
   combatResolve: 500,      // Hasta que se calcula el combate
   combatReveal: 300,       // Hasta que aparece el botón de continuar
+  sealMove: 700,           // Pausa extra para ver los cambios de sitio de los sellos
 } as const;
 
 export const COMBAT_REVEAL_SECONDS = 5;

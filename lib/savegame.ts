@@ -10,6 +10,8 @@ export interface SavedGame {
   v: number;
   difficulty: Difficulty;
   roundNumber: number;
+  /** Boss contra el que se jugaba (partidas antiguas: el actual) */
+  bossIndex?: number;
   player: PlayerState;
   opponent: PlayerState;
 }

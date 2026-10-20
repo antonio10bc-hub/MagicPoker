@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen } from '@/types';
 import {
-  calculateCombat, clearDefeatedCards, countRankOnBoard, createDeck, createPlayerState,
-  drawCards, getGameResult, markCombatResult, playCardToSlot, revealBoard,
+  applyPreCombatSeals, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState,
+  drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, revealBoard, SealEvent,
 } from '@/lib/game-utils';
+import { BOSSES, buildBossDeck, buildPlayerDeck, currentBossIndex, recordBossDefeat } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { playSound } from '@/lib/sounds';
 import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStamp } from '@/lib/stats';
@@ -24,6 +25,10 @@ interface GameState {
   /** Resultado del combate en curso (se muestra durante 'combat-reveal') */
   pendingCombatResult: CombatResult | null;
   gameResult: GameResult | null;
+  /** Boss contra el que se juega esta partida (índice en BOSSES) */
+  bossIndex: number;
+  /** Efectos de sello de antes del choque (cambios de sitio), para animarlos */
+  sealFx: { id: number; events: SealEvent[] } | null;
   /** Paso del tutorial guiado (null = partida normal) */
   tutorialStep: number | null;
 
@@ -73,6 +78,8 @@ const initialMatchState = () => ({
   roundNumber: 1,
   pendingCombatResult: null,
   gameResult: null,
+  bossIndex: 0,
+  sealFx: null,
   tutorialStep: null,
   player: createPlayerState(),
   opponent: createPlayerState(),
@@ -97,13 +104,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     playSound('shuffle', 0.6);
     incrementStat('totalGames');
     track = newMatchTrack();
+    // Siempre contra el boss actual: su mazo lleva su sello; el tuyo, los que tengas
+    const bossIndex = currentBossIndex();
+    const boss = BOSSES[bossIndex];
 
     set({
       ...initialMatchState(),
       screen: 'game',
       phase: 'placement',
-      player: createPlayerState(createDeck('player'), STARTING_HAND_SIZE, true),
-      opponent: createPlayerState(createDeck('opponent'), STARTING_HAND_SIZE, false),
+      bossIndex,
+      player: createPlayerState(buildPlayerDeck(), STARTING_HAND_SIZE, true),
+      opponent: createPlayerState(buildBossDeck(boss), STARTING_HAND_SIZE, false, boss.lives),
     });
   },
 
@@ -126,6 +137,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       turn: 'player',
       difficulty: saved.difficulty,
       roundNumber: saved.roundNumber,
+      bossIndex: saved.bossIndex ?? currentBossIndex(),
       player: saved.player,
       opponent: saved.opponent,
     });
@@ -240,7 +252,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       get().drawCard('player', countRankOnBoard(player.board, 'JOKER') * JOKER_DRAW_BONUS);
       get().drawCard('opponent', countRankOnBoard(opponent.board, 'JOKER') * JOKER_DRAW_BONUS);
 
-      // 2. Se calcula el choque y se marcan las cartas afectadas
+      // 2. Sellos de antes del choque: cambios de sitio y de bando
+      const pre = applyPreCombatSeals(get().player.board, get().opponent.board);
+      if (pre.events.length > 0) {
+        set(s => ({
+          player: { ...s.player, board: pre.player },
+          opponent: { ...s.opponent, board: pre.opponent },
+          sealFx: { id: Date.now(), events: pre.events },
+        }));
+      }
+
+      // 3. Se calcula el choque y se marcan las cartas afectadas
       schedule(() => {
         const { player, opponent, tutorialStep, roundNumber } = get();
         const tutorial = tutorialStep !== null;
@@ -258,9 +280,9 @@ export const useGameStore = create<GameState>((set, get) => ({
           opponent: { ...opponent, board: markCombatResult(opponent.board, result) },
         });
 
-        // 3. Se muestra el resultado y el botón de continuar
+        // 4. Se muestra el resultado y el botón de continuar
         schedule(() => set({ phase: 'combat-reveal' }), TIMINGS.combatReveal);
-      }, TIMINGS.combatResolve);
+      }, TIMINGS.combatResolve + (pre.events.length > 0 ? TIMINGS.sealMove : 0));
     }, TIMINGS.combatFlip);
   },
 
@@ -278,15 +300,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
+    // Sello de vida: cada carta con él que muere devuelve una vida (sin pasar del máximo)
+    const heal = (s: PlayerState, damage: number) =>
+      Math.max(0, Math.min(s.maxLives ?? STARTING_LIVES, s.lives - damage + lifeGains(s.board, result)));
     const nextPlayer: PlayerState = {
       ...player,
-      lives: Math.max(0, player.lives - result.playerDamageTaken),
+      lives: heal(player, result.playerDamageTaken),
       board: clearDefeatedCards(player.board),
       isPassed: false,
     };
     const nextOpponent: PlayerState = {
       ...opponent,
-      lives: Math.max(0, opponent.lives - result.opponentDamageTaken),
+      lives: heal(opponent, result.opponentDamageTaken),
       board: clearDefeatedCards(opponent.board),
       isPassed: false,
     };
@@ -301,6 +326,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         return;
       }
       const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
+      // Boss vencido: se desbloquea su sello (o la colección, con el primero)
+      if (gameResult === 'win') recordBossDefeat(get().bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));
       award(endStamps({
         result: gameResult, difficulty, rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
         streak: stats.currentStreak, totalGames: stats.totalGames, track,
@@ -330,7 +357,7 @@ if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
     if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
-      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, player: state.player, opponent: state.opponent });
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, player: state.player, opponent: state.opponent });
     }
     if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
   });

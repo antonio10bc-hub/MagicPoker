@@ -1,4 +1,4 @@
-import { BoardSlot, Card, CombatResult, DamageSource, GameResult, Owner, PlayerState, Rank, Rng } from '@/types';
+import { BoardSlot, Card, CombatResult, DamageSource, GameResult, Owner, PlayerState, Rank, Rng, SealId } from '@/types';
 import { BOARD_SIZE, STARTING_LIVES } from '@/lib/constants';
 
 // --- DEFINICIÓN DE CARTAS ---
@@ -38,9 +38,12 @@ export const RANKS: Record<Rank, RankDefinition> = {
   'K': { value: 13, attack: { offsets: [-1, 0, 1], mode: 'all' }, marksVictims: true },
   'A': { value: 14, attack: null, wipesBoard: true },
   'JOKER': { value: 0, attack: null },
+  // Carta de sello: no se coloca en un hueco, se aplica sobre una carta propia
+  'SEAL': { value: 0, attack: null },
 };
 
-const DECK_RANKS = Object.keys(RANKS) as Rank[];
+/** Rangos del mazo estándar (los sellos se añaden aparte) */
+const DECK_RANKS = (Object.keys(RANKS) as Rank[]).filter(r => r !== 'SEAL');
 
 export const getCardValue = (rank: Rank): number => RANKS[rank].value;
 
@@ -71,13 +74,85 @@ export const createDeck = (owner: Owner, rng: Rng = Math.random): Card[] =>
     rng
   );
 
+// --- SELLOS ---
+
+export const isSealCard = (card: Card): boolean => card.rank === 'SEAL';
+
+export const createSealCard = (owner: Owner, seal: SealId): Card => ({
+  id: `${owner}-SEAL-${seal}-${++nextCardId}`, rank: 'SEAL', suit: 'seal', value: 0, isFaceUp: false, owner, seal,
+});
+
+/** Huecos con una carta propia sin sello: donde se puede aplicar uno */
+export const getSealTargets = (board: BoardSlot[]): number[] =>
+  board.filter(s => s.card && !s.card.seal).map(s => s.index);
+
+export type SealEvent =
+  | { kind: 'shift'; owner: Owner; from: number; to: number }
+  | { kind: 'swap'; index: number; initiator: Owner };
+
+/**
+ * Efectos de sello que ocurren al empezar la pelea, antes del choque:
+ *  1. Cambio (shift): cada carta con este sello se cambia con el hueco de su derecha
+ *     (del último salta al primero), aunque esté vacío. Cada carta se mueve una vez.
+ *  2. Cambio con enemigo (swap): la carta se cambia de bando con la de enfrente (si la
+ *     hay) y el sello se rompe. Sin carta enfrente, el sello espera.
+ */
+export const applyPreCombatSeals = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[]) => {
+  const events: SealEvent[] = [];
+  const boards: Record<Owner, BoardSlot[]> = {
+    player: playerBoard.map(s => ({ ...s })),
+    opponent: opponentBoard.map(s => ({ ...s })),
+  };
+
+  (['player', 'opponent'] as Owner[]).forEach(owner => {
+    const board = boards[owner];
+    const moved = new Set<string>();
+    const shifters = board.filter(s => s.card?.seal === 'shift').map(s => s.card!.id);
+    shifters.forEach(id => {
+      if (moved.has(id)) return;
+      const from = board.findIndex(s => s.card?.id === id);
+      const to = (from + 1) % board.length;
+      const other = board[to].card;
+      board[to] = { index: to, card: board[from].card };
+      board[from] = { index: from, card: other };
+      moved.add(id);
+      if (other) moved.add(other.id);
+      events.push({ kind: 'shift', owner, from, to });
+    });
+  });
+
+  const swapped = new Set<number>();
+  (['player', 'opponent'] as Owner[]).forEach(owner => {
+    const enemy: Owner = owner === 'player' ? 'opponent' : 'player';
+    boards[owner].forEach((slot, i) => {
+      const mine = slot.card;
+      const theirs = boards[enemy][i].card;
+      if (mine?.seal !== 'swap' || !theirs || swapped.has(i)) return;
+      swapped.add(i);
+      // Su carta pasa a ser mía y la mía (sin el sello, que se rompe) pasa a ser suya
+      boards[owner][i] = { index: i, card: { ...theirs, owner, isFaceUp: true } };
+      boards[enemy][i] = { index: i, card: { ...mine, owner: enemy, seal: undefined, isFaceUp: true } };
+      events.push({ kind: 'swap', index: i, initiator: owner });
+    });
+  });
+
+  return { player: boards.player, opponent: boards.opponent, events };
+};
+
+/** Vidas que recupera cada bando por sus cartas con sello de vida que han muerto */
+export const lifeGains = (board: BoardSlot[], result: CombatResult): number => {
+  const dead = new Set(result.deadCardIds);
+  return board.filter(s => s.card?.seal === 'life' && dead.has(s.card.id)).length;
+};
+
 // --- ESTADO DE JUGADOR (helpers puros) ---
 
 export const createEmptyBoard = (): BoardSlot[] =>
   Array.from({ length: BOARD_SIZE }, (_, index) => ({ index, card: null }));
 
-export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = false): PlayerState => ({
-  lives: STARTING_LIVES,
+export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = false, lives = STARTING_LIVES): PlayerState => ({
+  lives,
+  maxLives: lives,
   hand: deck.slice(0, handSize).map(c => ({ ...c, isFaceUp: handFaceUp })),
   deck: deck.slice(handSize),
   board: createEmptyBoard(),
@@ -90,11 +165,23 @@ export const drawCards = (state: PlayerState, amount: number, faceUp: boolean): 
   return { ...state, hand: [...state.hand, ...drawn], deck: state.deck.slice(amount) };
 };
 
-/** Mueve una carta de la mano al hueco indicado. Devuelve null si no es posible. */
+/**
+ * Juega una carta de la mano en el hueco indicado. Una carta normal va a un hueco
+ * vacío; una de sello se aplica sobre la carta propia (sin sello) de ese hueco.
+ * Devuelve null si no es posible.
+ */
 export const playCardToSlot = (state: PlayerState, cardId: string, slotIndex: number, faceUp: boolean): PlayerState | null => {
   const card = state.hand.find(c => c.id === cardId);
   const slot = state.board[slotIndex];
-  if (!card || !slot || slot.card) return null;
+  if (!card || !slot) return null;
+
+  if (isSealCard(card)) {
+    if (!slot.card || slot.card.seal) return null;
+    const board = [...state.board];
+    board[slotIndex] = { ...slot, card: { ...slot.card, seal: card.seal } };
+    return { ...state, hand: state.hand.filter(c => c.id !== cardId), board };
+  }
+  if (slot.card) return null;
 
   const board = [...state.board];
   board[slotIndex] = { ...slot, card: { ...card, isFaceUp: faceUp } };
@@ -143,12 +230,20 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       opponentEmptySlotsHit: {},
       damageSources,
       cardsDestroyedCount: 0,
+      deadByOwner: { player: 0, opponent: 0 },
+      shieldedIds: [],
       isRepublicanaTriggered,
     };
   }
 
   // 2. CHOQUES: cada carta ataca a sus objetivos en el tablero contrario
   const deadIds = new Set<string>();
+  // Sello de defensa: los golpes de toda la pelea no la matan (llegan a la vez)
+  const shielded = new Set<string>();
+  const kill = (card: Card) => {
+    if (card.seal === 'shield') shielded.add(card.id);
+    else deadIds.add(card.id);
+  };
   const emptyHits: Record<Owner, Record<number, number>> = { player: {}, opponent: {} };
   const damageTaken: Record<Owner, number> = { player: 0, opponent: 0 };
 
@@ -160,12 +255,12 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       return;
     }
     if (attacker.value >= defender.value) {
-      deadIds.add(defender.id);
-      if (attacker.value > defender.value && RANKS[attacker.rank].marksVictims) {
+      kill(defender);
+      if (attacker.value > defender.value && RANKS[attacker.rank].marksVictims && defender.seal !== 'shield') {
         damageSources[defender.id] = { rank: attacker.rank, owner: attacker.owner };
       }
     }
-    if (attacker.value <= defender.value) deadIds.add(attacker.id);
+    if (attacker.value <= defender.value) kill(attacker);
   };
 
   const attack = (attackBoard: BoardSlot[], defenseBoard: BoardSlot[], defenderOwner: Owner) => {
@@ -177,10 +272,14 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
       const targets = getTargetIndices(slot.index, attacker.rank);
       if (targets.length === 0) return;
 
-      const chosen = pattern.mode === 'random-one'
-        ? [targets[Math.floor(rng() * targets.length)]]
-        : targets;
-      chosen.forEach(i => resolveHit(attacker, defenseBoard[i], defenderOwner));
+      // Sello de ataque: ataca dos veces (el Príncipe elige objetivo cada vez)
+      const times = attacker.seal === 'double' ? 2 : 1;
+      for (let n = 0; n < times; n++) {
+        const chosen = pattern.mode === 'random-one'
+          ? [targets[Math.floor(rng() * targets.length)]]
+          : targets;
+        chosen.forEach(i => resolveHit(attacker, defenseBoard[i], defenderOwner));
+      }
     });
   };
 
@@ -196,16 +295,23 @@ export const calculateCombat = (playerBoard: BoardSlot[], opponentBoard: BoardSl
     opponentEmptySlotsHit: emptyHits.opponent,
     damageSources,
     cardsDestroyedCount: deadIds.size,
+    deadByOwner: {
+      player: playerCards.filter(c => deadIds.has(c.id)).length,
+      opponent: opponentCards.filter(c => deadIds.has(c.id)).length,
+    },
+    shieldedIds: Array.from(shielded).filter(id => !deadIds.has(id)),
     isRepublicanaTriggered,
   };
 };
 
-/** Marca en el tablero las cartas que mueren o se anulan para animarlas. */
+/** Marca en el tablero las cartas que mueren, se anulan o se salvan, para animarlas. */
 export const markCombatResult = (board: BoardSlot[], result: CombatResult): BoardSlot[] => {
   const dead = new Set(result.deadCardIds);
   const voided = new Set(result.voidedCardIds);
+  const shielded = new Set(result.shieldedIds);
   return board.map(slot => {
     const card = slot.card;
+    if (card && shielded.has(card.id)) return { ...slot, card: { ...card, isShielded: true } };
     if (!card || (!dead.has(card.id) && !voided.has(card.id))) return slot;
     return {
       ...slot,
@@ -218,8 +324,14 @@ export const markCombatResult = (board: BoardSlot[], result: CombatResult): Boar
   });
 };
 
+/** Tras la pelea: se retiran las cartas caídas y se rompen los sellos de defensa usados */
 export const clearDefeatedCards = (board: BoardSlot[]): BoardSlot[] =>
-  board.map(slot => (slot.card?.isTakingDamage || slot.card?.isVoided ? { ...slot, card: null } : slot));
+  board.map(slot => {
+    const card = slot.card;
+    if (card?.isTakingDamage || card?.isVoided) return { ...slot, card: null };
+    if (card?.isShielded) return { ...slot, card: { ...card, isShielded: false, seal: undefined } };
+    return slot;
+  });
 
 export const revealBoard = (board: BoardSlot[]): BoardSlot[] =>
   board.map(slot => (slot.card && !slot.card.isFaceUp ? { ...slot, card: { ...slot.card, isFaceUp: true } } : slot));

@@ -24,7 +24,7 @@ export const roundStamps = (result: CombatResult): StampId[] => {
   const out: StampId[] = [];
   if (result.isRepublicanaTriggered) out.push('republicana');
   // Solo cuentan las cartas del rival que caen
-  if (result.cardsDestroyedCount >= 3 && result.deadCardIds.filter(id => id.startsWith('opponent')).length >= 3) out.push('massacre');
+  if (result.deadByOwner.opponent >= 3) out.push('massacre');
   if (result.opponentDamageTaken >= 3) out.push('barrage');
   return out;
 };
