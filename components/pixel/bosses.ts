@@ -328,7 +328,7 @@ const MIRRORIST = boss([
   '..........oooo....oooo..........',
 ]);
 
-/** La Envenenadora (veneno): capucha puntiaguda, túnica y un frasco que gotea */
+/** La Tóxica (veneno): capucha puntiaguda, túnica y un frasco que gotea */
 const POISONER = boss([
   '................................',
   '...............oo...............',

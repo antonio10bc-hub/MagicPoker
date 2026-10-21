@@ -330,7 +330,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   colgante, corazón). Su forma cuenta su sello: El Muro (defensa) es enorme y fuerte,
   La Duelista (ataque) lleva dos espadas, El Trilero (cambio) tiene un anillo girando,
   La Ladrona (robo) va agachada con un saco, La Matriarca (vida) lleva un bastón con
-  un corazón, El Espejista (espejo) lleva gorguera y un espejo de mano, La Envenenadora
+  un corazón, El Espejista (espejo) lleva gorguera y un espejo de mano, La Tóxica
   (veneno) una capucha y un frasco que gotea, El Bardo (eco) un laúd y ondas, El
   Marinero (ancla) un ancla al hombro y La Vidente (revelar) una bola con un ojo. El
   Forastero, el primero, no tiene sello. El Soberano, jefe secreto, es enorme, con
