@@ -28,7 +28,11 @@ test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y s
   await page.waitForTimeout(900);
   await shot(page, info, 'presentacion');
   await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 0);
-  await page.waitForTimeout(2400);
+  // Tras evolucionar, la presentación espera a que toques
+  await page.waitForTimeout(3600);
+  await expect(page.locator('[aria-label="boss intro"]')).toBeVisible();
+  await page.locator('[aria-label="boss intro"]').click();
+  await expect(page.locator('[aria-label="boss intro"]')).toBeHidden();
   await shot(page, info, 'piso-1');
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
   const choose = page.getByText('Elige una mejora');

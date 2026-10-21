@@ -17,12 +17,12 @@ import { bossLine } from './BossTaunt';
 // cae con un golpe, su nombre, sus vidas, sus sellos y su frase de entrada. Se va
 // sola o al tocarla. En revancha y en el Castillo lleva su etiqueta. En el Castillo
 // cae en su forma normal y ahí mismo evoluciona: destello carmesí, sacudida y le sale
-// su capa roja.
+// su capa roja. Ahí no se va sola: se queda hasta que tocas (sin aviso en pantalla).
 
 const SHOW_MS = 2600;
-/** En el Castillo dura un poco más: le da tiempo a evolucionar */
-const CASTLE_SHOW_MS = 3300;
 const EVOLVE_S = 0.85;
+/** En el Castillo, los toques antes de que termine de evolucionar no cuentan */
+const CASTLE_TAP_AFTER_MS = (EVOLVE_S + 0.45) * 1000;
 
 /** Brasas carmesí que suben alrededor del jefe al evolucionar (deterministas) */
 const EMBERS = Array.from({ length: 12 }, (_, i) => ({
@@ -46,7 +46,7 @@ export const BossIntro = () => {
     if (intro === null) return;
     const slam = setTimeout(() => { playSfx('crush', 0.8, 0.7); playSfx('fight', 0.5); haptic('stamp'); }, 260);
     const evolve = castle ? setTimeout(() => { playSfx('zap', 0.8, 0.6); haptic('stamp'); }, EVOLVE_S * 1000) : undefined;
-    const done = setTimeout(() => setClosed(intro), castle ? CASTLE_SHOW_MS : SHOW_MS);
+    const done = castle ? undefined : setTimeout(() => setClosed(intro), SHOW_MS);
     return () => { clearTimeout(slam); clearTimeout(evolve); clearTimeout(done); };
   }, [intro, castle]);
 
@@ -63,7 +63,8 @@ export const BossIntro = () => {
           key={intro}
           className="absolute inset-0 z-[150] flex flex-col items-center justify-center gap-[6px] cursor-pointer"
           style={{ background: 'radial-gradient(ellipse 70% 55% at 50% 45%, rgba(30,42,40,0.92) 0%, rgba(11,13,12,0.97) 70%)' }}
-          onClick={() => setClosed(intro)}
+          aria-label="boss intro"
+          onClick={() => { if (!castle || Date.now() - intro >= CASTLE_TAP_AFTER_MS) setClosed(intro); }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }}
         >
           {tag && (

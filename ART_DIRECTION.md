@@ -403,7 +403,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
      forma normal en la presentación; ahí mismo evoluciona: tiembla, se hincha con un
      destello blanco, estalla un halo carmesí con una onda de choque (anillo que se
      abre), le sale su capa roja con el aura y suben brasas carmesí por los lados
-     mientras dura la presentación.
+     mientras dura la presentación. En el Castillo la presentación no se va sola:
+     se queda hasta que tocas (sin texto que lo pida; los toques antes de que acabe
+     de evolucionar no cuentan).
 - **Todo lo que sale del mercader es azul eléctrico:** las cartas nuevas (masa azul en
   vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
