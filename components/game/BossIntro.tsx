@@ -24,6 +24,15 @@ const SHOW_MS = 2600;
 const CASTLE_SHOW_MS = 3300;
 const EVOLVE_S = 0.85;
 
+/** Brasas carmesí que suben alrededor del jefe al evolucionar (deterministas) */
+const EMBERS = Array.from({ length: 12 }, (_, i) => ({
+  // Por los lados de la silueta, no encima
+  x: i % 2 ? -0.18 + ((i * 41) % 30) / 100 : 0.88 + ((i * 41) % 30) / 100,
+  delay: EVOLVE_S + 0.1 + ((i * 29) % 10) / 12,
+  rise: 30 + ((i * 17) % 5) * 8,
+  size: i % 3 === 0 ? 3 : 2,
+}));
+
 export const BossIntro = () => {
   const t = useTranslations();
   const { width, height } = useStage();
@@ -78,6 +87,16 @@ export const BossIntro = () => {
                 <motion.div className="absolute rounded-full pointer-events-none" style={{ left: '50%', top: '45%', width: figureH * 1.4, height: figureH * 1.4, marginLeft: -figureH * 0.7, marginTop: -figureH * 0.7,
                   background: 'radial-gradient(circle, rgba(255,31,75,0.85) 0%, rgba(255,31,75,0.35) 35%, transparent 65%)' }}
                   initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0], scale: [0.3, 1.3, 1.6] }} transition={{ delay: EVOLVE_S, duration: 0.7 }} />
+                {/* Onda de choque: un anillo carmesí que se abre */}
+                <motion.div className="absolute rounded-full pointer-events-none" style={{ left: '50%', top: '50%', width: figureH, height: figureH, marginLeft: -figureH / 2, marginTop: -figureH / 2,
+                  boxShadow: '0 0 0 2px rgba(255,31,75,0.9), 0 0 10px 2px rgba(255,31,75,0.6)' }}
+                  initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: [0, 1, 0], scale: [0.2, 1.2, 1.8] }} transition={{ delay: EVOLVE_S + 0.05, duration: 0.6, ease: 'easeOut' }} />
+                {/* Brasas que suben y siguen saliendo mientras dura la presentación */}
+                {EMBERS.map((e, i) => (
+                  <motion.span key={i} className="absolute pointer-events-none" style={{ left: `${e.x * 100}%`, bottom: '10%', width: e.size, height: e.size, background: 'var(--ink-crimson)', boxShadow: '0 0 3px rgba(255,31,75,0.9)' }}
+                    initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 1, 0], y: [0, -e.rise] }}
+                    transition={{ duration: 1.1, delay: e.delay, repeat: Infinity, repeatDelay: 0.3, ease: 'easeOut' }} />
+                ))}
               </motion.div>
             ) : <BossFigure id={boss.id} height={figureH} />}
           </motion.div>

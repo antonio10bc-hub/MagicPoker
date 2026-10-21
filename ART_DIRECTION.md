@@ -384,7 +384,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
   de la lista de jefes (un castillo de torres en punta), el botón ENTRAR / SEGUIR, el
   piso (n/12) en el panel del rival y la presentación.
 - **Jefes evolucionados:** la misma silueta con una capa carmesí sacada de ella
-  (ojos encendidos, púas por arriba y a los lados) y un halo carmesí en vez del naranja.
+  (ojos encendidos, púas por arriba y a los lados) y su aura: halo carmesí doble en la
+  silueta (cerca intenso, lejos suave), un aura de píxeles punteada a dos píxeles del
+  contorno que parpadea, chispas sueltas por encima y un resplandor carmesí que late
+  detrás. En miniatura negra (panel compacto del rival) no lleva aura.
 - **Entre pisos (pequeña cinemática, sin panel de victoria):**
   1. *Jefe derrotado:* sobre negro con un halo carmesí, el jefe evolucionado tiembla,
      destella dos veces y se desmorona hacia abajo en esquirlas carmesí; debajo,
@@ -398,7 +401,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
      fantasma; al volver, la ventana del mercader (banda azul) te espera.
   3. *Nuevo jefe:* al elegir, el mercader se desvanece y el siguiente jefe cae en su
      forma normal en la presentación; ahí mismo evoluciona: tiembla, se hincha con un
-     destello blanco, estalla un halo carmesí y le sale su capa roja.
+     destello blanco, estalla un halo carmesí con una onda de choque (anillo que se
+     abre), le sale su capa roja con el aura y suben brasas carmesí por los lados
+     mientras dura la presentación.
 - **Todo lo que sale del mercader es azul eléctrico:** las cartas nuevas (masa azul en
   vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
