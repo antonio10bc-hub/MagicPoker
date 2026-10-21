@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Rank } from '@/types';
@@ -47,14 +47,25 @@ const BoonIcon = ({ boon }: { boon: Boon }) => {
   return <span className="font-display glow-azure" style={{ color: 'var(--ink-azure)', fontSize: 14 }}>{boon.kind === 'card' ? '?' : boon.kind === 'upgrade' ? '+2' : '−'}</span>;
 };
 
+/** Lo que tarda cada mejora en entrar */
+const ENTER_S = 0.35;
+
 /** Las 3 mejoras de la subida en curso. `onChosen` se llama tras elegir (por defecto, sube
  *  al siguiente jefe). `compact`: letra y filas más pequeñas (escena del mercader). */
 export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: () => void; delay?: number; compact?: boolean }) => {
   const t = useTranslations();
   // Se fija al aparecer: al elegir, la oferta se borra y la lista no debe saltar
   const [run] = useState(() => getCastle().run);
+  // No se puede elegir hasta que se ven las 3 (un toque rápido no coge nada a ciegas)
+  const [ready, setReady] = useState(false);
+  const count = run?.offer?.length ?? 0;
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), (delay + Math.max(0, count - 1) * 0.08 + ENTER_S) * 1000);
+    return () => clearTimeout(id);
+  }, [delay, count]);
   if (!run?.offer) return null;
   const pick = (i: number) => {
+    if (!ready) return;
     playSound('click');
     playSfx('sparkle');
     if (!chooseBoon(i)) return;
@@ -71,7 +82,7 @@ export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: ()
           <motion.button key={i} aria-label={`boon ${boon.kind}`}
             className={clsx('px-inset px-round flex items-center text-left cursor-pointer', compact ? 'gap-[4px] p-[3px]' : 'gap-[6px] p-[4px]')}
             style={{ boxShadow: compact ? 'inset 0 0 0 1px rgba(46,155,255,0.35)' : 'inset 0 0 0 1px rgba(46,155,255,0.6), 0 0 6px rgba(46,155,255,0.25)', background: compact ? 'rgba(11,13,12,0.7)' : undefined }}
-            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: delay + i * 0.08 }}
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: delay + i * 0.08, duration: ENTER_S }}
             whileHover={{ scale: 1.03 }} onClick={() => pick(i)}>
             <span className={clsx('shrink-0 flex justify-center', compact ? 'w-[16px]' : 'w-[22px]')}><BoonIcon boon={boon} /></span>
             <span className={clsx('flex flex-col min-w-0', compact ? 'leading-[9px]' : 'leading-[10px]')} style={{ fontSize: compact ? 8 : 9 }}>

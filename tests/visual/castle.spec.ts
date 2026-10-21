@@ -43,6 +43,10 @@ test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y s
   }
   await expect(choose).toBeVisible();
   await expect(page.getByText('EL MERCADER')).toBeVisible();
+  // Un toque antes de que se vean las 3 no elige nada
+  await page.locator('[aria-label^="boon"]').first().click({ force: true });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => !!JSON.parse(localStorage.getItem('magic_poker_castle')!).run.offer)).toBe(true);
   await page.waitForTimeout(1800);
   await shot(page, info, 'mercader');
   await page.locator('[aria-label^="boon"]').first().click({ force: true });

@@ -403,7 +403,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
      (encapuchado, con un fardo a la espalda; cuerpo azul, ojos y farol crema). Todo
      pequeño y en penumbra, con rollo misterioso: su nombre en letra pequeña espaciada,
      su frase entre comillas en menta (sin bocadillo) y sus 3 mejoras en filas
-     compactas (8 px, contorno azul tenue, icono en azul). "Volver al menú" en
+     compactas (8 px, contorno azul tenue, icono en azul). No se puede elegir ninguna
+     hasta que han entrado las 3: un toque rápido no coge nada a ciegas. "Volver al menú" en
      fantasma; al volver, la ventana del mercader (banda azul) te espera.
   3. *Nuevo jefe:* al elegir, el mercader se desvanece y el siguiente jefe cae en su
      forma normal en la presentación; ahí mismo evoluciona: tiembla, se hincha con un
