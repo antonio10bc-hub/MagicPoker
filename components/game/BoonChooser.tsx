@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { clsx } from 'clsx';
 import { Rank } from '@/types';
 import { Boon, CardTemplate, chooseBoon, getCastle } from '@/lib/castle';
 import { Translations, useTranslations } from '@/lib/i18n';
@@ -45,10 +47,12 @@ const BoonIcon = ({ boon }: { boon: Boon }) => {
   return <span className="font-display glow-azure" style={{ color: 'var(--ink-azure)', fontSize: 14 }}>{boon.kind === 'card' ? '?' : boon.kind === 'upgrade' ? '+2' : '−'}</span>;
 };
 
-/** Las 3 mejoras de la subida en curso. `onChosen` se llama tras elegir (por defecto, sube al siguiente jefe). */
-export const BoonChooser = ({ onChosen, delay = 0.15 }: { onChosen?: () => void; delay?: number }) => {
+/** Las 3 mejoras de la subida en curso. `onChosen` se llama tras elegir (por defecto, sube
+ *  al siguiente jefe). `compact`: letra y filas más pequeñas (escena del mercader). */
+export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: () => void; delay?: number; compact?: boolean }) => {
   const t = useTranslations();
-  const run = getCastle().run;
+  // Se fija al aparecer: al elegir, la oferta se borra y la lista no debe saltar
+  const [run] = useState(() => getCastle().run);
   if (!run?.offer) return null;
   const pick = (i: number) => {
     playSound('click');
@@ -58,17 +62,19 @@ export const BoonChooser = ({ onChosen, delay = 0.15 }: { onChosen?: () => void;
     else useGameStore.getState().startCastle();
   };
   return (
-    <div className="flex flex-col gap-[4px] w-full">
-      <span className="text-center glow-azure" style={{ color: 'var(--ink-azure)' }}>{t.castle_choose}</span>
+    <div className={clsx('flex flex-col w-full', compact ? 'gap-[3px]' : 'gap-[4px]')}>
+      <motion.span className={clsx('text-center glow-azure', compact && 't-micro')} style={{ color: 'var(--ink-azure)', letterSpacing: compact ? 1 : undefined }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.max(0, delay - 0.1) }}>{t.castle_choose}</motion.span>
       {run.offer.map((boon, i) => {
         const { title, desc } = boonText(t, boon, run.deck);
         return (
-          <motion.button key={i} aria-label={`boon ${boon.kind}`} className="px-inset px-round flex items-center gap-[6px] p-[4px] text-left cursor-pointer"
-            style={{ boxShadow: 'inset 0 0 0 1px rgba(46,155,255,0.6), 0 0 6px rgba(46,155,255,0.25)' }}
+          <motion.button key={i} aria-label={`boon ${boon.kind}`}
+            className={clsx('px-inset px-round flex items-center text-left cursor-pointer', compact ? 'gap-[4px] p-[3px]' : 'gap-[6px] p-[4px]')}
+            style={{ boxShadow: compact ? 'inset 0 0 0 1px rgba(46,155,255,0.35)' : 'inset 0 0 0 1px rgba(46,155,255,0.6), 0 0 6px rgba(46,155,255,0.25)', background: compact ? 'rgba(11,13,12,0.7)' : undefined }}
             initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: delay + i * 0.08 }}
             whileHover={{ scale: 1.03 }} onClick={() => pick(i)}>
-            <span className="shrink-0 w-[22px] flex justify-center"><BoonIcon boon={boon} /></span>
-            <span className="flex flex-col min-w-0 leading-[10px]" style={{ fontSize: 9 }}>
+            <span className={clsx('shrink-0 flex justify-center', compact ? 'w-[16px]' : 'w-[22px]')}><BoonIcon boon={boon} /></span>
+            <span className={clsx('flex flex-col min-w-0', compact ? 'leading-[9px]' : 'leading-[10px]')} style={{ fontSize: compact ? 8 : 9 }}>
               <span style={{ color: 'var(--ink-cream)' }}>{title}</span>
               <span style={{ color: 'var(--ink-mint)' }}>{desc}</span>
             </span>

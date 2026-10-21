@@ -278,6 +278,9 @@ html, body {
 .anim-sway { animation: hand-sway 2.6s ease-in-out infinite; }
 .anim-float { animation: table-float 3s ease-in-out infinite; }
 .anim-pulse { animation: pulse-fade 1.1s ease-in-out infinite; }
+/* Farol del mercader: parpadeo irregular de llama */
+@keyframes flicker { 0%, 100% { opacity: 0.85; } 12% { opacity: 0.55; } 20% { opacity: 0.95; } 47% { opacity: 0.7; } 52% { opacity: 1; } 78% { opacity: 0.6; } }
+.anim-flicker { animation: flicker 2.3s steps(1, end) infinite; }
 .anim-pulse-soft { animation: pulse-soft 2.2s ease-in-out infinite; }
 .anim-throb { animation: throb 0.9s ease-in-out infinite; }
 .anim-heartbeat { animation: heartbeat 1.1s linear infinite; }

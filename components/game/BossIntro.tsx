@@ -15,9 +15,14 @@ import { bossLine } from './BossTaunt';
 // --- PRESENTACIÓN DEL JEFE ---
 // Al empezar una partida nueva el jefe entra a pantalla completa: silueta grande que
 // cae con un golpe, su nombre, sus vidas, sus sellos y su frase de entrada. Se va
-// sola o al tocarla. En revancha y en el Castillo lleva su etiqueta.
+// sola o al tocarla. En revancha y en el Castillo lleva su etiqueta. En el Castillo
+// cae en su forma normal y ahí mismo evoluciona: destello carmesí, sacudida y le sale
+// su capa roja.
 
 const SHOW_MS = 2600;
+/** En el Castillo dura un poco más: le da tiempo a evolucionar */
+const CASTLE_SHOW_MS = 3300;
+const EVOLVE_S = 0.85;
 
 export const BossIntro = () => {
   const t = useTranslations();
@@ -31,9 +36,10 @@ export const BossIntro = () => {
   useEffect(() => {
     if (intro === null) return;
     const slam = setTimeout(() => { playSfx('crush', 0.8, 0.7); playSfx('fight', 0.5); haptic('stamp'); }, 260);
-    const done = setTimeout(() => setClosed(intro), SHOW_MS);
-    return () => { clearTimeout(slam); clearTimeout(done); };
-  }, [intro]);
+    const evolve = castle ? setTimeout(() => { playSfx('zap', 0.8, 0.6); haptic('stamp'); }, EVOLVE_S * 1000) : undefined;
+    const done = setTimeout(() => setClosed(intro), castle ? CASTLE_SHOW_MS : SHOW_MS);
+    return () => { clearTimeout(slam); clearTimeout(evolve); clearTimeout(done); };
+  }, [intro, castle]);
 
   const boss = BOSSES[bossIndex];
   const seals = Array.from(new Set(bossSeals(boss, level)));
@@ -59,7 +65,21 @@ export const BossIntro = () => {
           <motion.div style={{ transformOrigin: '50% 100%' }}
             initial={{ y: -height * 0.6, scaleY: 1.2 }} animate={{ y: 0, scaleY: [1.2, 0.85, 1.05, 1] }}
             transition={{ y: { type: 'spring', stiffness: 420, damping: 22 }, scaleY: { duration: 0.5, times: [0, 0.45, 0.75, 1], delay: 0.2 } }}>
-            <BossFigure id={boss.id} height={figureH} evolved={castle} />
+            {castle ? (
+              // Evoluciona: la forma normal tiembla y encima se enciende la evolucionada
+              <motion.div className="relative"
+                animate={{ x: [0, 0, -3, 3, -2, 2, 0], scale: [1, 1, 1.18, 1, 1, 1, 1], filter: ['brightness(1)', 'brightness(1)', 'brightness(3)', 'brightness(1.4)', 'brightness(1)', 'brightness(1)', 'brightness(1)'] }}
+                transition={{ duration: 0.55, delay: EVOLVE_S - 0.15, times: [0, 0.25, 0.35, 0.55, 0.7, 0.85, 1] }}>
+                <BossFigure id={boss.id} height={figureH} />
+                <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: EVOLVE_S, duration: 0.15 }}>
+                  <BossFigure id={boss.id} height={figureH} evolved />
+                </motion.div>
+                {/* Destello carmesí al evolucionar */}
+                <motion.div className="absolute rounded-full pointer-events-none" style={{ left: '50%', top: '45%', width: figureH * 1.4, height: figureH * 1.4, marginLeft: -figureH * 0.7, marginTop: -figureH * 0.7,
+                  background: 'radial-gradient(circle, rgba(255,31,75,0.85) 0%, rgba(255,31,75,0.35) 35%, transparent 65%)' }}
+                  initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0], scale: [0.3, 1.3, 1.6] }} transition={{ delay: EVOLVE_S, duration: 0.7 }} />
+              </motion.div>
+            ) : <BossFigure id={boss.id} height={figureH} />}
           </motion.div>
           <motion.div className="h-[3px] rounded-full" style={{ width: Math.min(160, width * 0.5), background: accent, boxShadow: `0 0 10px 2px ${accent}` }}
             initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.3, duration: 0.3 }} />

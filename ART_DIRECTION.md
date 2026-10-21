@@ -385,14 +385,20 @@ se mueve rápido y una vibración leve a las masas naranjas.
   piso (n/12) en el panel del rival y la presentación.
 - **Jefes evolucionados:** la misma silueta con una capa carmesí sacada de ella
   (ojos encendidos, púas por arriba y a los lados) y un halo carmesí en vez del naranja.
-- **El mercader (azul eléctrico, `--ink-azure`):** al vencer a un jefe del Castillo no
-  sale el panel de victoria: la pantalla se oscurece con una luz azul, arriba "PISO N
-  SUPERADO" en carmesí, y el mercader entra caminando desde la derecha (encapuchado,
-  con un fardo a la espalda y un farol; cuerpo azul, ojos y farol crema). Debajo, una
-  raya azul, su nombre, una frase suya en el bocadillo crema y sus 3 mejoras: botones
-  con contorno azul y el icono en azul (corazón, carta, sello, +2, −, estrella del
-  pacto). Al elegir, sube el siguiente jefe con su presentación. "Volver al menú" en
-  pequeño; al volver, la ventana del mercader (banda azul) te espera.
+- **Entre pisos (pequeña cinemática, sin panel de victoria):**
+  1. *Jefe derrotado:* sobre negro con un halo carmesí, el jefe evolucionado tiembla,
+     destella dos veces y se desmorona hacia abajo en esquirlas carmesí; debajo,
+     "DERROTADO" en carmesí y "Piso N superado" en pequeño. Tocar lo salta.
+  2. *El mercader (azul eléctrico, `--ink-azure`):* el halo pasa de rojo a azul, se
+     enciende el farol (parpadeo de llama) y el mercader sale despacio de la oscuridad
+     (encapuchado, con un fardo a la espalda; cuerpo azul, ojos y farol crema). Todo
+     pequeño y en penumbra, con rollo misterioso: su nombre en letra pequeña espaciada,
+     su frase entre comillas en menta (sin bocadillo) y sus 3 mejoras en filas
+     compactas (8 px, contorno azul tenue, icono en azul). "Volver al menú" en
+     fantasma; al volver, la ventana del mercader (banda azul) te espera.
+  3. *Nuevo jefe:* al elegir, el mercader se desvanece y el siguiente jefe cae en su
+     forma normal en la presentación; ahí mismo evoluciona: tiembla, se hincha con un
+     destello blanco, estalla un halo carmesí y le sale su capa roja.
 - **Todo lo que sale del mercader es azul eléctrico:** las cartas nuevas (masa azul en
   vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
