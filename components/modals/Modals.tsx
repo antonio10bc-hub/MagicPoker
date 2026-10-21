@@ -163,28 +163,28 @@ const CollectionModal = () => {
   const [seals] = useState(() => unlockedSeals());
   const [tab, setTab] = useState<'seals' | 'backs'>('seals');
   return (
-    <Dialog title={t.collection_title}>
+    <Dialog title={t.collection_title} width={250}>
       {/* Pestañas: sellos y dorsos */}
       <Tabs className="px-[6px] pt-[6px]" value={tab} options={[['seals', t.tab_seals], ['backs', t.tab_backs]]} onChange={setTab} />
       {tab === 'backs' ? <BackGallery /> : (
-      <DialogBody className="t-list">
+      <DialogBody className="t-micro gap-[4px]">
         {seals.length === 0 && <p className="t-note">{t.collection_empty}</p>}
         {BOSSES.filter(b => b.seal).map(boss => {
           const seal = boss.seal!;
           const owned = seals.includes(seal);
           return (
-            <div key={seal} className="flex gap-[6px] items-start px-inset p-[5px]"
-              style={{ boxShadow: owned ? 'inset 0 0 0 1px rgba(125,255,43,0.45)' : undefined }}>
+            <div key={seal} className="flex gap-[5px] items-center px-inset px-[5px] py-[4px]"
+              style={{ boxShadow: owned ? 'inset 0 0 0 1px rgba(125,255,43,0.35)' : undefined }}>
               <div className={owned ? 'shrink-0 flex items-center justify-center rounded-full bloom-volt' : 'shrink-0 flex items-center justify-center rounded-full'}
-                style={{ width: 22, height: 22, background: owned ? 'var(--ink-volt)' : 'var(--ink-slate)' }}>
+                style={{ width: 16, height: 16, background: owned ? 'var(--ink-volt)' : 'var(--ink-slate)' }}>
                 <PixelSprite sprite={SEAL_ICONS[seal]} tint={owned ? INK.black : INK.teal} />
               </div>
-              <div className="flex flex-col gap-[2px] min-w-0">
-                <span className={owned ? 'glow-volt' : undefined} style={{ color: owned ? 'var(--ink-volt)' : 'var(--ink-teal)' }}>
+              <div className="flex flex-col gap-[1px] min-w-0">
+                <span className={owned ? 'glow-volt' : undefined} style={{ color: owned ? 'var(--ink-volt)' : 'var(--ink-teal)', fontSize: 9, lineHeight: '10px' }}>
                   {owned ? t[`seal_${seal}` as keyof Translations] : '???'}
                 </span>
                 <span style={{ color: owned ? 'var(--ink-cream)' : 'var(--ink-teal)' }}>
-                  {owned ? t[`seal_${seal}_desc` as keyof Translations] : t.collection_locked.replace('{boss}', t[`boss_${boss.id}` as keyof Translations])}
+                  {owned ? t[`seal_${seal}_desc` as keyof Translations] : t.collection_locked.replace('{n}', String(BOSSES.indexOf(boss) + 1))}
                 </span>
               </div>
             </div>

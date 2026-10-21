@@ -229,9 +229,9 @@ export const BackGallery = () => {
   const pick = (id: string) => { playSfx('select', 0.7); setBack(id); };
   const items = [{ id: DEFAULT_BACK, index: -1 }, ...BOSSES.map((b, index) => ({ id: b.id, index }))];
   return (
-    <DialogBody className="t-list">
-      <p className="t-note">{t.backs_hint}</p>
-      <div className="grid grid-cols-4 gap-x-[4px] gap-y-[6px] justify-items-center">
+    <DialogBody className="t-micro gap-[5px]">
+      <p className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.backs_hint}</p>
+      <div className="grid grid-cols-5 gap-x-[3px] gap-y-[6px] justify-items-center">
         {items.map(({ id, index }) => {
           const has = id === DEFAULT_BACK || owned.has(id);
           const visible = index < 0 || isBossVisible(index, progress);
@@ -240,13 +240,25 @@ export const BackGallery = () => {
           return (
             <button key={id} aria-label={`back ${id}`} disabled={!has} onClick={() => pick(id)}
               className={has ? 'flex flex-col items-center gap-[2px] cursor-pointer' : 'flex flex-col items-center gap-[2px]'}>
-              <div className="relative" style={{ width: 40, height: 56, opacity: has ? 1 : 0.35, filter: has ? undefined : 'grayscale(1)',
+              {/* Dorso a escala reducida (la carta mide 40×56) */}
+              <div className="relative" style={{ width: 32, height: 45, opacity: has ? 1 : 0.35, filter: has ? undefined : 'grayscale(1)',
                 outline: on ? '1px solid var(--ink-cream)' : undefined, outlineOffset: 2, borderRadius: 3 }}>
-                <CardBack owner="player" back={visible ? id : DEFAULT_BACK} />
+                <div className="absolute left-0 top-0" style={{ width: 40, height: 56, transform: 'scale(0.8)', transformOrigin: '0 0' }}>
+                  <CardBack owner="player" back={visible ? id : DEFAULT_BACK} />
+                </div>
               </div>
-              <span className="text-center" style={{ color: on ? 'var(--ink-cream)' : has ? 'var(--ink-mint)' : 'var(--ink-teal)', fontSize: 8, lineHeight: '9px' }}>
-                {on ? t.back_equipped : index < 0 ? t.back_default : !visible ? '???' : has ? t[`boss_${id}` as keyof Translations] : t.wins_count.replace('{n}', String(Math.min(wins, WINS_FOR_BACK)))}
-              </span>
+              {has || index < 0 ? (
+                <span className="text-center truncate w-[38px]" style={{ color: on ? 'var(--ink-cream)' : 'var(--ink-mint)', fontSize: 7, lineHeight: '8px' }}>
+                  {on ? t.back_equipped : index < 0 ? t.back_default : t[`boss_${id}` as keyof Translations]}
+                </span>
+              ) : (
+                // Por ganar: las victorias que llevas, en puntos (como las estrellas del menú)
+                <span className="flex gap-[1px] h-[8px] items-center" aria-label={`${Math.min(wins, WINS_FOR_BACK)}/${WINS_FOR_BACK}`}>
+                  {visible && Array.from({ length: WINS_FOR_BACK }, (_, i) => (
+                    <span key={i} style={{ width: 3, height: 3, background: i < wins ? 'var(--ink-orange)' : 'var(--ink-slate)' }} />
+                  ))}
+                </span>
+              )}
             </button>
           );
         })}

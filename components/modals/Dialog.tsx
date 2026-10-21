@@ -56,16 +56,18 @@ interface DialogProps {
   actions?: ReactNode;
   /** Acciones de la ventana: van al pie, separadas del contenido */
   footer?: ReactNode;
+  /** Ancho a medida (por defecto, el del tamaño) */
+  width?: number;
   /** Sin botón de cerrar ni cierre al tocar fuera (hay que elegir) */
   modal?: boolean;
   onClose?: () => void;
   children: ReactNode;
 }
 
-export const Dialog = ({ title, size = 'lg', tone = 'default', actions, footer, modal, onClose = closeWithClick, children }: DialogProps) => {
+export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, footer, modal, onClose = closeWithClick, children }: DialogProps) => {
   const stage = useStage();
   const portrait = stage.mode === 'portrait';
-  const w = Math.min(WIDTH[size], stage.width - 16);
+  const w = Math.min(width ?? WIDTH[size], stage.width - 16);
   const maxH = stage.height - (portrait ? 48 : 16);
   // Las grandes tienen alto fijo (en vertical aprovechan la pantalla); el resto, al contenido
   const height = size === 'lg' ? Math.min(portrait ? 420 : 270, maxH) : undefined;

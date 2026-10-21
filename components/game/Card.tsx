@@ -134,6 +134,50 @@ const SEALED_LOOK = {
 
 // --- DORSO ---
 // Sin dibujo: una masa de grano del color del bando cuyos bordes se deshacen
+// --- MOTIVOS GEOMÉTRICOS DE LOS DORSOS ---
+// Líneas finas sobre el grano, como un dorso de baraja impreso: marco doble y una
+// figura alrededor del centro (cada jefe la suya).
+type Motif = 'frame' | 'diamond' | 'circles' | 'chevrons' | 'rays';
+const MOTIFS: Motif[] = ['diamond', 'circles', 'chevrons', 'rays'];
+
+const BackMotif = ({ kind, color }: { kind: Motif; color: string }) => (
+  <svg className="absolute inset-0" width={40} height={56} viewBox="0 0 40 56" fill="none" stroke={color} strokeWidth={1} aria-hidden>
+    {/* Marco doble */}
+    <rect x={2.5} y={2.5} width={35} height={51} rx={1.5} />
+    <rect x={4.5} y={4.5} width={31} height={47} rx={1} strokeOpacity={0.6} />
+    {kind === 'diamond' && (
+      <>
+        <path d="M20 9 L33 28 L20 47 L7 28 Z" />
+        <path d="M20 13 L30 28 L20 43 L10 28 Z" strokeOpacity={0.5} />
+        {[[8, 9], [32, 9], [8, 47], [32, 47]].map(([x, y]) => <path key={`${x}-${y}`} d={`M${x} ${y - 2} L${x + 2} ${y} L${x} ${y + 2} L${x - 2} ${y} Z`} fill={color} />)}
+      </>
+    )}
+    {kind === 'circles' && (
+      <>
+        <circle cx={20} cy={28} r={15} />
+        <circle cx={20} cy={28} r={12} strokeOpacity={0.5} />
+        {[[8, 9], [32, 9], [8, 47], [32, 47]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r={1.5} fill={color} />)}
+      </>
+    )}
+    {kind === 'chevrons' && (
+      <>
+        <path d="M8 9 L20 15 L32 9 M8 13 L20 19 L32 13" />
+        <path d="M8 47 L20 41 L32 47 M8 43 L20 37 L32 43" />
+        <path d="M8 22 L8 34 M32 22 L32 34" strokeOpacity={0.6} />
+      </>
+    )}
+    {kind === 'rays' && (
+      <>
+        <circle cx={20} cy={28} r={11} strokeOpacity={0.6} />
+        {Array.from({ length: 12 }, (_, i) => {
+          const a = (i / 12) * Math.PI * 2;
+          return <path key={i} d={`M${20 + Math.cos(a) * 13} ${28 + Math.sin(a) * 13} L${20 + Math.cos(a) * 17} ${28 + Math.sin(a) * 17}`} />;
+        })}
+      </>
+    )}
+  </svg>
+);
+
 /** Dorso dorado del jefe secreto */
 const GOLD = 'radial-gradient(ellipse 70% 60% at 50% 45%, #FFE9A8 0%, #E8B64A 50%, #9A6B1C 100%)';
 
@@ -156,23 +200,32 @@ export const CardBack = ({ owner, sealed, back = DEFAULT_BACK }: { owner: Owner;
       backgroundSize: sealed ? '100% 100%, 100% 100%, 16px' : '100% 100%, 16px',
       WebkitMaskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
       maskImage: 'radial-gradient(ellipse 75% 70% at 50% 50%, #000 55%, transparent 100%)',
+      // Con un dorso de jefe el grano baja para que manden las líneas del motivo
+      opacity: boss && !sealed ? 0.45 : 1,
     }} />
-    {sprite ? (
-      <>
-        {/* Dorso de jefe: su silueta, un marco fino y su sello en la esquina */}
-        <div className="absolute inset-[3px] rounded-[2px]" style={{ boxShadow: `inset 0 0 0 1px ${gold ? 'rgba(11,13,12,0.55)' : 'rgba(237,235,224,0.35)'}` }} />
-        <PixelSprite sprite={sprite.body} tint={INK.black} style={{ position: 'absolute', left: 9, top: 10, width: 22, height: 28 }} />
-        {boss.seal && (
-          <div className="absolute" style={{ right: 4, bottom: 4, opacity: 0.85 }}>
-            <PixelSprite sprite={SEAL_ICONS[boss.seal]} tint={owner === 'opponent' || gold ? INK.black : INK.cream} />
-          </div>
-        )}
-        {boss.secret && (
-          <div className="absolute" style={{ left: 4, bottom: 4 }}>
-            <PixelSprite sprite={STAR} tint={INK.black} />
-          </div>
-        )}
-      </>
+    {sprite && boss ? (
+      boss.secret ? (
+        // Jefe secreto: oro con rayos, un aura grande y la silueta en el centro exacto
+        <>
+          <div className="absolute inset-0 rounded-[2px]" style={{ background: 'repeating-conic-gradient(from 0deg at 50% 50%, rgba(11,13,12,0.16) 0deg 8deg, transparent 8deg 22deg)' }} />
+          <div className="absolute" style={{ left: 2, top: 10, width: 36, height: 36, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,246,214,0.95) 0%, rgba(255,233,168,0.55) 45%, transparent 72%)' }} />
+          <BackMotif kind="frame" color="rgba(11,13,12,0.6)" />
+          <PixelSprite sprite={sprite.body} tint={INK.black} style={{ position: 'absolute', left: 12, top: 15.5, width: 16, height: 25 }} />
+          <div className="absolute" style={{ left: 16.5, top: 4 }}><PixelSprite sprite={STAR} tint={INK.black} /></div>
+          <div className="absolute" style={{ left: 16.5, bottom: 4 }}><PixelSprite sprite={STAR} tint={INK.black} /></div>
+        </>
+      ) : (
+        // Dorso de jefe: un motivo geométrico (según el jefe), su silueta en el centro y su sello
+        <>
+          <BackMotif kind={MOTIFS[BOSSES.indexOf(boss) % MOTIFS.length]} color={owner === 'opponent' ? 'rgba(11,13,12,0.6)' : 'rgba(237,235,224,0.6)'} />
+          <PixelSprite sprite={sprite.body} tint={INK.black} style={{ position: 'absolute', left: 13, top: 19, width: 14, height: 18 }} />
+          {boss.seal && (
+            <div className="absolute" style={{ right: 4, bottom: 4, opacity: 0.85 }}>
+              <PixelSprite sprite={SEAL_ICONS[boss.seal]} tint={owner === 'opponent' ? INK.black : INK.cream} />
+            </div>
+          )}
+        </>
+      )
     ) : (
       // Emblema del bando en silueta
       <div className="absolute flex items-center justify-center" style={{ left: 12, top: 20, width: 16, height: 16 }}>

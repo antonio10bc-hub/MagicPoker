@@ -338,12 +338,11 @@ se mueve rápido y una vibración leve a las masas naranjas.
   un bocadillo crema con contorno negro junto a su panel (entrada, perdiendo,
   ganando o una de las de siempre).
 - **Menú:** el boss a derrotar, grande sobre el tapete y respirando; la lista se
-  desliza en horizontal (con imán y puntos de página): los vencidos dicen VENCIDO y
-  los futuros salen apagados y sin nombre. JUGAR juega contra el boss en pantalla
-  (los vencidos se pueden repetir, sin premio; con uno bloqueado, JUGAR se apaga).
-  Con un vencido aparece debajo REVANCHA (botón con contorno verde): vuelve con una
-  vida más y un segundo sello; ganarla lo marca en verde ("REVANCHA GANADA"). El jefe
-  secreto no sale en la lista hasta que has vencido a los demás.
+  desliza en horizontal (con imán y puntos de página): los vencidos llevan sus
+  estrellas y los futuros salen apagados y sin nombre. Un solo botón: ¡DESAFIAR!
+  contra un jefe que aún no has vencido (con uno bloqueado se apaga) y REVANCHA
+  ("nivel N" en pequeño) contra uno vencido; debajo, la pista de en qué se hace más
+  fuerte. El jefe secreto no sale en la lista hasta que has vencido a los demás.
 - **Editor de mazo:** llega con el primer sello (al vencer al segundo boss): botón
   naranja con un mazo en el menú. Arriba, las 14 cartas del mazo (se pueden quitar
   hasta 3, tachadas); debajo, los sellos desbloqueados (hasta 5 en total, 2 copias de
@@ -360,12 +359,19 @@ se mueve rápido y una vibración leve a las masas naranjas.
   color del modo (naranja; verde en revancha; carmesí en el Castillo), su nombre, sus
   vidas, sus sellos y su frase de entrada en el bocadillo crema.
 - **Revanchas:** cada revancha ganada sube el nivel del jefe (NV.1 a NV.4: más vidas
-  y más sellos). En la lista, cada jefe vencido lleva su contador de victorias
-  (n/5, verde; dorado al llegar a 5).
-- **Dorsos:** cada jefe tiene un dorso temático: el grano del color del bando con su
-  silueta en negro, un marco fino y su sello en la esquina. Sus cartas lo usan siempre;
-  tú lo ganas con 5 victorias contra él y te lo pones en la colección (pestaña Dorsos).
-  El del jefe secreto es dorado, con una estrella.
+  y más sellos). En la lista, cada jefe vencido lleva 5 estrellas pequeñas, sin texto:
+  encendidas en naranja las victorias, apagadas en pizarra el resto; con las 5,
+  todas doradas.
+- **Dorsos:** cada jefe tiene un dorso temático, como un dorso de baraja impreso: el
+  grano del color del bando (bajado) con líneas finas encima (marco doble y una figura
+  geométrica: rombo, círculos, galones o rayos, según el jefe), su silueta en negro en
+  el centro y su sello en la esquina. Sus cartas lo usan siempre; tú lo ganas con 5
+  victorias contra él y te lo pones en la colección (pestaña Dorsos). El del jefe
+  secreto es especial: oro con rayos, un aura crema grande, la silueta más grande en
+  el centro exacto y una estrella arriba y otra abajo.
+- **Colección:** ventana más estrecha (250 px) y todo en letra pequeña: sellos con
+  icono de 16 px; dorsos en rejilla de 5 a escala reducida, con el nombre en 7 px o,
+  si aún no es tuyo, 5 puntitos con las victorias.
 - **Música y sonido:** cada jefe tiene su variación del tema de partida (tono, tempo,
   timbre y trémolo); en el Castillo, más grave, más rápida y siempre tensa. Cada sello
   suena a lo suyo al ponerlo y al actuar (cristal el espejo, campana que se repite el
@@ -473,12 +479,12 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   partida se cierra la que hubiera. Los avisos (sello nuevo, logro) esperan a que no
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
 - **Pantalla principal:** cada página de la lista de jefes tiene la misma estructura:
-  pastilla de estado arriba (naranja si es el próximo rival, pizarra si ya está
-  vencido o bloqueado, carmesí en el Castillo), la silueta, el nombre y una fila con
+  pastilla de estado arriba (naranja si es el próximo rival, pizarra si está
+  bloqueado, carmesí en el Castillo; un vencido lleva sus estrellas), la silueta, el nombre y una fila con
   sus vidas y sus sellos. Flechas a los lados para cambiar de jefe sin deslizar.
   Debajo, una sola acción principal ancha con el verbo grande y el contexto en pequeño
-  ("JUGAR · contra El Trilero", "SEGUIR · piso 2 de 12") y, si hay, una fila de
-  secundarias del mismo ancho (revancha, continuar partida).
+  ("¡DESAFIAR!", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si hay, continuar
+  partida debajo, del mismo ancho.
 - **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (colección en verde,
   mazo en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
   ajustes).

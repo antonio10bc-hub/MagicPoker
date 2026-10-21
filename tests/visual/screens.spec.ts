@@ -43,15 +43,16 @@ test('el jefe secreto no sale hasta vencer a los demás', async ({ page }, info)
   noErrors();
 });
 
-test('revancha: botón bajo JUGAR con un boss vencido', async ({ page }, info) => {
+test('revancha: un solo botón REVANCHA con un jefe vencido', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 3, rematches: ['wall'] });
   // Se desliza el carrusel hasta El Muro (vencido)
   await page.locator('.no-scrollbar').first().evaluate(e => { e.scrollLeft = e.clientWidth; });
   await page.waitForTimeout(600);
-  await expect(page.getByText('REVANCHA NV.2')).toBeVisible();
+  await expect(page.getByText('REVANCHA', { exact: true })).toBeVisible();
+  await expect(page.getByText('nivel 2')).toBeVisible();
   await shot(page, info, 'menu-revancha');
-  await page.getByText('REVANCHA NV.2').click({ force: true });
+  await page.getByText('REVANCHA', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { rematch: boolean } } }).__game.getState().rematch);
   await page.waitForTimeout(2500);
   await shot(page, info, 'partida-revancha');
@@ -119,7 +120,7 @@ test('pausa: el rival no juega mientras está abierta y x2 se guarda', async ({ 
 test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 4 });
-  await page.getByText('JUGAR', { exact: true }).click({ force: true });
+  await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
   await dismissIntro(page);
   await page.locator('[aria-label=speed]').click();
@@ -152,7 +153,7 @@ test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ 
 test('al vencer a un jefe: SIGUIENTE JEFE y VOLVER AL MENÚ', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 2 });
-  await page.getByText('JUGAR', { exact: true }).click({ force: true });
+  await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
   type G = { __game: { getState: () => { phase: string; bossIndex: number; debugWin: () => void } } };
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());

@@ -4,7 +4,7 @@ import { useUiStore } from '@/store/useUiStore';
 import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CASTLE_SPRITE } from '@/components/pixel/bosses';
-import { HEART, SEAL_ICONS } from '@/components/pixel/sprites';
+import { HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { INK } from '@/theme/tokens';
 import {
   BOSSES, bossLives, bossSeals, bossWins, isCastleUnlocked, currentBossIndex, getProgress, getServerProgress, isBossVisible,
@@ -32,6 +32,16 @@ const Pill = ({ children, tone }: { children: ReactNode; tone: 'hot' | 'muted' |
     </span>
   );
 };
+
+/** Victorias contra un jefe: 5 estrellas pequeñas, encendidas las ganadas (con 5, doradas) */
+const Stars = ({ lit }: { lit: number }) => (
+  <span className="flex items-center gap-[2px] h-[11px]" aria-label={`${lit}/${WINS_FOR_BACK}`}>
+    {Array.from({ length: WINS_FOR_BACK }, (_, i) => (
+      <PixelSprite key={i} sprite={STAR} tint={i < lit ? (lit >= WINS_FOR_BACK ? INK.gold : INK.orange) : INK.slate}
+        className={i < lit ? (lit >= WINS_FOR_BACK ? 'bloom-gold-shape' : 'bloom-shape') : undefined} />
+    ))}
+  </span>
+);
 
 /** Flecha de navegación (izquierda o derecha) */
 const Arrow = ({ dir, onClick }: { dir: -1 | 1; onClick: () => void }) => (
@@ -94,7 +104,7 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
               {isCurrent && !beaten
                 ? <Pill tone="hot">{boss.secret ? t.secret_boss : t.next_rival}</Pill>
                 : beaten
-                  ? <Pill tone="muted">{t.beaten} · <span style={{ color: wins >= WINS_FOR_BACK ? 'var(--ink-gold)' : wins > 1 ? 'var(--ink-volt)' : undefined }}>{wins}/{WINS_FOR_BACK}</span></Pill>
+                  ? <Stars lit={wins} />
                   : <Pill tone="muted">{t.boss_n.replace('{n}', String(i + 1)).replace('{total}', total)}</Pill>}
               <div className={isCurrent ? 'anim-breathe' : undefined} style={{ opacity: beaten && !isCurrent ? 0.6 : 1 }}>
                 <BossFigure id={boss.id} height={figureH} dim={locked} />

@@ -199,6 +199,7 @@ html, body {
 .bloom-cream { filter: drop-shadow(0 0 2px rgba(237, 235, 224, 0.6)); }
 .bloom-volt { box-shadow: 0 0 5px 1px rgba(125, 255, 43, 0.65), 0 0 14px 3px rgba(125, 255, 43, 0.25); }
 .bloom-volt-shape { filter: drop-shadow(0 0 2px rgba(125, 255, 43, 0.9)); }
+.bloom-gold-shape { filter: drop-shadow(0 0 2px rgba(232, 182, 74, 0.9)); }
 .bloom-gold { box-shadow: 0 0 5px 1px rgba(232, 182, 74, 0.7), 0 0 14px 3px rgba(232, 182, 74, 0.3); }
 .bloom-crimson { box-shadow: 0 0 5px 1px rgba(255, 31, 75, 0.7), 0 0 14px 3px rgba(255, 31, 75, 0.3); }
 .bloom-crimson-shape { filter: drop-shadow(0 0 2px rgba(255, 31, 75, 0.95)); }
