@@ -1,20 +1,46 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { clsx } from 'clsx';
+import { CSSProperties, ReactNode, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { useUiStore } from '@/store/useUiStore';
 import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CASTLE_SPRITE } from '@/components/pixel/bosses';
+import { HEART, SEAL_ICONS } from '@/components/pixel/sprites';
 import { INK } from '@/theme/tokens';
-import { BOSSES, bossWins, isCastleUnlocked, currentBossIndex, getProgress, getServerProgress, isBossVisible, subscribeProgress, WINS_FOR_BACK } from '@/lib/bosses';
+import {
+  BOSSES, bossLives, bossSeals, bossWins, isCastleUnlocked, currentBossIndex, getProgress, getServerProgress, isBossVisible,
+  subscribeProgress, WINS_FOR_BACK,
+} from '@/lib/bosses';
 import { BossFigure } from '@/components/game/BossFigure';
 import { playSfx } from '@/lib/sounds';
 
-// --- LISTA DE BOSSES (menú) ---
-// Una página por boss, deslizable en horizontal (con imán). Empieza en el boss a
-// derrotar: grande, en naranja y con su sello verde. Los vencidos dicen VENCIDO y se
-// pueden repetir (JUGAR juega contra el que está en pantalla); los futuros salen
-// apagados y sin nombre.
+// --- LISTA DE JEFES (menú) ---
+// Una página por jefe, deslizable en horizontal (con imán) o con las flechas de los
+// lados. Cada página tiene la misma estructura: etiqueta de estado arriba, la silueta,
+// el nombre y una fila con lo que trae (vidas y sellos). Empieza en el jefe a derrotar
+// (o en el Castillo, si está abierto). Los futuros salen apagados y sin nombre.
+
+/** Etiqueta de estado: pastilla con el color de lo que significa */
+const Pill = ({ children, tone }: { children: ReactNode; tone: 'hot' | 'muted' | 'castle' }) => {
+  const style: Record<typeof tone, CSSProperties> = {
+    hot: { background: 'var(--ink-orange)', color: 'var(--ink-black)', boxShadow: '0 0 6px rgba(255,74,28,0.55)' },
+    muted: { background: 'rgba(30,42,40,0.9)', color: 'var(--ink-mint)', boxShadow: 'inset 0 0 0 1px rgba(185,207,200,0.12)' },
+    castle: { background: 'var(--ink-crimson)', color: 'var(--ink-black)', boxShadow: '0 0 6px rgba(255,31,75,0.6)' },
+  };
+  return (
+    <span className="font-display px-[5px] rounded-[2px] whitespace-nowrap" style={{ fontSize: 9, lineHeight: '11px', height: 11, paddingTop: 1, ...style[tone] }}>
+      {children}
+    </span>
+  );
+};
+
+/** Flecha de navegación (izquierda o derecha) */
+const Arrow = ({ dir, onClick }: { dir: -1 | 1; onClick: () => void }) => (
+  <button aria-label={dir < 0 ? 'previous boss' : 'next boss'} onClick={onClick}
+    className="absolute z-10 flex items-center justify-center cursor-pointer opacity-60 hover:opacity-100"
+    style={{ top: '42%', [dir < 0 ? 'left' : 'right']: 0, width: 18, height: 26, transform: dir < 0 ? 'scaleX(-1)' : undefined }}>
+    <PixelSprite sprite={SEAL_ICONS.shift} tint={INK.cream} />
+  </button>
+);
 
 export const BossCarousel = ({ left, top, width, height }: { left: number; top: number; width: number; height: number }) => {
   const t = useTranslations();
@@ -28,15 +54,22 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
   const [page, setPage] = useState(start);
   const setMenuBoss = useUiStore(s => s.setMenuBoss);
 
-  // Al abrir el menú (o al vencer a uno) se coloca en el boss actual
+  // Al abrir el menú (o al vencer a uno) se coloca en el jefe actual
   useLayoutEffect(() => {
     if (ref.current) ref.current.scrollLeft = start * width;
     setMenuBoss(start);
   }, [start, width, setMenuBoss]);
 
-  const figureH = Math.min(100, height - 40);
   // El jefe secreto no sale hasta que lo alcanzas
   const shown = BOSSES.filter((_, i) => isBossVisible(i, progress));
+  const pages = shown.length + (castleOpen ? 1 : 0);
+  // Silueta: lo que queda tras la etiqueta, el nombre y la fila de datos
+  const figureH = Math.max(40, Math.min(96, height - 58));
+  const go = (dir: -1 | 1) => {
+    const next = Math.max(0, Math.min(pages - 1, page + dir));
+    ref.current?.scrollTo({ left: next * width, behavior: 'smooth' });
+  };
+  const total = String(BOSSES.length);
 
   return (
     <div className="absolute z-20" style={{ left, top, width, height }}>
@@ -52,46 +85,52 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
         {shown.map((boss, i) => {
           const beaten = i < progress.defeated;
           // Victorias contra él (la primera y las revanchas): con 5, su dorso
-          const wins = bossWins(i, progress);
-          const backWon = wins >= WINS_FOR_BACK;
+          const wins = Math.min(bossWins(i, progress), WINS_FOR_BACK);
           const isCurrent = i === current;
           const locked = i > current;
+          const seals = Array.from(new Set(bossSeals(boss)));
           return (
-            <div key={boss.id} className="shrink-0 flex flex-col items-center justify-center gap-[3px]"
-              style={{ width, height, scrollSnapAlign: 'center' }}>
-              <span className={clsx('font-display', isCurrent && !beaten && 'glow-text')}
-                style={{ fontSize: 10, lineHeight: '10px', color: isCurrent && !beaten ? 'var(--ink-orange)' : 'var(--ink-teal)' }}>
-                {isCurrent && !beaten ? (boss.secret ? t.secret_boss : t.next_rival) : beaten ? t.beaten : `${i + 1} / ${shown.length}`}
-                {beaten && (
-                  <span style={{ color: backWon ? 'var(--ink-gold)' : wins > 1 ? 'var(--ink-volt)' : 'var(--ink-teal)' }}>
-                    {' · '}{t.wins_count.replace('{n}', String(Math.min(wins, WINS_FOR_BACK)))}
-                  </span>
-                )}
-              </span>
-              <div className={isCurrent ? 'anim-breathe' : undefined} style={{ opacity: beaten && !isCurrent ? 0.55 : 1 }}>
+            <div key={boss.id} className="shrink-0 flex flex-col items-center justify-center gap-[4px]" style={{ width, height, scrollSnapAlign: 'center' }}>
+              {isCurrent && !beaten
+                ? <Pill tone="hot">{boss.secret ? t.secret_boss : t.next_rival}</Pill>
+                : beaten
+                  ? <Pill tone="muted">{t.beaten} · <span style={{ color: wins >= WINS_FOR_BACK ? 'var(--ink-gold)' : wins > 1 ? 'var(--ink-volt)' : undefined }}>{wins}/{WINS_FOR_BACK}</span></Pill>
+                  : <Pill tone="muted">{t.boss_n.replace('{n}', String(i + 1)).replace('{total}', total)}</Pill>}
+              <div className={isCurrent ? 'anim-breathe' : undefined} style={{ opacity: beaten && !isCurrent ? 0.6 : 1 }}>
                 <BossFigure id={boss.id} height={figureH} dim={locked} />
               </div>
-              <span className="text-outline" style={{ fontSize: 12, lineHeight: '12px' }}>
+              <span className="text-outline" style={{ fontSize: 13, lineHeight: '13px' }}>
                 {locked ? '???' : t[`boss_${boss.id}` as keyof Translations]}
+              </span>
+              {/* Lo que trae: vidas y sellos */}
+              <span className="flex items-center gap-[5px] h-[9px]" style={{ opacity: locked ? 0 : 1 }}>
+                <span className="flex items-center gap-[1px]">
+                  <PixelSprite sprite={HEART} tint={INK.orange} />
+                  <span className="font-display t-micro" style={{ color: 'var(--ink-cream)' }}>×{bossLives(boss)}</span>
+                </span>
+                {seals.slice(0, 10).map(s => <PixelSprite key={s} sprite={SEAL_ICONS[s]} tint={INK.volt} />)}
               </span>
             </div>
           );
         })}
         {/* El Castillo: "un jefe más" al final de la lista, en rojo eléctrico */}
         {castleOpen && (
-          <div className="shrink-0 flex flex-col items-center justify-center gap-[3px]" style={{ width, height, scrollSnapAlign: 'center' }}>
-            <span className="font-display glow-crimson" style={{ fontSize: 10, lineHeight: '10px', color: 'var(--ink-crimson)' }}>
-              {castle.run ? t.castle_floor.replace('{n}', String(castle.run.stage + 1)).replace('{total}', String(BOSSES.length))
-                : t.castle_best.replace('{n}', String(castle.best)).replace('{total}', String(BOSSES.length))}
-            </span>
+          <div className="shrink-0 flex flex-col items-center justify-center gap-[4px]" style={{ width, height, scrollSnapAlign: 'center' }}>
+            <Pill tone="castle">
+              {castle.run ? t.castle_floor.replace('{n}', String(castle.run.stage + 1)).replace('{total}', total)
+                : t.castle_best.replace('{n}', String(castle.best)).replace('{total}', total)}
+            </Pill>
             <div className="anim-breathe">
               <PixelSprite sprite={CASTLE_SPRITE} tint={INK.crimson} className="bloom-crimson-shape"
                 style={{ width: Math.round(figureH * 32 / 41), height: figureH }} />
             </div>
-            <span className="text-outline glow-crimson" style={{ fontSize: 12, lineHeight: '12px', color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
+            <span className="text-outline glow-crimson" style={{ fontSize: 13, lineHeight: '13px', color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
+            <span className="t-micro text-center px-[18px]" style={{ color: 'var(--ink-mint)' }}>{t.castle_tagline}</span>
           </div>
         )}
       </div>
+      {page > 0 && <Arrow dir={-1} onClick={() => go(-1)} />}
+      {page < pages - 1 && <Arrow dir={1} onClick={() => go(1)} />}
       {/* Puntos de página */}
       <div className="absolute left-0 right-0 flex justify-center gap-[3px] pointer-events-none" style={{ bottom: -6 }}>
         {shown.map((b, i) => (

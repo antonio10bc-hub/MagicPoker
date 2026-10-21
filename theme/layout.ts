@@ -195,7 +195,7 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     };
   }
   // Vertical: logo arriba, tapete en el centro con las siluetas, JUGAR debajo
-  const BUTTONS_H = 48;
+  const BUTTONS_H = 62;
   // En pantallas bajas el tapete crece menos para que todo quepa
   const boardH = boardMinHeight(true) + (H < 360 ? 4 : 16);
   const block = LOGO_HEIGHT + DIORAMA_OVERHANG + boardH + DIORAMA_SHADOW + 10 + BUTTONS_H;

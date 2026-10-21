@@ -1,4 +1,5 @@
 import { CSSProperties, useSyncExternalStore } from 'react';
+import { clsx } from 'clsx';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { Translations, useTranslations } from '@/lib/i18n';
@@ -139,9 +140,18 @@ export const MenuScreen = () => {
   const level = canRematch ? rematchLevel(selected, progress) : 0;
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
-  // Con revancha y partida guardada a la vez, van lado a lado bajo JUGAR
-  const both = canRematch && hasSave;
   const resumeGame = useGameStore(s => s.resumeGame);
+  // Botón principal: el verbo y, debajo, contra quién o qué pasa
+  const ctaW = Math.min(160, board.diorama.w - 40);
+  const total = String(BOSSES.length);
+  const selectedBoss = BOSSES[Math.min(selected, BOSSES.length - 1)];
+  const cta = castleSel
+    ? castleRun
+      ? { title: t.castle_continue_title, sub: t.castle_floor_sub.replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
+      : { title: t.castle_enter, sub: t.castle_sub_new }
+    : locked
+      ? { title: t.play, sub: t.play_locked_sub }
+      : { title: t.play, sub: (selected < progress.defeated ? t.play_replay : t.play_vs).replace('{boss}', t[`boss_${selectedBoss.id}` as keyof Translations]) };
 
   return (
     <div className="absolute inset-0">
@@ -172,33 +182,34 @@ export const MenuScreen = () => {
       {/* El boss a derrotar, grande en el centro del tapete; se desliza para ver la lista */}
       <BossCarousel left={board.diorama.x + 4} top={bossY} width={board.diorama.w - 8} height={bossH} />
 
-      <motion.div className="absolute z-20" style={{ left: cx - 50, top: playY, width: 100, height: 28 }}
-        initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.9 }}>
-        <PxButton tone="yellow" onClick={() => handleStartGame()} disabled={locked} className={locked ? 'text-title w-full h-full overflow-hidden opacity-40' : 'text-title w-full h-full overflow-hidden anim-breathe'}
+      {/* Acciones: una principal (ancha, con el contexto debajo del verbo) y, si hay,
+          una fila de secundarias del mismo ancho */}
+      <motion.div className="absolute z-20 flex flex-col items-stretch gap-[4px]" style={{ left: cx - Math.floor(ctaW / 2), top: playY, width: ctaW }}
+        initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 16, delay: 0.7 }}>
+        <PxButton tone="yellow" onClick={() => handleStartGame()} disabled={locked}
+          className={clsx('w-full h-[30px] flex-col gap-[1px] overflow-hidden', locked ? 'opacity-50' : 'anim-breathe')}
           style={castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : undefined}>
-          {castleSel ? (castleRun ? t.castle_continue.replace('{n}', String(castleRun.stage + 1)).replace('{total}', String(BOSSES.length)) : t.castle_enter) : t.play}
+          <span className="text-title" style={{ lineHeight: '14px' }}>{cta.title}</span>
+          <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>
         </PxButton>
+        {(canRematch || hasSave) && (
+          <div className="flex gap-[4px]">
+            {canRematch && (
+              <PxButton size="md" className="flex-1" onClick={() => handleStartGame(true)} style={{ boxShadow: 'inset 0 0 0 1px rgba(125,255,43,0.6)' }}>
+                <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch_level.replace('{n}', String(level))}</span>
+              </PxButton>
+            )}
+            {hasSave && (
+              <PxButton size="md" className="flex-1" onClick={() => { playSound('click'); resumeGame(); }}>{t.continue_game}</PxButton>
+            )}
+          </div>
+        )}
+        {/* Qué cambia en la revancha (solo en vertical, donde cabe) */}
+        {canRematch && !hasSave && stage.mode === 'portrait' && (
+          <span className="t-micro text-center whitespace-nowrap" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
+        )}
       </motion.div>
-
-      {/* Revancha: el boss vencido vuelve más fuerte */}
-      {canRematch && (
-        <motion.div key={selected} className="absolute z-20 flex flex-col items-center" style={{ left: cx - 50, top: playY + 32, width: both ? 48 : 100 }}
-          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
-          <PxButton onClick={() => handleStartGame(true)} className="w-full h-[16px]"
-            style={{ boxShadow: 'inset 0 0 0 1px rgba(125,255,43,0.6)' }}>
-            <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch_level.replace('{n}', String(level))}</span>
-          </PxButton>
-          {!both && stage.mode === 'portrait' && <span className="t-micro mt-[3px] text-center whitespace-nowrap" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>}
-        </motion.div>
-      )}
-
-      {hasSave && (
-        <motion.div className="absolute z-20" style={{ left: both ? cx + 2 : cx - 50, top: playY + 32, width: both ? 48 : 100, height: 16 }}
-          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }}>
-          <PxButton onClick={() => { playSound('click'); resumeGame(); }} className="w-full h-full">{t.continue_game}</PxButton>
-        </motion.div>
-      )}
 
     </div>
   );

@@ -472,6 +472,13 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
 - **Capas y orden:** solo una ventana a la vez. Al cambiar de pantalla o acabar la
   partida se cierra la que hubiera. Los avisos (sello nuevo, logro) esperan a que no
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
+- **Pantalla principal:** cada página de la lista de jefes tiene la misma estructura:
+  pastilla de estado arriba (naranja si es el próximo rival, pizarra si ya está
+  vencido o bloqueado, carmesí en el Castillo), la silueta, el nombre y una fila con
+  sus vidas y sus sellos. Flechas a los lados para cambiar de jefe sin deslizar.
+  Debajo, una sola acción principal ancha con el verbo grande y el contexto en pequeño
+  ("JUGAR · contra El Trilero", "SEGUIR · piso 2 de 12") y, si hay, una fila de
+  secundarias del mismo ancho (revancha, continuar partida).
 - **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (colección en verde,
   mazo en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
   ajustes).
