@@ -24,8 +24,10 @@ export const UnlockToasts = () => {
   const shift = useUiStore(s => s.shiftUnlock);
   // Espera a que termine la pelea (también el repaso del resultado) para no taparla
   const busy = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
+  // Con una ventana abierta, el aviso espera a que se cierre
+  const modalOpen = useUiStore(s => !!s.modal);
   // El premio del boss va primero; los logros esperan a que termine
-  const show = current && !busy;
+  const show = current && !busy && !modalOpen;
 
   useEffect(() => {
     if (!show) return;
@@ -34,7 +36,7 @@ export const UnlockToasts = () => {
     return () => { clearTimeout(slam); clearTimeout(done); };
   }, [show, current, shift]);
 
-  const w = Math.min(200, width - 16);
+  const w = Math.min(210, width - 16);
   const seal = current?.kind === 'seal' ? current.seal : null;
   const kind = current?.kind ?? 'collection';
   const backBoss = current?.kind === 'back' ? current.boss : null;
@@ -51,7 +53,7 @@ export const UnlockToasts = () => {
         <motion.button
           key={seal ?? backBoss ?? kind}
           className="absolute z-[300] flex flex-col items-center gap-[8px] cursor-pointer"
-          style={{ left: (width - w) / 2, top: Math.round(height * 0.22), width: w }}
+          style={{ left: (width - w) / 2, top: Math.round(height * 0.24), width: w }}
           onClick={shift}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12, transition: { duration: 0.25 } }}
         >

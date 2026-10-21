@@ -38,12 +38,14 @@ type Tone = 'white' | 'yellow' | 'green' | 'red' | 'blue' | 'roof';
 
 interface PxButtonProps extends HTMLMotionProps<'button'> {
   tone?: Tone;
+  /** Alto: lg (acción principal), md (secundaria), sm (pastillas y opciones) */
+  size?: 'lg' | 'md' | 'sm';
 }
 
 /** Botón con muelle: crece al pasar por encima, se hunde y aplasta al pulsar */
-export const PxButton = ({ tone = 'white', className, children, onPointerEnter, ...rest }: PxButtonProps) => (
+export const PxButton = ({ tone = 'white', size, className, children, onPointerEnter, ...rest }: PxButtonProps) => (
   <motion.button
-    className={clsx('px-btn px-round uppercase', tone !== 'white' && `px-btn-${tone}`, className)}
+    className={clsx('px-btn px-round uppercase', tone !== 'white' && `px-btn-${tone}`, size && `px-btn-${size}`, size === 'lg' && 'text-title', className)}
     whileHover={{ scale: 1.06, y: -1 }}
     whileTap={{ scale: 0.9, y: 2 }}
     transition={{ type: 'spring', stiffness: 600, damping: 18 }}

@@ -438,3 +438,43 @@ se mueve rápido y una vibración leve a las masas naranjas.
 6. **Comprueba los pilares:** paleta cerrada; el naranja solo en lo importante;
    siluetas sin contorno; grano en todo; niebla en las bases; sombras largas; negro
    como espacio negativo; y las reglas de rendimiento.
+
+## Sistema de interfaz (menús y ventanas)
+
+La partida y los menús comparten paleta y tipografía; los menús, además, siguen un
+solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.tsx`).
+
+- **Ventanas (`Dialog`):** misma estructura siempre. Cabecera (banda naranja con el
+  título y la X de cerrar), cuerpo y, si hay acciones, un pie separado por una línea
+  fina. Tres tamaños:
+  - **sm** (210 px): confirmaciones y elecciones cortas (salir, pausa, mejoras del
+    Castillo). Se ajustan al contenido: nunca queda media ventana vacía.
+  - **md** (240 px): listas cortas con controles (ajustes, comodín). Al contenido, con
+    tope y scroll.
+  - **lg** (280 px): contenido largo (reglas, estadísticas, colección, editor,
+    catálogo). Alto fijo; solo el cuerpo hace scroll.
+  - Tono: la banda es naranja; carmesí solo en lo del Castillo.
+- **Jerarquía de botones:** una sola acción principal por ventana.
+  - Primario (`size="lg"`, masa naranja): SEGUIR, ¡SIGUIENTE JEFE!, ¡OTRA PARTIDA!
+  - Secundario (`size="md"`, pizarra): cancelar, reglas, volver al menú.
+  - Terciario (`px-btn-ghost`, sin fondo): salidas discretas (volver al menú desde la
+    pausa, restablecer).
+  - Peligro (`px-btn-danger`, pizarra con filo y texto naranja): borrar progreso.
+  - Opciones y pestañas (`size="sm"`): la elegida en naranja, el resto en pizarra
+    (`Tabs`, `Choice`).
+- **Secciones (`Section`):** hueco pizarra con el título en versalitas apagadas y una
+  línea debajo (`.t-section`). Ajustes se agrupa en Sonido, Partida, Pantalla y Más.
+- **Texto:** cuerpo (por defecto), nota (`.t-note`, menta, para explicaciones),
+  listas densas (`.t-list`) y micro (`.t-micro`, etiquetas pequeñas). Nada de tamaños
+  sueltos.
+- **Pie de acciones:** los botones van abajo, no mezclados con el contenido. El
+  resultado de una partida usa el mismo esquema que una ventana pequeña.
+- **Capas y orden:** solo una ventana a la vez. Al cambiar de pantalla o acabar la
+  partida se cierra la que hubiera. Los avisos (sello nuevo, logro) esperan a que no
+  haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
+- **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (colección en verde,
+  mazo en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
+  ajustes).
+- **Icono de la app:** fondo naranja a sangre con el centro encendido, el Rey en
+  silueta negra en el centro con un halo crema detrás, un leve desajuste de registro
+  y grano de impresión (`app/icon.png`, `app/apple-icon.png`, `public/icons/*`).

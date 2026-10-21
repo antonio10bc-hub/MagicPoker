@@ -19,7 +19,7 @@ import { PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, SEAL_ICONS } from '@/components/pixel/sprites';
 import { INK } from '@/theme/tokens';
-import { closeWithClick, Dialog, Section } from './Dialog';
+import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 
 const sealName = (t: Translations, s: SealId) => t[`seal_${s}` as keyof Translations];
 const sealDesc = (t: Translations, s: SealId) => t[`seal_${s}_desc` as keyof Translations];
@@ -46,26 +46,26 @@ export const PauseModal = () => {
     else { useUiStore.getState().closeModal(); exitToMenu(); }
   };
   return (
-    <Dialog title={t.pause_title} width={190} height={150}>
-      <div className="flex-1 p-[8px] flex flex-col gap-[6px] justify-center">
-        <PxButton tone="yellow" className="h-[20px] text-title" onClick={closeWithClick}>{t.resume}</PxButton>
-        <div className="flex items-center justify-between gap-[6px]">
-          <span>{t.speed}</span>
-          <div className="flex gap-[3px]">
-            {([1, 2] as const).map(v => (
-              <PxButton key={v} tone={v === speed ? 'roof' : 'white'} data-pressed={v === speed} className="h-[15px] px-[6px]"
-                onClick={() => { playSfx('select', 0.6); updateSettings({ speed: v }); }}>
-                <span className={v === speed ? 'text-outline' : undefined}>x{v}</span>
-              </PxButton>
-            ))}
-          </div>
-        </div>
+    <Dialog title={t.pause_title} size="sm" footer={
+      <>
+        <PxButton size="lg" tone="yellow" onClick={closeWithClick}>{t.resume}</PxButton>
         <div className="flex gap-[4px]">
-          <PxButton className="h-[16px] flex-1" onClick={() => open('rules')}>{t.menu_rules}</PxButton>
-          <PxButton className="h-[16px] flex-1" onClick={() => open('stats')}>{t.menu_stats}</PxButton>
+          <PxButton size="md" className="flex-1" onClick={() => open('rules')}>{t.menu_rules}</PxButton>
+          <PxButton size="md" className="flex-1" onClick={() => open('stats')}>{t.menu_stats}</PxButton>
         </div>
-        <PxButton className="h-[16px]" onClick={goHome}>{t.exit_menu}</PxButton>
-      </div>
+        <PxButton size="md" className="px-btn-ghost" onClick={goHome}>{t.exit_menu}</PxButton>
+      </>
+    }>
+      <DialogBody scroll={false}>
+        <OptionRow label={t.speed}>
+          {([1, 2] as const).map(v => (
+            <PxButton key={v} size="sm" tone={v === speed ? 'roof' : 'white'} data-pressed={v === speed}
+              onClick={() => { playSfx('select', 0.6); updateSettings({ speed: v }); }}>
+              <span className={v === speed ? 'text-outline' : undefined}>x{v}</span>
+            </PxButton>
+          ))}
+        </OptionRow>
+      </DialogBody>
     </Dialog>
   );
 };
@@ -105,20 +105,18 @@ export const DeckEditorModal = () => {
   };
 
   return (
-    <Dialog title={t.deck_title} width={250} height={260}>
-      <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[11px]">
-        {/* Mazos guardados */}
-        <div className="flex gap-[3px]">
-          {Array.from({ length: DECK_SLOTS }, (_, i) => (
-            <PxButton key={i} aria-label={`deck slot ${i + 1}`} tone={slot === i ? 'roof' : 'white'} data-pressed={slot === i} className="h-[15px] flex-1"
-              onClick={() => switchSlot(i)}>
-              <span className={slot === i ? 'text-outline' : undefined}>{t.deck_slot.replace('{n}', String(i + 1))}</span>
-            </PxButton>
-          ))}
-        </div>
-        <div className="text-center" style={{ color: 'var(--ink-orange)' }}>{t.deck_size.replace('{n}', String(size))}</div>
+    <Dialog title={t.deck_title} footer={
+      <div className="flex items-center justify-between gap-[6px]">
+        <span className="glow-text whitespace-nowrap" style={{ color: 'var(--ink-orange)' }}>{t.deck_size.replace('{n}', String(size))}</span>
+        <PxButton size="sm" className="px-btn-ghost" onClick={() => { playSound('click'); clearDeckConfig(); setConfig(defaultDeckConfig(owned)); }}>{t.deck_reset}</PxButton>
+      </div>
+    }>
+      {/* Mazos guardados */}
+      <Tabs className="px-[6px] pt-[6px]" value={slot} onChange={switchSlot}
+        options={Array.from({ length: DECK_SLOTS }, (_, i) => [i, t.deck_slot.replace('{n}', String(i + 1))] as [number, string])} />
+      <DialogBody>
         <Section title={`${t.deck_removed} · ${config.removed.length}/${MAX_REMOVED}`}>
-          <div className="mb-[3px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_removed_hint}</div>
+          <p className="t-note mb-[4px]">{t.deck_removed_hint}</p>
           <div className="grid grid-cols-7 gap-[3px] justify-items-center">
             {REMOVABLE.map(rank => {
               const out = config.removed.includes(rank);
@@ -134,14 +132,14 @@ export const DeckEditorModal = () => {
           </div>
         </Section>
         <Section title={`${t.deck_seals} · ${total}/${MAX_SEALS}`}>
-          <div className="mb-[3px]" style={{ color: 'var(--ink-teal)' }}>{t.deck_hint}</div>
+          <p className="t-note mb-[4px]">{t.deck_hint}</p>
           <div className="flex flex-col gap-[3px]">
             {owned.map(seal => {
               const n = config.seals[seal] ?? 0;
               return (
                 <div key={seal} className="flex items-center gap-[5px]">
                   <SealDot seal={seal} on={n > 0} />
-                  <span className="flex-1" style={{ color: n > 0 ? 'var(--ink-volt)' : 'var(--ink-mint)' }}>{sealName(t, seal)}</span>
+                  <span className="flex-1 truncate" style={{ color: n > 0 ? 'var(--ink-volt)' : 'var(--ink-mint)' }}>{t[`seal_tag_${seal}` as keyof Translations]}</span>
                   <PxButton aria-label={`less ${seal}`} className="w-[14px] h-[14px]" disabled={n === 0} onClick={() => step(seal, -1)}>-</PxButton>
                   <span className="font-display w-[10px] text-center">{n}</span>
                   <PxButton aria-label={`more ${seal}`} className="w-[14px] h-[14px]" disabled={n >= MAX_COPIES || total >= MAX_SEALS} onClick={() => step(seal, 1)}>+</PxButton>
@@ -150,8 +148,7 @@ export const DeckEditorModal = () => {
             })}
           </div>
         </Section>
-        <PxButton className="h-[16px]" onClick={() => { playSound('click'); clearDeckConfig(); setConfig(defaultDeckConfig(owned)); }}>{t.deck_reset}</PxButton>
-      </div>
+      </DialogBody>
     </Dialog>
   );
 };
@@ -198,9 +195,9 @@ const Entry = ({ icon, name, desc, idea }: { icon: ReactNode; name: string; desc
 export const CardCatalogModal = () => {
   const t = useTranslations();
   return (
-    <Dialog title={t.cards_title} width={260} height={240}>
-      <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[10px]" style={{ fontSize: 9 }}>
-        <p style={{ color: 'var(--ink-teal)' }}>{t.cards_intro}</p>
+    <Dialog title={t.cards_title}>
+      <DialogBody className="t-list">
+        <p className="t-note">{t.cards_intro}</p>
         <Section title={t.cards_section_base} className="flex flex-col gap-[3px]">
           <Entry icon={<span className="font-display" style={{ fontSize: 14 }}>7</span>} name={t.card_numbers} desc={t.card_number_desc} />
           {BASE.map(({ rank, text }) => (
@@ -217,7 +214,7 @@ export const CardCatalogModal = () => {
               name={t[`idea_${id}` as keyof Translations]} desc={t[`idea_${id}_desc` as keyof Translations]} />
           ))}
         </Section>
-      </div>
+      </DialogBody>
     </Dialog>
   );
 };
@@ -232,8 +229,8 @@ export const BackGallery = () => {
   const pick = (id: string) => { playSfx('select', 0.7); setBack(id); };
   const items = [{ id: DEFAULT_BACK, index: -1 }, ...BOSSES.map((b, index) => ({ id: b.id, index }))];
   return (
-    <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[10px]" style={{ fontSize: 9 }}>
-      <p style={{ color: 'var(--ink-teal)' }}>{t.backs_hint}</p>
+    <DialogBody className="t-list">
+      <p className="t-note">{t.backs_hint}</p>
       <div className="grid grid-cols-4 gap-x-[4px] gap-y-[6px] justify-items-center">
         {items.map(({ id, index }) => {
           const has = id === DEFAULT_BACK || owned.has(id);
@@ -254,7 +251,7 @@ export const BackGallery = () => {
           );
         })}
       </div>
-    </div>
+    </DialogBody>
   );
 };
 
@@ -263,10 +260,10 @@ export const BackGallery = () => {
 export const BoonsModal = () => {
   const t = useTranslations();
   return (
-    <Dialog title={t.castle_title} width={230} height={200}>
-      <div className="flex-1 p-[6px] flex items-center">
+    <Dialog title={t.castle_title} size="sm" tone="castle">
+      <DialogBody scroll={false}>
         <BoonChooser onChosen={() => { useUiStore.getState().closeModal(); useGameStore.getState().startCastle(); }} />
-      </div>
+      </DialogBody>
     </Dialog>
   );
 };

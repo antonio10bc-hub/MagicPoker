@@ -127,7 +127,7 @@ export const MenuScreen = () => {
   const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
   const collection = isCollectionUnlocked(progress);
   const editor = isEditorUnlocked(progress);
-  const buttons = 3 + Number(collection) + Number(editor);
+  const buttons = 3 + Number(collection) + Number(editor) + (collection || editor ? 0.4 : 0);
   const current = currentBossIndex(progress);
   const selected = menuBoss ?? current;
   // La página de después del último jefe es el Castillo
@@ -151,18 +151,19 @@ export const MenuScreen = () => {
       <div className="absolute z-30 flex gap-[3px]" style={stage.mode === 'landscape'
         ? { left: logoX + logoW / 2 - Math.round((buttons * 18 + (buttons - 1) * 3) / 2), top: logoY + 84 }
         : { right: 4, top: 4 }}>
+        {/* Todos los iconos con el mismo marco: lo tuyo (colección, mazo) lleva el icono
+            de su color y va separado de lo del juego (reglas, estadísticas, ajustes) */}
         {collection && (
-          <PxButton aria-label="collection" className="w-[18px] h-[18px]" style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.4)' }}
-            onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
-            <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} className="bloom-volt-shape" />
+          <PxButton aria-label="collection" className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
+            <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} />
           </PxButton>
         )}
         {editor && (
-          <PxButton aria-label="deck" className="w-[18px] h-[18px]" style={{ boxShadow: '0 0 0 1px rgba(255,74,28,0.7), 0 0 6px rgba(255,74,28,0.45)' }}
-            onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
-            <PixelSprite sprite={ICONS.deck} tint={INK.orange} className="bloom-shape" />
+          <PxButton aria-label="deck" className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
+            <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
           </PxButton>
         )}
+        {(collection || editor) && <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />}
         <IconButton icon={ICONS.info} aria-label="rules" onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
         <IconButton icon={ICONS.trophy} aria-label="stats" onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
         <IconButton icon={ICONS.gear} aria-label="settings" onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
@@ -185,10 +186,10 @@ export const MenuScreen = () => {
         <motion.div key={selected} className="absolute z-20 flex flex-col items-center" style={{ left: cx - 50, top: playY + 32, width: both ? 48 : 100 }}
           initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
           <PxButton onClick={() => handleStartGame(true)} className="w-full h-[16px]"
-            style={{ boxShadow: '0 0 0 1px rgba(125,255,43,0.6), 0 0 6px rgba(125,255,43,0.35)' }}>
+            style={{ boxShadow: 'inset 0 0 0 1px rgba(125,255,43,0.6)' }}>
             <span className="glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.rematch_level.replace('{n}', String(level))}</span>
           </PxButton>
-          {!both && stage.mode === 'portrait' && <span className="mt-[2px]" style={{ color: 'var(--ink-mint)', fontSize: 8, lineHeight: '9px' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>}
+          {!both && stage.mode === 'portrait' && <span className="t-micro mt-[3px] text-center whitespace-nowrap" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>}
         </motion.div>
       )}
 

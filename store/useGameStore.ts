@@ -491,7 +491,12 @@ if (typeof window !== 'undefined') {
   useUiStore.subscribe((ui, prev) => {
     if (!!ui.modal !== !!prev.modal) setPaused(!!ui.modal && useGameStore.getState().screen === 'game');
   });
-  useGameStore.subscribe((state, prev) => { if (state.screen !== prev.screen) setPaused(false); });
+  useGameStore.subscribe((state, prev) => {
+    if (state.screen !== prev.screen) setPaused(false);
+    // Una ventana nunca sobrevive a un cambio de pantalla ni al final de la partida
+    const ended = state.phase === 'end' && prev.phase !== 'end';
+    if ((state.screen !== prev.screen || ended) && useUiStore.getState().modal) useUiStore.getState().closeModal();
+  });
 }
 
 // --- GUARDADO AUTOMÁTICO ---

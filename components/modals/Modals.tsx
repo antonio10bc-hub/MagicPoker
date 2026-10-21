@@ -10,15 +10,14 @@ import { GrainLevel, updateSettings } from '@/lib/settings';
 import { useSettings } from '@/hooks/useSettings';
 import { useMuted } from '@/hooks/useMuted';
 import { Rank } from '@/types';
-import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
+import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { INK } from '@/theme/tokens';
-import { useStage } from '@/components/pixel/Stage';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { BOSSES, resetProgress, unlockedSeals } from '@/lib/bosses';
-import { closeWithClick, Dialog, Overlay, Section } from './Dialog';
+import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 import { BackGallery, BoonsModal, CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
@@ -49,8 +48,6 @@ export const Modals = () => {
 const ConfirmExitModal = () => {
   const t = useTranslations();
   const exitToMenu = useGameStore(s => s.exitToMenu);
-  const stage = useStage();
-
   const confirmExit = () => {
     playSound('click');
     useUiStore.getState().closeModal();
@@ -58,15 +55,14 @@ const ConfirmExitModal = () => {
   };
 
   return (
-    <Overlay>
-      <Panel title={t.confirm_exit_title} band="var(--c-mult)" style={{ width: Math.min(200, stage.width - 16) }} bodyClassName="p-[6px] flex flex-col gap-[8px]">
-        <p className="leading-[12px]">{t.confirm_exit_desc}</p>
-        <div className="flex gap-[6px] justify-center pb-[3px]">
-          <PxButton tone="red" onClick={confirmExit} className="px-[6px] h-[16px]"><span className="text-outline">{t.yes_exit}</span></PxButton>
-          <PxButton onClick={closeWithClick} className="px-[6px] h-[16px]">{t.cancel}</PxButton>
-        </div>
-      </Panel>
-    </Overlay>
+    <Dialog title={t.confirm_exit_title} size="sm" footer={
+      <div className="flex gap-[4px]">
+        <PxButton size="md" className="flex-1" onClick={closeWithClick}>{t.cancel}</PxButton>
+        <PxButton size="md" tone="red" className="flex-1" onClick={confirmExit}><span className="text-outline">{t.yes_exit}</span></PxButton>
+      </div>
+    }>
+      <DialogBody scroll={false}><p>{t.confirm_exit_desc}</p></DialogBody>
+    </Dialog>
   );
 };
 
@@ -104,8 +100,8 @@ const StatsModal = () => {
   ));
 
   return (
-    <Dialog title={t.stats_title} width={250} height={232}>
-      <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[4px] leading-[12px]">
+    <Dialog title={t.stats_title}>
+      <DialogBody>
         <Section title={t.results}>
           <div className="grid gap-x-[3px] text-center" style={{ gridTemplateColumns: "1fr 1fr 1fr 0.7fr" }}>
             {([
@@ -115,7 +111,7 @@ const StatsModal = () => {
               ['%', `${finished ? Math.round((totalWins / finished) * 100) : 0}%`, 'var(--ink-ember)'],
             ] as const).map(([label, value, color]) => (
               <div key={label}>
-                <div style={{ color: 'var(--ink-mint)', fontSize: 8 }}>{label}</div>
+                <div className="t-micro" style={{ color: 'var(--ink-mint)' }}>{label}</div>
                 <div className="text-title" style={{ color }}>{value}</div>
               </div>
             ))}
@@ -151,12 +147,12 @@ const StatsModal = () => {
                 </div>
                 <div style={{ color: 'var(--ink-mint)' }}>{stampDesc(t, picked)}</div>
               </>
-            ) : <div style={{ color: 'var(--ink-teal)' }}>{t.stamp_hint}</div>}
+            ) : <div className="t-note">{t.stamp_hint}</div>}
           </div>
         </Section>
         <Section title={t.records}>{rows(records)}</Section>
         <Section title={t.global}>{rows(globals)}</Section>
-      </div>
+      </DialogBody>
     </Dialog>
   );
 };
@@ -167,19 +163,12 @@ const CollectionModal = () => {
   const [seals] = useState(() => unlockedSeals());
   const [tab, setTab] = useState<'seals' | 'backs'>('seals');
   return (
-    <Dialog title={t.collection_title} width={250} height={220}>
+    <Dialog title={t.collection_title}>
       {/* Pestañas: sellos y dorsos */}
-      <div className="flex gap-[3px] px-[6px] pt-[5px]">
-        {(['seals', 'backs'] as const).map(k => (
-          <PxButton key={k} tone={tab === k ? 'roof' : 'white'} data-pressed={tab === k} className="h-[15px] flex-1"
-            onClick={() => { playSfx('select', 0.6); setTab(k); }}>
-            <span className={tab === k ? 'text-outline' : undefined}>{k === 'seals' ? t.tab_seals : t.tab_backs}</span>
-          </PxButton>
-        ))}
-      </div>
+      <Tabs className="px-[6px] pt-[6px]" value={tab} options={[['seals', t.tab_seals], ['backs', t.tab_backs]]} onChange={setTab} />
       {tab === 'backs' ? <BackGallery /> : (
-      <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[6px] leading-[10px]" style={{ fontSize: 9 }}>
-        {seals.length === 0 && <p style={{ color: 'var(--ink-mint)' }}>{t.collection_empty}</p>}
+      <DialogBody className="t-list">
+        {seals.length === 0 && <p className="t-note">{t.collection_empty}</p>}
         {BOSSES.filter(b => b.seal).map(boss => {
           const seal = boss.seal!;
           const owned = seals.includes(seal);
@@ -201,25 +190,18 @@ const CollectionModal = () => {
             </div>
           );
         })}
-      </div>
+      </DialogBody>
       )}
     </Dialog>
   );
 };
 
 // --- AJUSTES ---
-const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="flex items-center justify-between gap-[6px] min-h-[18px]">
-    <span>{label}</span>
-    <div className="flex items-center gap-[3px]">{children}</div>
-  </div>
-);
-
-const Choice = <T extends string | boolean>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) => (
+const Choice = <T extends string | boolean | number>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) => (
   <>
     {options.map(([v, label]) => (
-      <PxButton key={String(v)} tone={v === value ? 'roof' : 'white'} data-pressed={v === value}
-        onClick={() => { playSfx('select', 0.6); onChange(v); }} className="h-[15px] px-[5px]">
+      <PxButton key={String(v)} size="sm" tone={v === value ? 'roof' : 'white'} data-pressed={v === value}
+        onClick={() => { playSfx('select', 0.6); onChange(v); }}>
         <span className={v === value ? 'text-outline' : undefined}>{label}</span>
       </PxButton>
     ))}
@@ -241,8 +223,8 @@ const ResetProgress = () => {
   const t = useTranslations();
   const [step, setStep] = useState<'idle' | 'confirm' | 'done'>('idle');
   return (
-    <PxButton className="h-[16px]" disabled={step === 'done'}
-      style={step === 'confirm' ? { boxShadow: '0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : undefined}
+    <PxButton size="md" className={step === 'done' ? undefined : 'px-btn-danger'} disabled={step === 'done'}
+      style={step === 'confirm' ? { boxShadow: 'inset 0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : undefined}
       onClick={() => {
         if (step === 'idle') { playSfx('select', 0.6); setStep('confirm'); return; }
         playSound('click');
@@ -262,36 +244,43 @@ const SettingsModal = () => {
   const settings = useSettings();
   const isMuted = useMuted();
   return (
-    <Dialog title={t.settings_title} width={236} height={238}>
-      <div className="px-scroll flex-1 p-[6px] flex flex-col gap-[5px] leading-[12px]">
-        <Row label={t.set_sound}>
-          <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
-        </Row>
-        <Row label={t.set_music}><Slider label={t.set_music} value={settings.music} onChange={music => updateSettings({ music })} /></Row>
-        <Row label={t.set_sfx}><Slider label={t.set_sfx} value={settings.sfx} onChange={sfx => updateSettings({ sfx })} /></Row>
-        <Row label={t.set_vibration}>
-          <Choice value={settings.vibration} options={[[true, t.on], [false, t.off]]}
-            onChange={vibration => { updateSettings({ vibration }); if (vibration) haptic('select'); }} />
-        </Row>
-        <Row label={t.set_confirm_stand}>
-          <Choice value={settings.confirmStand} options={[[true, t.on], [false, t.off]]} onChange={confirmStand => updateSettings({ confirmStand })} />
-        </Row>
-        <div className="flex flex-col gap-[3px]">
+    <Dialog title={t.settings_title} size="md">
+      <DialogBody>
+        <Section title={t.sec_sound} className="flex flex-col gap-[3px]">
+          <OptionRow label={t.set_sound}>
+            <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
+          </OptionRow>
+          <OptionRow label={t.set_music}><Slider label={t.set_music} value={settings.music} onChange={music => updateSettings({ music })} /></OptionRow>
+          <OptionRow label={t.set_sfx}><Slider label={t.set_sfx} value={settings.sfx} onChange={sfx => updateSettings({ sfx })} /></OptionRow>
+          <OptionRow label={t.set_vibration}>
+            <Choice value={settings.vibration} options={[[true, t.on], [false, t.off]]}
+              onChange={vibration => { updateSettings({ vibration }); if (vibration) haptic('select'); }} />
+          </OptionRow>
+        </Section>
+        <Section title={t.sec_game} className="flex flex-col gap-[3px]">
+          <OptionRow label={t.set_confirm_stand}>
+            <Choice value={settings.confirmStand} options={[[true, t.on], [false, t.off]]} onChange={confirmStand => updateSettings({ confirmStand })} />
+          </OptionRow>
+          <OptionRow label={t.speed}>
+            <Choice<number> value={settings.speed} options={[[1, 'x1'], [2, 'x2']]} onChange={v => updateSettings({ speed: v as 1 | 2 })} />
+          </OptionRow>
+        </Section>
+        <Section title={t.sec_display} className="flex flex-col gap-[3px]">
           <span>{t.set_grain}</span>
-          <div className="flex gap-[3px]">
-            <Choice<GrainLevel> value={settings.grain} options={[['full', t.grain_full], ['soft', t.grain_soft], ['off', t.grain_off]]}
-              onChange={grain => updateSettings({ grain })} />
-          </div>
-        </div>
-        <div style={{ color: 'var(--ink-teal)' }}>{t.grain_hint}</div>
-        <PxButton className="h-[16px] mt-[2px]" onClick={() => {
-          playSound('click');
-          useUiStore.getState().closeModal();
-          useGameStore.getState().startTutorial();
-        }}>{t.replay_tutorial}</PxButton>
-        <PxButton className="h-[16px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('cards'); }}>{t.cards_button}</PxButton>
-        <ResetProgress />
-      </div>
+          <Tabs<GrainLevel> value={settings.grain} options={[['full', t.grain_full], ['soft', t.grain_soft], ['off', t.grain_off]]}
+            onChange={grain => updateSettings({ grain })} />
+          <p className="t-note">{t.grain_hint}</p>
+        </Section>
+        <Section title={t.sec_more} className="flex flex-col gap-[4px]">
+          <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().openModal('cards'); }}>{t.cards_button}</PxButton>
+          <PxButton size="md" onClick={() => {
+            playSound('click');
+            useUiStore.getState().closeModal();
+            useGameStore.getState().startTutorial();
+          }}>{t.replay_tutorial}</PxButton>
+          <ResetProgress />
+        </Section>
+      </DialogBody>
     </Dialog>
   );
 };
@@ -353,13 +342,10 @@ const MuteButton = () => {
 const RulesModal = () => {
   const t = useTranslations();
   return (
-    <Dialog title={t.rules_title} width={300} height={232} actions={<MuteButton />}>
-      <div className="px-scroll flex-1 p-[5px] flex flex-col gap-[6px] leading-[12px]">
+    <Dialog title={t.rules_title} actions={<MuteButton />}>
+      <DialogBody>
         {RULES.map(section => (
-          <section key={section.title}>
-            <div className={clsx('inline-block px-round px-[4px] pt-[2px] h-[13px] mb-[3px]', /orange|mult/.test(section.band) ? 'text-ink' : 'text-outline')} style={{ background: section.band }}>
-              {t[section.title]}
-            </div>
+          <Section key={section.title} title={t[section.title]}>
             <ul className="flex flex-col gap-[3px]">
               {section.items.map(item => {
                 const portrait = SPECIAL_PORTRAIT[item];
@@ -374,12 +360,9 @@ const RulesModal = () => {
                 );
               })}
             </ul>
-          </section>
+          </Section>
         ))}
-        <section>
-          <div className="inline-block px-round px-[4px] pt-[2px] h-[13px] mb-[3px] text-outline" style={{ background: 'var(--ink-slate)' }}>
-            {t.legend_title}
-          </div>
+        <Section title={t.legend_title}>
           <ul className="flex flex-col gap-[4px]">
             {LEGEND.map(item => (
               <li key={item.text} className="flex gap-[5px] items-start">
@@ -388,8 +371,8 @@ const RulesModal = () => {
               </li>
             ))}
           </ul>
-        </section>
-      </div>
+        </Section>
+      </DialogBody>
     </Dialog>
   );
 };

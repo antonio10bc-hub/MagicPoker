@@ -94,7 +94,7 @@ export const EndScreen = () => {
   const { cx, board, mascotY } = useMenuLayout();
   // El panel de resultado va centrado sobre el tapete
   const panelY = mascotY - 2;
-  const panelWidth = Math.min(200, useStage().width - 16);
+  const panelWidth = Math.min(210, useStage().width - 16);
 
   const isWin = gameResult === 'win';
   // Tras vencer a un jefe hay otro esperando (el siguiente de la lista)
@@ -131,31 +131,33 @@ export const EndScreen = () => {
         // Derrota: caída seca con temblor (varios fotogramas: sin muelle); victoria: muelle
         transition={isLoss ? { duration: 0.6, ease: 'easeOut', delay: 0.25 } : { type: 'spring', stiffness: 260, damping: 12, delay: 0.25 }}
       >
-      {castleOutcome ? (
-        // Castillo: elegir mejora y subir, o fin de la subida (conquistado o caído)
-        <Panel title={<TitleLetters text={castleOutcome.kind === 'conquered' ? t.castle_conquered : t[ui.title]} />}
-          band={castleOutcome.kind === 'fallen' ? ui.band : 'var(--ink-crimson)'}
-          style={{ width: panelWidth, minHeight: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
-          {castleOutcome.kind === 'next' ? <BoonChooser /> : (
-            <>
-              <p className="text-center leading-[12px]">
-                {castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1))}
-              </p>
-              <PxButton tone="yellow" onClick={() => { playSound('click'); startCastle(); }} className="h-[20px]">{t.castle_again}</PxButton>
-            </>
+      {/* Mismo esquema que las ventanas pequeñas: banda, texto y pie de acciones */}
+      <Panel
+        title={<TitleLetters text={castleOutcome?.kind === 'conquered' ? t.castle_conquered : t[ui.title]} />}
+        band={castleOutcome && castleOutcome.kind !== 'fallen' ? 'var(--ink-crimson)' : ui.band}
+        titleClassName={castleOutcome && castleOutcome.kind !== 'fallen' ? 'text-ink' : undefined}
+        style={{ width: panelWidth }} bodyClassName="flex flex-col">
+        <div className="p-[6px]">
+          {castleOutcome?.kind === 'next' ? <BoonChooser /> : (
+            <p className="text-center leading-[12px]">
+              {castleOutcome
+                ? (castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1)))
+                : wasTutorial ? t.tut_done : t[ui.sub]}
+            </p>
           )}
-          <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
-        </Panel>
-      ) : (
-      <Panel title={<TitleLetters text={t[ui.title]} />} band={ui.band} style={{ width: panelWidth, height: 96 }} bodyClassName="p-[6px] flex flex-col gap-[6px]">
-        <p className="text-center leading-[12px]">{wasTutorial ? t.tut_done : t[ui.sub]}</p>
-        {/* Si ganas, al siguiente jefe; si no, revancha contra el mismo */}
-        <PxButton tone="yellow" onClick={() => { playSound('click'); startGame(wasTutorial || isWin ? undefined : bossIndex, rematch && !isWin); }} className="h-[20px]">
-          {hasNextBoss ? t.next_boss : t.play_again}
-        </PxButton>
-        <PxButton onClick={() => { playSound('click'); exitToMenu(); }} className="h-[16px]">{t.exit_menu}</PxButton>
+        </div>
+        <div className="p-[6px] flex flex-col gap-[4px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(185,207,200,0.1)' }}>
+          {castleOutcome ? castleOutcome.kind !== 'next' && (
+            <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
+          ) : (
+            // Si ganas, al siguiente jefe; si no, revancha contra el mismo
+            <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startGame(wasTutorial || isWin ? undefined : bossIndex, rematch && !isWin); }}>
+              {hasNextBoss ? t.next_boss : t.play_again}
+            </PxButton>
+          )}
+          <PxButton size="md" onClick={() => { playSound('click'); exitToMenu(); }}>{t.exit_menu}</PxButton>
+        </div>
       </Panel>
-      )}
       </motion.div>}
     </div>
   );

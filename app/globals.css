@@ -168,6 +168,29 @@ html, body {
   text-shadow: 0.5px 0 0 rgba(237, 235, 224, 0.25);
 }
 
+/* ===== SISTEMA DE MENÚS (ver ART_DIRECTION: "Sistema de interfaz") =====
+   Tres alturas de botón y una jerarquía clara:
+   primario (masa naranja), secundario (pizarra), terciario (sin fondo) y peligro
+   (pizarra con texto y filo naranja: borrar, salir sin guardar). */
+.px-btn-lg { height: 20px; }
+.px-btn-md { height: 16px; }
+.px-btn-sm { height: 15px; padding: 0 5px; }
+.px-btn-ghost { --btn-bg: transparent; --btn-fg: var(--ink-mint); box-shadow: none; }
+.px-btn-ghost:hover { filter: none; --btn-fg: var(--ink-cream); }
+.px-btn-danger { --btn-fg: var(--ink-orange); box-shadow: inset 0 0 0 1px rgba(255, 74, 28, 0.55); }
+
+/* Escala de texto de los menús: cuerpo (por defecto), nota y micro */
+.t-note { font-size: 9px; line-height: 10px; color: var(--ink-mint); }
+.t-micro { font-size: 8px; line-height: 9px; }
+/* Listas densas (colección, catálogo): un punto menos */
+.t-list { font-size: 9px; line-height: 10px; }
+/* Título de sección: versalitas apagadas con una línea debajo */
+.t-section {
+  font-size: 9px; line-height: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-teal); padding-bottom: 2px; margin-bottom: 4px;
+  box-shadow: 0 1px 0 0 rgba(185, 207, 200, 0.1);
+}
+
 /* ===== BLOOM (masas que brillan desde dentro) =====
    Rendimiento: en cajas el halo es box-shadow (se pinta una vez y viaja con la capa);
    `filter` solo en siluetas pequeñas y con una única sombra. */

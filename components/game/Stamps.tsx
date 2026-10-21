@@ -72,9 +72,11 @@ export const StampToasts = () => {
   const shift = useUiStore(s => s.shiftStamp);
   // Espera a que termine la pelea (también el repaso del resultado) para no taparla
   const busy = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
+  // Con una ventana abierta, el aviso espera a que se cierre
+  const modalOpen = useUiStore(s => !!s.modal);
   // El premio del boss (sello o colección) se celebra antes
   const unlockPending = useUiStore(s => s.unlockQueue.length > 0);
-  const ready = current && !busy && !unlockPending;
+  const ready = current && !busy && !unlockPending && !modalOpen;
   const [shown, setShown] = useState<StampId | null>(null);
   useEffect(() => {
     if (!ready) return;
@@ -90,14 +92,14 @@ export const StampToasts = () => {
     return () => { clearTimeout(slam); clearTimeout(done); };
   }, [show, current, shift]);
 
-  const w = Math.min(190, width - 16);
+  const w = Math.min(210, width - 16);
   return (
     <AnimatePresence>
       {show && (
         <motion.button
           key={current}
           className="absolute z-[300] flex flex-col items-center gap-[6px] cursor-pointer"
-          style={{ left: (width - w) / 2, top: Math.round(height * 0.26), width: w }}
+          style={{ left: (width - w) / 2, top: Math.round(height * 0.24), width: w }}
           onClick={shift}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12, transition: { duration: 0.25 } }}
         >
