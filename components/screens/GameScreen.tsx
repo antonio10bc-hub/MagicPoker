@@ -8,6 +8,8 @@ import { Hand, HandHandlers, PlayerPanel, RivalPanel, Sidebar } from '@/componen
 import { CardInfo } from '@/components/game/CardInfo';
 import { BossTaunt, SpyBubble } from '@/components/game/BossTaunt';
 import { BossIntro } from '@/components/game/BossIntro';
+import { Phase2Scene } from '@/components/game/Phase2Scene';
+import { HurtFlash, SlowMoLayer } from '@/components/game/Juice';
 import { WildSealPicker } from '@/components/game/WildSealPicker';
 import { TutorialCoach, useTutorialGate } from '@/components/game/TutorialCoach';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
@@ -81,6 +83,9 @@ export const GameScreen = () => {
       <RivalPanel />
       <BossTaunt />
       <BossIntro />
+      <Phase2Scene />
+      <HurtFlash />
+      <SlowMoLayer />
       <SpyBubble />
       <PlayerPanel />
       <MenuButtons />

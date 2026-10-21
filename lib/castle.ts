@@ -4,7 +4,7 @@
 // Entre jefe y jefe eliges 1 de 3 mejoras sacadas de una bolsa (curarte y una carta
 // nueva casi siempre están). Si caes, la subida se acaba y se empieza de cero.
 import { Card, Rank, Rng, SealId } from '@/types';
-import { CASTLE_RANKS, createCard, createSealCard, createWildSealCard, DECK_RANKS, RANKS, shuffle } from '@/lib/game-utils';
+import { CASTLE_RANKS, LEGENDARY_RANKS, createCard, createSealCard, createWildSealCard, DECK_RANKS, RANKS, shuffle } from '@/lib/game-utils';
 import { ALL_SEALS, BOSSES } from '@/lib/bosses';
 import { defaultDeckConfig, getDeckConfig, sanitizeDeckConfig } from '@/lib/deck';
 import { STARTING_LIVES } from '@/lib/constants';
@@ -32,6 +32,17 @@ export type Boon =
   | { kind: 'maxLife' }
   | { kind: 'pact' };
 
+/** Rareza de una mejora: común, rara o legendaria (las cartas legendarias) */
+export type Rarity = 'common' | 'rare' | 'legendary';
+const RARE_CARDS: (Rank | 'WILD')[] = ['KNIGHT', 'PRIESTESS', 'WILD'];
+export const boonRarity = (boon: Boon): Rarity => {
+  if (boon.kind === 'card') return LEGENDARY_RANKS.includes(boon.rank as Rank) ? 'legendary' : RARE_CARDS.includes(boon.rank) ? 'rare' : 'common';
+  return boon.kind === 'seal' || boon.kind === 'maxLife' || boon.kind === 'pact' ? 'rare' : 'common';
+};
+/** Desde este piso el mercader puede traer una legendaria */
+export const LEGENDARY_FROM_STAGE = 6;
+const LEGENDARY_CHANCE = 0.3;
+
 export interface CastleRun {
   /** Jefe al que te enfrentas (índice en BOSSES) */
   stage: number;
@@ -42,7 +53,21 @@ export interface CastleRun {
   pact?: boolean;
   /** Mejoras para elegir tras la última victoria */
   offer?: Boon[];
+  /** Cofre por abrir (cada CHEST_EVERY pisos): su premio ya está decidido */
+  chest?: Boon;
+  /** Desafíos activos en esta subida */
+  challenges?: ChallengeId[];
 }
+
+// --- DESAFÍOS (se abren al conquistar el Castillo una vez) ---
+//  noHeal  · nadie te ofrece curarte
+//  fierce  · los jefes tienen una vida más
+//  sealed  · los jefes llevan un nivel más (más sellos)
+//  short   · empiezas sin tus 4 cartas más flojas
+//  fragile · empiezas con 3 vidas (y 3 de tope)
+export type ChallengeId = 'noHeal' | 'fierce' | 'sealed' | 'short' | 'fragile';
+export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short', 'fragile'];
+const has = (run: CastleRun | undefined | null, c: ChallengeId) => !!run?.challenges?.includes(c);
 
 export interface CastleState {
   run: CastleRun | null;
@@ -50,7 +75,22 @@ export interface CastleState {
   best: number;
   /** Veces que lo has conquistado */
   conquered: number;
+  /** Más desafíos a la vez con los que lo has conquistado */
+  bestChallenges?: number;
+  /** Los últimos desafíos elegidos (para no marcarlos otra vez) */
+  lastChallenges?: ChallengeId[];
+  /** Ya has conseguido alguna carta legendaria */
+  legendary?: boolean;
 }
+
+// --- DORSOS DEL CASTILLO ---
+//  castle   · conquistar el Castillo
+//  merchant · conseguir una carta legendaria (del mercader o de un cofre)
+//  crown    · conquistarlo con los 5 desafíos a la vez
+export const CASTLE_BACKS = ['castle', 'merchant', 'crown'] as const;
+export type CastleBack = typeof CASTLE_BACKS[number];
+export const castleBacks = (s: CastleState = getCastle()): CastleBack[] => CASTLE_BACKS.filter(b =>
+  b === 'castle' ? s.conquered > 0 : b === 'merchant' ? !!s.legendary : (s.bestChallenges ?? 0) >= CHALLENGES.length);
 
 export const CASTLE_LENGTH = BOSSES.length;
 const KEY = 'magic_poker_castle';
@@ -99,21 +139,30 @@ const startingDeck = (): CardTemplate[] => {
   ];
 };
 
-/** Empieza una subida nueva (o devuelve la que está a medias) */
-export const ensureRun = (): CastleRun => {
+/** Empieza una subida nueva (o devuelve la que está a medias), con sus desafíos */
+export const ensureRun = (challenges: ChallengeId[] = []): CastleRun => {
   const state = getCastle();
   if (state.run) return state.run;
-  const run: CastleRun = { stage: 0, lives: STARTING_LIVES, maxLives: STARTING_LIVES, deck: startingDeck() };
-  save({ ...state, run });
+  const valid = CHALLENGES.filter(c => challenges.includes(c));
+  const lives = valid.includes('fragile') ? STARTING_LIVES - 1 : STARTING_LIVES;
+  let deck = startingDeck();
+  if (valid.includes('short')) {
+    // Fuera las 4 cartas normales más flojas
+    const weakest = deck.map((c, i) => ({ c, i })).filter(({ c }) => c.rank !== 'SEAL')
+      .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, 4).map(w => w.i);
+    deck = deck.filter((_, i) => !weakest.includes(i));
+  }
+  const run: CastleRun = { stage: 0, lives, maxLives: lives, deck, ...(valid.length ? { challenges: valid } : {}) };
+  save({ ...state, run, lastChallenges: valid });
   return run;
 };
 
 export const abandonRun = () => save({ ...getCastle(), run: null });
 
 /** Jefe evolucionado: nivel de revancha según lo alto que estés */
-export const castleBossLevel = (stage: number) => (stage < 4 ? 1 : stage < 8 ? 2 : 3);
+export const castleBossLevel = (stage: number, run?: CastleRun | null) => Math.min(4, (stage < 4 ? 1 : stage < 8 ? 2 : 3) + (has(run, 'sealed') ? 1 : 0));
 /** Vidas del jefe: menos que en sus partidas (aquí las tuyas se arrastran), crecen al subir */
-export const castleBossLives = (run: CastleRun) => Math.max(1, 3 + Math.floor(run.stage / 3) - (run.pact ? 1 : 0));
+export const castleBossLives = (run: CastleRun) => Math.max(1, 3 + Math.floor(run.stage / 3) - (run.pact ? 1 : 0) + (has(run, 'fierce') ? 1 : 0));
 
 /** Mazo de la pelea a partir de las plantillas */
 export const buildRunDeck = (run: CastleRun): Card[] => shuffle(run.deck.map(t => {
@@ -132,7 +181,7 @@ const normalCards = (run: CastleRun) => run.deck.map((c, i) => ({ c, i })).filte
 /** Una mejora concreta de cada tipo (o null si ahora no tiene sentido) */
 const makeBoon = (kind: Boon['kind'], run: CastleRun, rng: Rng): Boon | null => {
   switch (kind) {
-    case 'heal': return run.lives < run.maxLives ? { kind } : null;
+    case 'heal': return run.lives < run.maxLives && !has(run, 'noHeal') ? { kind } : null;
     case 'card': return { kind, rank: pick<Rank | 'WILD'>([...CASTLE_RANKS, 'WILD'], rng) };
     case 'seal': {
       const free = normalCards(run).filter(({ c }) => !c.seal);
@@ -165,6 +214,12 @@ export const offerBoons = (run: CastleRun, rng: Rng = Math.random): Boon[] => {
   if (rng() < 0.85) add('heal');
   if (rng() < 0.85) add('card');
   for (const kind of shuffle<Boon['kind']>(['seal', 'upgrade', 'purge', 'maxLife', 'pact', 'heal', 'card'], rng)) add(kind);
+  // Arriba, a veces, una legendaria en el último puesto
+  if (run.stage >= LEGENDARY_FROM_STAGE && rng() < LEGENDARY_CHANCE) {
+    const legend: Boon = { kind: 'card', rank: pick(LEGENDARY_RANKS, rng) };
+    const i = out.findIndex(b => b.kind === 'card');
+    out[i >= 0 ? i : out.length - 1] = legend;
+  }
   return out;
 };
 
@@ -189,8 +244,36 @@ export const chooseBoon = (index: number): CastleRun | null => {
   const boon = state.run?.offer?.[index];
   if (!state.run || !boon) return null;
   const run = applyBoon(state.run, boon);
-  save({ ...state, run });
+  save({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' });
   return run;
+};
+
+// --- COFRE (cada 3 pisos) ---
+// Un "gacha": la rareza sale a suertes (40 % común, 45 % rara, 15 % legendaria) y luego
+// un premio de esa rareza. Nunca trae el pacto (no es un regalo).
+export const CHEST_EVERY = 3;
+export const isChestFloor = (stage: number) => stage > 0 && stage % CHEST_EVERY === 0 && stage < CASTLE_LENGTH;
+
+export const rollChest = (run: CastleRun, rng: Rng = Math.random): Boon => {
+  const roll = rng();
+  const rarity: Rarity = roll < 0.15 ? 'legendary' : roll < 0.6 ? 'rare' : 'common';
+  if (rarity === 'legendary') return { kind: 'card', rank: pick(LEGENDARY_RANKS, rng) };
+  const options: (Boon | null)[] = rarity === 'rare'
+    ? [makeBoon('seal', run, rng), { kind: 'maxLife' }, { kind: 'card', rank: pick(RARE_CARDS, rng) }]
+    : [makeBoon('heal', run, rng), { kind: 'card', rank: pick(CASTLE_RANKS.filter(r => !RARE_CARDS.includes(r)), rng) }, makeBoon('upgrade', run, rng)];
+  const valid = options.filter((b): b is Boon => !!b);
+  return valid.length ? pick(valid, rng) : { kind: 'maxLife' };
+};
+
+/** Abres el cofre: su premio se aplica y se guarda */
+export const openChest = (): Boon | null => {
+  const state = getCastle();
+  const boon = state.run?.chest;
+  if (!state.run || !boon) return null;
+  // La oferta del mercader que ya estaba decidida se conserva
+  const run = { ...applyBoon(state.run, boon), offer: state.run.offer, chest: undefined };
+  save({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' });
+  return boon;
 };
 
 // --- RESULTADO DE CADA PELEA ---
@@ -203,10 +286,12 @@ export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): Cast
   if (!state.run) return { kind: 'fallen', stage: 0 };
   const stage = state.run.stage + 1;
   if (stage >= CASTLE_LENGTH) {
-    save({ run: null, best: CASTLE_LENGTH, conquered: state.conquered + 1 });
+    const n = state.run.challenges?.length ?? 0;
+    save({ ...state, run: null, best: CASTLE_LENGTH, conquered: state.conquered + 1, bestChallenges: Math.max(state.bestChallenges ?? 0, n) });
     return { kind: 'conquered' };
   }
   const run: CastleRun = { ...state.run, stage, lives: livesLeft, pact: false };
+  if (isChestFloor(stage)) run.chest = rollChest(run, rng);
   run.offer = offerBoons(run, rng);
   save({ ...state, run, best: Math.max(state.best, stage) });
   return { kind: 'next', run };

@@ -23,6 +23,8 @@ interface RankDefinition {
   wipesBoard?: boolean;
   /** Las figuras muestran su sello sobre las cartas que destruyen */
   marksVictims?: boolean;
+  /** Legendaria del mercader */
+  legendary?: boolean;
 }
 
 const FRONT: AttackPattern = { offsets: [0], mode: 'all' };
@@ -57,10 +59,19 @@ export const RANKS: Record<Rank, RankDefinition> = {
   'KNIGHT': { value: 9, attack: { offsets: [-2, 2], mode: 'all' }, castle: true },
   // Sacerdotisa: si sobrevive a la pelea, recuperas una vida
   'PRIESTESS': { value: 5, attack: FRONT, castle: true },
+  // --- Legendarias (solo las vende el mercader o salen del cofre) ---
+  // Dragón: vale 16 y golpea los tres huecos de delante
+  'DRAGON': { value: 16, attack: { offsets: [-1, 0, 1], mode: 'all' }, castle: true, legendary: true },
+  // Hidra: al caer en un choque deja un 5 en su hueco
+  'HYDRA': { value: 7, attack: FRONT, castle: true, legendary: true },
+  // Fénix: al caer vuelve a tu mano
+  'PHOENIX': { value: 8, attack: FRONT, castle: true, legendary: true },
 };
 
 /** Cartas del Castillo (las ideas del catálogo hechas realidad) */
 export const CASTLE_RANKS: Rank[] = ['JESTER', 'TOWER', 'BOMB', 'SPY', 'KNIGHT', 'PRIESTESS'];
+/** Legendarias del mercader */
+export const LEGENDARY_RANKS: Rank[] = ['DRAGON', 'HYDRA', 'PHOENIX'];
 
 /** Rangos del mazo estándar (los sellos y las cartas del Castillo se añaden aparte) */
 export const DECK_RANKS = (Object.keys(RANKS) as Rank[]).filter(r => r !== 'SEAL' && !RANKS[r].castle);
@@ -141,10 +152,16 @@ export const applyReveal = (enemyBoard: BoardSlot[], index: number): { board: Bo
   return { board, index: target.index };
 };
 
-/** Carta que deja un sello de eco al morir: un 2 boca arriba */
-export const createEchoCard = (owner: Owner): Card => ({
-  id: `${owner}-2-echo-${++nextCardId}`, rank: '2', suit: 'standard', value: RANKS['2'].value, isFaceUp: true, owner,
+/** Carta que deja un sello de eco al morir: un 2 boca arriba (la Hidra deja un 5) */
+export const createEchoCard = (owner: Owner, rank: Rank = '2'): Card => ({
+  id: `${owner}-${rank}-echo-${++nextCardId}`, rank, suit: 'standard', value: RANKS[rank].value, isFaceUp: true, owner,
 });
+
+/** Fénix caídos en la pelea: vuelven a la mano de su dueño (como carta nueva) */
+export const risenPhoenixes = (board: BoardSlot[]): Card[] =>
+  board.flatMap(s => (s.card?.rank === 'PHOENIX' && s.card.isTakingDamage
+    ? [createCard(s.card.owner, 'PHOENIX', { isFaceUp: s.card.owner === 'player', merchant: s.card.merchant })]
+    : []));
 
 /**
  * Efectos de sello que ocurren al empezar la pelea, antes del choque:
@@ -481,6 +498,7 @@ export const clearDefeatedCards = (board: BoardSlot[]): BoardSlot[] =>
     const card = slot.card;
     if (!card) return slot;
     if (card.isTakingDamage && card.seal === 'echo') return { ...slot, card: createEchoCard(card.owner) };
+    if (card.isTakingDamage && card.rank === 'HYDRA') return { ...slot, card: { ...createEchoCard(card.owner, '5'), merchant: card.merchant } };
     if (card.isTakingDamage || card.isVoided) return { ...slot, card: null };
     if (card.isShielded || card.isReflecting) return { ...slot, card: { ...card, isShielded: false, isReflecting: false, isExposed: false, seal: undefined } };
     if (card.isExposed) return { ...slot, card: { ...card, isExposed: false } };

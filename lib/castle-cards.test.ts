@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BoardSlot, Card, Owner, Rank, SealId } from '@/types';
 import {
-  calculateCombat, createEmptyBoard, createPlayerState, createWildSealCard, DECK_RANKS, lifeGains, playCardToSlot, RANKS,
+  calculateCombat, clearDefeatedCards, createEmptyBoard, createPlayerState, createWildSealCard, DECK_RANKS, LEGENDARY_RANKS, lifeGains,
+  markCombatResult, playCardToSlot, RANKS, risenPhoenixes,
 } from '@/lib/game-utils';
 
 const card = (rank: Rank, owner: Owner, id: string, seal?: SealId): Card => ({
@@ -56,5 +57,34 @@ describe('cartas del Castillo', () => {
     const state = { ...createPlayerState(), hand: [wild], board: board('player', [['5'], null, null, null]) };
     expect(playCardToSlot(state, wild.id, 0, true)).toBeNull();
     expect(playCardToSlot(state, wild.id, 0, true, 'mirror')!.board[0].card?.seal).toBe('mirror');
+  });
+});
+
+describe('legendarias del mercader', () => {
+  it('no están en el mazo estándar', () => {
+    expect(DECK_RANKS).not.toContain('DRAGON');
+    expect(LEGENDARY_RANKS.every(r => RANKS[r].legendary && RANKS[r].castle)).toBe(true);
+  });
+
+  it('Dragón: vale 16 y golpea los tres huecos de delante', () => {
+    const r = calculateCombat(board('player', [null, ['DRAGON'], null, null]), board('opponent', [['K'], null, ['9'], null]));
+    expect(r.deadCardIds.sort()).toEqual(['opponent-0', 'opponent-2']);
+    expect(r.opponentDamageTaken).toBe(1);
+  });
+
+  it('Hidra: al caer en un choque deja un 5 en su hueco', () => {
+    const mine = board('player', [['HYDRA']]);
+    const r = calculateCombat(mine, board('opponent', [['K']]));
+    expect(r.deadCardIds).toContain('player-0');
+    const after = clearDefeatedCards(markCombatResult(mine, r));
+    expect(after[0].card?.rank).toBe('5');
+  });
+
+  it('Fénix: al caer vuelve a la mano', () => {
+    const mine = board('player', [['PHOENIX']]);
+    const r = calculateCombat(mine, board('opponent', [['K']]));
+    const risen = risenPhoenixes(markCombatResult(mine, r));
+    expect(risen.map(c => c.rank)).toEqual(['PHOENIX']);
+    expect(risen[0].id).not.toBe('player-0');
   });
 });

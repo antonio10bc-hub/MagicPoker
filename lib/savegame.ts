@@ -21,6 +21,8 @@ export interface SavedGame {
   rematchLevel?: number;
   /** Pelea del Castillo (el resto de la subida se guarda aparte) */
   castle?: boolean;
+  /** El Soberano del Castillo ya pasó a su fase 2 */
+  phase2?: boolean;
   player: PlayerState;
   opponent: PlayerState;
 }

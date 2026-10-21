@@ -8,7 +8,8 @@ import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { SEAL_SFX } from '@/lib/synth';
 import { fx } from '@/components/fx/fxStore';
 import { ARROW_HOLD_S, IMPACT_DELAY_S, SECOND_HIT_S, SHIELD_BREAK_S } from './Card';
-import { getTargetIndices } from '@/lib/game-utils';
+import { getTargetIndices, lifeGains } from '@/lib/game-utils';
+import { BOSSES } from '@/lib/bosses';
 import { pausableTimeout } from '@/lib/clock';
 import { useTranslations } from '@/lib/i18n';
 
@@ -18,6 +19,8 @@ import { useTranslations } from '@/lib/i18n';
 // eventos de juego.
 
 const IMPACT_MS = IMPACT_DELAY_S * 1000;
+/** Duración del momento decisivo a cámara lenta */
+const SLOWMO_S = 2.4;
 const HOLD_MS = ARROW_HOLD_S * 1000;
 
 type Located = { slot: BoardSlot; owner: Owner; x: number; y: number };
@@ -171,7 +174,26 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
       ...Object.keys(combat.playerEmptySlotsHit).map(i => cards.find(l => l.owner === 'player' && l.slot.index === +i)!),
       ...Object.keys(combat.opponentEmptySlotsHit).map(i => cards.find(l => l.owner === 'opponent' && l.slot.index === +i)!),
     ].filter(Boolean);
-    if (spots.length > 0) {
+    // Golpe decisivo: esta pelea deja a alguien sin vidas (el Soberano del Castillo, si
+    // aún no ha pasado a su fase 2, se levanta: no cuenta)
+    const { castle, bossIndex } = useGameStore.getState();
+    const left = (s: typeof player, dmg: number) => s.lives - dmg + lifeGains(s.board, combat);
+    const sovereignRises = !!castle && !castle.phase2 && BOSSES[bossIndex]?.id === 'sovereign';
+    const decisive = left(player, combat.playerDamageTaken) <= 0 || (!sovereignRises && left(opponent, combat.opponentDamageTaken) <= 0);
+
+    if (decisive) {
+      // Cámara lenta: bandas de cine, color apagado, zoom lento al centro de la mesa,
+      // la música se hunde y late el corazón; el impacto retumba más
+      const mid = geo.slots.player[1];
+      const cx = spots.length ? spots.reduce((a, l) => a + l.x, 0) / spots.length : mid.x + CARD_SIZE.width;
+      const cy = spots.length ? spots.reduce((a, l) => a + l.y, 0) / spots.length : mid.y;
+      fx.slowmo(SLOWMO_S);
+      fx.focus(cx, cy, 1.2, SLOWMO_S);
+      duckMusic(0.85, SLOWMO_S);
+      // Latido: dos golpes graves
+      [0, 380].forEach(ms => later(ms, () => playSfx('hit', 0.7, 0.45)));
+      later(IMPACT_MS, () => { fx.flash(0.7); fx.shake(5); fx.punch(0.08); haptic('wipe'); playSfx('crush', 1, 0.6); });
+    } else if (spots.length > 0) {
       const cx = spots.reduce((a, l) => a + l.x, 0) / spots.length;
       const cy = spots.reduce((a, l) => a + l.y, 0) / spots.length;
       // Más cerca cuanto más concentrada está la acción

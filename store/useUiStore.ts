@@ -4,7 +4,7 @@ import type { Unlock } from '@/lib/bosses';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
-export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons';
+export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges';
 
 interface UiState {
   modal: ModalName | null;
@@ -20,6 +20,9 @@ interface UiState {
   /** Boss que se ve en el carrusel del menú (null = el actual) */
   menuBoss: number | null;
   setMenuBoss: (i: number) => void;
+  /** Cinemática a pantalla completa en curso (presentación, fase 2): los avisos esperan */
+  cinematic: boolean;
+  setCinematic: (on: boolean) => void;
 }
 
 export const useUiStore = create<UiState>(set => ({
@@ -34,4 +37,6 @@ export const useUiStore = create<UiState>(set => ({
   shiftUnlock: () => set(s => ({ unlockQueue: s.unlockQueue.slice(1) })),
   menuBoss: null,
   setMenuBoss: menuBoss => set({ menuBoss }),
+  cinematic: false,
+  setCinematic: cinematic => set({ cinematic }),
 }));

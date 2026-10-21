@@ -30,6 +30,9 @@ export interface MusicHandle {
   stop: (fadeSeconds: number) => void;
   /** 0 = calma, 1 = pelea */
   setHeat: (heat: number) => void;
+  /** Al borde (a alguien le queda 1 vida): 0 = nada, 1 = máxima. Más rápida, latido
+   *  doble y una cuerda tensa que tiembla encima */
+  setTension: (tension: number) => void;
 }
 
 const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12);
@@ -156,6 +159,35 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
   });
 
   let heat = 0;
+  let tension = 0;
+
+  // --- Cuerda tensa (solo al borde): dos sierras agudas desafinadas con trémolo rápido
+  const strain = ctx.createGain();
+  strain.gain.value = 0;
+  const strainBand = ctx.createBiquadFilter();
+  strainBand.type = 'bandpass';
+  strainBand.frequency.value = 1400;
+  strainBand.Q.value = 4;
+  const strainTrem = ctx.createGain();
+  strainTrem.gain.value = 0.6;
+  const strainLfo = ctx.createOscillator();
+  strainLfo.frequency.value = 7.5;
+  const strainDepth = ctx.createGain();
+  strainDepth.gain.value = 0.4;
+  strainLfo.connect(strainDepth).connect(strainTrem.gain);
+  strainLfo.start();
+  nodes.push(strainLfo);
+  const strainOscs = [-9, 9].map(detune => {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.detune.value = detune;
+    o.frequency.value = midi(ROOTS[0] + shift + 25);
+    o.connect(strainBand);
+    o.start();
+    nodes.push(o);
+    return o;
+  });
+  strainBand.connect(strainTrem).connect(strain).connect(shaper);
 
   // --- Guitarra con trémolo: una nota = dos osciladores + filtro con envolvente
   const pluck = (when: number, note: number, accent: number) => {
@@ -224,6 +256,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       if (step % 32 === 0) {
         const root = ROOTS[(bar / 4) % ROOTS.length];
         droneVoices.forEach(v => v.oscs.forEach(o => o.frequency.setTargetAtTime(midi(root + shift + v.interval), nextTime, 0.8)));
+        strainOscs.forEach(o => o.frequency.setTargetAtTime(midi(root + shift + 25), nextTime, 0.8));
       }
       const onBeat = step % 2 === 0;
       // Guitarra: frases cortas con silencios; más notas en tiempo fuerte
@@ -238,8 +271,11 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
         const beatInBar = (step % 8) / 2;
         const every = heat > 0.5 ? 1 : 2;
         if (onBeat && beatInBar % every === 0) thump(nextTime, 0.5 + heat * 0.5);
+        // Al borde: latido doble (pum-pum) en cada tiempo
+        if (tension > 0.5 && onBeat) thump(nextTime + beat * 0.22, 0.3 + tension * 0.25);
       }
-      nextTime += beat / 2;
+      // Al borde el pulso se acelera
+      nextTime += beat / 2 / (1 + tension * 0.22);
       step++;
     }
   };
@@ -252,7 +288,14 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       const t = ctx.currentTime;
       droneVoices[2].gain.gain.setTargetAtTime(heat * 0.25, t, 0.6);
       droneFilter.frequency.setTargetAtTime(320 + heat * 500, t, 0.6);
-      tone.frequency.setTargetAtTime(2600 + heat * 1800, t, 0.6);
+      tone.frequency.setTargetAtTime(2600 + heat * 1800 + tension * 900, t, 0.6);
+    },
+    setTension: (v: number) => {
+      tension = Math.max(0, Math.min(1, v));
+      const t = ctx.currentTime;
+      strain.gain.setTargetAtTime(tension * 0.045, t, 1.2);
+      strainLfo.frequency.setTargetAtTime(6 + tension * 4, t, 0.8);
+      tone.frequency.setTargetAtTime(2600 + heat * 1800 + tension * 900, t, 0.6);
     },
     stop: (fade: number) => {
       clearInterval(timer);

@@ -664,6 +664,87 @@ const PRIESTESS = s(
   '..ooooooooooooooo.',
 );
 
+/** Dragón: cuernos, alas y cola (legendaria) */
+const DRAGON = s(
+  '..o.........o.....',
+  '..oo.......oo.....',
+  '...oo.....oo......',
+  '...ooooooooo......',
+  '..ooooooooooo.....',
+  '..oo.ooooo.oo.....',
+  '..ooooooooooo.....',
+  '...ooooooooo......',
+  '....o.o.o.o.......',
+  'o...ooooooo....o..',
+  'oo..ooooooooo.oo..',
+  'ooo.ooooooooooooo.',
+  'oooooooooooooooo..',
+  '.oooooooooooooo...',
+  '..ooooooooooooo...',
+  '...oooooooooooo...',
+  '....ooooooooooo...',
+  '....ooooooooooooo.',
+  '....oooo...oooo.oo',
+  '....ooo.....ooo..o',
+  '...oooo.....oooo.o',
+  '...oooo.....oooo..',
+  '..................',
+);
+
+/** Hidra: tres cuellos con cabeza sobre un cuerpo enorme (legendaria) */
+const HYDRA = s(
+  '.o.......o.......o',
+  'ooo.....ooo.....oo',
+  'o.o.....o.o.....o.',
+  'ooo.....ooo....oo.',
+  '.oo......oo...oo..',
+  '..oo.....oo..oo...',
+  '...oo....oo.oo....',
+  '....oo...oooo.....',
+  '.....oooooooo.....',
+  '.....ooooooooo....',
+  '....ooooooooooo...',
+  '....ooooooooooo...',
+  '...ooooooooooooo..',
+  '...ooooooooooooo..',
+  '...ooooooooooooo..',
+  '...oooooooooooooo.',
+  '....ooooooooooooo.',
+  '.....oooooooooooo.',
+  '......oooooooooooo',
+  '.......ooo...ooo.o',
+  '.......ooo...ooo..',
+  '......oooo..oooo..',
+  '..................',
+);
+
+/** Fénix: cresta de llama y alas abiertas (legendaria) */
+const PHOENIX = s(
+  '........o.........',
+  '.......ooo........',
+  '........o.........',
+  '.......ooo........',
+  '......ooooo.......',
+  '.......o.o........',
+  '.......ooo........',
+  'o.......o.......o.',
+  'oo.....ooo.....oo.',
+  'ooo...ooooo...ooo.',
+  '.oooo.ooooo.oooo..',
+  '.oooooooooooooooo.',
+  '..ooooooooooooo...',
+  '...ooooooooooo....',
+  '....ooooooooo.....',
+  '.....ooooooo......',
+  '......ooooo.......',
+  '.....oo.o.oo......',
+  '....oo..o..oo.....',
+  '...oo...o...oo....',
+  '..o.....o.....o...',
+  '........o.........',
+  '..................',
+);
+
 export const CHARACTERS: Partial<Record<Rank, Sprite>> = {
   K: KING,
   Q: QUEEN,
@@ -671,4 +752,5 @@ export const CHARACTERS: Partial<Record<Rank, Sprite>> = {
   A: ACE,
   JOKER: JOKER,
   JESTER, TOWER, BOMB, SPY, KNIGHT, PRIESTESS,
+  DRAGON, HYDRA, PHOENIX,
 };

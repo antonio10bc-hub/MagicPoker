@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
-import { playMusic, preloadSounds, setMusicHeat, stopMusic } from '@/lib/sounds';
+import { playMusic, preloadSounds, setMusicHeat, setMusicTension, stopMusic } from '@/lib/sounds';
 import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
@@ -54,8 +54,15 @@ export default function Home() {
     else playMusic('game_music', 0.4, musicBoss ? bossMusic(musicBoss, inCastle) : undefined);
   }, [screen, isEnd, musicBoss, inCastle]);
 
-  // La música se tensa durante la pelea
+  // La música se tensa durante la pelea y crece al borde: con 1 vida (de cualquiera) a
+  // tope; con 2, a medias; el Soberano en su fase 2, siempre a tope
   useEffect(() => { setMusicHeat(isFight ? 1 : 0); }, [isFight]);
+  const tension = useGameStore(s => {
+    if (s.screen !== 'game' || s.phase === 'end' || s.tutorialStep !== null) return 0;
+    const low = Math.min(s.player.lives, s.opponent.lives);
+    return s.castle?.phase2 || low <= 1 ? 1 : low === 2 ? 0.5 : 0;
+  });
+  useEffect(() => { setMusicTension(tension); }, [tension]);
 
   return (
     <Stage>

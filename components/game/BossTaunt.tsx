@@ -7,16 +7,37 @@ import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx } from '@/lib/sounds';
 import { pausableTimeout } from '@/lib/clock';
 import { useGameLayout } from '@/components/pixel/Stage';
+import { CombatResult } from '@/types';
+import { SealEvent } from '@/lib/game-utils';
 
 // --- BOCADILLO DEL BOSS ---
 // Al empezar cada ronda el boss suelta una frase con su personalidad: de entrada en la
 // primera, otra si va perdiendo, otra si te tiene contra las cuerdas y, si no, una de
 // las de siempre. Sale después del cartel de ronda, se va sola o al tocarla.
+// Además reacciona a lo que pasa en la pelea (al terminar la coreografía): si le robas
+// una carta, le devuelves un golpe con el espejo, le borras la mesa con un As, le quitas
+// 2 vidas o más, le tumbas 2 cartas o más... o se ríe si te quita 2 vidas o más.
 
 type Mood = 'intro' | 'mid' | 'low' | 'win';
 
 const SHOW_DELAY_MS = 1100;
 const SHOW_MS = 2800;
+
+type Reaction = 'robbed' | 'reflected' | 'ace' | 'crushed' | 'massacre' | 'gloat';
+/** Tras la coreografía de la pelea */
+const REACT_DELAY_MS = 1700;
+const REACT_MS = 2200;
+
+/** Qué le ha pasado en esta pelea (la más llamativa), o nada */
+const reactionTo = (result: CombatResult, sealFx: SealEvent[]): Reaction | null => {
+  if (sealFx.some(e => e.kind === 'swap' && e.initiator === 'player')) return 'robbed';
+  if (result.reflected.some(r => r.mirrorId.startsWith('player'))) return 'reflected';
+  if (result.voidedCardIds.length && Object.values(result.damageSources).some(d => d.rank === 'A' && d.owner === 'player')) return 'ace';
+  if (result.opponentDamageTaken >= 2) return 'crushed';
+  if (result.deadByOwner.opponent >= 2) return 'massacre';
+  if (result.playerDamageTaken >= 2) return 'gloat';
+  return null;
+};
 
 /** Frase de un boss para esta ronda (las variantes van separadas por "|") */
 export const bossLine = (t: Translations, bossId: string, mood: Mood, round: number): string => {
@@ -34,7 +55,23 @@ export const BossTaunt = () => {
     bossLives: s.opponent.lives,
     playerLives: s.player.lives,
   })));
-  const [shown, setShown] = useState<{ round: number; text: string } | null>(null);
+  const [shown, setShown] = useState<{ round: number | string; text: string } | null>(null);
+  const result = useGameStore(s => (s.phase === 'combat-reveal' ? s.pendingCombatResult : null));
+
+  // Reacción a la pelea que acaba de verse
+  useEffect(() => {
+    if (!result || !boss) return;
+    // Solo los efectos de sello de esta pelea (los de rondas anteriores no cuentan)
+    const fx = useGameStore.getState().sealFx;
+    const kind = reactionTo(result, fx && Date.now() - fx.id < 8000 ? fx.events : []);
+    if (!kind) return;
+    const lines = t[`react_${kind}` as keyof Translations].split('|');
+    const text = lines[round % lines.length];
+    const show = pausableTimeout(() => { setShown({ round: `r${round}`, text }); playSfx('pop', 0.6, 0.7); }, REACT_DELAY_MS);
+    const hide = pausableTimeout(() => setShown(s => (s?.round === `r${round}` ? null : s)), REACT_DELAY_MS + REACT_MS);
+    return () => { show(); hide(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   // Una frase por ronda: se decide al empezarla
   useEffect(() => {

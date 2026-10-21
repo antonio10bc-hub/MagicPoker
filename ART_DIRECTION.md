@@ -38,7 +38,7 @@ los dos.
 | Musgo | `#6F8F5A` | solo transición en halos (niebla, pelea) |
 | Voltio | `#7DFF2B` | **exclusivo de los sellos**: verde eléctrico (amarillo verdoso) que brilla como el naranja |
 | Carmesí | `#FF1F4B` | **exclusivo del Castillo**: rojo eléctrico de los jefes evolucionados, su página y sus mejoras |
-| Oro | `#E8B64A` | solo el dorso del jefe secreto (El Soberano) |
+| Oro | `#E8B64A` | el Soberano (dorso, aura), lo **legendario** (cartas, rareza, cofre) |
 | Azul eléctrico | `#2E9BFF` | **exclusivo del mercader del Castillo** y de todo lo que sale de él |
 
 **El naranja es el único color saturado y se reserva para lo importante.** Nunca hay
@@ -223,6 +223,20 @@ canales de 0,5 px → viñeta.
 
 ### Movimiento y game feel
 
+- **Golpe decisivo a cámara lenta:** la pelea que deja a alguien sin vidas se vive
+  más despacio: bandas de cine arriba y abajo, color apagado con viñeta, zoom lento al
+  choque (2,4 s), la música se hunde y late un corazón grave; el impacto retumba más
+  (destello, sacudida y vibración fuertes). Las animaciones de las cartas no se
+  ralentizan (el reloj de Framer no se toca).
+- **Daño con peso:** al perder vidas salta un "-N" sobre los corazones (carmesí si son
+  tuyas) y, si son tuyas, los bordes de la pantalla laten en rojo. El jefe del panel
+  se encoge y se enciende al recibir.
+- **Reacciones del jefe:** bocadillo tras la pelea si le robas una carta, le devuelves
+  un golpe con el espejo, le borras la mesa con un As, le quitas 2 vidas o le tumbas 2
+  cartas, o se ríe si te quita 2 vidas.
+- **Los avisos esperan a las cinemáticas** (presentación del jefe, fase 2), igual que
+  a las ventanas.
+
 El movimiento es suave: muelles (`type: 'spring'`) y curvas ease. **Los tiempos no
 cambiaron con la dirección analógica**; solo se añadió *ghosting* (desenfoque) a lo que
 se mueve rápido y una vibración leve a las masas naranjas.
@@ -278,6 +292,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - Con `prefers-reduced-motion` se desactivan los bucles CSS.
 
 ### Sonido (`lib/sounds.ts`, `lib/synth.ts`, `lib/music.ts`)
+
+- **Música que crece:** con 2 vidas (de cualquiera) la música de partida se tensa a
+  medias; con 1, o contra el Soberano en su fase 2, a tope: el pulso se acelera, late
+  doble (pum-pum) y entra una cuerda aguda con trémolo rápido.
 
 - **Motor Web Audio:** música generativa con fundido entre estilos; paso bajo que
   "ahoga" la música con un modal abierto; *ducking* en los golpes fuertes; volúmenes
@@ -417,6 +435,35 @@ se mueve rápido y una vibración leve a las masas naranjas.
   vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
   (el verde del sello manda) y las vidas de más por encima de las 4 de partida.
+- **Rarezas del mercader:** cada mejora lleva su rareza en pequeño a la derecha de su
+  título: COMÚN (menta), RARA (azul, contorno más vivo) y LEGENDARIA (oro: contorno y
+  título dorados, icono en oro y un brillo que cruza la fila). Las legendarias salen a
+  partir del piso 6.
+- **Cartas legendarias** (Dragón, Hidra, Fénix): cuerpo azul del mercader con un filo de
+  oro doble, halo dorado y una estrella de oro en la esquina superior derecha.
+- **Cofre (pisos 3, 6 y 9):** entre el jefe derrotado y el mercader. Cofre de madera
+  carmesí con herrajes de oro sobre un halo tenue que late; "Toca para abrirlo". Al
+  tocar tiembla cada vez más y su luz sube de rareza en rareza (menta → azul → oro)
+  hasta pararse en la suya; la tapa salta, sale un haz de ese color y el premio sube
+  grande. Debajo, su rareza, título y descripción, y "Seguir". Si vuelves al menú con
+  el cofre cerrado, lo abres en la ventana del cofre (banda carmesí).
+- **Mapa de la subida:** fila de 12 pisos (cuadraditos de 6 px): vencidos en carmesí,
+  el actual con anillo que late, los que faltan apagados; un cofrecito de oro entre
+  los pisos 3-4, 6-7 y 9-10 (apagado si ya se abrió) y una estrella para el Soberano.
+  Sale arriba en la escena del mercader (el piso recién vencido se rellena) y en la
+  página del Castillo del menú con una subida a medias.
+- **Desafíos:** al conquistarlo por primera vez, ENTRAR abre la ventana DESAFÍOS (banda
+  carmesí): cinco interruptores con casilla carmesí (Sin curas, Jefes feroces, Jefes
+  sellados, Mazo corto, Frágil) y ENTRAR · n desafíos. La página del Castillo muestra el
+  récord ("conquistado con n/5 desafíos").
+- **Fase 2 del Soberano:** al bajar a la mitad de vidas la pelea se para: destello
+  rojo, "FASE 2", él se alza temblando con su aura que crece, onda de oro, "EL SOBERANO
+  DESPIERTA", sus corazones se rellenan uno a uno y su frase. Se cierra tocando. Pasa
+  una vez por pelea (se guarda en la partida).
+- **Dorsos del Castillo** (al final de la galería, con el Castillo abierto): Castillo
+  (carmesí con la silueta del castillo; al conquistarlo), Mercader (azul con su
+  silueta; al conseguir una legendaria) y Corona (oro con rayos carmesí y el Soberano;
+  al conquistarlo con los 5 desafíos).
 - **Cartas del Castillo** (Bufón, Torre, Bomba, Espía, Caballero, Sacerdotisa): figuras
   en silueta como J/Q/K, con su nombre en pequeño arriba. La insignia de ataque usa
   "?" (Bufón, copia), "–" (Torre, no ataca) y "±2" (Caballero, salta). El comodín de

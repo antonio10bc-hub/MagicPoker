@@ -25,7 +25,7 @@ export const UnlockToasts = () => {
   // Espera a que termine la pelea (también el repaso del resultado) para no taparla
   const busy = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
   // Con una ventana abierta, el aviso espera a que se cierre
-  const modalOpen = useUiStore(s => !!s.modal);
+  const modalOpen = useUiStore(s => !!s.modal || s.cinematic);
   // El premio del boss va primero; los logros esperan a que termine
   const show = current && !busy && !modalOpen;
 

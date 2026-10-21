@@ -17,6 +17,7 @@ const SPECIAL_TEXT: Partial<Record<Rank, keyof Translations>> = {
   // Cartas del Castillo
   JESTER: 'idea_jester_desc', TOWER: 'idea_tower_desc', BOMB: 'idea_bomb_desc', SPY: 'idea_spy_desc',
   KNIGHT: 'idea_knight_desc', PRIESTESS: 'idea_priestess_desc',
+  DRAGON: 'idea_dragon_desc', HYDRA: 'idea_hydra_desc', PHOENIX: 'idea_phoenix_desc',
 };
 
 /** Mini diagrama: 3 casillas (izquierda, frente, derecha) y las que golpea */

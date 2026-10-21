@@ -11,6 +11,9 @@ import { useStage } from '@/components/pixel/Stage';
 import { pausableTimeout } from '@/lib/clock';
 import { PxButton } from '@/components/pixel/ui';
 import { BoonChooser } from './BoonChooser';
+import { ChestReveal } from './ChestReveal';
+import { CastleMap } from './CastleMap';
+import { getCastle } from '@/lib/castle';
 import { BossFigure } from './BossFigure';
 
 // --- ENTRE PISOS DEL CASTILLO: JEFE DERROTADO Y EL MERCADER ---
@@ -19,7 +22,8 @@ import { BossFigure } from './BossFigure';
 //  2. En la penumbra se enciende un farol y aparece el mercader (azul eléctrico). Dice
 //     algo en voz baja y ofrece sus 3 mejoras; al elegir sube el siguiente jefe, que
 //     evoluciona en su presentación. Se puede volver al menú: te esperará.
-// Tocar durante el primer tiempo lo salta.
+// Cada 3 pisos, entre los dos tiempos, un cofre por abrir. Tocar durante el primer
+// tiempo lo salta.
 
 const FALL_MS = 2200;
 
@@ -91,6 +95,10 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
     <motion.div key="shop" className="absolute inset-0 flex flex-col items-center justify-center gap-[5px]"
       style={{ pointerEvents: leaving ? 'none' : undefined }}
       initial={{ opacity: 0 }} animate={{ opacity: leaving ? 0 : 1 }} transition={{ duration: 1 }}>
+      {/* Mapa de la subida: el piso recién vencido se rellena */}
+      <motion.div className="mb-[8px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
+        <CastleMap stage={floor} justCleared />
+      </motion.div>
       {/* Primero se enciende el farol; luego, despacio, sale de la oscuridad */}
       <motion.div initial={{ opacity: 0, filter: 'brightness(0)' }} animate={{ opacity: [0, 0.35, 0.35, 1], filter: ['brightness(0)', 'brightness(0.2)', 'brightness(0.2)', 'brightness(1)'] }}
         transition={{ duration: 1.6, times: [0, 0.3, 0.55, 1] }}>
@@ -115,14 +123,19 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
   );
 };
 
+type Step = 'fall' | 'chest' | 'shop';
+
 export const MerchantScene = ({ floor }: { floor: number }) => {
   const { width, height } = useStage();
-  const [shop, setShop] = useState(false);
+  const [step, setStep] = useState<Step>('fall');
+  const shop = step === 'shop';
   const bossId = BOSSES[Math.max(0, floor - 1)].id;
+  // Tras el jefe: el cofre (si es piso de cofre y aún está cerrado) y luego el mercader
+  const afterFall = () => setStep(s => (s !== 'fall' ? s : getCastle().run?.chest ? 'chest' : 'shop'));
 
   useEffect(() => {
     const crack = setTimeout(() => { playSfx('crush', 0.7, 0.8); haptic('stamp'); }, 900);
-    const open = setTimeout(() => setShop(true), FALL_MS);
+    const open = setTimeout(afterFall, FALL_MS);
     return () => { clearTimeout(crack); clearTimeout(open); };
   }, []);
   useEffect(() => {
@@ -134,7 +147,7 @@ export const MerchantScene = ({ floor }: { floor: number }) => {
   return (
     <motion.div
       className="absolute inset-0 z-[20]"
-      onClick={() => { if (!shop) setShop(true); }}
+      onClick={() => { if (step === 'fall') afterFall(); }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9 }}
       // Del rojo del jefe al azul del mercader
       style={{ background: 'rgba(11,13,12,0.96)' }}
@@ -142,12 +155,15 @@ export const MerchantScene = ({ floor }: { floor: number }) => {
       <motion.div className="absolute inset-0 pointer-events-none"
         animate={{ background: shop
           ? 'radial-gradient(ellipse 45% 30% at 50% 30%, rgba(18,60,110,0.5) 0%, rgba(11,13,12,0) 70%)'
-          : 'radial-gradient(ellipse 45% 30% at 50% 40%, rgba(110,14,34,0.45) 0%, rgba(11,13,12,0) 70%)' }}
+          : step === 'chest' ? 'radial-gradient(ellipse 45% 30% at 50% 45%, rgba(90,60,14,0.4) 0%, rgba(11,13,12,0) 70%)'
+            : 'radial-gradient(ellipse 45% 30% at 50% 40%, rgba(110,14,34,0.45) 0%, rgba(11,13,12,0) 70%)' }}
         transition={{ duration: 1.3 }} />
       <AnimatePresence mode="wait">
         {shop
           ? <Shop key="shop" floor={floor} figureH={Math.min(80, Math.round(height * 0.16))} panelW={Math.min(190, width - 32)} />
-          : <BossFall key="fall" bossId={bossId} floor={floor} figureH={Math.min(110, Math.round(height * 0.22))} />}
+          : step === 'chest'
+            ? <ChestReveal key="chest" width={Math.min(190, width - 32)} onDone={() => setStep('shop')} />
+            : <BossFall key="fall" bossId={bossId} floor={floor} figureH={Math.min(110, Math.round(height * 0.22))} />}
       </AnimatePresence>
     </motion.div>
   );

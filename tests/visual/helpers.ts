@@ -7,7 +7,7 @@ import type { BoardSlot, Card, PlayerState, Rank, SealId } from '@/types';
 
 const VALUES: Partial<Record<Rank, number>> = {
   '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, J: 11, Q: 12, K: 13, A: 14,
-  JESTER: 6, TOWER: 15, BOMB: 4, SPY: 3, KNIGHT: 9, PRIESTESS: 5,
+  JESTER: 6, TOWER: 15, BOMB: 4, SPY: 3, KNIGHT: 9, PRIESTESS: 5, DRAGON: 16, HYDRA: 7, PHOENIX: 8,
 };
 
 export const card = (owner: 'player' | 'opponent', rank: Rank, id: string, extra: Partial<Card> = {}): Card => ({
@@ -29,18 +29,22 @@ const side = (lives: number, boardCards: (Card | null)[], hand: Card[] = [], pas
 export interface Scenario {
   defeated?: number;
   player: { lives?: number; board: (Card | null)[]; hand?: Card[] };
-  opponent: { lives?: number; board: (Card | null)[] };
+  opponent: { lives?: number; maxLives?: number; board: (Card | null)[] };
   bossIndex?: number;
+  /** Pelea del Castillo */
+  castle?: boolean;
+  /** Estado de la subida del Castillo (magic_poker_castle) */
+  castleState?: object;
 }
 
 /** Abre el juego con una partida preparada y la retoma */
 export const startScenario = async (page: Page, s: Scenario) => {
   const save = {
-    v: 2, difficulty: 'hard', roundNumber: 2, bossIndex: s.bossIndex ?? 1,
+    v: 2, difficulty: 'hard', roundNumber: 2, bossIndex: s.bossIndex ?? 1, castle: s.castle,
     player: side(s.player.lives ?? 3, s.player.board, s.player.hand ?? [card('player', '3', 'h1')]),
-    opponent: { ...side(s.opponent.lives ?? 5, s.opponent.board, [], true), maxLives: 5 },
+    opponent: { ...side(s.opponent.lives ?? 5, s.opponent.board, [], true), maxLives: s.opponent.maxLives ?? 5 },
   };
-  await page.addInitScript(([progress, saved]) => {
+  await page.addInitScript(([progress, saved, castleState]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     localStorage.clear();
@@ -49,7 +53,8 @@ export const startScenario = async (page: Page, s: Scenario) => {
     localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
     localStorage.setItem('magic_poker_progress', JSON.stringify({ defeated: progress }));
     localStorage.setItem('magic_poker_save', JSON.stringify(saved));
-  }, [s.defeated ?? 6, save] as const);
+    if (castleState) localStorage.setItem('magic_poker_castle', JSON.stringify(castleState));
+  }, [s.defeated ?? 6, save, s.castleState ?? null] as const);
   await page.goto('/');
   // Igual que "Continuar partida" (sin depender de cuándo se puede pulsar el botón)
   await page.waitForFunction(() => !!(window as unknown as { __game?: unknown }).__game);

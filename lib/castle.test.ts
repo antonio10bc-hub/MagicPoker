@@ -79,4 +79,69 @@ describe('el Castillo', () => {
     expect(c.recordCastleWin(4)).toEqual({ kind: 'conquered' });
     expect(c.getCastle()).toMatchObject({ run: null, best: c.CASTLE_LENGTH, conquered: 1 });
   });
+
+  it('rarezas: legendarias solo arriba y con su rareza', async () => {
+    const c = await load();
+    const run = c.ensureRun();
+    expect(c.boonRarity({ kind: 'heal' })).toBe('common');
+    expect(c.boonRarity({ kind: 'seal', seal: 'shield', target: 0 })).toBe('rare');
+    expect(c.boonRarity({ kind: 'card', rank: 'DRAGON' })).toBe('legendary');
+    // Abajo nunca sale una legendaria
+    expect(c.offerBoons(run, fixed(0)).some(b => c.boonRarity(b) === 'legendary')).toBe(false);
+    // Arriba, con suerte, sí (y las 3 siguen siendo de tipos distintos)
+    const high = c.offerBoons({ ...run, stage: 8 }, fixed(0));
+    expect(high.some(b => c.boonRarity(b) === 'legendary')).toBe(true);
+    expect(new Set(high.map(b => b.kind)).size).toBe(3);
+  });
+
+  it('cofre: cada 3 pisos, con un premio válido que se aplica al abrirlo', async () => {
+    const c = await load();
+    expect([1, 2, 3, 4, 6, 9, 11].map(c.isChestFloor)).toEqual([false, false, true, false, true, true, false]);
+    const run = c.ensureRun();
+    for (const n of [0, 0.2, 0.5, 0.7, 0.99]) {
+      const boon = c.rollChest(run, fixed(n));
+      expect(boon.kind).not.toBe('pact');
+    }
+    expect(c.boonRarity(c.rollChest(run, fixed(0)))).toBe('legendary');
+    // Se gana el piso 3: hay cofre; al abrirlo se aplica y desaparece
+    c.recordCastleWin(4);
+    c.recordCastleWin(4);
+    const out = c.recordCastleWin(4);
+    expect(out.kind === 'next' && out.run.chest).toBeTruthy();
+    const deckBefore = c.getCastle().run!.deck.length;
+    const livesBefore = c.getCastle().run!.maxLives;
+    const prize = c.openChest()!;
+    const after = c.getCastle().run!;
+    expect(after.chest).toBeUndefined();
+    expect(after.offer).toHaveLength(3);
+    expect(after.deck.length + after.maxLives).toBeGreaterThanOrEqual(deckBefore + livesBefore - (prize.kind === 'purge' ? 2 : 0));
+  });
+
+  it('desafíos: cambian el arranque, los jefes y lo que se ofrece', async () => {
+    const c = await load();
+    const run = c.ensureRun(['fragile', 'short', 'noHeal', 'fierce', 'sealed']);
+    expect(run).toMatchObject({ lives: 3, maxLives: 3 });
+    expect(run.deck.some(card => card.rank === '2')).toBe(false);
+    expect(run.deck.filter(card => card.rank !== 'SEAL')).toHaveLength(10);
+    const plain = { ...run, challenges: undefined };
+    expect(c.castleBossLives(run)).toBe(c.castleBossLives(plain) + 1);
+    expect(c.castleBossLevel(0, run)).toBe(c.castleBossLevel(0) + 1);
+    // Con vida por perder, sin desafío saldría curarte; con "sin curas", nunca
+    for (const n of [0, 0.3, 0.6, 0.99]) expect(c.offerBoons({ ...run, lives: 1 }, fixed(n)).some(b => b.kind === 'heal')).toBe(false);
+    expect(c.getCastle().lastChallenges).toHaveLength(5);
+  });
+
+  it('dorsos del Castillo: conquistarlo, una legendaria y los 5 desafíos', async () => {
+    const c = await load();
+    expect(c.castleBacks({ run: null, best: 0, conquered: 0 })).toEqual([]);
+    expect(c.castleBacks({ run: null, best: 12, conquered: 1, bestChallenges: 2 })).toEqual(['castle']);
+    expect(c.castleBacks({ run: null, best: 12, conquered: 1, bestChallenges: 5, legendary: true })).toEqual(['castle', 'merchant', 'crown']);
+    // Elegir una legendaria la marca
+    const run = c.ensureRun();
+    localStorage.setItem('magic_poker_castle', JSON.stringify({ ...c.getCastle(), run: { ...run, offer: [{ kind: 'card', rank: 'PHOENIX' }] } }));
+    const fresh = await load();
+    fresh.chooseBoon(0);
+    expect(fresh.getCastle().legendary).toBe(true);
+    expect(fresh.castleBacks()).toContain('merchant');
+  });
 });

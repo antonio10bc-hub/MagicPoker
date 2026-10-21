@@ -2,7 +2,9 @@ export type Owner = 'player' | 'opponent';
 export type Suit = 'standard' | 'joker' | 'seal';
 export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A' | 'JOKER' | 'SEAL'
   // Cartas del Castillo (solo salen allí)
-  | 'JESTER' | 'TOWER' | 'BOMB' | 'SPY' | 'KNIGHT' | 'PRIESTESS';
+  | 'JESTER' | 'TOWER' | 'BOMB' | 'SPY' | 'KNIGHT' | 'PRIESTESS'
+  // Legendarias del mercader (solo en el Castillo)
+  | 'DRAGON' | 'HYDRA' | 'PHOENIX';
 
 /**
  * Sellos: se aplican sobre una carta propia de la mesa.

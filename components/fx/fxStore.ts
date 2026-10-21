@@ -29,11 +29,14 @@ interface FxState {
   punch: CameraKick | null;
   flash: CameraKick | null;
   focus: CameraFocus | null;
+  /** Momento decisivo a cámara lenta (intensity = segundos) */
+  slowmo: CameraKick | null;
   emit: (fx: NewEffect) => void;
   shakeCamera: (intensity?: number) => void;
   punchCamera: (amount?: number) => void;
   flashScreen: (opacity?: number) => void;
   focusCamera: (x: number, y: number, zoom: number, seconds: number) => void;
+  slowMotion: (seconds: number) => void;
 }
 
 let nextId = 1;
@@ -72,6 +75,7 @@ export const useFxStore = create<FxState>((set, get) => ({
   punch: null,
   flash: null,
   focus: null,
+  slowmo: null,
   emit: fx => {
     const effect = build(fx);
     set({ effects: [...get().effects, effect] });
@@ -81,6 +85,7 @@ export const useFxStore = create<FxState>((set, get) => ({
   punchCamera: (amount = 0.03) => set({ punch: { id: nextId++, intensity: amount } }),
   flashScreen: (opacity = 0.8) => set({ flash: { id: nextId++, intensity: opacity } }),
   focusCamera: (x, y, zoom, seconds) => set({ focus: { id: nextId++, x, y, zoom, seconds } }),
+  slowMotion: seconds => set({ slowmo: { id: nextId++, intensity: seconds } }),
 }));
 
 /** Atajo para usar fuera de React (efectos de animación, callbacks) */
@@ -90,4 +95,5 @@ export const fx = {
   punch: (amount?: number) => useFxStore.getState().punchCamera(amount),
   flash: (opacity?: number) => useFxStore.getState().flashScreen(opacity),
   focus: (x: number, y: number, zoom: number, seconds: number) => useFxStore.getState().focusCamera(x, y, zoom, seconds),
+  slowmo: (seconds: number) => useFxStore.getState().slowMotion(seconds),
 };

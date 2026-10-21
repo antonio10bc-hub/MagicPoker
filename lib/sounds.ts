@@ -209,6 +209,7 @@ export const haptic = (name: keyof typeof HAPTICS) => vibrate(HAPTICS[name]);
 
 // --- MÚSICA (generativa, con fundido cruzado entre estilos) ---
 let musicHeat = 0;
+let musicTension = 0;
 
 /** `variant` (con su `key`) cambia el tema: cada jefe suena a lo suyo */
 export const playMusic = (name: MusicName, volume = 0.3, variant?: TrackVariant) => {
@@ -222,6 +223,7 @@ export const playMusic = (name: MusicName, volume = 0.3, variant?: TrackVariant)
   currentTrack?.handle.stop(MUSIC_FADE_S * 2);
   const handle = startMusic(e.ctx, e.musicFilter, MUSIC_STYLES[name], volume, variant);
   handle.setHeat(musicHeat);
+  handle.setTension(musicTension);
   currentTrack = { name, key: variant?.key, handle };
 };
 
@@ -235,4 +237,10 @@ export const stopMusic = (fadeSeconds = 0.8) => {
 export const setMusicHeat = (heat: number) => {
   musicHeat = heat;
   currentTrack?.handle.setHeat(heat);
+};
+
+/** Música al borde (a alguien le queda 1 vida): 0 nada, 1 máxima */
+export const setMusicTension = (tension: number) => {
+  musicTension = tension;
+  currentTrack?.handle.setTension(tension);
 };

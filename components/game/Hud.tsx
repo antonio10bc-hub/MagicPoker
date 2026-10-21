@@ -16,6 +16,7 @@ import { Rect } from '@/theme/layout';
 import { Card } from './Card';
 import { deckSummary, forecastFight } from './forecast';
 import { BossFigure } from './BossFigure';
+import { Flinch } from './Juice';
 import { BOSSES } from '@/lib/bosses';
 import { haptic, playSfx } from '@/lib/sounds';
 
@@ -82,6 +83,15 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
         );
       })}
       {lost?.indices.map(i => <FlyingHeart key={`${lost.id}-${i}`} index={i} />)}
+      {/* Número de daño: "-N" que salta encima de los corazones */}
+      {lost && (
+        <motion.span key={`n-${lost.id}`} className="absolute font-display pointer-events-none text-outline"
+          style={{ left: lives * 10 - 2, top: -12, fontSize: 12 + lost.indices.length * 2, color: owner === 'player' ? 'var(--ink-crimson)' : 'var(--ink-cream)' }}
+          initial={{ y: 4, scale: 0.4, opacity: 0 }} animate={{ y: [4, -6, -10], scale: [0.4, 1.4, 1], opacity: [0, 1, 0] }}
+          transition={{ duration: 1, times: [0, 0.25, 1] }}>
+          -{lost.indices.length}
+        </motion.span>
+      )}
     </motion.div>
   );
 };
@@ -176,7 +186,7 @@ export const RivalPanel = () => {
   if (compactPanels) {
     return (
       <>
-        <CompactPanel label={boss ? <BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /> : t.rival} owner="opponent" rect={rect}>
+        <CompactPanel label={boss ? <Flinch><BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /></Flinch> : t.rival} owner="opponent" rect={rect}>
           <Lives lives={lives} max={maxLives} owner="opponent" />
           <RivalHand count={handCount} />
           {floor}
@@ -189,7 +199,7 @@ export const RivalPanel = () => {
   return (
     <>
       <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
-        {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><BossFigure id={boss.id} height={26} evolved={!!castle} /></div>}
+        {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><BossFigure id={boss.id} height={26} evolved={!!castle} /></Flinch></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
         <RivalHand count={handCount} />
         <DeckCount owner="opponent" count={deckCount} />

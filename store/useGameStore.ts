@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
-  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState,
+  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, risenPhoenixes, countRankOnBoard, createPlayerState,
   drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, revealBoard, SealEvent,
 } from '@/lib/game-utils';
 import {
@@ -37,8 +37,10 @@ interface GameState {
   rematch: boolean;
   /** Nivel de la revancha (1 a 4; 0 si no lo es): cuanto más alto, más fuerte el jefe */
   rematchLevel: number;
-  /** Pelea del Castillo en curso (piso = índice del jefe) */
-  castle: { stage: number } | null;
+  /** Pelea del Castillo en curso (piso = índice del jefe). `phase2`: el Soberano ya se transformó */
+  castle: { stage: number; phase2?: boolean } | null;
+  /** Fase 2 del Soberano: momento en que se transforma (para su cinemática) */
+  phase2Fx: number | null;
   /** Cómo acabó la última pelea del Castillo (para la pantalla final) */
   castleOutcome: CastleOutcome | null;
   /** Presentación del jefe al empezar una partida nueva (id del momento) */
@@ -123,6 +125,7 @@ const initialMatchState = () => ({
   rematchLevel: 0,
   castle: null,
   castleOutcome: null,
+  phase2Fx: null,
   intro: null,
   sealFx: null,
   spyFx: null,
@@ -185,7 +188,7 @@ export const useGameStore = create<GameState>((set, get) => {
     track = newMatchTrack();
     const run = ensureRun();
     const boss = BOSSES[run.stage];
-    const level = castleBossLevel(run.stage);
+    const level = castleBossLevel(run.stage, run);
     const playerDeck = buildRunDeck(run);
     deckSeals = countSeals(playerDeck);
     set({
@@ -253,7 +256,7 @@ export const useGameStore = create<GameState>((set, get) => {
       bossIndex: saved.bossIndex ?? currentBossIndex(),
       rematch: !!saved.rematch,
       rematchLevel: saved.rematchLevel ?? (saved.rematch ? 1 : 0),
-      castle: saved.castle ? { stage: saved.bossIndex ?? 0 } : null,
+      castle: saved.castle ? { stage: saved.bossIndex ?? 0, phase2: !!saved.phase2 } : null,
       player: saved.player,
       opponent: saved.opponent,
     });
@@ -444,18 +447,34 @@ export const useGameStore = create<GameState>((set, get) => {
     // Sello de vida: cada carta con él que muere devuelve una vida (sin pasar del máximo)
     const heal = (s: PlayerState, damage: number) =>
       Math.max(0, Math.min(s.maxLives ?? STARTING_LIVES, s.lives - damage + lifeGains(s.board, result)));
+    // El Fénix que cae vuelve a la mano
     const nextPlayer: PlayerState = {
       ...player,
       lives: heal(player, result.playerDamageTaken),
       board: clearDefeatedCards(player.board),
+      hand: [...player.hand, ...risenPhoenixes(player.board)],
       isPassed: false,
     };
     const nextOpponent: PlayerState = {
       ...opponent,
       lives: heal(opponent, result.opponentDamageTaken),
       board: clearDefeatedCards(opponent.board),
+      hand: [...opponent.hand, ...risenPhoenixes(opponent.board)],
       isPassed: false,
     };
+
+    // Castillo, el Soberano: al bajar a la mitad de vidas (o menos) se transforma una vez
+    // y se cura entero
+    const { castle, bossIndex } = get();
+    let phase2 = false;
+    if (castle && !castle.phase2 && BOSSES[bossIndex]?.id === 'sovereign') {
+      const max = nextOpponent.maxLives ?? opponent.lives;
+      if (nextOpponent.lives <= Math.floor(max / 2)) {
+        nextOpponent.lives = max;
+        phase2 = true;
+      }
+    }
+    if (phase2) set({ castle: { ...castle!, phase2: true }, phase2Fx: Date.now() });
 
     const gameResult = getGameResult(nextPlayer, nextOpponent);
 
@@ -506,7 +525,7 @@ if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
     if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
-      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, player: state.player, opponent: state.opponent });
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, phase2: !!state.castle?.phase2, player: state.player, opponent: state.opponent });
     }
     if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
   });

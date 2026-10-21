@@ -11,6 +11,7 @@ import {
   subscribeProgress, WINS_FOR_BACK,
 } from '@/lib/bosses';
 import { BossFigure } from '@/components/game/BossFigure';
+import { CastleMap } from '@/components/game/CastleMap';
 import { playSfx } from '@/lib/sounds';
 
 // --- LISTA DE JEFES (menú) ---
@@ -135,7 +136,12 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
                 style={{ width: Math.round(figureH * 32 / 41), height: figureH }} />
             </div>
             <span className="text-outline glow-crimson" style={{ fontSize: 13, lineHeight: '13px', color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
-            <span className="t-micro text-center px-[18px]" style={{ color: 'var(--ink-mint)' }}>{t.castle_tagline}</span>
+            {/* Con una subida a medias, su mapa; si no, la frase del Castillo */}
+            {castle.run
+              ? <CastleMap stage={castle.run.stage} chestPending={!!castle.run.chest} />
+              : <span className="t-micro text-center px-[18px]" style={{ color: 'var(--ink-mint)' }}>
+                {castle.conquered > 0 ? t.ch_record.replace('{n}', String(castle.bestChallenges ?? 0)) : t.castle_tagline}
+              </span>}
           </div>
         )}
       </div>

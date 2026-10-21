@@ -118,7 +118,10 @@ export const MenuScreen = () => {
     if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
     else if (castleSel) {
       // Castillo: si quedó una mejora por elegir, primero eso
-      if (getCastle().run?.offer) useUiStore.getState().openModal('boons');
+      // Subida nueva tras haberlo conquistado: antes, los desafíos
+      const castle = getCastle();
+      if (castle.run?.offer || castle.run?.chest) useUiStore.getState().openModal('boons');
+      else if (!castle.run && castle.conquered > 0) useUiStore.getState().openModal('challenges');
       else useGameStore.getState().startCastle();
     } else startGame(selected, rematch);
   };

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
+import { useUiStore } from '@/store/useUiStore';
 import { BOSSES, bossSeals } from '@/lib/bosses';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { haptic, playSfx } from '@/lib/sounds';
@@ -41,6 +42,11 @@ export const BossIntro = () => {
   })));
   const [closed, setClosed] = useState<number | null>(null);
   const open = intro !== null && closed !== intro;
+  // Mientras se ve, los avisos (logros) esperan
+  useEffect(() => {
+    useUiStore.getState().setCinematic(open);
+    return () => useUiStore.getState().setCinematic(false);
+  }, [open]);
 
   useEffect(() => {
     if (intro === null) return;

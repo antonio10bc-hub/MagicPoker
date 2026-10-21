@@ -11,7 +11,8 @@ import { CHARACTERS, EMBLEM_OPPONENT, EMBLEM_PLAYER, PIP, SEAL_ICONS, STAR } fro
 import { useTranslations, Translations } from '@/lib/i18n';
 import { SealId } from '@/types';
 import { CARD_BACK_TILE, WINDOW_TILE, patternUri } from '@/components/pixel/patterns';
-import { BOSS_SPRITES } from '@/components/pixel/bosses';
+import { BOSS_SPRITES, CASTLE_SPRITE, MERCHANT_SPRITE } from '@/components/pixel/bosses';
+import { CASTLE_BACKS, CastleBack } from '@/lib/castle';
 import { BOSSES } from '@/lib/bosses';
 import { DEFAULT_BACK, usePlayerBack } from '@/lib/cosmetics';
 import { useGameStore } from '@/store/useGameStore';
@@ -194,7 +195,38 @@ const GOLD = 'radial-gradient(ellipse 70% 60% at 50% 45%, #FFE9A8 0%, #E8B64A 50
  * emblema lleva la silueta de ese jefe y su sello en una esquina; el del jefe
  * secreto, además, es dorado.
  */
+/** Dorsos del Castillo: castillo (carmesí), mercader (azul) y corona (oro y carmesí) */
+const SpecialBack = ({ id }: { id: CastleBack }) => {
+  const look = {
+    castle: { bg: 'radial-gradient(ellipse 70% 60% at 50% 45%, #FF6A86 0%, var(--ink-crimson) 45%, #6E0E22 100%)', glow: 'bloom-crimson', line: 'rgba(11,13,12,0.55)' },
+    merchant: { bg: 'radial-gradient(ellipse 70% 60% at 50% 45%, #A6D8FF 0%, var(--ink-azure) 50%, #0E3E86 100%)', glow: 'bloom-azure', line: 'rgba(11,13,12,0.5)' },
+    crown: { bg: 'radial-gradient(ellipse 70% 60% at 50% 45%, #FFE9A8 0%, #E8B64A 40%, #8A1430 100%)', glow: 'bloom-gold', line: 'rgba(11,13,12,0.6)' },
+  }[id];
+  return (
+    <div className={clsx('px-round-2 absolute inset-0 overflow-hidden', look.glow)} style={{ background: look.bg }}>
+      {id === 'crown' && <div className="absolute inset-0" style={{ background: 'repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,31,75,0.35) 0deg 7deg, transparent 7deg 20deg)' }} />}
+      <BackMotif kind={id === 'castle' ? 'chevrons' : id === 'merchant' ? 'circles' : 'frame'} color={look.line} />
+      {id === 'castle' && <PixelSprite sprite={CASTLE_SPRITE} tint={INK.black} style={{ position: 'absolute', left: 12, top: 16, width: 16, height: 20.5 }} />}
+      {id === 'merchant' && (
+        <>
+          <PixelSprite sprite={MERCHANT_SPRITE.body} tint={INK.black} style={{ position: 'absolute', left: 12, top: 16, width: 16, height: 21 }} />
+          <PixelSprite sprite={MERCHANT_SPRITE.seal} tint={INK.cream} style={{ position: 'absolute', left: 12, top: 16, width: 16, height: 21 }} />
+        </>
+      )}
+      {id === 'crown' && (
+        <>
+          <div className="absolute" style={{ left: 2, top: 10, width: 36, height: 36, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,246,214,0.9) 0%, rgba(255,233,168,0.45) 45%, transparent 72%)' }} />
+          <PixelSprite sprite={BOSS_SPRITES.sovereign.body} tint={INK.black} style={{ position: 'absolute', left: 12, top: 15.5, width: 16, height: 25 }} />
+          <div className="absolute" style={{ left: 16.5, top: 4 }}><PixelSprite sprite={STAR} tint={INK.crimson} /></div>
+          <div className="absolute" style={{ left: 16.5, bottom: 4 }}><PixelSprite sprite={STAR} tint={INK.crimson} /></div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const CardBack = ({ owner, sealed, back = DEFAULT_BACK }: { owner: Owner; sealed?: boolean; back?: string }) => {
+  if (!sealed && (CASTLE_BACKS as readonly string[]).includes(back)) return <SpecialBack id={back as CastleBack} />;
   const boss = back !== DEFAULT_BACK ? BOSSES.find(b => b.id === back) : undefined;
   const gold = !!boss?.secret && !sealed;
   const sprite = boss && BOSS_SPRITES[boss.id];
@@ -255,6 +287,7 @@ const useCardBack = (owner: Owner) => {
 /** Nombre corto de las cartas del Castillo (Bufón, Torre…) */
 const CASTLE_NAME: Partial<Record<CardType['rank'], keyof Translations>> = {
   JESTER: 'idea_jester', TOWER: 'idea_tower', BOMB: 'idea_bomb', SPY: 'idea_spy', KNIGHT: 'idea_knight', PRIESTESS: 'idea_priestess',
+  DRAGON: 'idea_dragon', HYDRA: 'idea_hydra', PHOENIX: 'idea_phoenix',
 };
 
 const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
@@ -265,18 +298,26 @@ const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
   const tile = card.owner === 'opponent' ? '16px' : '8px';
   // Del mercader: azul eléctrico (si además lleva sello, manda el verde y queda un filo azul)
   const merchant = !!card.merchant;
+  // Legendaria: además del azul, filo y brillo de oro y una estrella
+  const legendary = !!RANKS[card.rank].legendary;
   return (
-    <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : merchant ? 'bloom-azure' : look.glow)}
+    <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : legendary ? 'bloom-gold' : merchant ? 'bloom-azure' : look.glow)}
       style={{
-        background: sealed ? SEALED_LOOK.body : merchant ? MERCHANT_LOOK.body : look.body,
-        boxShadow: sealed && merchant ? 'inset 0 0 0 1px var(--ink-azure), 0 0 5px 1px rgba(46,155,255,0.6)'
+        background: sealed ? SEALED_LOOK.body : merchant || legendary ? MERCHANT_LOOK.body : look.body,
+        boxShadow: legendary ? 'inset 0 0 0 1px var(--ink-gold), inset 0 0 0 2px rgba(232,182,74,0.35)'
+          : sealed && merchant ? 'inset 0 0 0 1px var(--ink-azure), 0 0 5px 1px rgba(46,155,255,0.6)'
           : !sealed && !merchant && card.owner === 'player' ? '0 0 6px 1px rgba(237,235,224,0.14)' : undefined,
       }}>
+      {legendary && (
+        <div className="absolute z-10" style={{ right: 4, top: 4 }}>
+          <PixelSprite sprite={STAR} tint={INK.gold} className="bloom-gold-shape" />
+        </div>
+      )}
       {/* Ventana de ilustración (ocupa casi toda la carta) */}
       <div className="absolute overflow-hidden" style={{
         left: 3, top: 3, width: 34, height: 39, borderRadius: 2,
-        backgroundImage: sealed ? SEALED_LOOK.window(card.owner) : merchant ? MERCHANT_LOOK.window : look.window,
-        backgroundSize: sealed || merchant ? `100% 100%, 100% 100%, ${tile}` : `100% 100%, ${tile}`,
+        backgroundImage: sealed ? SEALED_LOOK.window(card.owner) : merchant || legendary ? MERCHANT_LOOK.window : look.window,
+        backgroundSize: sealed || merchant || legendary ? `100% 100%, 100% 100%, ${tile}` : `100% 100%, ${tile}`,
       }}>
         {character ? (
           // Personaje: silueta casi negra, lectura por contorno

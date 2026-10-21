@@ -73,7 +73,7 @@ export const StampToasts = () => {
   // Espera a que termine la pelea (también el repaso del resultado) para no taparla
   const busy = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
   // Con una ventana abierta, el aviso espera a que se cierre
-  const modalOpen = useUiStore(s => !!s.modal);
+  const modalOpen = useUiStore(s => !!s.modal || s.cinematic);
   // El premio del boss (sello o colección) se celebra antes
   const unlockPending = useUiStore(s => s.unlockQueue.length > 0);
   const ready = current && !busy && !unlockPending && !modalOpen;

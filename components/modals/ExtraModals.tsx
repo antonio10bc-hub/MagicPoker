@@ -4,11 +4,13 @@ import { useGameStore } from '@/store/useGameStore';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
 import { isBoardEmpty } from '@/lib/game-utils';
-import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
+import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
+import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
+import { ChestReveal } from '@/components/game/ChestReveal';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
   sanitizeDeckConfig, saveDeckConfig, totalSeals,
@@ -157,9 +159,10 @@ export const DeckEditorModal = () => {
 // --- CATÁLOGO DE CARTAS ---
 // Lista completa: las del juego (cartas y sellos) y las ideas aún sin hacer, para
 // valorar cuáles meter en el futuro.
-const IDEAS = ['jester', 'tower', 'wild_seal', 'bomb', 'spy', 'knight', 'priestess'] as const;
+const IDEAS = ['jester', 'tower', 'wild_seal', 'bomb', 'spy', 'knight', 'priestess', 'dragon', 'hydra', 'phoenix'] as const;
 const IDEA_RANK: Partial<Record<typeof IDEAS[number], Rank>> = {
   jester: 'JESTER', tower: 'TOWER', bomb: 'BOMB', spy: 'SPY', knight: 'KNIGHT', priestess: 'PRIESTESS',
+  dragon: 'DRAGON', hydra: 'HYDRA', phoenix: 'PHOENIX',
 };
 const BASE: { rank: Rank; text: keyof Translations }[] = [
   { rank: 'J', text: 'special_jack' },
@@ -225,21 +228,24 @@ export const CardCatalogModal = () => {
 export const BackGallery = () => {
   const t = useTranslations();
   const progress = getProgress();
-  const owned = new Set(unlockedBacks(progress));
+  const castleOpen = isCastleUnlocked(progress);
+  const owned = new Set<string>([...unlockedBacks(progress), ...castleBacks()]);
   const current = usePlayerBack();
   const pick = (id: string) => { playSfx('select', 0.7); setBack(id); };
-  const items = [{ id: DEFAULT_BACK, index: -1 }, ...BOSSES.map((b, index) => ({ id: b.id, index }))];
+  // Los del Castillo van al final (index -2), solo con el Castillo abierto
+  const items = [{ id: DEFAULT_BACK, index: -1 }, ...BOSSES.map((b, index) => ({ id: b.id, index })),
+    ...(castleOpen ? CASTLE_BACKS.map(id => ({ id: id as string, index: -2 })) : [])];
   return (
     <DialogBody className="t-micro gap-[5px]">
       <p className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.backs_hint}</p>
       <div className="grid grid-cols-5 gap-x-[3px] gap-y-[4px] justify-items-center">
         {items.map(({ id, index }) => {
           const has = id === DEFAULT_BACK || owned.has(id);
-          const visible = index < 0 || isBossVisible(index, progress);
+          const visible = index === -1 || (index === -2 ? has : isBossVisible(index, progress));
           const wins = index < 0 ? 0 : bossWins(index, progress);
           const on = current === id;
           return (
-            <button key={id} aria-label={`back ${id}`} title={index < 0 ? t.back_default : t[`boss_${id}` as keyof Translations]} disabled={!has} onClick={() => pick(id)}
+            <button key={id} aria-label={`back ${id}`} title={index === -1 ? t.back_default : index === -2 ? t.castle_title : t[`boss_${id}` as keyof Translations]} disabled={!has} onClick={() => pick(id)}
               className={has ? 'flex flex-col items-center gap-[2px] cursor-pointer' : 'flex flex-col items-center gap-[2px]'}>
               {/* Dorso a escala reducida (la carta mide 40×56) */}
               <div className="relative" style={{ width: 32, height: 45, opacity: has ? 1 : 0.35, filter: has ? undefined : 'grayscale(1)',
@@ -260,6 +266,7 @@ export const BackGallery = () => {
           );
         })}
       </div>
+      {castleOpen && <p className="t-micro" style={{ color: 'var(--ink-crimson)' }}>{t.backs_castle_hint}</p>}
     </DialogBody>
   );
 };
@@ -268,6 +275,17 @@ export const BackGallery = () => {
 // Si saliste al menú sin elegir mejora, se elige al volver a entrar
 export const BoonsModal = () => {
   const t = useTranslations();
+  // Si dejaste el cofre sin abrir, primero el cofre
+  const [chest, setChest] = useState(() => !!getCastle().run?.chest);
+  if (chest) {
+    return (
+      <Dialog title={t.chest_title} size="sm" tone="castle">
+        <div className="relative" style={{ height: 220 }}>
+          <ChestReveal width={180} onDone={() => setChest(false)} />
+        </div>
+      </Dialog>
+    );
+  }
   return (
     <Dialog title={t.merchant_name} size="sm" tone="merchant">
       <DialogBody scroll={false}>
@@ -276,6 +294,47 @@ export const BoonsModal = () => {
           <span className="t-note">{t.merchant_back}</span>
         </div>
         <BoonChooser onChosen={() => { useUiStore.getState().closeModal(); useGameStore.getState().startCastle(); }} />
+      </DialogBody>
+    </Dialog>
+  );
+};
+
+// --- DESAFÍOS DEL CASTILLO ---
+// Tras conquistarlo, al entrar eliges desafíos (interruptores). Se recuerdan los últimos.
+export const ChallengesModal = () => {
+  const t = useTranslations();
+  const [picked, setPicked] = useState<ChallengeId[]>(() => getCastle().lastChallenges ?? []);
+  const toggle = (c: ChallengeId) => {
+    playSfx('select', 0.6);
+    setPicked(p => (p.includes(c) ? p.filter(x => x !== c) : [...p, c]));
+  };
+  const enter = () => {
+    playSound('click');
+    ensureRun(picked);
+    useUiStore.getState().closeModal();
+    useGameStore.getState().startCastle();
+  };
+  return (
+    <Dialog title={t.ch_title} size="sm" tone="castle" width={230}
+      footer={<PxButton size="lg" tone="yellow" onClick={enter}>{picked.length ? t.ch_enter_n.replace('{n}', String(picked.length)) : t.ch_enter}</PxButton>}>
+      <DialogBody scroll={false} className="gap-[4px]">
+        <p className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.ch_intro}</p>
+        {CHALLENGES.map(c => {
+          const on = picked.includes(c);
+          return (
+            <button key={c} aria-label={`challenge ${c}`} aria-pressed={on} onClick={() => toggle(c)}
+              className="px-inset px-round flex items-center gap-[5px] p-[3px] text-left cursor-pointer"
+              style={{ boxShadow: on ? 'inset 0 0 0 1px var(--ink-crimson), 0 0 6px rgba(255,31,75,0.4)' : 'inset 0 0 0 1px rgba(185,207,200,0.12)' }}>
+              {/* Casilla: carmesí encendida si está puesto */}
+              <span className="shrink-0 rounded-[2px]" style={{ width: 8, height: 8, background: on ? 'var(--ink-crimson)' : 'transparent',
+                boxShadow: on ? '0 0 4px rgba(255,31,75,0.9)' : 'inset 0 0 0 1px var(--ink-teal)' }} />
+              <span className="flex flex-col leading-[9px]" style={{ fontSize: 8 }}>
+                <span style={{ color: on ? 'var(--ink-crimson)' : 'var(--ink-cream)' }}>{t[`ch_${c}` as keyof Translations]}</span>
+                <span style={{ color: 'var(--ink-mint)' }}>{t[`ch_${c}_desc` as keyof Translations]}</span>
+              </span>
+            </button>
+          );
+        })}
       </DialogBody>
     </Dialog>
   );
