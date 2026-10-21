@@ -231,14 +231,14 @@ export const BackGallery = () => {
   return (
     <DialogBody className="t-micro gap-[5px]">
       <p className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.backs_hint}</p>
-      <div className="grid grid-cols-5 gap-x-[3px] gap-y-[6px] justify-items-center">
+      <div className="grid grid-cols-5 gap-x-[3px] gap-y-[4px] justify-items-center">
         {items.map(({ id, index }) => {
           const has = id === DEFAULT_BACK || owned.has(id);
           const visible = index < 0 || isBossVisible(index, progress);
           const wins = index < 0 ? 0 : bossWins(index, progress);
           const on = current === id;
           return (
-            <button key={id} aria-label={`back ${id}`} disabled={!has} onClick={() => pick(id)}
+            <button key={id} aria-label={`back ${id}`} title={index < 0 ? t.back_default : t[`boss_${id}` as keyof Translations]} disabled={!has} onClick={() => pick(id)}
               className={has ? 'flex flex-col items-center gap-[2px] cursor-pointer' : 'flex flex-col items-center gap-[2px]'}>
               {/* Dorso a escala reducida (la carta mide 40×56) */}
               <div className="relative" style={{ width: 32, height: 45, opacity: has ? 1 : 0.35, filter: has ? undefined : 'grayscale(1)',
@@ -247,18 +247,14 @@ export const BackGallery = () => {
                   <CardBack owner="player" back={visible ? id : DEFAULT_BACK} />
                 </div>
               </div>
-              {has || index < 0 ? (
-                <span className="text-center truncate w-[38px]" style={{ color: on ? 'var(--ink-cream)' : 'var(--ink-mint)', fontSize: 7, lineHeight: '8px' }}>
-                  {on ? t.back_equipped : index < 0 ? t.back_default : t[`boss_${id}` as keyof Translations]}
-                </span>
-              ) : (
-                // Por ganar: las victorias que llevas, en puntos (como las estrellas del menú)
-                <span className="flex gap-[1px] h-[8px] items-center" aria-label={`${Math.min(wins, WINS_FOR_BACK)}/${WINS_FOR_BACK}`}>
-                  {visible && Array.from({ length: WINS_FOR_BACK }, (_, i) => (
-                    <span key={i} style={{ width: 3, height: 3, background: i < wins ? 'var(--ink-orange)' : 'var(--ink-slate)' }} />
-                  ))}
-                </span>
-              )}
+              {/* Solo el dorso: el puesto lleva el contorno crema; los que faltan, sus
+                  victorias en puntos (como las estrellas del menú). El hueco se guarda
+                  siempre para que las filas queden iguales. */}
+              <span className="flex gap-[1px] h-[4px] items-center" aria-label={has ? undefined : `${Math.min(wins, WINS_FOR_BACK)}/${WINS_FOR_BACK}`}>
+                {!has && visible && Array.from({ length: WINS_FOR_BACK }, (_, i) => (
+                  <span key={i} style={{ width: 3, height: 3, background: i < wins ? 'var(--ink-orange)' : 'var(--ink-slate)' }} />
+                ))}
+              </span>
             </button>
           );
         })}

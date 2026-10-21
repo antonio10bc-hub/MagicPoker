@@ -370,8 +370,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   secreto es especial: oro con rayos, un aura crema grande, la silueta más grande en
   el centro exacto y una estrella arriba y otra abajo.
 - **Colección:** ventana más estrecha (250 px) y todo en letra pequeña: sellos con
-  icono de 16 px; dorsos en rejilla de 5 a escala reducida, con el nombre en 7 px o,
-  si aún no es tuyo, 5 puntitos con las victorias.
+  icono de 16 px; dorsos en rejilla de 5 a escala reducida, sin nombre (el puesto
+  lleva contorno crema; los que aún no son tuyos, 5 puntitos con las victorias).
 - **Música y sonido:** cada jefe tiene su variación del tema de partida (tono, tempo,
   timbre y trémolo); en el Castillo, más grave, más rápida y siempre tensa. Cada sello
   suena a lo suyo al ponerlo y al actuar (cristal el espejo, campana que se repite el
