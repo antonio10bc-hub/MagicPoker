@@ -112,6 +112,9 @@ export interface GameLayout {
 }
 
 const M = 4; // margen
+/** Escalas de la mano (la carta mide 40×56: ambas dan píxeles enteros) */
+const HAND_SCALE_BIG = 1.375;
+const HAND_SCALE_SMALL = 0.875;
 /** Lo máximo que crece el tapete en móviles altos */
 const BOARD_GROW_MAX = 80;
 
@@ -126,7 +129,8 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
       menuButtonSize: 14,
       turnBox: { x: 314, y: M, w: 66, h: 36 },
       actionButton: { x: 314, y: 196, w: 66, h: 22 },
-      hand: { x: 72, y: 226, w: 236, scale: 1 },
+      // Mano un poco más pequeña que la mesa (35×49), pegada abajo
+      hand: { x: 72, y: 233, w: 236, scale: HAND_SCALE_SMALL },
       compactPanels: false,
     };
   }
@@ -134,11 +138,11 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
   // Vertical: de abajo arriba → mano y fila del jugador (panel + acción) en la zona del
   // pulgar; arriba → barra del rival; entre la barra y el tablero, en el hueco que dejan
   // farolas y banderolas, el cuadro de turno y los botones de menú. El tablero se centra.
-  // En móviles altos la mano se dibuja a ×1,5 (sigue cayendo en píxeles enteros) si cabe
+  // En móviles altos la mano se dibuja a ×1,375 (55×77, píxeles enteros) si cabe; si no, ×0,875
   const boardW = W - 2 * M;
   const boardMin = boardMinHeight(true);
   const top = M + 28 + DIORAMA_OVERHANG + 2;
-  const handScale = H - M - 1.5 * CARD_SIZE.height - 10 - 28 - 6 - top >= boardMin + DIORAMA_SHADOW ? 1.5 : 1;
+  const handScale = H - M - HAND_SCALE_BIG * CARD_SIZE.height - 10 - 28 - 6 - top >= boardMin + DIORAMA_SHADOW ? HAND_SCALE_BIG : HAND_SCALE_SMALL;
   const handY = H - M - Math.round(CARD_SIZE.height * handScale);
   const playerRowY = handY - 10 - 28;
   const statusY = M + 28 + 3;

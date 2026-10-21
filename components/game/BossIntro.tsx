@@ -22,13 +22,13 @@ import { bossLine } from './BossTaunt';
 const SHOW_MS = 2600;
 const EVOLVE_S = 0.85;
 /** En el Castillo, los toques antes de que termine de evolucionar no cuentan */
-const CASTLE_TAP_AFTER_MS = (EVOLVE_S + 0.45) * 1000;
+const CASTLE_TAP_AFTER_MS = (EVOLVE_S + 0.95) * 1000;
 
 /** Brasas carmesí que suben alrededor del jefe al evolucionar (deterministas) */
 const EMBERS = Array.from({ length: 12 }, (_, i) => ({
   // Por los lados de la silueta, no encima
   x: i % 2 ? -0.18 + ((i * 41) % 30) / 100 : 0.88 + ((i * 41) % 30) / 100,
-  delay: EVOLVE_S + 0.1 + ((i * 29) % 10) / 12,
+  delay: EVOLVE_S + 0.3 + ((i * 29) % 10) / 12,
   rise: 30 + ((i * 17) % 5) * 8,
   size: i % 3 === 0 ? 3 : 2,
 }));
@@ -45,12 +45,13 @@ export const BossIntro = () => {
   useEffect(() => {
     if (intro === null) return;
     const slam = setTimeout(() => { playSfx('crush', 0.8, 0.7); playSfx('fight', 0.5); haptic('stamp'); }, 260);
-    const evolve = castle ? setTimeout(() => { playSfx('zap', 0.8, 0.6); haptic('stamp'); }, EVOLVE_S * 1000) : undefined;
+    const evolve = castle ? setTimeout(() => { playSfx('zap', 0.8, 0.6); haptic('stamp'); }, (EVOLVE_S + 0.2) * 1000) : undefined;
     const done = castle ? undefined : setTimeout(() => setClosed(intro), SHOW_MS);
     return () => { clearTimeout(slam); clearTimeout(evolve); clearTimeout(done); };
   }, [intro, castle]);
 
   const boss = BOSSES[bossIndex];
+  const royal = castle && boss.id === 'sovereign';
   const seals = Array.from(new Set(bossSeals(boss, level)));
   const accent = castle ? 'var(--ink-crimson)' : level > 0 ? 'var(--ink-volt)' : 'var(--ink-orange)';
   const tag = castle ? t.castle_title : level > 0 ? t.rematch_level.replace('{n}', String(level)) : boss.secret ? t.secret_boss : null;
@@ -79,24 +80,26 @@ export const BossIntro = () => {
               // Evoluciona: la forma normal tiembla y encima se enciende la evolucionada
               <motion.div className="relative"
                 animate={{ x: [0, 0, -3, 3, -2, 2, 0], scale: [1, 1, 1.18, 1, 1, 1, 1], filter: ['brightness(1)', 'brightness(1)', 'brightness(3)', 'brightness(1.4)', 'brightness(1)', 'brightness(1)', 'brightness(1)'] }}
-                transition={{ duration: 0.55, delay: EVOLVE_S - 0.15, times: [0, 0.25, 0.35, 0.55, 0.7, 0.85, 1] }}>
+                transition={{ duration: 1.05, delay: EVOLVE_S - 0.15, times: [0, 0.25, 0.35, 0.55, 0.7, 0.85, 1] }}>
                 <BossFigure id={boss.id} height={figureH} />
-                <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: EVOLVE_S, duration: 0.15 }}>
+                <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: EVOLVE_S + 0.2, duration: 0.65 }}>
                   <BossFigure id={boss.id} height={figureH} evolved />
                 </motion.div>
                 {/* Destello carmesí al evolucionar */}
                 <motion.div className="absolute rounded-full pointer-events-none" style={{ left: '50%', top: '45%', width: figureH * 1.4, height: figureH * 1.4, marginLeft: -figureH * 0.7, marginTop: -figureH * 0.7,
                   background: 'radial-gradient(circle, rgba(255,31,75,0.85) 0%, rgba(255,31,75,0.35) 35%, transparent 65%)' }}
-                  initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0], scale: [0.3, 1.3, 1.6] }} transition={{ delay: EVOLVE_S, duration: 0.7 }} />
+                  initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0], scale: [0.3, 1.3, 1.6] }} transition={{ delay: EVOLVE_S + 0.2, duration: 1.2 }} />
                 {/* Onda de choque: un anillo carmesí que se abre */}
                 <motion.div className="absolute rounded-full pointer-events-none" style={{ left: '50%', top: '50%', width: figureH, height: figureH, marginLeft: -figureH / 2, marginTop: -figureH / 2,
                   boxShadow: '0 0 0 2px rgba(255,31,75,0.9), 0 0 10px 2px rgba(255,31,75,0.6)' }}
-                  initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: [0, 1, 0], scale: [0.2, 1.2, 1.8] }} transition={{ delay: EVOLVE_S + 0.05, duration: 0.6, ease: 'easeOut' }} />
+                  initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: [0, 1, 0], scale: [0.2, 1.2, 1.8] }} transition={{ delay: EVOLVE_S + 0.25, duration: 1.1, ease: 'easeOut' }} />
                 {/* Brasas que suben y siguen saliendo mientras dura la presentación */}
                 {EMBERS.map((e, i) => (
-                  <motion.span key={i} className="absolute pointer-events-none" style={{ left: `${e.x * 100}%`, bottom: '10%', width: e.size, height: e.size, background: 'var(--ink-crimson)', boxShadow: '0 0 3px rgba(255,31,75,0.9)' }}
+                  <motion.span key={i} className="absolute pointer-events-none" style={{ left: `${e.x * 100}%`, bottom: '10%', width: e.size, height: e.size,
+                      // El Soberano: la mitad, de oro
+                      background: royal && i % 2 ? 'var(--ink-gold)' : 'var(--ink-crimson)', boxShadow: royal && i % 2 ? '0 0 3px rgba(232,182,74,0.95)' : '0 0 3px rgba(255,31,75,0.9)' }}
                     initial={{ opacity: 0, y: 0 }} animate={{ opacity: [0, 1, 0], y: [0, -e.rise] }}
-                    transition={{ duration: 1.1, delay: e.delay, repeat: Infinity, repeatDelay: 0.3, ease: 'easeOut' }} />
+                    transition={{ duration: 1.6, delay: e.delay, repeat: Infinity, repeatDelay: 0.3, ease: 'easeOut' }} />
                 ))}
               </motion.div>
             ) : <BossFigure id={boss.id} height={figureH} />}

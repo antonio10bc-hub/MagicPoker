@@ -574,18 +574,19 @@ export const BOSS_SPRITES: Record<string, BossSprite> = {
 // mutado. Se calcula una vez por jefe.
 const evolvedCache = new Map<string, Sprite>();
 
-/** Aura de píxeles del jefe evolucionado: un halo punteado a dos píxeles de la silueta
- *  (en damero, para que vibre) y chispas sueltas más arriba. */
+/** Aura de píxeles del jefe evolucionado: un halo punteado a `ring` píxeles de la
+ *  silueta (en damero, para que vibre) y chispas sueltas un poco más allá. */
 const auraCache = new Map<string, Sprite>();
-export const auraLayer = (id: string): Sprite => {
-  const cached = auraCache.get(id);
+export const auraLayer = (id: string, ring = 2): Sprite => {
+  const key = `${id}:${ring}`;
+  const cached = auraCache.get(key);
   if (cached) return cached;
   const rows = BOSS_SPRITES[id].body.rows;
   const h = rows.length;
   const w = rows[0].length;
   const isBody = (x: number, y: number) => y >= 0 && y < h && x >= 0 && x < w && rows[y][x] === 'o';
   const dist = (x: number, y: number) => {
-    for (let d = 1; d <= 3; d++) {
+    for (let d = 1; d <= ring + 1; d++) {
       for (let dy = -d; dy <= d; dy++) for (let dx = -d; dx <= d; dx++) if (isBody(x + dx, y + dy)) return d;
     }
     return 99;
@@ -593,12 +594,12 @@ export const auraLayer = (id: string): Sprite => {
   const out = rows.map((r, y) => r.split('').map((_, x) => {
     if (isBody(x, y)) return '.';
     const d = dist(x, y);
-    if (d === 2 && (x + y) % 2 === 0) return 'o';
-    if (d === 3 && (x * 7 + y * 3) % 11 === 0 && y < h * 0.7) return 'o';
+    if (d === ring && (x + y + ring) % 2 === 0) return 'o';
+    if (d === ring + 1 && (x * 7 + y * 3 + ring) % 11 === 0 && y < h * 0.7) return 'o';
     return '.';
   }));
   const sprite: Sprite = { rows: out.map(r => r.join('')) };
-  auraCache.set(id, sprite);
+  auraCache.set(key, sprite);
   return sprite;
 };
 

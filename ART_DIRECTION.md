@@ -388,7 +388,13 @@ se mueve rápido y una vibración leve a las masas naranjas.
   silueta (cerca intenso, lejos suave), un aura de píxeles punteada a dos píxeles del
   contorno que parpadea, chispas sueltas por encima y un resplandor carmesí que late
   detrás. En miniatura negra (panel compacto del rival) no lleva aura.
-- **Entre pisos (pequeña cinemática, sin panel de victoria):**
+- **El Soberano evolucionado** lleva mucha más aura, roja y dorada: además de la
+  roja, un segundo aura de píxeles en oro (más lejos del contorno, latiendo), un
+  tercer anillo de chispas carmesí, un resplandor dorado amplio y, en grande, una
+  corona de rayos oro y carmesí que gira detrás. En su evolución la mitad de las
+  brasas son de oro.
+- **Entre pisos (pequeña cinemática, sin panel de victoria):** cada animación dura
+  0,5 s más que una normal del juego, para que se saboree.
   1. *Jefe derrotado:* sobre negro con un halo carmesí, el jefe evolucionado tiembla,
      destella dos veces y se desmorona hacia abajo en esquirlas carmesí; debajo,
      "DERROTADO" en carmesí y "Piso N superado" en pequeño. Tocar lo salta.
@@ -502,6 +508,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
 - **Capas y orden:** solo una ventana a la vez. Al cambiar de pantalla o acabar la
   partida se cierra la que hubiera. Los avisos (sello nuevo, logro) esperan a que no
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
+- **Mano:** algo más pequeña que antes: ×1,375 en móviles altos (55×77) y ×0,875 en
+  horizontal y móviles bajos (35×49); siempre en píxeles enteros.
 - **Pantalla principal:** cada página de la lista de jefes tiene la misma estructura:
   pastilla de estado arriba (naranja si es el próximo rival, pizarra si está
   bloqueado, carmesí en el Castillo; un vencido lleva sus estrellas), la silueta, el nombre y una fila con
