@@ -8,8 +8,9 @@ import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { useGameStore } from '@/store/useGameStore';
 
-// --- MEJORAS DEL CASTILLO ---
-// Tras vencer a un jefe del Castillo eliges 1 de 3 mejoras; al elegir, sube el siguiente.
+// --- MEJORAS DEL CASTILLO (el género del mercader) ---
+// Tras vencer a un jefe del Castillo el mercader te ofrece 3 mejoras; eliges 1 y sube
+// el siguiente. Todo lo que sale de él va en azul eléctrico.
 
 const CASTLE_NAMES: Partial<Record<Rank, keyof Translations>> = {
   JESTER: 'idea_jester', TOWER: 'idea_tower', BOMB: 'idea_bomb', SPY: 'idea_spy', KNIGHT: 'idea_knight', PRIESTESS: 'idea_priestess',
@@ -36,15 +37,16 @@ const boonText = (t: Translations, boon: Boon, deck: CardTemplate[]): { title: s
 };
 
 const BoonIcon = ({ boon }: { boon: Boon }) => {
-  if (boon.kind === 'heal' || boon.kind === 'maxLife') return <PixelSprite sprite={HEART} tint={INK.orange} className="bloom-shape" />;
-  if (boon.kind === 'seal') return <PixelSprite sprite={SEAL_ICONS[boon.seal]} tint={INK.volt} className="bloom-volt-shape" />;
-  if (boon.kind === 'card' && boon.rank !== 'WILD') return <PixelSprite sprite={CHARACTERS[boon.rank]!} tint={INK.cream} />;
-  if (boon.kind === 'pact') return <PixelSprite sprite={STAR} tint={INK.crimson} className="bloom-crimson-shape" />;
-  return <span className="font-display" style={{ color: 'var(--ink-crimson)', fontSize: 14 }}>{boon.kind === 'card' ? '?' : boon.kind === 'upgrade' ? '+2' : '−'}</span>;
+  const shape = { tint: INK.azure, className: 'bloom-azure-shape' };
+  if (boon.kind === 'heal' || boon.kind === 'maxLife') return <PixelSprite sprite={HEART} {...shape} />;
+  if (boon.kind === 'seal') return <PixelSprite sprite={SEAL_ICONS[boon.seal]} {...shape} />;
+  if (boon.kind === 'card' && boon.rank !== 'WILD') return <PixelSprite sprite={CHARACTERS[boon.rank]!} {...shape} />;
+  if (boon.kind === 'pact') return <PixelSprite sprite={STAR} {...shape} />;
+  return <span className="font-display glow-azure" style={{ color: 'var(--ink-azure)', fontSize: 14 }}>{boon.kind === 'card' ? '?' : boon.kind === 'upgrade' ? '+2' : '−'}</span>;
 };
 
 /** Las 3 mejoras de la subida en curso. `onChosen` se llama tras elegir (por defecto, sube al siguiente jefe). */
-export const BoonChooser = ({ onChosen }: { onChosen?: () => void }) => {
+export const BoonChooser = ({ onChosen, delay = 0.15 }: { onChosen?: () => void; delay?: number }) => {
   const t = useTranslations();
   const run = getCastle().run;
   if (!run?.offer) return null;
@@ -57,13 +59,13 @@ export const BoonChooser = ({ onChosen }: { onChosen?: () => void }) => {
   };
   return (
     <div className="flex flex-col gap-[4px] w-full">
-      <span className="text-center glow-crimson" style={{ color: 'var(--ink-crimson)' }}>{t.castle_choose}</span>
+      <span className="text-center glow-azure" style={{ color: 'var(--ink-azure)' }}>{t.castle_choose}</span>
       {run.offer.map((boon, i) => {
         const { title, desc } = boonText(t, boon, run.deck);
         return (
           <motion.button key={i} aria-label={`boon ${boon.kind}`} className="px-inset px-round flex items-center gap-[6px] p-[4px] text-left cursor-pointer"
-            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,31,75,0.5)' }}
-            initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 + i * 0.08 }}
+            style={{ boxShadow: 'inset 0 0 0 1px rgba(46,155,255,0.6), 0 0 6px rgba(46,155,255,0.25)' }}
+            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: delay + i * 0.08 }}
             whileHover={{ scale: 1.03 }} onClick={() => pick(i)}>
             <span className="shrink-0 w-[22px] flex justify-center"><BoonIcon boon={boon} /></span>
             <span className="flex flex-col min-w-0 leading-[10px]" style={{ fontSize: 9 }}>

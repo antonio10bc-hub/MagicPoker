@@ -18,6 +18,8 @@ export interface CardTemplate {
   bonus?: number;
   /** Comodín de sello */
   wild?: boolean;
+  /** Te la ha dado (o tocado) el mercader */
+  merchant?: boolean;
 }
 
 /** Mejoras entre jefes */
@@ -114,10 +116,12 @@ export const castleBossLevel = (stage: number) => (stage < 4 ? 1 : stage < 8 ? 2
 export const castleBossLives = (run: CastleRun) => Math.max(1, 3 + Math.floor(run.stage / 3) - (run.pact ? 1 : 0));
 
 /** Mazo de la pelea a partir de las plantillas */
-export const buildRunDeck = (run: CastleRun): Card[] => shuffle(run.deck.map(t =>
-  t.wild ? createWildSealCard('player')
+export const buildRunDeck = (run: CastleRun): Card[] => shuffle(run.deck.map(t => {
+  const card = t.wild ? createWildSealCard('player')
     : t.rank === 'SEAL' ? createSealCard('player', t.seal!)
-      : createCard('player', t.rank, { seal: t.seal, bonus: t.bonus })));
+      : createCard('player', t.rank, { seal: t.seal, bonus: t.bonus });
+  return t.merchant ? { ...card, merchant: true } : card;
+}));
 
 // --- MEJORAS ---
 
@@ -168,9 +172,10 @@ export const applyBoon = (run: CastleRun, boon: Boon): CastleRun => {
   const next: CastleRun = { ...run, deck: [...run.deck], offer: undefined, pact: false };
   switch (boon.kind) {
     case 'heal': next.lives = next.maxLives; break;
-    case 'card': next.deck.push(boon.rank === 'WILD' ? { rank: 'SEAL', wild: true } : { rank: boon.rank }); break;
-    case 'seal': next.deck[boon.target] = { ...next.deck[boon.target], seal: boon.seal }; break;
-    case 'upgrade': next.deck[boon.target] = { ...next.deck[boon.target], bonus: (next.deck[boon.target].bonus ?? 0) + 2 }; break;
+    // Lo que sale del mercader queda marcado (se pinta en azul eléctrico)
+    case 'card': next.deck.push(boon.rank === 'WILD' ? { rank: 'SEAL', wild: true, merchant: true } : { rank: boon.rank, merchant: true }); break;
+    case 'seal': next.deck[boon.target] = { ...next.deck[boon.target], seal: boon.seal, merchant: true }; break;
+    case 'upgrade': next.deck[boon.target] = { ...next.deck[boon.target], bonus: (next.deck[boon.target].bonus ?? 0) + 2, merchant: true }; break;
     case 'purge': next.deck = next.deck.filter((_, i) => !boon.targets.includes(i)); break;
     case 'maxLife': next.maxLives += 1; next.lives += 1; break;
     case 'pact': next.pact = true; next.lives -= 1; break;

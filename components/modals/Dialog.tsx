@@ -15,7 +15,7 @@ import { useStage } from '@/components/pixel/Stage';
 //  · md: listas cortas con controles (ajustes). Al contenido, con tope y scroll.
 //  · lg: contenido largo (reglas, estadísticas, colección, editor, catálogo). Alto
 //    fijo, el cuerpo hace scroll.
-// El tono cambia solo la banda: naranja (normal), carmesí (Castillo).
+// El tono cambia solo la banda: naranja (normal), carmesí (Castillo), azul (mercader).
 
 export const closeWithClick = () => {
   playSound('click');
@@ -46,7 +46,7 @@ export const Overlay = ({ onClose, children }: { onClose?: () => void; children:
 export type DialogSize = 'sm' | 'md' | 'lg';
 const WIDTH: Record<DialogSize, number> = { sm: 210, md: 240, lg: 280 };
 
-const BAND = { default: 'var(--c-chip)', castle: 'var(--ink-crimson)' } as const;
+const BAND = { default: 'var(--c-chip)', castle: 'var(--ink-crimson)', merchant: 'var(--ink-azure)' } as const;
 
 interface DialogProps {
   title: string;
@@ -76,7 +76,7 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
       <Panel
         title={<span>{title}</span>}
         band={BAND[tone]}
-        titleClassName={tone === 'castle' ? 'text-ink' : undefined}
+        titleClassName={tone !== 'default' ? 'text-ink' : undefined}
         style={{ width: w, height, maxHeight: maxH }}
         bodyClassName="flex flex-col"
       >

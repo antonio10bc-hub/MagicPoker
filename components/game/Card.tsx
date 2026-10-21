@@ -93,10 +93,11 @@ const AttackBadge = ({ card }: { card: CardType }) => {
 };
 
 /** Insignia de valor: píldora negra con la cifra crema (máximo contraste). Expuesta
- *  (sello de revelar): la cifra baja en uno y la píldora se enciende en brasa. */
-const ValueBadge = ({ value, exposed }: { value: number; exposed?: boolean }) => (
-  <div className={clsx('absolute flex items-center justify-center font-display', exposed ? 'text-ink' : 'text-outline')}
-    style={{ left: 3, top: 44, width: 17, height: 10, borderRadius: 2, background: exposed ? 'var(--ink-ember)' : 'rgba(11,13,12,0.85)', fontSize: 11 }}>
+ *  (sello de revelar): la cifra baja en uno y la píldora se enciende en brasa. Mejorada
+ *  por el mercader: azul eléctrico. */
+const ValueBadge = ({ value, exposed, boosted }: { value: number; exposed?: boolean; boosted?: boolean }) => (
+  <div className={clsx('absolute flex items-center justify-center font-display', exposed || boosted ? 'text-ink' : 'text-outline', boosted && !exposed && 'bloom-azure')}
+    style={{ left: 3, top: 44, width: 17, height: 10, borderRadius: 2, background: exposed ? 'var(--ink-ember)' : boosted ? 'var(--ink-azure)' : 'rgba(11,13,12,0.85)', fontSize: 11 }}>
     <span className="leading-[10px] pt-[2px]">{exposed ? value - 1 : value}</span>
   </div>
 );
@@ -130,6 +131,13 @@ const SEALED_LOOK = {
   body: 'radial-gradient(ellipse 80% 70% at 50% 45%, #B6FF7A 0%, var(--ink-volt) 55%, #4FC414 100%)',
   window: (owner: Owner) => `radial-gradient(ellipse 60% 55% at 50% 60%, rgba(237,255,214,0.6) 0%, rgba(125,255,43,0) 70%), ${VOLT_WASH}, ${
     owner === 'opponent' ? patternUri('card-back', CARD_BACK_TILE, 'opponent') : patternUri('window', WINDOW_TILE)}`,
+};
+
+/** Carta del mercader: masa azul eléctrico con la ventana bañada en azul */
+const AZURE_WASH = 'linear-gradient(rgba(46,155,255,0.5), rgba(46,155,255,0.5))';
+const MERCHANT_LOOK = {
+  body: 'radial-gradient(ellipse 80% 70% at 50% 45%, #A6D8FF 0%, var(--ink-azure) 55%, #1253B0 100%)',
+  window: `radial-gradient(ellipse 60% 55% at 50% 60%, rgba(226,243,255,0.6) 0%, rgba(46,155,255,0) 70%), ${AZURE_WASH}, ${patternUri('window', WINDOW_TILE)}`,
 };
 
 // --- DORSO ---
@@ -251,18 +259,24 @@ const CASTLE_NAME: Partial<Record<CardType['rank'], keyof Translations>> = {
 
 const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
   const t = useTranslations();
-  if (card.rank === 'SEAL') return <SealCardFace seal={card.seal} />;
+  if (card.rank === 'SEAL') return <SealCardFace seal={card.seal} merchant={card.merchant} />;
   const look = LOOK[card.owner];
   const character = CHARACTERS[card.rank];
   const tile = card.owner === 'opponent' ? '16px' : '8px';
+  // Del mercader: azul eléctrico (si además lleva sello, manda el verde y queda un filo azul)
+  const merchant = !!card.merchant;
   return (
-    <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : look.glow)}
-      style={{ background: sealed ? SEALED_LOOK.body : look.body, boxShadow: !sealed && card.owner === 'player' ? '0 0 6px 1px rgba(237,235,224,0.14)' : undefined }}>
+    <div className={clsx('px-round-2 absolute inset-0', sealed ? 'bloom-volt' : merchant ? 'bloom-azure' : look.glow)}
+      style={{
+        background: sealed ? SEALED_LOOK.body : merchant ? MERCHANT_LOOK.body : look.body,
+        boxShadow: sealed && merchant ? 'inset 0 0 0 1px var(--ink-azure), 0 0 5px 1px rgba(46,155,255,0.6)'
+          : !sealed && !merchant && card.owner === 'player' ? '0 0 6px 1px rgba(237,235,224,0.14)' : undefined,
+      }}>
       {/* Ventana de ilustración (ocupa casi toda la carta) */}
       <div className="absolute overflow-hidden" style={{
         left: 3, top: 3, width: 34, height: 39, borderRadius: 2,
-        backgroundImage: sealed ? SEALED_LOOK.window(card.owner) : look.window,
-        backgroundSize: sealed ? `100% 100%, 100% 100%, ${tile}` : `100% 100%, ${tile}`,
+        backgroundImage: sealed ? SEALED_LOOK.window(card.owner) : merchant ? MERCHANT_LOOK.window : look.window,
+        backgroundSize: sealed || merchant ? `100% 100%, 100% 100%, ${tile}` : `100% 100%, ${tile}`,
       }}>
         {character ? (
           // Personaje: silueta casi negra, lectura por contorno
@@ -291,7 +305,7 @@ const CardFace = ({ card, sealed }: { card: CardType; sealed: boolean }) => {
           {CASTLE_NAME[card.rank] ? t[CASTLE_NAME[card.rank]!] : card.rank}
         </div>
       )}
-      <ValueBadge value={card.value} exposed={card.isExposed} />
+      <ValueBadge value={card.value} exposed={card.isExposed} boosted={!!card.bonus} />
       <AttackBadge card={card} />
     </div>
   );
@@ -302,11 +316,12 @@ export const sealTag = (t: Translations, seal: SealId) => t[`seal_tag_${seal}` a
 
 /** Carta de sello: masa verde que brilla, con el icono en silueta y su nombre. El
  *  comodín (sin sello fijo) lleva un interrogante. */
-const SealCardFace = ({ seal }: { seal?: SealId }) => {
+const SealCardFace = ({ seal, merchant }: { seal?: SealId; merchant?: boolean }) => {
   const t = useTranslations();
   return (
-    <div className="px-round-2 absolute inset-0 bloom-volt" style={{
-      background: 'radial-gradient(ellipse 70% 60% at 50% 42%, #D8FF9A 0%, var(--ink-volt) 45%, #4FC414 100%)',
+    // El comodín que vende el mercader es azul eléctrico
+    <div className={clsx('px-round-2 absolute inset-0', merchant ? 'bloom-azure' : 'bloom-volt')} style={{
+      background: merchant ? MERCHANT_LOOK.body : 'radial-gradient(ellipse 70% 60% at 50% 42%, #D8FF9A 0%, var(--ink-volt) 45%, #4FC414 100%)',
     }}>
       <div className="absolute flex items-center justify-center" style={{ left: 3, top: 6, width: 34, height: 30 }}>
         {seal ? <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.black} scale={2} />

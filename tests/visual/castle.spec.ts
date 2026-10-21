@@ -19,7 +19,7 @@ const seed = async (page: Page, items: Record<string, unknown>) => {
   await page.waitForTimeout(1800);
 };
 
-test('el Castillo: entrar, vencer al primer jefe, elegir mejora y subir al siguiente', async ({ page }, info) => {
+test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y subir al siguiente', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await seed(page, { magic_poker_progress: { defeated: 12 } });
   await expect(page.getByText('EL CASTILLO').first()).toBeVisible();
@@ -38,7 +38,9 @@ test('el Castillo: entrar, vencer al primer jefe, elegir mejora y subir al sigui
     await page.waitForTimeout(700);
   }
   await expect(choose).toBeVisible();
-  await shot(page, info, 'mejoras');
+  await expect(page.getByText('EL MERCADER')).toBeVisible();
+  await page.waitForTimeout(1800);
+  await shot(page, info, 'mercader');
   await page.locator('[aria-label^="boon"]').first().click({ force: true });
   await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 1);
   await page.waitForTimeout(1200);
@@ -101,5 +103,21 @@ test('comodín de sello: se elige el sello al jugarlo', async ({ page }, info) =
   await page.locator('[aria-label="wild mirror"]').click({ force: true });
   const s = await state(page);
   expect(s.player.board[0].card?.seal).toBe('mirror');
+  noErrors();
+});
+
+test('lo del mercader va en azul: cartas nuevas, mejoradas y vidas de más', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await startScenario(page, {
+    player: {
+      lives: 6,
+      board: [card('player', 'KNIGHT', 'm1', { merchant: true }), card('player', '7', 'm2', { merchant: true, bonus: 2, value: 9 }), card('player', '5', 'n1')],
+      hand: [card('player', 'TOWER', 'm3', { merchant: true }), { ...sealCard('player', 'shield', 'm4'), seal: undefined, wild: true, merchant: true }],
+    },
+    opponent: { board: [] },
+  });
+  await page.waitForTimeout(1500);
+  await expect(page.locator('[data-card]').first()).toBeVisible();
+  await shot(page, info, 'mercader-en-mesa');
   noErrors();
 });

@@ -8,6 +8,7 @@ import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, unlockedBacks,
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
+import { MerchantFigure } from '@/components/game/MerchantScene';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
   sanitizeDeckConfig, saveDeckConfig, totalSeals,
@@ -268,8 +269,12 @@ export const BackGallery = () => {
 export const BoonsModal = () => {
   const t = useTranslations();
   return (
-    <Dialog title={t.castle_title} size="sm" tone="castle">
+    <Dialog title={t.merchant_name} size="sm" tone="merchant">
       <DialogBody scroll={false}>
+        <div className="flex items-center gap-[6px]">
+          <MerchantFigure height={40} />
+          <span className="t-note">{t.merchant_back}</span>
+        </div>
         <BoonChooser onChosen={() => { useUiStore.getState().closeModal(); useGameStore.getState().startCastle(); }} />
       </DialogBody>
     </Dialog>

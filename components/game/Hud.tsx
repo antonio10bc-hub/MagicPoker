@@ -34,6 +34,7 @@ const FlyingHeart = ({ index }: { index: number }) => (
   </motion.div>
 );
 
+/** Vidas. Las de más que te da el mercader del Castillo (por encima de las de partida) van en azul eléctrico. */
 const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: Owner; max?: number }) => {
   const last = useRef(lives);
   const shake = useAnimationControls();
@@ -65,6 +66,7 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
     <motion.div animate={shake} className="relative flex gap-[1px]">
       {Array.from({ length: max }, (_, i) => {
         const healed = !!gained && i >= gained.from && i < gained.to && i < lives;
+        const extra = owner === 'player' && i >= STARTING_LIVES;
         return (
           <motion.div
             key={`${i}-${i < lives}`}
@@ -74,8 +76,8 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
             transition={{ type: 'spring', stiffness: 500, damping: 14 }}
           >
             {/* Vida: brasa que brilla; perdida: hueco apagado; recuperada: verde un momento */}
-            <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={healed ? INK.volt : i < lives ? INK.orange : INK.slate}
-              className={healed ? 'bloom-volt-shape' : i < lives ? 'bloom-shape' : undefined} />
+            <PixelSprite sprite={i < lives ? HEART : HEART_LOST} tint={healed ? INK.volt : i < lives ? (extra ? INK.azure : INK.orange) : INK.slate}
+              className={healed ? 'bloom-volt-shape' : i < lives ? (extra ? 'bloom-azure-shape' : 'bloom-shape') : undefined} />
           </motion.div>
         );
       })}
@@ -262,7 +264,7 @@ const DeckPeek = ({ anchor, onClose }: { anchor: Rect; onClose: () => void }) =>
 export const PlayerPanel = () => {
   const t = useTranslations();
   const { playerPanel: rect, compactPanels } = useGameLayout();
-  const { lives, deckCount } = usePlayerHud('player');
+  const { lives, maxLives, deckCount } = usePlayerHud('player');
   const [peek, setPeek] = useState(false);
   const togglePeek = () => { playSfx(peek ? 'deselect' : 'open', 0.6); setPeek(p => !p); };
   const deck = (
@@ -276,7 +278,7 @@ export const PlayerPanel = () => {
     return (
       <>
         <CompactPanel label={t.you} owner="player" rect={rect}>
-          <Lives lives={lives} owner="player" />
+          <Lives lives={lives} max={maxLives} owner="player" />
           <DangerChip lives={lives} />
           <div className="ml-auto">{deck}</div>
         </CompactPanel>
@@ -287,7 +289,7 @@ export const PlayerPanel = () => {
   return (
     <>
       <Panel title={<div className="flex items-center justify-between"><span>{t.you}</span><DangerChip lives={lives} /></div>} band={TEAM_BAND.player} titleClassName={TEAM_BAND_TEXT.player} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[4px]">
-        <Lives lives={lives} owner="player" />
+        <Lives lives={lives} max={maxLives} owner="player" />
         <div>{deck}</div>
       </Panel>
       {peekLayer}

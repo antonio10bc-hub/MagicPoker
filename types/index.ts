@@ -51,6 +51,8 @@ export interface Card {
   wild?: boolean;
   /** Mejora del Castillo: puntos de valor de más */
   bonus?: number;
+  /** Viene del mercader del Castillo (carta nueva, sellada o mejorada por él) */
+  merchant?: boolean;
 }
 
 export interface BoardSlot {

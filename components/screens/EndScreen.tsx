@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { currentBossIndex } from '@/lib/bosses';
-import { BoonChooser } from '@/components/game/BoonChooser';
+import { MerchantScene } from '@/components/game/MerchantScene';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { useEffect, useState } from 'react';
@@ -115,6 +115,16 @@ export const EndScreen = () => {
     return () => { pops.forEach(clearTimeout); clearTimeout(sparkle); };
   }, [isWin, waiting]);
 
+  // Castillo, jefe vencido: en vez del panel, entra el mercader con sus mejoras
+  if (castleOutcome?.kind === 'next') {
+    return (
+      <div className="absolute inset-0">
+        <MenuBackground />
+        {!waiting && <MerchantScene floor={castleOutcome.run.stage} />}
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0">
       <MenuBackground />
@@ -138,16 +148,14 @@ export const EndScreen = () => {
         titleClassName={castleOutcome && castleOutcome.kind !== 'fallen' ? 'text-ink' : undefined}
         style={{ width: panelWidth }} bodyClassName="flex flex-col">
         <div className="p-[6px]">
-          {castleOutcome?.kind === 'next' ? <BoonChooser /> : (
-            <p className="text-center leading-[12px]">
-              {castleOutcome
-                ? (castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1)))
-                : wasTutorial ? t.tut_done : t[ui.sub]}
-            </p>
-          )}
+          <p className="text-center leading-[12px]">
+            {castleOutcome
+              ? (castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1)))
+              : wasTutorial ? t.tut_done : t[ui.sub]}
+          </p>
         </div>
         <div className="p-[6px] flex flex-col gap-[4px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(185,207,200,0.1)' }}>
-          {castleOutcome ? castleOutcome.kind !== 'next' && (
+          {castleOutcome ? (
             <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
           ) : (
             // Si ganas, al siguiente jefe; si no, revancha contra el mismo

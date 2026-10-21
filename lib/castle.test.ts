@@ -33,11 +33,15 @@ describe('el Castillo', () => {
     const c = await load();
     const run = { ...c.ensureRun(), lives: 2 };
     expect(c.applyBoon(run, { kind: 'heal' }).lives).toBe(4);
-    expect(c.applyBoon(run, { kind: 'card', rank: 'TOWER' }).deck.at(-1)).toEqual({ rank: 'TOWER' });
-    expect(c.applyBoon(run, { kind: 'card', rank: 'WILD' }).deck.at(-1)).toEqual({ rank: 'SEAL', wild: true });
+    expect(c.applyBoon(run, { kind: 'card', rank: 'TOWER' }).deck.at(-1)).toEqual({ rank: 'TOWER', merchant: true });
+    expect(c.applyBoon(run, { kind: 'card', rank: 'WILD' }).deck.at(-1)).toEqual({ rank: 'SEAL', wild: true, merchant: true });
     expect(c.applyBoon(run, { kind: 'seal', seal: 'mirror', target: 0 }).deck[0].seal).toBe('mirror');
     expect(c.applyBoon(run, { kind: 'upgrade', target: 0 }).deck[0].bonus).toBe(2);
     expect(c.applyBoon(run, { kind: 'purge', targets: [0, 1] }).deck).toHaveLength(run.deck.length - 2);
+    // Lo que toca el mercader queda marcado, también en las cartas de la pelea
+    expect(c.applyBoon(run, { kind: 'upgrade', target: 0 }).deck[0].merchant).toBe(true);
+    const bought = c.applyBoon(run, { kind: 'card', rank: 'KNIGHT' });
+    expect(c.buildRunDeck(bought).filter(card => card.merchant).map(card => card.rank)).toEqual(['KNIGHT']);
     expect(c.applyBoon(run, { kind: 'maxLife' })).toMatchObject({ maxLives: 5, lives: 3 });
     const pact = c.applyBoon(run, { kind: 'pact' });
     expect(pact).toMatchObject({ pact: true, lives: 1 });

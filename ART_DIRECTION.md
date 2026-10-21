@@ -39,6 +39,7 @@ los dos.
 | Voltio | `#7DFF2B` | **exclusivo de los sellos**: verde eléctrico (amarillo verdoso) que brilla como el naranja |
 | Carmesí | `#FF1F4B` | **exclusivo del Castillo**: rojo eléctrico de los jefes evolucionados, su página y sus mejoras |
 | Oro | `#E8B64A` | solo el dorso del jefe secreto (El Soberano) |
+| Azul eléctrico | `#2E9BFF` | **exclusivo del mercader del Castillo** y de todo lo que sale de él |
 
 **El naranja es el único color saturado y se reserva para lo importante.** Nunca hay
 dos fuentes de color compitiendo: el decorado es negro y grises fríos.
@@ -381,11 +382,21 @@ se mueve rápido y una vibración leve a las masas naranjas.
 
 - **Rojo eléctrico (`--ink-crimson`)** marca todo lo del Castillo: su página al final
   de la lista de jefes (un castillo de torres en punta), el botón ENTRAR / SEGUIR, el
-  piso (n/12) en el panel del rival, las mejoras y la presentación.
+  piso (n/12) en el panel del rival y la presentación.
 - **Jefes evolucionados:** la misma silueta con una capa carmesí sacada de ella
   (ojos encendidos, púas por arriba y a los lados) y un halo carmesí en vez del naranja.
-- **Mejoras entre jefes:** tres botones con contorno carmesí, cada uno con su icono
-  (corazón, carta, sello en verde, +2, −, estrella del pacto), título y descripción.
+- **El mercader (azul eléctrico, `--ink-azure`):** al vencer a un jefe del Castillo no
+  sale el panel de victoria: la pantalla se oscurece con una luz azul, arriba "PISO N
+  SUPERADO" en carmesí, y el mercader entra caminando desde la derecha (encapuchado,
+  con un fardo a la espalda y un farol; cuerpo azul, ojos y farol crema). Debajo, una
+  raya azul, su nombre, una frase suya en el bocadillo crema y sus 3 mejoras: botones
+  con contorno azul y el icono en azul (corazón, carta, sello, +2, −, estrella del
+  pacto). Al elegir, sube el siguiente jefe con su presentación. "Volver al menú" en
+  pequeño; al volver, la ventana del mercader (banda azul) te espera.
+- **Todo lo que sale del mercader es azul eléctrico:** las cartas nuevas (masa azul en
+  vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
+  insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
+  (el verde del sello manda) y las vidas de más por encima de las 4 de partida.
 - **Cartas del Castillo** (Bufón, Torre, Bomba, Espía, Caballero, Sacerdotisa): figuras
   en silueta como J/Q/K, con su nombre en pequeño arriba. La insignia de ataque usa
   "?" (Bufón, copia), "–" (Torre, no ataca) y "±2" (Caballero, salta). El comodín de

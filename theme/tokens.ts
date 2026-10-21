@@ -20,6 +20,8 @@ export const INK = {
   // Exclusivo del Castillo: rojo eléctrico de los jefes evolucionados
   crimson: '#FF1F4B',
   gold: '#E8B64A',
+  // Exclusivo del mercader del Castillo y de todo lo que sale de él: azul eléctrico
+  azure: '#2E9BFF',
 } as const;
 
 export const PALETTE = {
