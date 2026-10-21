@@ -3,6 +3,7 @@ import { motion, AnimatePresence, animate, useAnimationControls, useMotionValue 
 import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
+import { useUiStore } from '@/store/useUiStore';
 import { useTranslations } from '@/lib/i18n';
 import { STARTING_LIVES } from '@/lib/constants';
 import { CARD_SIZE, INK } from '@/theme/tokens';
@@ -64,7 +65,7 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
 
   const critical = owner === 'player' && lives === 1;
   return (
-    <motion.div animate={shake} className="relative flex gap-[1px]">
+    <motion.div animate={shake} className="relative flex gap-[1px]" data-lives={owner}>
       {Array.from({ length: max }, (_, i) => {
         const healed = !!gained && i >= gained.from && i < gained.to && i < lives;
         const extra = owner === 'player' && i >= STARTING_LIVES;
@@ -171,7 +172,10 @@ const SecretWin = ({ rect }: { rect: Rect }) => {
 export const RivalPanel = () => {
   const t = useTranslations();
   const { rivalPanel: rect, compactPanels } = useGameLayout();
-  const { lives, maxLives, deckCount, handCount } = usePlayerHud('opponent');
+  const { lives: realLives, maxLives, deckCount, handCount } = usePlayerHud('opponent');
+  // Durante la fase 2 del Soberano el panel enseña las vidas que anima la cinemática
+  const shown = useUiStore(s => s.rivalLivesShown);
+  const lives = shown ?? realLives;
   // El boss de esta partida (en el tutorial, un rival sin nombre)
   const boss = useGameStore(s => (s.tutorialStep === null ? BOSSES[s.bossIndex] : null));
   const name = boss ? t[`boss_${boss.id}` as keyof typeof t] : t.rival;

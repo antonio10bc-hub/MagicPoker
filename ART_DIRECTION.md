@@ -456,10 +456,16 @@ se mueve rápido y una vibración leve a las masas naranjas.
   carmesí): cinco interruptores con casilla carmesí (Sin curas, Jefes feroces, Jefes
   sellados, Mazo corto, Frágil) y ENTRAR · n desafíos. La página del Castillo muestra el
   récord ("conquistado con n/5 desafíos").
-- **Fase 2 del Soberano:** al bajar a la mitad de vidas la pelea se para: destello
-  rojo, "FASE 2", él se alza temblando con su aura que crece, onda de oro, "EL SOBERANO
-  DESPIERTA", sus corazones se rellenan uno a uno y su frase. Se cierra tocando. Pasa
-  una vez por pelea (se guarda en la partida).
+- **Fase 2 del Soberano** (pausada, unos 9 s, para que se entienda):
+  1. Se ve el golpe: su barra baja a la mitad (con su "-N"), su panel parpadea con un
+     filo carmesí y sale "¡MITAD DE VIDA!" debajo, en una pastilla negra.
+  2. Se para todo: destello rojo, "FASE 2", él se alza temblando con su aura que crece
+     y una onda de oro.
+  3. La pantalla se aclara para ver su barra: los corazones que le faltan nacen en el
+     centro, saltan y vuelan uno a uno a su panel, que sube con cada uno.
+  4. "EL SOBERANO DESPIERTA" y su frase. Se cierra tocando (solo al final).
+  Pasa una vez por pelea (se guarda en la partida). La lógica ya le ha curado: el panel
+  enseña las vidas que va animando la escena.
 - **Dorsos del Castillo** (al final de la galería, con el Castillo abierto): Castillo
   (carmesí con la silueta del castillo; al conquistarlo), Mercader (azul con su
   silueta; al conseguir una legendaria) y Corona (oro con rayos carmesí y el Soberano;

@@ -3,7 +3,7 @@ import { card, fight, shot, startScenario, watchErrors } from './helpers';
 
 // --- CASTILLO: COFRE, MAPA, DESAFÍOS, LEGENDARIAS, FASE 2 DEL SOBERANO Y CÁMARA LENTA ---
 
-type G = { __game: { getState: () => Record<string, unknown> & { castle: { stage: number; phase2?: boolean } | null; phase: string; debugWin: () => void; opponent: { lives: number }; phase2Fx: number | null } } };
+type G = { __game: { getState: () => Record<string, unknown> & { castle: { stage: number; phase2?: boolean } | null; phase: string; debugWin: () => void; opponent: { lives: number }; phase2Fx: unknown } } };
 const DECK = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'JOKER'].map(rank => ({ rank }));
 
 const seed = async (page: Page, items: Record<string, unknown>) => {
@@ -97,13 +97,21 @@ test('fase 2 del Soberano: a mitad de vida se transforma y se cura entero', asyn
   });
   await fight(page);
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase2Fx !== null, undefined, { timeout: 15_000 });
-  await page.waitForTimeout(1500);
+  // La lógica ya le ha curado; el panel enseña primero la bajada a la mitad
+  expect(await page.evaluate(() => (window as unknown as G).__game.getState().opponent.lives)).toBe(6);
+  await page.waitForTimeout(1200);
+  await expect(page.getByText('¡MITAD DE VIDA!')).toBeVisible();
+  await shot(page, info, 'fase2-1-mitad');
   // Los logros esperan a que termine la cinemática
   await expect(page.getByText('¡LOGRO NUEVO!')).toBeHidden();
-  await shot(page, info, 'fase2');
-  expect(await page.evaluate(() => (window as unknown as G).__game.getState().opponent.lives)).toBe(6);
+  await page.waitForTimeout(3000);
+  await shot(page, info, 'fase2-2-se-alza');
+  await page.waitForTimeout(3000);
+  await shot(page, info, 'fase2-3-corazones');
+  await page.waitForTimeout(2200);
+  await expect(page.getByText('EL SOBERANO DESPIERTA')).toBeVisible();
+  await shot(page, info, 'fase2-4-despierta');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_save') ?? '{}').phase2 ?? (window as unknown as G).__game.getState().castle?.phase2)).toBe(true);
-  await page.waitForTimeout(1400);
   await page.locator('[aria-label="phase 2"]').click();
   await expect(page.locator('[aria-label="phase 2"]')).toBeHidden();
   noErrors();

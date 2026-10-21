@@ -23,6 +23,9 @@ interface UiState {
   /** Cinemática a pantalla completa en curso (presentación, fase 2): los avisos esperan */
   cinematic: boolean;
   setCinematic: (on: boolean) => void;
+  /** Vidas del rival que enseña el panel mientras una cinemática las anima (null = las reales) */
+  rivalLivesShown: number | null;
+  setRivalLivesShown: (n: number | null) => void;
 }
 
 export const useUiStore = create<UiState>(set => ({
@@ -39,4 +42,6 @@ export const useUiStore = create<UiState>(set => ({
   setMenuBoss: menuBoss => set({ menuBoss }),
   cinematic: false,
   setCinematic: cinematic => set({ cinematic }),
+  rivalLivesShown: null,
+  setRivalLivesShown: rivalLivesShown => set({ rivalLivesShown }),
 }));

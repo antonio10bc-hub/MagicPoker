@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
+import { useUiStore } from '@/store/useUiStore';
 import { BOSSES } from '@/lib/bosses';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx } from '@/lib/sounds';
@@ -57,6 +58,8 @@ export const BossTaunt = () => {
   })));
   const [shown, setShown] = useState<{ round: number | string; text: string } | null>(null);
   const result = useGameStore(s => (s.phase === 'combat-reveal' ? s.pendingCombatResult : null));
+  // Durante una cinemática (fase 2 del Soberano) no habla
+  const cinematic = useUiStore(s => s.cinematic);
 
   // Reacción a la pelea que acaba de verse
   useEffect(() => {
@@ -92,7 +95,7 @@ export const BossTaunt = () => {
   const pos = compactPanels ? { left: rect.x + 4, top: rect.y + rect.h + 6 } : { left: rect.x + rect.w + 6, top: rect.y + 6 };
   return (
     <AnimatePresence>
-      {shown && (
+      {shown && !cinematic && (
         <motion.button
           key={shown.round}
           className="absolute z-[90] text-left px-[6px] py-[4px] leading-[11px] cursor-pointer"

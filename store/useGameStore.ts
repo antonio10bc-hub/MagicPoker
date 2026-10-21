@@ -40,7 +40,7 @@ interface GameState {
   /** Pelea del Castillo en curso (piso = índice del jefe). `phase2`: el Soberano ya se transformó */
   castle: { stage: number; phase2?: boolean } | null;
   /** Fase 2 del Soberano: momento en que se transforma (para su cinemática) */
-  phase2Fx: number | null;
+  phase2Fx: { id: number; from: number; to: number } | null;
   /** Cómo acabó la última pelea del Castillo (para la pantalla final) */
   castleOutcome: CastleOutcome | null;
   /** Presentación del jefe al empezar una partida nueva (id del momento) */
@@ -466,15 +466,15 @@ export const useGameStore = create<GameState>((set, get) => {
     // Castillo, el Soberano: al bajar a la mitad de vidas (o menos) se transforma una vez
     // y se cura entero
     const { castle, bossIndex } = get();
-    let phase2 = false;
+    // (la cinemática enseña primero la bajada y luego cómo se rellenan: from → to)
     if (castle && !castle.phase2 && BOSSES[bossIndex]?.id === 'sovereign') {
       const max = nextOpponent.maxLives ?? opponent.lives;
       if (nextOpponent.lives <= Math.floor(max / 2)) {
+        const from = nextOpponent.lives;
         nextOpponent.lives = max;
-        phase2 = true;
+        set({ castle: { ...castle, phase2: true }, phase2Fx: { id: Date.now(), from, to: max } });
       }
     }
-    if (phase2) set({ castle: { ...castle!, phase2: true }, phase2Fx: Date.now() });
 
     const gameResult = getGameResult(nextPlayer, nextOpponent);
 
