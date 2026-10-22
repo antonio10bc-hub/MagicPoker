@@ -321,6 +321,11 @@ se mueve rápido y una vibración leve a las masas naranjas.
 
 ### Sellos y bosses
 
+- **El As del rival:** no se carga su propia mesa cuando va claramente por delante
+  (más de 6 puntos de fuerza: valor de las cartas y 4 por sello); con poca ventaja lo
+  usa a veces (25 %); parejos o perdiendo, lo usa. Si solo le queda el As y no le
+  compensa, se planta y lo guarda.
+
 - **Todo lo relacionado con los sellos es verde eléctrico** (`--ink-volt`, `.bloom-volt`,
   `.glow-volt`): las cartas de sello, la insignia del sello puesto en una carta, los
   contornos de objetivo al aplicarlo, los efectos de pelea y la colección.

@@ -68,6 +68,27 @@ const sealMove = (hand: Card[], opponentBoard: BoardSlot[], playerBoard: BoardSl
   return null;
 };
 
+// --- EL AS (borra la mesa entera, la suya también) ---
+// No debe ser ni un genio ni tonto: no se carga su propia mesa cuando va claramente por
+// delante (p. ej. Rey con ataque doble y Reina contra poca cosa), pero sí lo usa cuando
+// vais parejos o tú vas mejor, y en la zona dudosa a veces se arriesga.
+/** Fuerza de una mesa: valor de sus cartas, y cada sello puesto cuenta como 4 más */
+export const boardStrength = (board: BoardSlot[]) =>
+  board.reduce((sum, s) => sum + (s.card ? s.card.value + (s.card.seal ? 4 : 0) : 0), 0);
+/** Ventaja a partir de la cual se lo guarda siempre */
+const ACE_CLEAR_LEAD = 6;
+/** Ventaja pequeña en la que a veces se arriesga igualmente */
+const ACE_SMALL_LEAD = 2;
+const ACE_RISK_CHANCE = 0.25;
+
+/** ¿Le compensa ahora borrar la mesa? */
+export const aceWorthIt = (opponentBoard: BoardSlot[], playerBoard: BoardSlot[], rng: Rng = Math.random): boolean => {
+  const lead = boardStrength(opponentBoard) - boardStrength(playerBoard);
+  if (lead > ACE_CLEAR_LEAD) return false;
+  if (lead > ACE_SMALL_LEAD) return rng() < ACE_RISK_CHANCE;
+  return true;
+};
+
 /** Decide qué carta juega el rival y dónde. Devuelve null si debe plantarse. */
 export const chooseOpponentMove = (
   hand: Card[],
@@ -80,7 +101,10 @@ export const chooseOpponentMove = (
   const seal = sealMove(hand, opponentBoard, playerBoard);
   if (seal) return seal;
 
-  const card = hand.find(c => !isSealCard(c));
+  // El As solo si le compensa; si no, otra carta (o se planta y lo guarda)
+  const normal = hand.filter(c => !isSealCard(c));
+  const aceOk = !normal.some(c => RANKS[c.rank].wipesBoard) || aceWorthIt(opponentBoard, playerBoard, rng);
+  const card = normal.find(c => aceOk || !RANKS[c.rank].wipesBoard);
   const available = getAvailableSlots(opponentBoard);
   if (!card || available.length === 0) return null;
 

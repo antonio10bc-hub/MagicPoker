@@ -53,3 +53,35 @@ describe('opponent AI (estrategias)', () => {
     });
   });
 });
+
+describe('el As del rival', () => {
+  const c = (rank: Rank, owner: Owner, id: string, extra: Partial<Card> = {}): Card => ({ id, rank, owner, suit: 'standard', value: RANKS[rank].value, isFaceUp: true, ...extra });
+  const boardOf = (owner: Owner, cards: (Card | null)[]): BoardSlot[] => createEmptyBoard().map((s, i) => ({ ...s, card: cards[i] ?? null }));
+  const hand = [c('A', 'opponent', 'ace'), c('4', 'opponent', 'four')];
+  const always = (n: number) => () => n;
+
+  it('con una mesa ganadora (Rey con doble ataque y Reina) no se carga la suya: juega otra', () => {
+    const mine = boardOf('opponent', [c('K', 'opponent', 'k', { seal: 'double' }), c('Q', 'opponent', 'q')]);
+    const yours = boardOf('player', [c('3', 'player', 'p3')]);
+    for (const n of [0, 0.5, 0.99]) expect(chooseOpponentMove(hand, mine, yours, 'hard', always(n))!.cardId).toBe('four');
+  });
+
+  it('si solo le queda el As y va ganando, se planta y lo guarda', () => {
+    const mine = boardOf('opponent', [c('K', 'opponent', 'k'), c('Q', 'opponent', 'q')]);
+    expect(chooseOpponentMove([c('A', 'opponent', 'ace')], mine, boardOf('player', []), 'hard', always(0.9))).toBeNull();
+  });
+
+  it('si vais parejos (Rey y Reina los dos) o tú vas mejor, lo usa', () => {
+    const mine = boardOf('opponent', [c('K', 'opponent', 'k'), c('Q', 'opponent', 'q')]);
+    const yours = boardOf('player', [c('K', 'player', 'pk'), c('Q', 'player', 'pq')]);
+    expect(chooseOpponentMove(hand, mine, yours, 'hard', always(0.9))!.cardId).toBe('ace');
+    expect(chooseOpponentMove(hand, boardOf('opponent', []), yours, 'hard', always(0.9))!.cardId).toBe('ace');
+  });
+
+  it('con poca ventaja a veces se arriesga (no es perfecto)', () => {
+    const mine = boardOf('opponent', [c('9', 'opponent', 'n')]);
+    const yours = boardOf('player', [c('5', 'player', 'p5')]);
+    expect(chooseOpponentMove(hand, mine, yours, 'hard', always(0.1))!.cardId).toBe('ace');
+    expect(chooseOpponentMove(hand, mine, yours, 'hard', always(0.9))!.cardId).toBe('four');
+  });
+});
