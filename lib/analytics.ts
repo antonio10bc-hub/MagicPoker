@@ -37,7 +37,8 @@ export const initAnalytics = (base: Props = {}) => {
       disable_session_recording: true,
       person_profiles: 'identified_only',
     });
-    posthog.register(base);
+    // app: para separar este juego de los otros sitios que comparten el proyecto de PostHog
+    posthog.register({ app: 'magicpoker', ...base });
     ph = posthog;
     queue.splice(0).forEach(([e, p]) => posthog.capture(e, p));
   }).catch(() => { starting = false; });
