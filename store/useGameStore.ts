@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
   applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isStalemate, risenPhoenixes, countRankOnBoard, createPlayerState,
-  drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, revealBoard, SealEvent,
+  drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent,
 } from '@/lib/game-utils';
 import {
   ALL_SEALS, BOSSES, bossLives, buildBossDeck, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, rematchLevel, unlockedSeals,
@@ -17,6 +17,7 @@ import { incrementStat, recordCardPlayed, recordGameEnd, recordRound, unlockStam
 import { endStamps, newMatchTrack, roundStamps, StampId } from '@/lib/stamps';
 import { clearGame, loadGame, saveGame } from '@/lib/savegame';
 import { useUiStore } from '@/store/useUiStore';
+import { track as trackEvent } from '@/lib/analytics';
 import { applyRivalMoves, markTutorialDone, stepCard, TUTORIAL_OPENINGS, TUTORIAL_STEPS, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
 import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS, STARTING_HAND_SIZE, STARTING_LIVES, TIMINGS } from '@/lib/constants';
 
@@ -145,6 +146,18 @@ export const useGameStore = create<GameState>((set, get) => {
   const endMatch = (gameResult: GameResult, nextPlayer: PlayerState, nextOpponent: PlayerState) => {
     const { difficulty, roundNumber, tutorialStep } = get();
     playSound(...END_SOUNDS[gameResult]);
+    // Analíticas: cómo acaba cada partida (y si era la primera victoria contra ese jefe)
+    {
+      const { bossIndex, rematch, castle, rematchLevel: lvl } = get();
+      const firstWin = tutorialStep === null && !castle && !rematch && gameResult === 'win' && bossIndex >= getProgress().defeated;
+      trackEvent('match_ended', {
+        result: gameResult, mode: tutorialStep !== null ? 'tutorial' : castle ? 'castle' : rematch ? 'rematch' : 'boss',
+        boss: BOSSES[bossIndex]?.id, boss_index: bossIndex, level: lvl, floor: castle ? castle.stage + 1 : null,
+        rounds: roundNumber, lives_left: nextPlayer.lives, rival_lives_left: nextOpponent.lives, first_win: firstWin,
+      });
+      if (tutorialStep !== null) trackEvent('tutorial_completed');
+      if (firstWin) trackEvent('boss_beaten', { boss: BOSSES[bossIndex]?.id, boss_index: bossIndex, rounds: roundNumber });
+    }
     if (tutorialStep !== null) {
       markTutorialDone();
     } else {
@@ -191,6 +204,7 @@ export const useGameStore = create<GameState>((set, get) => {
     const level = castleBossLevel(run.stage, run);
     const playerDeck = buildRunDeck(run);
     deckSeals = countSeals(playerDeck);
+    trackEvent('match_started', { mode: 'castle', boss: boss.id, boss_index: run.stage, floor: run.stage + 1, level, lives: run.lives, deck_size: run.deck.length });
     set({
       ...initialMatchState(),
       screen: 'game',
@@ -219,6 +233,7 @@ export const useGameStore = create<GameState>((set, get) => {
     const level = rematch ? rematchLevel(bossIndex) : 0;
     const playerDeck = buildMatchDeck();
     deckSeals = countSeals(playerDeck);
+    trackEvent('match_started', { mode: rematch ? 'rematch' : 'boss', boss: boss.id, boss_index: bossIndex, level, seals_in_deck: deckSeals });
 
     set({
       ...initialMatchState(),
@@ -235,6 +250,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   startTutorial: () => {
     cancelScheduled();
+    trackEvent('tutorial_started');
     playSound('shuffle', 0.6);
     set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, ...tutorialPlayers() });
   },
@@ -304,6 +320,13 @@ export const useGameStore = create<GameState>((set, get) => {
     const sealPut = played?.rank === 'SEAL' ? (played.wild ? wildSeal : played.seal) : undefined;
     if (sealPut) playSfx(SEAL_SFX[sealPut]);
     if (played) {
+      // Analíticas: qué cartas y sellos se juegan
+      trackEvent('card_played', {
+        rank: played.rank, seal: sealPut ?? played.seal ?? null, wild: !!played.wild, bonus: played.bonus ?? 0,
+        merchant: !!played.merchant, legendary: !!RANKS[played.rank].legendary,
+        mode: get().castle ? 'castle' : get().rematch ? 'rematch' : 'boss', boss: BOSSES[get().bossIndex]?.id,
+        round: get().roundNumber, slot: slotIndex,
+      });
       recordCardPlayed(played.rank);
       track.ranksPlayed.push(played.rank);
       if (played.rank === 'SEAL') track.sealsPlayed++;
@@ -476,6 +499,7 @@ export const useGameStore = create<GameState>((set, get) => {
         const from = nextOpponent.lives;
         nextOpponent.lives = max;
         set({ castle: { ...castle, phase2: true }, phase2Fx: { id: Date.now(), from, to: max } });
+        trackEvent('sovereign_phase2', { lives_left: nextPlayer.lives, round: roundNumber });
       }
     }
 

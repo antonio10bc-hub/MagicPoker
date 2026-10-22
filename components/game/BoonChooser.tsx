@@ -9,6 +9,7 @@ import { INK } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { useGameStore } from '@/store/useGameStore';
+import { track } from '@/lib/analytics';
 
 // --- MEJORAS DEL CASTILLO (el género del mercader) ---
 // Tras vencer a un jefe del Castillo el mercader te ofrece 3 mejoras; eliges 1 y sube
@@ -74,6 +75,13 @@ export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: ()
   if (!run?.offer) return null;
   const pick = (i: number) => {
     if (!ready) return;
+    // Analíticas: qué se elige de lo que ofrece el mercader
+    const boon = run.offer![i];
+    track('merchant_choice', {
+      kind: boon.kind, rarity: boonRarity(boon), card: boon.kind === 'card' ? boon.rank : null, seal: boon.kind === 'seal' ? boon.seal : null,
+      floor: run.stage, lives: run.lives, max_lives: run.maxLives, deck_size: run.deck.length,
+      offered: run.offer!.map(b => (b.kind === 'card' ? `card:${b.rank}` : b.kind)), slot: i, place: compact ? 'scene' : 'menu',
+    });
     playSound('click');
     playSfx('sparkle');
     if (!chooseBoon(i)) return;

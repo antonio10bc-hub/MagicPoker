@@ -8,8 +8,11 @@ import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { EndScreen } from '@/components/screens/EndScreen';
-import { BOSSES } from '@/lib/bosses';
 import { bossMusic } from '@/lib/bossMusic';
+import { BOSSES, getProgress } from '@/lib/bosses';
+import { getCastle } from '@/lib/castle';
+import { isTutorialDone } from '@/lib/tutorial';
+import { initAnalytics, track } from '@/lib/analytics';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
 import { UnlockToasts } from '@/components/game/UnlockToasts';
@@ -31,6 +34,20 @@ export default function Home() {
   const Screen = SCREENS[current];
 
   useEffect(preloadSounds, []);
+
+  // Analíticas: arrancan una vez con el dispositivo y el progreso del jugador
+  useEffect(() => {
+    const progress = getProgress();
+    const castle = getCastle();
+    const portrait = window.innerHeight > window.innerWidth;
+    initAnalytics({ orientation: portrait ? 'portrait' : 'landscape', pointer: matchMedia('(pointer: fine)').matches ? 'mouse' : 'touch' });
+    track('app_opened', {
+      bosses_defeated: progress.defeated, castle_unlocked: progress.defeated >= BOSSES.length, castle_conquered: castle.conquered,
+      castle_best_floor: castle.best, tutorial_done: isTutorialDone(), installed: matchMedia('(display-mode: standalone)').matches,
+    });
+  }, []);
+  // Pantalla en la que está (menú, partida, final)
+  useEffect(() => { track('screen_viewed', { screen: current }); }, [current]);
 
   // Al estar listo (fuentes cargadas), se retira la pantalla de carga y se registra el
   // service worker para poder jugar sin conexión

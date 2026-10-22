@@ -8,6 +8,7 @@ import { CASTLE_RANKS, LEGENDARY_RANKS, createCard, createSealCard, createWildSe
 import { ALL_SEALS, BOSSES } from '@/lib/bosses';
 import { defaultDeckConfig, getDeckConfig, sanitizeDeckConfig } from '@/lib/deck';
 import { STARTING_LIVES } from '@/lib/constants';
+import { track } from '@/lib/analytics';
 
 /** Una carta del mazo de la subida (se crea de nuevo en cada pelea) */
 export interface CardTemplate {
@@ -117,9 +118,17 @@ const countBoon = (run: CastleRun, boon: Boon, chest = false): RunStats => {
   return { ...s, boons: { ...s.boons, [r]: s.boons[r] + 1 }, chests: s.chests + (chest ? 1 : 0) };
 };
 
-const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: number, lives: number): RunSummary => ({
-  outcome, floors, deck: run.deck, lives, maxLives: run.maxLives, challenges: run.challenges, stats: statsOf(run), endedAt: Date.now(),
-});
+const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: number, lives: number): RunSummary => {
+  const sum: RunSummary = { outcome, floors, deck: run.deck, lives, maxLives: run.maxLives, challenges: run.challenges, stats: statsOf(run), endedAt: Date.now() };
+  // Analíticas: cómo acabó la subida
+  const s = sum.stats;
+  track('castle_run_ended', {
+    outcome, floors, lives, max_lives: run.maxLives, deck_size: run.deck.length, challenges: run.challenges ?? [], challenges_count: run.challenges?.length ?? 0,
+    rounds: s.rounds, minutes: Math.round((sum.endedAt - s.startedAt) / 60000), lives_taken: s.damageDealt, lives_lost: s.livesLost,
+    boons_common: s.boons.common, boons_rare: s.boons.rare, boons_legendary: s.boons.legendary, chests: s.chests,
+  });
+  return sum;
+};
 
 // --- DESAFÍOS (se abren al conquistar el Castillo una vez) ---
 //  noHeal  · nadie te ofrece curarte
@@ -218,6 +227,7 @@ export const ensureRun = (challenges: ChallengeId[] = []): CastleRun => {
   }
   const run: CastleRun = { stage: 0, lives, maxLives: lives, deck, stats: newStats(), ...(valid.length ? { challenges: valid } : {}) };
   save({ ...state, run, lastChallenges: valid });
+  track('castle_run_started', { challenges: valid, challenges_count: valid.length, deck_size: deck.length, attempt: state.conquered > 0 ? 'after_conquest' : 'normal' });
   return run;
 };
 

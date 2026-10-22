@@ -4,6 +4,7 @@ import { Boon, boonRarity, getCastle, openChest, Rarity } from '@/lib/castle';
 import { useTranslations } from '@/lib/i18n';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { pausableTimeout } from '@/lib/clock';
+import { track } from '@/lib/analytics';
 import { INK } from '@/theme/tokens';
 import { PixelSprite, spriteSize } from '@/components/pixel/PixelSprite';
 import { CHEST } from '@/components/pixel/chest';
@@ -60,6 +61,7 @@ export const ChestReveal = ({ onDone, width }: { onDone: () => void; width: numb
     setStep('shaking');
     playSound('click');
     ladder.forEach((_, i) => pausableTimeout(() => { playSfx('tick', 0.8, 1 + i * 0.3); haptic('stamp'); }, (i + 1) * (SHAKE_S * 1000) / (ladder.length + 1)));
+    track('chest_opened', { kind: prize.kind, rarity, card: prize.kind === 'card' ? prize.rank : null, seal: prize.kind === 'seal' ? prize.seal : null, floor: getCastle().run?.stage ?? null });
     pausableTimeout(() => {
       openChest();
       setStep('open');

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { track } from '@/lib/analytics';
 import { StampId } from '@/lib/stamps';
 import type { Unlock } from '@/lib/bosses';
 
@@ -30,7 +31,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>(set => ({
   modal: null,
-  openModal: modal => set({ modal }),
+  openModal: modal => { track('modal_opened', { modal }); set({ modal }); },
   closeModal: () => set({ modal: null }),
   stampQueue: [],
   pushStamp: id => set(s => ({ stampQueue: [...s.stampQueue, id] })),

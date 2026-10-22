@@ -2,6 +2,7 @@
 // Cada jefe tiene su dorso temático: lo usan sus cartas y tú lo ganas al vencerle 5
 // veces (ver lib/bosses). Aquí se guarda cuál llevas tú ('default' = el de siempre).
 import { useSyncExternalStore } from 'react';
+import { track } from '@/lib/analytics';
 
 const KEY = 'magic_poker_back';
 export const DEFAULT_BACK = 'default';
@@ -18,6 +19,7 @@ export const getBack = (): string => {
 };
 
 export const setBack = (id: string) => {
+  track('back_equipped', { back: id });
   cached = id;
   try { localStorage.setItem(KEY, id); } catch { /* sin almacenamiento */ }
   listeners.forEach(l => l());

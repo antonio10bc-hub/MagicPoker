@@ -499,6 +499,13 @@ se mueve rápido y una vibración leve a las masas naranjas.
 
 ### Meta: ajustes, sellos, estadísticas y app
 
+- **Analíticas (PostHog, región EU):** `lib/analytics.ts`, solo en la web publicada.
+  Eventos anónimos: app_opened, screen_viewed, modal_opened, tutorial_started y
+  tutorial_completed, match_started y match_ended, boss_beaten, card_played,
+  castle_run_started y castle_run_ended, merchant_choice, chest_opened, sovereign_phase2
+  y back_equipped. Salen por `/ingest` (rewrite en `next.config.ts`) para esquivar los
+  bloqueadores; el service worker no los toca. Sin clics automáticos ni grabaciones.
+
 - **Ajustes** (rueda dentada, en el menú y en la partida; `lib/settings.ts`): sonido,
   volumen de música y de efectos, vibración, confirmar al plantarse y grano (completo, suave o apagado; apagado
   también congela la niebla del fondo: modo rendimiento).
