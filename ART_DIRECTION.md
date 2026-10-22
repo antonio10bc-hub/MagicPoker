@@ -574,6 +574,7 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
 - **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (colección en verde,
   mazo en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
   ajustes).
-- **Icono de la app:** fondo naranja a sangre con el centro encendido, el Rey en
-  silueta negra en el centro con un halo crema detrás, un leve desajuste de registro
-  y grano de impresión (`app/icon.png`, `app/apple-icon.png`, `public/icons/*`).
+- **Icono de la app:** nocturno y misterioso: fondo negro con un rojo muy profundo,
+  una luna-brasa naranja detrás de la cabeza, el Rey en silueta negra sin cetro con un
+  filo de contraluz naranja, los ojos encendidos (crema con resplandor), niebla baja,
+  viñeta y grano de impresión (`app/icon.png`, `app/apple-icon.png`, `public/icons/*`).
