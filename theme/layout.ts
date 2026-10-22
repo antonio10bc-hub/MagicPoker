@@ -130,7 +130,7 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
       turnBox: { x: 314, y: M, w: 66, h: 36 },
       actionButton: { x: 314, y: 196, w: 66, h: 22 },
       // Mano un poco más pequeña que la mesa (35×49), pegada abajo
-      hand: { x: 72, y: 233, w: 236, scale: HAND_SCALE_SMALL },
+      hand: { x: 72, y: 229, w: 236, scale: HAND_SCALE_SMALL },
       compactPanels: false,
     };
   }

@@ -564,6 +564,11 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
 - **Mano:** algo más pequeña que antes: ×1,375 en móviles altos (55×77) y ×0,875 en
   horizontal y móviles bajos (35×49); siempre en píxeles enteros.
+- **Arrastrar con ratón (PC):** cursor de mano (agarrar/agarrando); la carta crece
+  desde su centro y queda bajo el cursor donde se agarró; el hueco de destino lo
+  decide el cursor (con el dedo, el centro de la carta). Pulsar una carta quita su
+  ficha, y la ficha por dejar el ratón encima tarda 1 s en salir para no tapar la mesa.
+  También vale clic en la carta y clic en el hueco.
 - **Pantalla principal:** cada página de la lista de jefes tiene la misma estructura:
   pastilla de estado arriba (naranja si es el próximo rival, pizarra si está
   bloqueado, carmesí en el Castillo; un vencido lleva sus estrellas), la silueta, el nombre y una fila con

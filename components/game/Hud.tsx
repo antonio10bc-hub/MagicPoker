@@ -361,15 +361,17 @@ const slotNear = (x: number, y: number): number | null => {
   return best;
 };
 
-/** Centro visible de la carta arrastrada (o el puntero si aún no hay caja) */
+/** Punto que decide el hueco: con ratón, el cursor (en PC se apunta con él); con el
+ *  dedo, el centro visible de la carta (el dedo la tapa) */
 const dragPoint = (el: HTMLElement | null, e: PointerEvent) => {
-  if (!el) return { x: e.clientX, y: e.clientY };
+  if (!el || e.pointerType === 'mouse') return { x: e.clientX, y: e.clientY };
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 };
 
 const LONG_PRESS_MS = 420;
-const HOVER_INFO_MS = 650;
+/** Ratón quieto encima de una carta: la ficha sale algo tarde para no estorbar al agarrarla */
+const HOVER_INFO_MS = 1000;
 
 const SPRING = { type: 'spring', stiffness: 380, damping: 24 } as const;
 
@@ -445,7 +447,8 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
       transition={{ ...SPRING, delay: entered ? 0 : initialDelay }}
       onAnimationComplete={() => setEntered(true)}
       onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS, false); }}
-      onPointerDown={e => { if (e.pointerType !== 'mouse') startInfo(LONG_PRESS_MS, true); }}
+      // Con ratón, pulsar quita la ficha (vas a jugarla); con el dedo, mantener la enseña
+      onPointerDown={e => { if (e.pointerType !== 'mouse') startInfo(LONG_PRESS_MS, true); else stopInfo(); }}
       onPointerUp={() => { if (infoTimer.current) clearTimeout(infoTimer.current); if (infoShown.current) handlers.onInfo(null); }}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
@@ -483,7 +486,9 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
           setDragY(null);
           handlers.onDrop(card.id, slot);
         }}
-        style={{ touchAction: 'none' }}
+        // Caja del tamaño visible de la carta: al crecer al arrastrar lo hace desde su
+        // centro y la carta sigue bajo el cursor (o el dedo) donde se agarró
+        style={{ touchAction: 'none', width: CARD_SIZE.width * scale, height: CARD_SIZE.height * scale, cursor: canPlay ? (dragging ? 'grabbing' : 'grab') : undefined }}
       >
       {/* Balanceo continuo: las cartas nunca están quietas del todo */}
       <div ref={faceRef} data-card-face style={{ transform: scale !== 1 ? `scale(${scale})` : undefined, transformOrigin: '0 0', width: CARD_SIZE.width, height: CARD_SIZE.height }}>
