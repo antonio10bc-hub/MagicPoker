@@ -237,14 +237,37 @@ export const lifeGains = (board: BoardSlot[], result: CombatResult): number => {
 export const createEmptyBoard = (): BoardSlot[] =>
   Array.from({ length: BOARD_SIZE }, (_, index) => ({ index, card: null }));
 
-export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = false, lives = STARTING_LIVES): PlayerState => ({
-  lives,
-  maxLives: lives,
-  hand: deck.slice(0, handSize).map(c => ({ ...c, isFaceUp: handFaceUp })),
-  deck: deck.slice(handSize),
-  board: createEmptyBoard(),
-  isPassed: false,
-});
+/** Sellos que puede traer como mucho la mano inicial (con más, la partida nace perdida) */
+export const MAX_OPENING_SEALS = 1;
+
+/**
+ * La mano inicial lleva como mucho MAX_OPENING_SEALS sellos: los sobrantes se cambian
+ * por las primeras cartas normales del resto del mazo (que pasan a la mano).
+ */
+export const limitOpeningSeals = (deck: Card[], handSize: number): Card[] => {
+  const out = [...deck];
+  let seals = 0;
+  for (let i = 0; i < Math.min(handSize, out.length); i++) {
+    if (!isSealCard(out[i])) continue;
+    if (++seals <= MAX_OPENING_SEALS) continue;
+    const j = out.findIndex((c, k) => k >= handSize && !isSealCard(c));
+    if (j < 0) break;
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = false, lives = STARTING_LIVES): PlayerState => {
+  const dealt = limitOpeningSeals(deck, handSize);
+  return {
+    lives,
+    maxLives: lives,
+    hand: dealt.slice(0, handSize).map(c => ({ ...c, isFaceUp: handFaceUp })),
+    deck: dealt.slice(handSize),
+    board: createEmptyBoard(),
+    isPassed: false,
+  };
+};
 
 export const drawCards = (state: PlayerState, amount: number, faceUp: boolean): PlayerState => {
   if (amount <= 0 || state.deck.length === 0) return state;
@@ -511,6 +534,18 @@ export const revealBoard = (board: BoardSlot[]): BoardSlot[] =>
 // --- FIN DE PARTIDA ---
 
 const hasRunOut = (s: PlayerState) => s.deck.length === 0 && s.hand.length === 0 && isBoardEmpty(s.board);
+
+/**
+ * Bloqueo: nadie tiene cartas en mano ni en mazo y la última pelea no cambió nada (sin
+ * daño, sin cartas caídas, sin vidas recuperadas). Se repetiría para siempre: empate.
+ */
+export const isStalemate = (player: PlayerState, opponent: PlayerState, result: CombatResult): boolean => {
+  const empty = (s: PlayerState) => s.deck.length === 0 && s.hand.length === 0;
+  const nothing = result.playerDamageTaken === 0 && result.opponentDamageTaken === 0 && result.deadCardIds.length === 0
+    && result.voidedCardIds.length === 0 && lifeGains(player.board, result) === 0 && lifeGains(opponent.board, result) === 0
+    && (result.blessedIds?.length ?? 0) === 0;
+  return empty(player) && empty(opponent) && nothing;
+};
 
 /** Devuelve el resultado si la partida ha terminado, o null si sigue. */
 export const getGameResult = (player: PlayerState, opponent: PlayerState): GameResult | null => {

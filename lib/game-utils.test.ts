@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoardSlot, Card, Owner, Rank } from '@/types';
 import {
   calculateCombat, createDeck, createEmptyBoard, createPlayerState, drawCards, getGameResult,
-  getTargetIndices, playCardToSlot, RANKS, shuffle,
+  getTargetIndices, isStalemate, playCardToSlot, RANKS, shuffle,
 } from '@/lib/game-utils';
 import { chooseOpponentMove } from '@/lib/ai';
 
@@ -146,5 +146,34 @@ describe('opponent AI', () => {
       const move = chooseOpponentMove(hand, board('opponent', ['2', '2', null, '2']), board('player', ['K']), difficulty);
       expect(move?.slotIndex).toBe(2);
     }
+  });
+});
+
+describe('mano inicial y bloqueos', () => {
+  const c = (rank: Rank, id: string): Card => ({ id, rank, owner: 'player', suit: rank === 'SEAL' ? 'seal' : 'standard', value: RANKS[rank].value, isFaceUp: false, ...(rank === 'SEAL' ? { seal: 'shield' as const } : {}) });
+
+  it('la mano inicial trae como mucho un sello', () => {
+    const deck = [c('SEAL', 's1'), c('SEAL', 's2'), c('SEAL', 's3'), c('SEAL', 's4'), c('5', 'n1'), c('7', 'n2')];
+    const state = createPlayerState(deck, 3, true);
+    expect(state.hand.filter(x => x.rank === 'SEAL')).toHaveLength(1);
+    expect(state.hand.map(x => x.id)).toEqual(['s1', 'n1', 'n2']);
+    // No se pierde ninguna carta
+    expect([...state.hand, ...state.deck].map(x => x.id).sort()).toEqual(deck.map(x => x.id).sort());
+  });
+
+  it('sin cartas normales de sobra, se queda como está', () => {
+    const deck = [c('SEAL', 's1'), c('SEAL', 's2'), c('SEAL', 's3')];
+    expect(createPlayerState(deck, 3, true).hand).toHaveLength(3);
+  });
+
+  it('bloqueo: sin cartas en mano ni mazo y una pelea en la que no pasa nada → empate', () => {
+    const tower = (owner: Owner, id: string): Card => ({ id, rank: 'TOWER', owner, suit: 'standard', value: 15, isFaceUp: true });
+    const board = (owner: Owner) => createEmptyBoard().map((s, i) => ({ ...s, card: tower(owner, `${owner}-${i}`) }));
+    const p = { ...createPlayerState(), board: board('player') };
+    const o = { ...createPlayerState(), board: board('opponent') };
+    const r = calculateCombat(p.board, o.board);
+    expect(isStalemate(p, o, r)).toBe(true);
+    // Si a alguien le queda una carta en la mano, no
+    expect(isStalemate({ ...p, hand: [c('5', 'x')] }, o, r)).toBe(false);
   });
 });

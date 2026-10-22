@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
-  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, risenPhoenixes, countRankOnBoard, createPlayerState,
+  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isStalemate, risenPhoenixes, countRankOnBoard, createPlayerState,
   drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, revealBoard, SealEvent,
 } from '@/lib/game-utils';
 import {
@@ -476,7 +476,8 @@ export const useGameStore = create<GameState>((set, get) => {
       }
     }
 
-    const gameResult = getGameResult(nextPlayer, nextOpponent);
+    // Sin cartas por ningún lado y una pelea en la que no pasa nada: bucle infinito → empate
+    const gameResult = getGameResult(nextPlayer, nextOpponent) ?? (isStalemate(player, opponent, result) ? 'draw' : null);
 
     if (gameResult) {
       endMatch(gameResult, nextPlayer, nextOpponent);
