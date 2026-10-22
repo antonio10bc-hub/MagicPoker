@@ -1,9 +1,10 @@
 import { ReactNode, useState } from 'react';
+import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
-import { isBoardEmpty } from '@/lib/game-utils';
+import { isBoardEmpty, RANKS } from '@/lib/game-utils';
 import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { CardBack } from '@/components/game/Card';
@@ -11,7 +12,9 @@ import { BoonChooser } from '@/components/game/BoonChooser';
 import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
-import { RunStatus } from '@/components/game/RunStatus';
+import { MiniCard, RunStatus } from '@/components/game/RunStatus';
+import { CastleMap } from '@/components/game/CastleMap';
+import { RARITY_UI } from '@/components/game/BoonChooser';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
   sanitizeDeckConfig, saveDeckConfig, totalSeals,
@@ -20,8 +23,9 @@ import { updateSettings } from '@/lib/settings';
 import { useSettings } from '@/hooks/useSettings';
 import { Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
+import { useStage } from '@/components/pixel/Stage';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { CHARACTERS, HEART, HEART_LOST, SEAL_ICONS } from '@/components/pixel/sprites';
 import { INK } from '@/theme/tokens';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 
@@ -338,6 +342,90 @@ export const ChallengesModal = () => {
             </button>
           );
         })}
+      </DialogBody>
+    </Dialog>
+  );
+};
+
+// --- RESUMEN DE LA SUBIDA DEL CASTILLO ---
+// Al terminar una subida (conquistada o caída): cómo acabó, el mapa, los desafíos, las
+// estadísticas de toda la subida y el mazo final con el que llegaste.
+const minutes = (ms: number) => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+export const RunSummaryModal = () => {
+  const t = useTranslations();
+  const portrait = useStage().mode === 'portrait';
+  const sum = getCastle().lastSummary;
+  if (!sum) return null;
+  const { stats } = sum;
+  const won = sum.outcome === 'conquered';
+  const rows: [string, ReactNode][] = [
+    [t.sum_floors, `${sum.floors}/12`],
+    [t.sum_rounds, stats.rounds],
+    [t.sum_time, minutes(sum.endedAt - stats.startedAt)],
+    [t.sum_dealt, stats.damageDealt],
+    [t.sum_lost, stats.livesLost],
+    [t.sum_destroyed, stats.cardsDestroyed],
+    [t.sum_cards_lost, stats.cardsLost],
+    [t.sum_best, t.sum_best_v.replace('{n}', String(stats.bestHit))],
+    [t.sum_boons, (
+      <span key="boons" className="flex gap-[4px]">
+        {(['common', 'rare', 'legendary'] as const).map(r => (
+          <span key={r} style={{ color: RARITY_UI[r].color }}>{stats.boons[r]} {t[RARITY_UI[r].label].slice(0, 1)}</span>
+        ))}
+      </span>
+    )],
+    [t.sum_chests, stats.chests],
+  ];
+  return (
+    <Dialog title={t.sum_title} tone="castle">
+      <DialogBody className="t-micro gap-[6px]">
+        {/* Cómo acabó */}
+        <div className="flex flex-col items-center gap-[4px]">
+          <span className={won ? 'font-display glow-crimson' : 'font-display'} style={{ fontSize: 12, letterSpacing: 1, color: won ? 'var(--ink-gold)' : 'var(--ink-crimson)' }}>
+            {won ? t.sum_conquered : t.sum_fallen.replace('{n}', String(sum.floors + 1))}
+          </span>
+          <CastleMap stage={won ? 12 : sum.floors} />
+          {!!sum.challenges?.length && (
+            <span className="flex flex-wrap justify-center gap-[3px]">
+              {sum.challenges.map(c => (
+                <span key={c} className="px-[3px] rounded-[2px]" style={{ fontSize: 7, background: 'var(--ink-crimson)', color: 'var(--ink-black)' }}>{t[`ch_${c}` as keyof Translations]}</span>
+              ))}
+            </span>
+          )}
+        </div>
+        <Section title={t.sum_stats}>
+          {/* En vertical, una columna (las etiquetas no caben en dos) */}
+          <div className={clsx('grid gap-x-[8px] gap-y-[2px]', portrait ? 'grid-cols-1' : 'grid-cols-2')}>
+            {rows.map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-[4px]">
+                <span style={{ color: 'var(--ink-mint)' }}>{label}</span>
+                <span style={{ color: 'var(--ink-cream)' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+        <Section title={t.sum_deck.replace('{n}', String(sum.deck.length))}>
+          <div className="flex items-center gap-[4px] mb-[4px]">
+            <span style={{ color: 'var(--ink-mint)' }}>{t.sum_lives}</span>
+            <span className="flex gap-[1px]">
+              {Array.from({ length: sum.maxLives }, (_, i) => (
+                <PixelSprite key={i} sprite={i < sum.lives ? HEART : HEART_LOST}
+                  tint={i < sum.lives ? (i >= 4 ? INK.azure : INK.orange) : INK.slate} />
+              ))}
+            </span>
+          </div>
+          <span className="flex flex-wrap gap-[3px]">
+            {[...sum.deck].sort((a, b) => {
+              const ka = a.rank === 'SEAL' ? 2 : RANKS[a.rank].castle ? 1 : 0;
+              const kb = b.rank === 'SEAL' ? 2 : RANKS[b.rank].castle ? 1 : 0;
+              return ka - kb || RANKS[a.rank].value - RANKS[b.rank].value;
+            }).map((c, i) => <MiniCard key={i} c={c} />)}
+          </span>
+        </Section>
       </DialogBody>
     </Dialog>
   );

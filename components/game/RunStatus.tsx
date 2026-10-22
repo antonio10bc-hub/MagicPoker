@@ -14,7 +14,7 @@ import { CHARACTERS, HEART, HEART_LOST, SEAL_ICONS } from '@/components/pixel/sp
 // con tu mazo que despliega todas tus cartas en miniatura.
 
 /** Carta en miniatura: número o figura, su sello, su +N y su color de origen */
-const MiniCard = ({ c }: { c: CardTemplate }) => {
+export const MiniCard = ({ c }: { c: CardTemplate }) => {
   const legendary = !!RANKS[c.rank].legendary;
   const seal = c.rank === 'SEAL';
   const figure = !seal && CHARACTERS[c.rank];

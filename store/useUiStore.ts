@@ -4,7 +4,7 @@ import type { Unlock } from '@/lib/bosses';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
-export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges';
+export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges' | 'summary';
 
 interface UiState {
   modal: ModalName | null;

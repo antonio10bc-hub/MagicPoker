@@ -57,7 +57,69 @@ export interface CastleRun {
   chest?: Boon;
   /** Desafíos activos en esta subida */
   challenges?: ChallengeId[];
+  /** Lo que va pasando en la subida (para el resumen final) */
+  stats?: RunStats;
 }
+
+// --- ESTADÍSTICAS DE LA SUBIDA Y RESUMEN FINAL ---
+export interface RunStats {
+  startedAt: number;
+  /** Peleas (rondas de choque) jugadas */
+  rounds: number;
+  /** Vidas quitadas a los jefes y perdidas por ti */
+  damageDealt: number;
+  livesLost: number;
+  /** Cartas del rival tumbadas y tuyas caídas */
+  cardsDestroyed: number;
+  cardsLost: number;
+  /** Más vidas quitadas en una sola pelea */
+  bestHit: number;
+  /** Mejoras elegidas por rareza (mercader y cofres) */
+  boons: Record<Rarity, number>;
+  chests: number;
+}
+
+/** Resumen de la última subida terminada (conquistada o caída) */
+export interface RunSummary {
+  outcome: 'conquered' | 'fallen';
+  /** Pisos vencidos */
+  floors: number;
+  deck: CardTemplate[];
+  lives: number;
+  maxLives: number;
+  challenges?: ChallengeId[];
+  stats: RunStats;
+  endedAt: number;
+}
+
+const newStats = (): RunStats => ({
+  startedAt: Date.now(), rounds: 0, damageDealt: 0, livesLost: 0, cardsDestroyed: 0, cardsLost: 0, bestHit: 0,
+  boons: { common: 0, rare: 0, legendary: 0 }, chests: 0,
+});
+/** Las subidas de antes de las estadísticas empiezan a contar desde cero */
+const statsOf = (run: CastleRun): RunStats => run.stats ?? newStats();
+
+/** Una pelea del Castillo: se suma a las estadísticas de la subida */
+export const trackCastleFight = (f: { dealt: number; lost: number; destroyed: number; cardsLost: number }) => {
+  const state = getCastle();
+  if (!state.run) return;
+  const s = statsOf(state.run);
+  const stats: RunStats = {
+    ...s, rounds: s.rounds + 1, damageDealt: s.damageDealt + f.dealt, livesLost: s.livesLost + f.lost,
+    cardsDestroyed: s.cardsDestroyed + f.destroyed, cardsLost: s.cardsLost + f.cardsLost, bestHit: Math.max(s.bestHit, f.dealt),
+  };
+  save({ ...state, run: { ...state.run, stats } });
+};
+
+const countBoon = (run: CastleRun, boon: Boon, chest = false): RunStats => {
+  const s = statsOf(run);
+  const r = boonRarity(boon);
+  return { ...s, boons: { ...s.boons, [r]: s.boons[r] + 1 }, chests: s.chests + (chest ? 1 : 0) };
+};
+
+const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: number, lives: number): RunSummary => ({
+  outcome, floors, deck: run.deck, lives, maxLives: run.maxLives, challenges: run.challenges, stats: statsOf(run), endedAt: Date.now(),
+});
 
 // --- DESAFÍOS (se abren al conquistar el Castillo una vez) ---
 //  noHeal  · nadie te ofrece curarte
@@ -81,6 +143,8 @@ export interface CastleState {
   lastChallenges?: ChallengeId[];
   /** Ya has conseguido alguna carta legendaria */
   legendary?: boolean;
+  /** Resumen de la última subida terminada */
+  lastSummary?: RunSummary;
 }
 
 // --- DORSOS DEL CASTILLO ---
@@ -152,7 +216,7 @@ export const ensureRun = (challenges: ChallengeId[] = []): CastleRun => {
       .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, 4).map(w => w.i);
     deck = deck.filter((_, i) => !weakest.includes(i));
   }
-  const run: CastleRun = { stage: 0, lives, maxLives: lives, deck, ...(valid.length ? { challenges: valid } : {}) };
+  const run: CastleRun = { stage: 0, lives, maxLives: lives, deck, stats: newStats(), ...(valid.length ? { challenges: valid } : {}) };
   save({ ...state, run, lastChallenges: valid });
   return run;
 };
@@ -243,7 +307,7 @@ export const chooseBoon = (index: number): CastleRun | null => {
   const state = getCastle();
   const boon = state.run?.offer?.[index];
   if (!state.run || !boon) return null;
-  const run = applyBoon(state.run, boon);
+  const run = { ...applyBoon(state.run, boon), stats: countBoon(state.run, boon) };
   save({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' });
   return run;
 };
@@ -271,7 +335,7 @@ export const openChest = (): Boon | null => {
   const boon = state.run?.chest;
   if (!state.run || !boon) return null;
   // La oferta del mercader que ya estaba decidida se conserva
-  const run = { ...applyBoon(state.run, boon), offer: state.run.offer, chest: undefined };
+  const run = { ...applyBoon(state.run, boon), offer: state.run.offer, chest: undefined, stats: countBoon(state.run, boon, true) };
   save({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' });
   return boon;
 };
@@ -287,7 +351,8 @@ export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): Cast
   const stage = state.run.stage + 1;
   if (stage >= CASTLE_LENGTH) {
     const n = state.run.challenges?.length ?? 0;
-    save({ ...state, run: null, best: CASTLE_LENGTH, conquered: state.conquered + 1, bestChallenges: Math.max(state.bestChallenges ?? 0, n) });
+    save({ ...state, run: null, best: CASTLE_LENGTH, conquered: state.conquered + 1, bestChallenges: Math.max(state.bestChallenges ?? 0, n),
+      lastSummary: summarize(state.run, 'conquered', CASTLE_LENGTH, livesLeft) });
     return { kind: 'conquered' };
   }
   const run: CastleRun = { ...state.run, stage, lives: livesLeft, pact: false };
@@ -301,6 +366,6 @@ export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): Cast
 export const recordCastleLoss = (): CastleOutcome => {
   const state = getCastle();
   const stage = state.run?.stage ?? 0;
-  save({ ...state, run: null, best: Math.max(state.best, stage) });
+  save({ ...state, run: null, best: Math.max(state.best, stage), lastSummary: state.run ? summarize(state.run, 'fallen', stage, 0) : state.lastSummary });
   return { kind: 'fallen', stage };
 };

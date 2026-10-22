@@ -145,3 +145,34 @@ test('golpe decisivo a cámara lenta y cartas legendarias en la mesa', async ({ 
   await shot(page, info, 'camara-lenta');
   noErrors();
 });
+
+test('resumen al conquistar el Castillo: estadísticas y mazo final (y desde el menú)', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  const stats = { startedAt: Date.now() - 1000 * 60 * 23, rounds: 41, damageDealt: 58, livesLost: 9, cardsDestroyed: 37, cardsLost: 22, bestHit: 4,
+    boons: { common: 6, rare: 4, legendary: 1 }, chests: 3 };
+  await seed(page, { magic_poker_progress: { defeated: 12 }, magic_poker_castle: { run: { stage: 11, lives: 3, maxLives: 5, deck: DECK, challenges: ['fierce', 'short'], stats }, best: 11, conquered: 0 } });
+  await page.getByText('SEGUIR').first().click({ force: true });
+  await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 11);
+  await closeIntro(page);
+  await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
+  const btn = page.locator('[aria-label="run summary"]');
+  for (let i = 0; i < 14 && !(await btn.isVisible()); i++) {
+    await page.mouse.click(page.viewportSize()!.width / 2, page.viewportSize()!.height * 0.3);
+    await page.waitForTimeout(700);
+  }
+  await expect(btn).toBeVisible();
+  await shot(page, info, 'conquistado');
+  await btn.click({ force: true });
+  await expect(page.getByText('RESUMEN DE LA SUBIDA')).toBeVisible();
+  await expect(page.getByText('Tu mazo final (20 cartas)')).toBeVisible();
+  await page.waitForTimeout(500);
+  await shot(page, info, 'resumen');
+  // Desde el menú: el resumen de la última subida
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => (window as unknown as { __game: { getState: () => { exitToMenu: () => void } } }).__game.getState().exitToMenu());
+  await page.waitForTimeout(1500);
+  await page.locator('.no-scrollbar').first().evaluate(e => { e.scrollLeft = e.scrollWidth; });
+  await page.waitForTimeout(700);
+  await expect(page.locator('[aria-label="last summary"]')).toBeVisible();
+  noErrors();
+});

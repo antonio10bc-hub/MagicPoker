@@ -144,4 +144,22 @@ describe('el Castillo', () => {
     expect(fresh.getCastle().legendary).toBe(true);
     expect(fresh.castleBacks()).toContain('merchant');
   });
+
+  it('estadísticas de la subida y resumen al terminarla', async () => {
+    const c = await load();
+    c.ensureRun(['fragile']);
+    c.trackCastleFight({ dealt: 2, lost: 1, destroyed: 2, cardsLost: 1 });
+    c.trackCastleFight({ dealt: 3, lost: 0, destroyed: 1, cardsLost: 0 });
+    c.recordCastleWin(2, fixed(0));
+    c.chooseBoon(0);
+    const stats = c.getCastle().run!.stats!;
+    expect(stats).toMatchObject({ rounds: 2, damageDealt: 5, livesLost: 1, cardsDestroyed: 3, cardsLost: 1, bestHit: 3 });
+    expect(stats.boons.common + stats.boons.rare + stats.boons.legendary).toBe(1);
+    // Cae en el piso 2: queda el resumen con su mazo
+    c.recordCastleLoss();
+    const sum = c.getCastle().lastSummary!;
+    expect(sum).toMatchObject({ outcome: 'fallen', floors: 1, challenges: ['fragile'] });
+    expect(sum.deck.length).toBeGreaterThan(0);
+    expect(sum.stats.rounds).toBe(2);
+  });
 });

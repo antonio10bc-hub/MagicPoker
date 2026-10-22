@@ -435,6 +435,14 @@ se mueve rápido y una vibración leve a las masas naranjas.
   vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
   (el verde del sello manda) y las vidas de más por encima de las 4 de partida.
+- **Resumen de la subida:** al conquistar o caer, la pantalla final del Castillo lleva
+  el botón RESUMEN (naranja, bajo ¡OTRA SUBIDA!), y la página del Castillo del menú un
+  enlace "Ver el resumen de la última subida". Ventana grande de banda carmesí: cómo
+  acabó (¡CASTILLO CONQUISTADO! en oro o "Caíste en el piso n" en carmesí), el mapa,
+  los desafíos en pastillas carmesí, las estadísticas (pisos, peleas, tiempo, vidas
+  quitadas y perdidas, cartas tumbadas y perdidas, mejor pelea, mejoras por rareza en
+  sus colores y cofres; una columna en vertical, dos en horizontal) y el mazo final
+  en miniaturas con las vidas con las que acabaste.
 - **Vidas y mazo en el mercader:** bajo el mapa, una fila con tus corazones (los de
   más que dio el mercader, en azul) y el botón "MAZO · n" (contorno azul). Al tocarlo se
   despliega tu mazo en miniaturas de 16×21 ordenadas (normales por valor, del Castillo,

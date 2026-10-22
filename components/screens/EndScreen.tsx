@@ -65,9 +65,9 @@ const Rays = ({ x, y }: { x: number; y: number }) => (
   </motion.div>
 );
 
-/** Título que aparece letra a letra con rebote */
+/** Título que aparece letra a letra con rebote (los largos, en letra más pequeña para caber) */
 const TitleLetters = ({ text }: { text: string }) => (
-  <span className="inline-flex">
+  <span className="inline-flex whitespace-nowrap" style={{ fontSize: text.length > 12 ? 9 : undefined }}>
     {text.split('').map((ch, i) => (
       <motion.span key={i} style={{ display: 'inline-block', whiteSpace: 'pre' }}
         initial={{ y: -10, scale: 0, opacity: 0 }} animate={{ y: 0, scale: 1, opacity: 1 }}
@@ -156,7 +156,11 @@ export const EndScreen = () => {
         </div>
         <div className="p-[6px] flex flex-col gap-[4px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(185,207,200,0.1)' }}>
           {castleOutcome ? (
-            <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
+            <>
+              <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
+              {/* Resumen de toda la subida: estadísticas y mazo final */}
+              <PxButton size="md" tone="roof" aria-label="run summary" onClick={() => { playSound('click'); useUiStore.getState().openModal('summary'); }}>{t.sum_button}</PxButton>
+            </>
           ) : (
             // Si ganas, al siguiente jefe; si no, revancha contra el mismo
             <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startGame(wasTutorial || isWin ? undefined : bossIndex, rematch && !isWin); }}>

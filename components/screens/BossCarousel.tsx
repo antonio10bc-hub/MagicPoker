@@ -142,6 +142,13 @@ export const BossCarousel = ({ left, top, width, height }: { left: number; top: 
               : <span className="t-micro text-center px-[18px]" style={{ color: 'var(--ink-mint)' }}>
                 {castle.conquered > 0 ? t.ch_record.replace('{n}', String(castle.bestChallenges ?? 0)) : t.castle_tagline}
               </span>}
+            {/* Sin subida en curso: el resumen de la última */}
+            {!castle.run && castle.lastSummary && (
+              <button aria-label="last summary" className="t-micro underline cursor-pointer" style={{ color: 'var(--ink-crimson)' }}
+                onClick={() => { playSfx('open', 0.6); useUiStore.getState().openModal('summary'); }}>
+                {t.sum_last}
+              </button>
+            )}
           </div>
         )}
       </div>

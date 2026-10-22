@@ -9,7 +9,7 @@ import {
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
-import { buildRunDeck, CastleOutcome, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin } from '@/lib/castle';
+import { buildRunDeck, CastleOutcome, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin, trackCastleFight } from '@/lib/castle';
 import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSfx, playSound } from '@/lib/sounds';
 import { SEAL_SFX } from '@/lib/synth';
@@ -462,6 +462,9 @@ export const useGameStore = create<GameState>((set, get) => {
       hand: [...opponent.hand, ...risenPhoenixes(opponent.board)],
       isPassed: false,
     };
+
+    // Castillo: la pelea cuenta para las estadísticas de la subida
+    if (get().castle) trackCastleFight({ dealt: result.opponentDamageTaken, lost: result.playerDamageTaken, destroyed: result.deadByOwner.opponent, cardsLost: result.deadByOwner.player });
 
     // Castillo, el Soberano: al bajar a la mitad de vidas (o menos) se transforma una vez
     // y se cura entero
