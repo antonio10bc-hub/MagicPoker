@@ -13,6 +13,7 @@ import { PxButton } from '@/components/pixel/ui';
 import { BoonChooser } from './BoonChooser';
 import { ChestReveal } from './ChestReveal';
 import { CastleMap } from './CastleMap';
+import { RunStatus } from './RunStatus';
 import { getCastle } from '@/lib/castle';
 import { BossFigure } from './BossFigure';
 
@@ -87,6 +88,8 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
   const exitToMenu = useGameStore(s => s.exitToMenu);
   // Al elegir, el mercader se desvanece en la oscuridad y sube el siguiente jefe
   const [leaving, setLeaving] = useState(false);
+  // La subida tal y como está ahora (ya con el premio del cofre, si lo hubo)
+  const [run] = useState(() => getCastle().run);
   const onChosen = () => {
     setLeaving(true);
     pausableTimeout(() => useGameStore.getState().startCastle(), 1050);
@@ -99,6 +102,12 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
       <motion.div className="mb-[8px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
         <CastleMap stage={floor} justCleared />
       </motion.div>
+      {/* Tus vidas y tu mazo, para decidir con datos */}
+      {run && (
+        <motion.div className="relative z-20 mb-[4px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.8 }}>
+          <RunStatus run={run} width={panelW} />
+        </motion.div>
+      )}
       {/* Primero se enciende el farol; luego, despacio, sale de la oscuridad */}
       <motion.div initial={{ opacity: 0, filter: 'brightness(0)' }} animate={{ opacity: [0, 0.35, 0.35, 1], filter: ['brightness(0)', 'brightness(0.2)', 'brightness(0.2)', 'brightness(1)'] }}
         transition={{ duration: 1.6, times: [0, 0.3, 0.55, 1] }}>

@@ -4,7 +4,9 @@ import { card, fight, shot, startScenario, watchErrors } from './helpers';
 // --- CASTILLO: COFRE, MAPA, DESAFÍOS, LEGENDARIAS, FASE 2 DEL SOBERANO Y CÁMARA LENTA ---
 
 type G = { __game: { getState: () => Record<string, unknown> & { castle: { stage: number; phase2?: boolean } | null; phase: string; debugWin: () => void; opponent: { lives: number }; phase2Fx: unknown } } };
-const DECK = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'JOKER'].map(rank => ({ rank }));
+const DECK: object[] = [...['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'JOKER'].map(rank => ({ rank })),
+  { rank: '7', bonus: 2, merchant: true }, { rank: 'KNIGHT', merchant: true }, { rank: 'DRAGON', merchant: true }, { rank: '9', seal: 'mirror' },
+  { rank: 'SEAL', seal: 'shield' }, { rank: 'SEAL', wild: true, merchant: true }];
 
 const seed = async (page: Page, items: Record<string, unknown>) => {
   await page.addInitScript(p => {
@@ -55,6 +57,13 @@ test('cofre tras el piso 3: se abre, da su premio y luego llega el mercader con 
   await expect(page.locator('[aria-label="map 3/12"]')).toBeVisible();
   await page.waitForTimeout(2600);
   await shot(page, info, 'mercader-mapa');
+  // Tus vidas y tu mazo, a la vista para decidir
+  await expect(page.locator('[aria-label="lives 4/4"]')).toBeVisible();
+  await page.locator('[aria-label="run deck"]').click();
+  await expect(page.getByText(/Tu mazo \(\d+ cartas\)/)).toBeVisible();
+  await page.waitForTimeout(300);
+  await shot(page, info, 'mercader-mazo');
+  await page.locator('[aria-label="close run deck"]').click();
   noErrors();
 });
 
@@ -67,6 +76,10 @@ test('rarezas: una legendaria en la oferta del mercader (al volver del menú)', 
   await expect(page.getByText('LEGENDARIA')).toBeVisible();
   await page.waitForTimeout(800);
   await shot(page, info, 'rarezas');
+  await expect(page.locator('[aria-label="lives 2/4"]')).toBeVisible();
+  await page.locator('[aria-label="run deck"]').click();
+  await page.waitForTimeout(300);
+  await shot(page, info, 'rarezas-mazo');
   noErrors();
 });
 

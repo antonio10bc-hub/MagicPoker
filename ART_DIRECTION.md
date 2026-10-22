@@ -435,6 +435,12 @@ se mueve rápido y una vibración leve a las masas naranjas.
   vez de pizarra, ventana bañada en azul; el comodín, azul en vez de verde), la
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
   (el verde del sello manda) y las vidas de más por encima de las 4 de partida.
+- **Vidas y mazo en el mercader:** bajo el mapa, una fila con tus corazones (los de
+  más que dio el mercader, en azul) y el botón "MAZO · n" (contorno azul). Al tocarlo se
+  despliega tu mazo en miniaturas de 16×21 ordenadas (normales por valor, del Castillo,
+  sellos): número o silueta, puntito verde si lleva sello, "+N" azul si está mejorada,
+  filo azul si vino del mercader, oro si es legendaria. Se cierra tocándolo. También en
+  la ventana del mercader al volver del menú.
 - **Rarezas del mercader:** cada mejora lleva su rareza en pequeño a la derecha de su
   título: COMÚN (menta), RARA (azul, contorno más vivo) y LEGENDARIA (oro: contorno y
   título dorados, icono en oro y un brillo que cruza la fila). Las legendarias salen a

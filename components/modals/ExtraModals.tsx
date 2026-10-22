@@ -11,6 +11,7 @@ import { BoonChooser } from '@/components/game/BoonChooser';
 import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
+import { RunStatus } from '@/components/game/RunStatus';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
   sanitizeDeckConfig, saveDeckConfig, totalSeals,
@@ -277,6 +278,7 @@ export const BoonsModal = () => {
   const t = useTranslations();
   // Si dejaste el cofre sin abrir, primero el cofre
   const [chest, setChest] = useState(() => !!getCastle().run?.chest);
+  const run = getCastle().run;
   if (chest) {
     return (
       <Dialog title={t.chest_title} size="sm" tone="castle">
@@ -293,6 +295,7 @@ export const BoonsModal = () => {
           <MerchantFigure height={40} />
           <span className="t-note">{t.merchant_back}</span>
         </div>
+        {run && <div className="relative z-20"><RunStatus run={run} /></div>}
         <BoonChooser onChosen={() => { useUiStore.getState().closeModal(); useGameStore.getState().startCastle(); }} />
       </DialogBody>
     </Dialog>
