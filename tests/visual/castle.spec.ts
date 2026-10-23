@@ -59,7 +59,7 @@ test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y s
 test('dorsos: la galería y ponerse uno ganado', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await seed(page, { magic_poker_progress: { defeated: 12, wins: { wall: 5, sovereign: 5, duelist: 3 } } });
-  await page.locator('[aria-label=collection]').click({ force: true });
+  await page.locator('[aria-label="colección"]').click({ force: true });
   await page.getByText('Dorsos', { exact: true }).click({ force: true });
   await page.waitForTimeout(400);
   await shot(page, info, 'galeria');

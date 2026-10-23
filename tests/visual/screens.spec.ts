@@ -62,7 +62,7 @@ test('revancha: un solo botón REVANCHA con un jefe vencido', async ({ page }, i
 test('editor de mazo (con el primer sello)', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 4 });
-  await page.locator('[aria-label=deck]').click({ force: true });
+  await page.locator('[aria-label=mazo]').click({ force: true });
   await page.waitForTimeout(500);
   // Por defecto lleva un sello de cada uno desbloqueado (defensa, ataque y cambio)
   await page.locator('[aria-label="more shield"]').click({ force: true });
@@ -80,7 +80,7 @@ test('editor de mazo (con el primer sello)', async ({ page }, info) => {
 test('catálogo de cartas desde ajustes', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 2 });
-  await page.locator('[aria-label=settings]').click({ force: true });
+  await page.locator('[aria-label=ajustes]').click({ force: true });
   await page.getByText('Catálogo de cartas').click({ force: true });
   await page.waitForTimeout(500);
   await expect(page.getByText('Bufón')).toBeAttached();
@@ -101,7 +101,7 @@ test('pausa: el rival no juega mientras está abierta y x2 se guarda', async ({ 
     g.setState({ opponent: { ...g.getState().opponent, isPassed: false, hand: [{ id: 'opponent-7-x', rank: '7', owner: 'opponent', suit: 'standard', value: 7, isFaceUp: false }] } });
   });
   // Se pausa y, con la pausa abierta, se juega: el turno del rival queda en espera
-  await page.locator('[aria-label=pause]').click();
+  await page.locator('[aria-label=pausa]').click();
   await expect(page.getByText('PAUSA', { exact: true })).toBeVisible();
   await page.evaluate(() => (window as unknown as { __game: { getState: () => { placeCard: (id: string, slot: number) => void } } }).__game.getState().placeCard('player-3-h1', 2));
   await page.waitForTimeout(2500);
@@ -123,7 +123,7 @@ test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ 
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
   await dismissIntro(page);
-  await page.locator('[aria-label=speed]').click();
+  await page.locator('[aria-label=velocidad]').click();
   type G = { __game: { getState: () => { phase: string; turn: string; player: { hand: { id: string; rank: string }[]; board: { index: number; card: unknown }[] }; opponent: { board: { card: unknown }[] }; placeCard: (id: string, s: number) => void; passTurn: () => void } } };
   for (let round = 0; round < 3; round++) {
     // Juegas una carta y te plantas; la cuenta atrás de CONTINUAR cierra la pelea sola

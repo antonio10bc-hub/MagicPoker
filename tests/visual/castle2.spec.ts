@@ -58,12 +58,12 @@ test('cofre tras el piso 3: se abre, da su premio y luego llega el mercader con 
   await page.waitForTimeout(2600);
   await shot(page, info, 'mercader-mapa');
   // Tus vidas y tu mazo, a la vista para decidir
-  await expect(page.locator('[aria-label="lives 4/4"]')).toBeVisible();
-  await page.locator('[aria-label="run deck"]').click();
+  await expect(page.locator('[aria-label^="lives "]')).toBeVisible();
+  await page.locator('[aria-label="mazo de la subida"]').click();
   await expect(page.getByText(/Tu mazo \(\d+ cartas\)/)).toBeVisible();
   await page.waitForTimeout(300);
   await shot(page, info, 'mercader-mazo');
-  await page.locator('[aria-label="close run deck"]').click();
+  await page.locator('[aria-label="cerrar el mazo de la subida"]').click();
   noErrors();
 });
 
@@ -77,7 +77,7 @@ test('rarezas: una legendaria en la oferta del mercader (al volver del menú)', 
   await page.waitForTimeout(800);
   await shot(page, info, 'rarezas');
   await expect(page.locator('[aria-label="lives 2/4"]')).toBeVisible();
-  await page.locator('[aria-label="run deck"]').click();
+  await page.locator('[aria-label="mazo de la subida"]').click();
   await page.waitForTimeout(300);
   await shot(page, info, 'rarezas-mazo');
   noErrors();
@@ -155,7 +155,7 @@ test('resumen al conquistar el Castillo: estadísticas y mazo final (y desde el 
   await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 11);
   await closeIntro(page);
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
-  const btn = page.locator('[aria-label="run summary"]');
+  const btn = page.locator('[aria-label="resumen de la subida"]');
   for (let i = 0; i < 14 && !(await btn.isVisible()); i++) {
     await page.mouse.click(page.viewportSize()!.width / 2, page.viewportSize()!.height * 0.3);
     await page.waitForTimeout(700);
