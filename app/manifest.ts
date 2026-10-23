@@ -5,13 +5,13 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Magic Poker',
     short_name: 'Magic Poker',
-    description: 'Juego de cartas estratégico',
+    description: 'A strategy card game',
     start_url: '/',
     display: 'standalone',
     orientation: 'any',
     background_color: '#0B0D0C',
     theme_color: '#0B0D0C',
-    lang: 'es',
+    lang: 'en',
     categories: ['games'],
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

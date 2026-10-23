@@ -282,7 +282,7 @@ export const PlayerPanel = () => {
   const [peek, setPeek] = useState(false);
   const togglePeek = () => { playSfx(peek ? 'deselect' : 'open', 0.6); setPeek(p => !p); };
   const deck = (
-    <button className="cursor-pointer" onClick={togglePeek} aria-label="deck">
+    <button className="cursor-pointer" onClick={togglePeek} aria-label={t.aria_deck}>
       <DeckCount owner="player" count={deckCount} />
     </button>
   );

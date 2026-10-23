@@ -20,6 +20,12 @@ const SPECIAL_TEXT: Partial<Record<Rank, keyof Translations>> = {
   DRAGON: 'idea_dragon_desc', HYDRA: 'idea_hydra_desc', PHOENIX: 'idea_phoenix_desc',
 };
 
+/** Nombre de las cartas del Castillo (el rango es un código interno en inglés) */
+const CASTLE_NAME: Partial<Record<Rank, keyof Translations>> = {
+  JESTER: 'idea_jester', TOWER: 'idea_tower', BOMB: 'idea_bomb', SPY: 'idea_spy', KNIGHT: 'idea_knight', PRIESTESS: 'idea_priestess',
+  DRAGON: 'idea_dragon', HYDRA: 'idea_hydra', PHOENIX: 'idea_phoenix',
+};
+
 /** Mini diagrama: 3 casillas (izquierda, frente, derecha) y las que golpea */
 const AttackDiagram = ({ rank }: { rank: Rank }) => {
   const attack = RANKS[rank].attack;
@@ -78,7 +84,7 @@ export const CardInfo = ({ cardId }: { cardId: string | null }) => {
           {CHARACTERS[card.rank] && <PixelSprite sprite={CHARACTERS[card.rank]!} tint={INK.cream} className="shrink-0 bloom-cream" />}
           <div className="flex flex-col gap-[3px] leading-[11px] min-w-0">
             <div className="flex items-center gap-[5px]">
-              <span className="text-title text-outline glow-text" style={{ color: 'var(--ink-orange)' }}>{card.rank}</span>
+              <span className="text-title text-outline glow-text" style={{ color: 'var(--ink-orange)' }}>{CASTLE_NAME[card.rank] ? t[CASTLE_NAME[card.rank]!] : card.rank}</span>
               <span style={{ color: 'var(--c-ui-muted)' }}>{t.card_value} {card.value}</span>
               <AttackDiagram rank={card.rank} />
             </div>

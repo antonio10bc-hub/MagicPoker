@@ -169,19 +169,19 @@ export const MenuScreen = () => {
         {/* Todos los iconos con el mismo marco: lo tuyo (colección, mazo) lleva el icono
             de su color y va separado de lo del juego (reglas, estadísticas, ajustes) */}
         {collection && (
-          <PxButton aria-label="collection" className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
+          <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
             <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} />
           </PxButton>
         )}
         {editor && (
-          <PxButton aria-label="deck" className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
+          <PxButton aria-label={t.aria_deck} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
             <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
           </PxButton>
         )}
         {(collection || editor) && <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />}
-        <IconButton icon={ICONS.info} aria-label="rules" onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
-        <IconButton icon={ICONS.trophy} aria-label="stats" onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
-        <IconButton icon={ICONS.gear} aria-label="settings" onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
+        <IconButton icon={ICONS.info} aria-label={t.aria_rules} onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
+        <IconButton icon={ICONS.trophy} aria-label={t.aria_stats} onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
+        <IconButton icon={ICONS.gear} aria-label={t.aria_settings} onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
       </div>
       <Logo x={logoX} w={logoW} y={logoY} />
       {/* El boss a derrotar, grande en el centro del tapete; se desliza para ver la lista */}

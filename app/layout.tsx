@@ -9,7 +9,7 @@ const displayFont = Bebas_Neue({ subsets: ['latin'], weight: '400', variable: '-
 
 export const metadata: Metadata = {
   title: 'Magic Poker',
-  description: 'Juego de cartas estratégico',
+  description: 'A strategy card game',
   // Instalable en iOS: pantalla completa y barra de estado sobre el negro del juego
   appleWebApp: { capable: true, title: 'Magic Poker', statusBarStyle: 'black-translucent' },
 }
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className={`h-full ${typeFont.variable} ${displayFont.variable}`}>
+    <html lang="en" className={`h-full ${typeFont.variable} ${displayFont.variable}`}>
       <body className="h-full m-0 overflow-hidden">
         {/* Pantalla de carga: HTML puro, visible antes de que arranque React */}
         <div id="splash" aria-hidden>
