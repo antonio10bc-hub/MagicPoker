@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoardSlot, Card, Owner, Rank } from '@/types';
 import {
   calculateCombat, createDeck, createEmptyBoard, createPlayerState, drawCards, getGameResult,
-  getTargetIndices, isStalemate, playCardToSlot, RANKS, shuffle,
+  getTargetIndices, isIdleDraw, isStalemate, nextIdleTurns, playCardToSlot, RANKS, shuffle,
 } from '@/lib/game-utils';
 import { chooseOpponentMove } from '@/lib/ai';
 
@@ -175,5 +175,30 @@ describe('mano inicial y bloqueos', () => {
     expect(isStalemate(p, o, r)).toBe(true);
     // Si a alguien le queda una carta en la mano, no
     expect(isStalemate({ ...p, hand: [c('5', 'x')] }, o, r)).toBe(false);
+  });
+
+  it('inactividad: con solo sellos en la mano y la mesa vacía nadie puede jugar; tras 4 turnos sin jugar → empate', () => {
+    const seal: Card = { id: 's', rank: 'SEAL', owner: 'player', suit: 'seal', value: 0, isFaceUp: true, seal: 'shield' };
+    const p = { ...createPlayerState(), hand: [seal], deck: [seal] };
+    const o = { ...createPlayerState(), hand: [{ ...seal, owner: 'opponent' as Owner }] };
+    // El sello no se puede poner sin una carta tuya en la mesa
+    expect(playCardToSlot(p, 's', 0, true)).toBeNull();
+    const quiet = calculateCombat(p.board, o.board);
+    // Dos rondas en las que los dos se plantan: 4 turnos sin jugar
+    let idle = 0;
+    for (let i = 0; i < 2; i++) idle = nextIdleTurns(nextIdleTurns(idle, 'pass'), 'pass');
+    expect(idle).toBe(4);
+    expect(isIdleDraw(3, p, o, quiet)).toBe(false);
+    expect(isIdleDraw(idle, p, o, quiet)).toBe(true);
+    // Jugar una carta reinicia la cuenta
+    expect(nextIdleTurns(3, 'play')).toBe(0);
+  });
+
+  it('inactividad: si la pelea cambia algo (daño), la partida sigue aunque nadie juegue', () => {
+    const p = { ...createPlayerState(), board: createEmptyBoard().map((s, i) => (i === 0 ? { ...s, card: card('9', 'player') } : s)) };
+    const o = createPlayerState();
+    const r = calculateCombat(p.board, o.board);
+    expect(r.opponentDamageTaken).toBeGreaterThan(0);
+    expect(isIdleDraw(6, p, o, r)).toBe(false);
   });
 });

@@ -347,6 +347,29 @@ export const ChallengesModal = () => {
   );
 };
 
+// --- DEPURACIÓN (solo con ?debug=1) ---
+// Repite en el mapa las revelaciones como si acabaras de ganar, sin tocar tu progreso.
+export const DebugModal = () => {
+  const replay = (defeated: number) => {
+    playSound('click');
+    useUiStore.getState().closeModal();
+    useUiStore.getState().setMapReplay(defeated);
+  };
+  const row = (label: string, defeated: number) => (
+    <PxButton key={label} size="md" onClick={() => replay(defeated)}>{label}</PxButton>
+  );
+  return (
+    <Dialog title="DEBUG" size="sm" width={220}>
+      <DialogBody scroll={false} className="gap-[4px]">
+        <p className="t-note">Repite las animaciones del mapa (tu progreso no cambia).</p>
+        {row('Jefe vencido → siguiente', 3)}
+        {row('Llega el Soberano', BOSSES.length - 1)}
+        {row('Se alza el Castillo', BOSSES.length)}
+      </DialogBody>
+    </Dialog>
+  );
+};
+
 // --- RESUMEN DE LA SUBIDA DEL CASTILLO ---
 // Al terminar una subida (conquistada o caída): cómo acabó, el mapa, los desafíos, las
 // estadísticas de toda la subida y el mazo final con el que llegaste.

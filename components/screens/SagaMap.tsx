@@ -315,7 +315,7 @@ const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gol
   );
 };
 
-export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
+export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay = null, onReplayDone }: {
   /** Zona del escenario que ocupa el mapa */
   rect: Rect;
   /** Lo que tapan arriba y abajo la cabecera y la acción principal (para centrar bien) */
@@ -323,9 +323,13 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
   safeBottom?: number;
   /** Mientras se cuenta algo nuevo (input bloqueado) */
   onRevealing?: (on: boolean) => void;
+  /** Depuración: repetir la revelación de haber vencido a tantos jefes (sin tocar el progreso) */
+  replay?: number | null;
+  onReplayDone?: () => void;
 }) => {
   const t = useTranslations();
-  const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
+  const realProgress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
+  const progress = useMemo(() => (replay === null ? realProgress : { ...realProgress, defeated: replay }), [realProgress, replay]);
   const castle = useSyncExternalStore(subscribeCastle, getCastle, getServerCastle);
   const setMenuBoss = useUiStore(s => s.setMenuBoss);
   const selected = useUiStore(s => s.menuBoss);
@@ -370,8 +374,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
   // Al abrir: la cámara en el jefe a derrotar (o en el Castillo); con algo por contar,
   // en el último vencido de antes
   useLayoutEffect(() => {
-    const { defeated } = getProgress();
-    const seen = getMapSeen(defeated);
+    const defeated = replay ?? getProgress().defeated;
+    const seen = replay !== null ? replay - 1 : getMapSeen(defeated);
     const pending = revealSteps(seen, defeated);
     if (pending.length) {
       setSteps(pending);
@@ -425,7 +429,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
     // Fin: se anota, se elige lo nuevo y vuelve el control
     at(clock, () => {
       const last = steps[steps.length - 1];
-      setMapSeen(last.beaten + 1);
+      if (replay === null) setMapSeen(last.beaten + 1);
+      else onReplayDone?.();
       setPhase('idle');
       setStep(null);
       setSteps([]);
@@ -541,7 +546,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                         : summoning ? { ...AT_REST, scaleY: [0.82, 1.1, 1], scaleX: [1.15, 0.95, 1], filter: ['brightness(3.5)', 'brightness(1)'] }
                           : arriving ? { ...AT_REST, scale: [1, 1.25, 1], filter: ['brightness(1)', 'brightness(2.6)', 'brightness(1)'] } : AT_REST}
                       exit={{ opacity: 0, y: -10, filter: 'brightness(2.2) blur(1px)', transition: { duration: 1.6, ease: 'easeIn' } }}
-                      transition={summoning && phase === 'summon' ? { duration: 3, times: [0, 0.78, 1], ease: 'easeInOut' } : { duration: summoning ? 0.7 : 0.6 }}>
+                      transition={summoning && phase === 'summon' ? { duration: 3, times: [0, 0.78, 1], ease: 'easeInOut', opacity: { duration: 0.6, times: [0, 0.8, 1] } } : { duration: summoning ? 0.7 : 0.6 }}>
                       <div className={isCurrent ? 'anim-breathe' : undefined}>
                         <BossFigure id={boss.id} height={boss.secret ? figureH + 8 : figureH} dim={locked} />
                       </div>

@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
 import { loadGame } from '@/lib/savegame';
+import { isDebug } from '@/lib/debug';
 import { isTutorialDone } from '@/lib/tutorial';
 import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
@@ -129,6 +130,9 @@ export const MenuScreen = () => {
   const { logoX, logoW, logoY, map, mapSafeTop, mapSafeBottom, cta: ctaBox } = useMenuLayout();
   // Mientras el mapa cuenta algo nuevo, el input queda bloqueado
   const [revealing, setRevealing] = useState(false);
+  // Depuración (?debug=1): repetir las animaciones del mapa
+  const mapReplay = useUiStore(s => s.mapReplay);
+  const debug = useSyncExternalStore(noSubscribe, isDebug, () => false);
   const stage = useStage();
   const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
   const collection = isCollectionUnlocked(progress);
@@ -165,7 +169,8 @@ export const MenuScreen = () => {
       <Backdrop />
       <AmbientDust />
       {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
-      <SagaMap rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom} onRevealing={setRevealing} />
+      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom} onRevealing={setRevealing}
+        replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} />
       {/* Cabecera y pie se funden con el mapa (en vertical flotan encima) */}
       {portrait && (
         <>
@@ -196,6 +201,10 @@ export const MenuScreen = () => {
         <IconButton icon={ICONS.info} aria-label={t.aria_rules} onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
         <IconButton icon={ICONS.trophy} aria-label={t.aria_stats} onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
         <IconButton icon={ICONS.gear} aria-label={t.aria_settings} onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
+        {debug && (
+          <PxButton aria-label="debug" className="w-[18px] h-[18px] font-display" style={{ fontSize: 7, color: 'var(--ink-volt)' }}
+            onClick={() => { playSound('click'); useUiStore.getState().openModal('debug'); }}>DB</PxButton>
+        )}
       </div>
       {portrait ? <Logo x={6} w={80} y={6} size={19} align="start" /> : <Logo x={logoX} w={logoW} y={logoY} />}
 

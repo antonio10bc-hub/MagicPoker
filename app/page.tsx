@@ -13,6 +13,7 @@ import { BOSSES, getProgress } from '@/lib/bosses';
 import { getCastle } from '@/lib/castle';
 import { isTutorialDone } from '@/lib/tutorial';
 import { initAnalytics, track } from '@/lib/analytics';
+import { initDebugFromUrl } from '@/lib/debug';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
 import { UnlockToasts } from '@/components/game/UnlockToasts';
@@ -34,6 +35,7 @@ export default function Home() {
   const Screen = SCREENS[current];
 
   useEffect(preloadSounds, []);
+  useEffect(initDebugFromUrl, []);
 
   // Analíticas: arrancan una vez con el dispositivo y el progreso del jugador
   useEffect(() => {

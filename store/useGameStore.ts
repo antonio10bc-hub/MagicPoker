@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
-  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isStalemate, risenPhoenixes, countRankOnBoard, createPlayerState,
+  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isIdleDraw, isQuietFight, isStalemate, nextIdleTurns, risenPhoenixes, countRankOnBoard, createPlayerState,
   drawCards, drawRound, getGameResult, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent,
 } from '@/lib/game-utils';
 import {
@@ -29,6 +29,8 @@ interface GameState {
   player: PlayerState;
   opponent: PlayerState;
   roundNumber: number;
+  /** Turnos seguidos en los que nadie ha jugado nada (ver isIdleDraw) */
+  idleTurns: number;
   /** Resultado del combate en curso (se muestra durante 'combat-reveal') */
   pendingCombatResult: CombatResult | null;
   gameResult: GameResult | null;
@@ -119,6 +121,7 @@ const initialMatchState = () => ({
   phase: 'start' as GamePhase,
   turn: 'player' as Owner,
   roundNumber: 1,
+  idleTurns: 0,
   pendingCombatResult: null,
   gameResult: null,
   bossIndex: 0,
@@ -339,7 +342,7 @@ export const useGameStore = create<GameState>((set, get) => {
       set({ spyFx: { id: Date.now(), rank: opponent.hand[Math.floor(Math.random() * opponent.hand.length)].rank } });
     }
     // Si el rival ya se plantó, sigues jugando tú
-    set({ player: nextPlayer, turn: opponent.isPassed ? 'player' : 'opponent' });
+    set({ player: nextPlayer, turn: opponent.isPassed ? 'player' : 'opponent', idleTurns: nextIdleTurns(get().idleTurns, 'play') });
     if (!opponent.isPassed) schedule(get().opponentTurnAction, TIMINGS.opponentThink);
   },
 
@@ -362,7 +365,7 @@ export const useGameStore = create<GameState>((set, get) => {
     }
 
     playSound('click');
-    set({ player: { ...player, isPassed: true }, turn: 'opponent' });
+    set({ player: { ...player, isPassed: true }, turn: 'opponent', idleTurns: nextIdleTurns(get().idleTurns, 'pass') });
 
     if (opponent.isPassed) get().resolveCombatPhase();
     else schedule(get().opponentTurnAction, TIMINGS.opponentThink);
@@ -377,14 +380,14 @@ export const useGameStore = create<GameState>((set, get) => {
 
     // Sin cartas o sin huecos: el rival se planta
     if (!nextOpponent) {
-      set({ opponent: { ...opponent, isPassed: true } });
+      set({ opponent: { ...opponent, isPassed: true }, idleTurns: nextIdleTurns(get().idleTurns, 'pass') });
       if (player.isPassed) get().resolveCombatPhase();
       else set({ turn: 'player' });
       return;
     }
 
     playSound('click', 0.4);
-    set({ opponent: nextOpponent });
+    set({ opponent: nextOpponent, idleTurns: nextIdleTurns(get().idleTurns, 'play') });
     const rivalSeal = opponent.hand.find(c => c.id === move!.cardId)?.seal;
     if (rivalSeal && opponent.hand.find(c => c.id === move!.cardId)?.rank === 'SEAL') playSfx(SEAL_SFX[rivalSeal]);
     const reveal = revealFor(opponent.hand.find(c => c.id === move!.cardId), move!.slotIndex, player, 'player');
@@ -503,8 +506,11 @@ export const useGameStore = create<GameState>((set, get) => {
       }
     }
 
-    // Sin cartas por ningún lado y una pelea en la que no pasa nada: bucle infinito → empate
-    const gameResult = getGameResult(nextPlayer, nextOpponent) ?? (isStalemate(player, opponent, result) ? 'draw' : null);
+    // Bucle infinito → empate: sin cartas por ningún lado, o 4 turnos (2 de cada uno) sin
+    // que nadie juegue nada, con una pelea en la que no pasa nada
+    const idle = get().idleTurns;
+    const gameResult = getGameResult(nextPlayer, nextOpponent)
+      ?? (isStalemate(player, opponent, result) || isIdleDraw(idle, player, opponent, result) ? 'draw' : null);
 
     if (gameResult) {
       endMatch(gameResult, nextPlayer, nextOpponent);
@@ -516,6 +522,8 @@ export const useGameStore = create<GameState>((set, get) => {
       phase: 'placement',
       turn: 'player',
       roundNumber: roundNumber + 1,
+      // Si la pelea cambió algo, la partida se mueve: la cuenta de inactividad vuelve a 0
+      idleTurns: isQuietFight(player, opponent, result) ? idle : 0,
       player: drawRound(nextPlayer, CARDS_DRAWN_PER_ROUND, true),
       // En el tutorial el rival puede abrir la ronda (Rey y Reina a la vista)
       opponent: tutorial

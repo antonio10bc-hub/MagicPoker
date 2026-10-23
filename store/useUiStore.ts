@@ -5,7 +5,7 @@ import type { Unlock } from '@/lib/bosses';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
-export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges' | 'summary';
+export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges' | 'summary' | 'debug';
 
 interface UiState {
   modal: ModalName | null;
@@ -27,6 +27,9 @@ interface UiState {
   /** Vidas del rival que enseña el panel mientras una cinemática las anima (null = las reales) */
   rivalLivesShown: number | null;
   setRivalLivesShown: (n: number | null) => void;
+  /** Depuración: el mapa repite la revelación de "acabas de vencer a tantos" (sin tocar el progreso) */
+  mapReplay: number | null;
+  setMapReplay: (defeated: number | null) => void;
 }
 
 export const useUiStore = create<UiState>(set => ({
@@ -45,4 +48,6 @@ export const useUiStore = create<UiState>(set => ({
   setCinematic: cinematic => set({ cinematic }),
   rivalLivesShown: null,
   setRivalLivesShown: rivalLivesShown => set({ rivalLivesShown }),
+  mapReplay: null,
+  setMapReplay: mapReplay => set({ mapReplay }),
 }));

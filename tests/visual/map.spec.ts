@@ -95,3 +95,19 @@ test('revelación: tras el Soberano, el Castillo se alza', async ({ page }, info
   await expect(page.getByText('ENTRAR')).toBeVisible();
   noErrors();
 });
+
+test('depuración (?debug=1): repetir la llegada del Soberano sin tocar el progreso', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await seed(page, { magic_poker_progress: { defeated: 12 }, magic_poker_map_seen: 12, magic_poker_debug: 1 });
+  await page.locator('[aria-label="debug"]').click();
+  await page.getByText('Llega el Soberano').click();
+  await expect(page.locator('[aria-label="map reveal"]')).toBeAttached();
+  await page.waitForTimeout(9500);
+  await shot(page, info, 'debug-soberano');
+  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 12000 });
+  // Todo sigue como estaba: el Castillo abierto y nada más por contar
+  expect(await page.evaluate(() => localStorage.getItem('magic_poker_map_seen'))).toBe('12');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_progress')!).defeated)).toBe(12);
+  await expect(page.locator('[aria-label="map castle"]')).toBeVisible();
+  noErrors();
+});

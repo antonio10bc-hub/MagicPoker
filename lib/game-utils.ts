@@ -558,11 +558,28 @@ const hasRunOut = (s: PlayerState) => s.deck.length === 0 && s.hand.length === 0
  */
 export const isStalemate = (player: PlayerState, opponent: PlayerState, result: CombatResult): boolean => {
   const empty = (s: PlayerState) => s.deck.length === 0 && s.hand.length === 0;
-  const nothing = result.playerDamageTaken === 0 && result.opponentDamageTaken === 0 && result.deadCardIds.length === 0
+  return empty(player) && empty(opponent) && isQuietFight(player, opponent, result);
+};
+
+/** Pelea en la que no pasa nada: sin daño, sin cartas caídas ni anuladas, sin vidas recuperadas */
+export const isQuietFight = (player: PlayerState, opponent: PlayerState, result: CombatResult): boolean =>
+  result.playerDamageTaken === 0 && result.opponentDamageTaken === 0 && result.deadCardIds.length === 0
     && result.voidedCardIds.length === 0 && lifeGains(player.board, result) === 0 && lifeGains(opponent.board, result) === 0
     && (result.blessedIds?.length ?? 0) === 0;
-  return empty(player) && empty(opponent) && nothing;
-};
+
+/**
+ * Turnos seguidos sin jugar nada (2 de cada jugador) tras los que, si la pelea tampoco
+ * cambia nada, la partida acaba en empate: nadie puede (o quiere) mover y se repetiría
+ * para siempre. Pasa, por ejemplo, con manos de solo sellos y la mesa vacía.
+ */
+export const IDLE_TURNS_FOR_DRAW = 4;
+
+/** Cuenta de turnos sin jugar: se suma al plantarse y vuelve a 0 al jugar una carta */
+export const nextIdleTurns = (idle: number, action: 'play' | 'pass') => (action === 'play' ? 0 : idle + 1);
+
+/** ¿Empate por inactividad? (tras la pelea; si la pelea cambió algo, la cuenta vuelve a 0) */
+export const isIdleDraw = (idle: number, player: PlayerState, opponent: PlayerState, result: CombatResult) =>
+  idle >= IDLE_TURNS_FOR_DRAW && isQuietFight(player, opponent, result);
 
 /** Devuelve el resultado si la partida ha terminado, o null si sigue. */
 export const getGameResult = (player: PlayerState, opponent: PlayerState): GameResult | null => {

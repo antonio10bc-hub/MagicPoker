@@ -521,6 +521,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
   cada logro lleva solo su nombre y cómo se consigue (sin "por conseguir": ya lo dice
   el anillo apagado). Gran golpe: robar una Reina con el sello de robo. Inmolación
   (llama): tu As se lleva tu propio J, Q y K (la Republicana contra ti mismo).
+- **Depuración (solo quien la activa):** abrir la web con `?debug=1` (se apaga con
+  `?debug=0`) añade un botón "DB" al final de la barra del menú. Su ventana repite las
+  animaciones del mapa (jefe vencido → siguiente, llegada del Soberano, el Castillo se
+  alza) sin tocar el progreso (`lib/debug.ts`).
 - **Estadísticas ampliadas:** victorias por dificultad, derrotas, empates, porcentaje,
   últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
   victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
