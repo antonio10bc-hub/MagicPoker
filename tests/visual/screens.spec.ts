@@ -27,7 +27,7 @@ const openMenu = async (page: Page, progress: { defeated: number; rematches?: st
 };
 
 /** Número de páginas del carrusel de bosses (los puntos de abajo) */
-const bossPages = (page: Page) => page.locator('.no-scrollbar > div').count();
+const bossPages = (page: Page) => page.locator('[aria-label^="map boss "]').count();
 
 test('el jefe secreto no sale hasta vencer a los demás', async ({ page }, info) => {
   const noErrors = watchErrors(page);
@@ -36,7 +36,9 @@ test('el jefe secreto no sale hasta vencer a los demás', async ({ page }, info)
   await shot(page, info, 'menu-sin-secreto');
   await page.evaluate(() => localStorage.setItem('magic_poker_progress', JSON.stringify({ defeated: 11 })));
   await page.reload();
-  await page.waitForTimeout(1800);
+  // El mapa lo cuenta por fases (jefe secreto activado) y luego lo deja en su sitio
+  await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible({ timeout: 12000 });
+  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 6000 });
   expect(await bossPages(page)).toBe(12);
   await expect(page.getByText('JEFE SECRETO')).toBeVisible();
   await shot(page, info, 'menu-jefe-secreto');
