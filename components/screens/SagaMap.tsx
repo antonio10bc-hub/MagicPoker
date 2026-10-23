@@ -555,12 +555,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                   <AnimatePresence mode="wait">
                     {justBeaten && phase === 'beaten' ? null
                       : beaten && !boss.secret ? <Stars key="stars" lit={wins} pop={justBeaten} />
-                        : isCurrent && !boss.secret ? (
-                          <motion.span key="hot" initial={arriving ? { scale: 0, opacity: 0 } : false} animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: arriving ? 0.35 : 0, type: 'spring', stiffness: 500, damping: 14 }}>
-                            <Pill tone="hot">{arriving ? t.map_new_rival : t.next_rival}</Pill>
-                          </motion.span>
-                        ) : isSel ? <Pill key="n" tone="muted">{t.boss_n.replace('{n}', String(i + 1)).replace('{total}', total)}</Pill> : null}
+                        : isSel && !isCurrent ? <Pill key="n" tone="muted">{t.boss_n.replace('{n}', String(i + 1)).replace('{total}', total)}</Pill> : null}
                   </AnimatePresence>
                 </div>
                 {/* Debajo: el nombre y, si está elegido, lo que trae */}

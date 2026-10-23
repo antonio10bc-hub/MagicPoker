@@ -59,7 +59,7 @@ test('revelación: vencer a un jefe enciende el siguiente, por fases', async ({ 
   await page.waitForTimeout(2200);
   await shot(page, info, 'rev-5-nuevo');
   await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 6000 });
-  await expect(page.getByText('PRÓXIMO RIVAL')).toBeVisible();
+  await expect(page.getByText('¡DESAFIAR!', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('magic_poker_map_seen'))).toBe('2');
   noErrors();
 });

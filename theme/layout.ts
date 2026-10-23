@@ -204,7 +204,7 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
       bossScale: 3, bossY: 26, bossH: 180, mascotY: 92, playY: 226,
       // El mapa a la derecha, de arriba abajo; logo, iconos y acción en la columna izquierda
       map: { x: 150, y: 0, w: W - 150, h: H }, mapSafeTop: 0, mapSafeBottom: 0,
-      cta: { x: 6, w: 138, bottom: 10 },
+      cta: { x: 6, w: 138, bottom: 22 },
     };
   }
   // Vertical: logo arriba, tapete en el centro con las siluetas, JUGAR debajo
@@ -228,8 +228,8 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     mascotY: boardY + Math.round(boardH / 2) - 26,
     playY: boardY + boardH + DIORAMA_SHADOW + 10,
     // El mapa ocupa toda la pantalla; la cabecera y la acción flotan encima
-    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 78,
-    cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), bottom: 10 },
+    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 92,
+    cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), bottom: 24 },
   };
 };
 

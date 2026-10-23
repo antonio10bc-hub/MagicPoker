@@ -628,8 +628,9 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   ciudad real del Soberano). Un jefe vencido ya no está: queda su pueblo con una bandera
   blanca. Las paradas se
   alternan a cada lado del camino y su decorado va hacia fuera. Sobre el camino, un
-  sendero de puntos (crema lo recorrido, pizarra lo que falta). Encima de cada jefe su
-  estado (pastilla naranja si es el próximo rival, estrellas si ya lo venciste); debajo
+  sendero de puntos (crema lo recorrido, pizarra lo que falta). Encima de cada jefe, nada
+  (ni etiquetas de "próximo rival": el jefe a batir es el que está en pie y respira; un
+  vencido deja estrellas sobre su bandera); debajo
   su nombre ("???" si está bloqueado) y, si está elegido, sus vidas y sus sellos (con
   muchos, "×N"). Tocar un jefe lo elige (anillo crema bajo los pies).
   Arriba del todo, el **Castillo** (silueta gótica negra de agujas cóncavas con aura
@@ -649,7 +650,7 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   despacio (1,5 s, suave) a cada paso: el jefe vencido **se desvanece de su pueblo**
   (sube un poco, se aclara y desaparece) y en su sitio se alza una **bandera blanca** de
   rendición → el sendero se dibuja punto a punto → el siguiente se enciende con destello
-  y onda ("¡NUEVO RIVAL!") y su pueblo enciende sus luces. Unos 7 s en total.
+  y onda, y su pueblo enciende sus luces. Unos 7 s en total.
   - **El Soberano:** aviso "¡JEFE SECRETO ACTIVADO!" en oro sobre el mapa oscurecido;
     luego un haz de luz dorada con tramado baja del cielo sobre su ciudad, él desciende
     dentro muy despacio entre chispas de oro y carmesí, y al tocar tierra todo tiembla:

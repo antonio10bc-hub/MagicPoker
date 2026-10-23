@@ -172,7 +172,7 @@ test('al vencer a un jefe nuevo: AL MAPA, que enciende el siguiente, y a por él
   // El mapa cuenta lo nuevo con el input bloqueado y luego devuelve el control
   await expect(page.locator('[aria-label="map reveal"]')).toBeAttached();
   await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 14000 });
-  await expect(page.getByText('PRÓXIMO RIVAL')).toBeVisible();
+  await expect(page.getByText('¡DESAFIAR!', { exact: true })).toBeVisible();
   await shot(page, info, 'mapa-tras-victoria');
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
