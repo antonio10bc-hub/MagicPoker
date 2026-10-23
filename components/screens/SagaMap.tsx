@@ -294,6 +294,73 @@ const SummonFx = ({ landed, h }: { landed: boolean; h: number }) => (
   </>
 );
 
+// --- El Castillo emerge: grietas, cascotes, rayos y polvo; al encenderse, rayos de luz y onda ---
+const BOLTS = [
+  { x: -14, at: 0.5, pts: '0,0 5,14 -3,24 6,38 -2,52 4,70 0,84' },
+  { x: 16, at: 1.4, pts: '0,0 -6,12 3,26 -5,40 4,56 -3,74 1,90' },
+  { x: 1, at: 2.3, pts: '0,0 4,10 -4,22 5,36 -5,50 3,66 -1,80 0,96' },
+];
+const CRACKS = ['0,0 8,-1 14,2 22,0 30,3 40,1', '0,0 -9,1 -16,-2 -24,1 -33,-1 -44,2', '0,0 6,3 11,2 15,6', '0,0 -5,4 -12,3 -16,7'];
+
+const CastleEmergeFx = () => (
+  <>
+    {/* Grietas carmesí que se abren en el suelo desde la base */}
+    <svg className="absolute pointer-events-none overflow-visible" style={{ left: 0, top: 0 }} width={1} height={1} shapeRendering="crispEdges">
+      {CRACKS.map((c, i) => (
+        <motion.polyline key={i} points={c} fill="none" stroke="#FF1F4B" strokeWidth={1.5} style={{ filter: 'drop-shadow(0 0 2px #FF1F4B)' }}
+          initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: [0, 1, 1, 0.6] }}
+          transition={{ delay: 0.15 + i * 0.25, duration: 1.4, ease: 'easeOut' }} />
+      ))}
+    </svg>
+    {/* Rayos que caen sobre las agujas */}
+    {BOLTS.map((b, i) => (
+      <motion.svg key={i} className="absolute pointer-events-none overflow-visible" style={{ left: b.x, top: -CASTLE_H - 110 }} width={1} height={1} shapeRendering="crispEdges"
+        initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.2, 1, 0] }} transition={{ delay: b.at, duration: 0.45, times: [0, 0.15, 0.35, 0.5, 1] }}>
+        <polyline points={b.pts} fill="none" stroke="#FF1F4B" strokeWidth={3} style={{ filter: 'drop-shadow(0 0 4px #FF1F4B)' }} />
+        <polyline points={b.pts} fill="none" stroke="#EDEBE0" strokeWidth={1} />
+      </motion.svg>
+    ))}
+    {/* El cielo se enciende con cada rayo */}
+    <motion.span className="absolute pointer-events-none" style={{ left: -150, top: -CASTLE_H - 140, width: 300, height: CASTLE_H + 170,
+      background: 'radial-gradient(ellipse 50% 50% at 50% 45%, rgba(255,31,75,0.55) 0%, rgba(255,31,75,0.15) 45%, transparent 70%)' }}
+      initial={{ opacity: 0 }} animate={{ opacity: [0, 0.9, 0.1, 0, 0.9, 0.1, 0, 0.9, 0.15] }}
+      transition={{ duration: 2.9, times: [0, 0.18, 0.28, 0.45, 0.5, 0.6, 0.77, 0.81, 1] }} />
+    {/* Cascotes que se desprenden de las murallas al subir */}
+    {Array.from({ length: 16 }, (_, i) => {
+      const x = ((i * 41) % 17) / 16 - 0.5;
+      return (
+        <motion.span key={i} className="absolute pointer-events-none" style={{ left: x * 70 - 1, top: -((i * 23) % 9) * 8 - 10, width: i % 3 ? 2 : 3, height: i % 3 ? 2 : 3, background: i % 4 ? 'var(--ink-black)' : 'var(--ink-slate)' }}
+          initial={{ y: 0, opacity: 0 }} animate={{ y: [0, 40 + (i % 5) * 6], x: [0, (x < 0 ? -1 : 1) * (6 + (i % 4) * 4)], opacity: [0, 1, 1, 0] }}
+          transition={{ delay: 0.3 + (i % 8) * 0.3, duration: 0.9, ease: 'easeIn', repeat: 1, repeatDelay: 0.4 }} />
+      );
+    })}
+    <Dust w={170} repeat={2} />
+    <div className="absolute" style={{ left: 0, top: -6 }}><Embers n={14} w={120} h={80} colors={['#FF1F4B', '#5E7A76']} duration={1.6} /></div>
+  </>
+);
+
+const CastleLitFx = () => (
+  <>
+    {/* Rayos de luz carmesí girando detrás, como el aura del Soberano */}
+    <motion.div className="absolute pointer-events-none rounded-full" style={{ left: -110, top: -CASTLE_H / 2 - 110, width: 220, height: 220,
+      maskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', WebkitMaskImage: 'radial-gradient(circle, #000 18%, transparent 68%)' }}
+      initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: [0, 1, 0.55], scale: [0.4, 1.1, 1] }} transition={{ duration: 1.6 }}>
+      <div className="absolute inset-0 rounded-full anim-spin" style={{ background: 'repeating-conic-gradient(rgba(255,31,75,0.55) 0deg 7deg, transparent 7deg 20deg, rgba(237,235,224,0.25) 20deg 24deg, transparent 24deg 36deg)' }} />
+    </motion.div>
+    {/* Onda de choque al encenderse */}
+    {[0, 0.25].map((d, i) => (
+      <motion.span key={i} className="absolute rounded-full pointer-events-none" style={{ left: -45, top: -CASTLE_H / 2 - 45, width: 90, height: 90,
+        boxShadow: i ? '0 0 0 1px rgba(237,235,224,0.8), 0 0 10px 2px rgba(237,235,224,0.3)' : '0 0 0 3px rgba(255,31,75,0.95), 0 0 20px 6px rgba(255,31,75,0.5)' }}
+        initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 3], opacity: [0, 1, 0] }} transition={{ delay: d, duration: 1.4, ease: 'easeOut' }} />
+    ))}
+    {/* Fogonazo */}
+    <motion.span className="absolute pointer-events-none" style={{ left: -130, top: -CASTLE_H - 70, width: 260, height: CASTLE_H + 110,
+      background: 'radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255,233,233,0.7) 0%, rgba(255,31,75,0.45) 30%, transparent 70%)' }}
+      initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 1.2 }} />
+    <div className="absolute" style={{ left: 0, top: -CASTLE_H * 0.4 }}><Embers n={22} w={110} h={130} colors={['#FF1F4B', '#FF4A1C', '#EDEBE0']} duration={2.4} /></div>
+  </>
+);
+
 /** Aviso grande en el centro (jefe secreto, Castillo): oscurece el mapa y lo dice claro */
 const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gold' | 'crimson' }) => {
   const rgb = tone === 'gold' ? '232,182,74' : '255,31,75';
@@ -453,7 +520,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const before = (p: Phase[]) => step !== null && p.includes(phase);
   const pendingLocked = (i: number) => i === target && before(['focus', 'beaten', 'path']);
   const hidden = (i: number) => (i === target && step?.then === 'secret' && before(['focus', 'beaten', 'path', 'secret']));
-  const castleVisible = castleOpen && !(target === CASTLE_INDEX && before(['focus', 'beaten', 'path', 'castle', 'rise']));
+  // (durante 'rise' ya está montado, pero bajo tierra: así nunca puede asomar de golpe)
+  const castleVisible = castleOpen && !(target === CASTLE_INDEX && before(['focus', 'beaten', 'path', 'castle']));
   const trailLit = (i: number) => i < shown && !(step?.beaten === i && before(['focus', 'beaten']));
   const visible = (i: number) => (!BOSSES[i].secret || shown >= i) && !hidden(i);
   // La niebla tapa todo lo que está por encima de lo último que conoces
@@ -604,27 +672,19 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                 <span className="absolute pointer-events-none anim-pulse-soft" style={{ left: -80, top: -CASTLE_H - 20, width: 160, height: CASTLE_H + 40,
                   background: 'radial-gradient(ellipse 50% 50% at 50% 60%, rgba(255,31,75,0.22) 0%, transparent 70%)' }} />
               )}
-              {/* El cielo se rasga en carmesí mientras emerge, y estalla al encenderse */}
-              {(phase === 'emerge' || phase === 'lit') && (
-                <motion.span className="absolute pointer-events-none" style={{ left: -110, top: -CASTLE_H - 60, width: 220, height: CASTLE_H + 90,
-                  background: 'radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255,31,75,0.8) 0%, rgba(255,31,75,0.25) 40%, transparent 70%)' }}
-                  initial={{ opacity: 0 }}
-                  animate={phase === 'emerge' ? { opacity: [0, 0.5, 0.05, 0.25, 0.6, 0.1, 0.35] } : { opacity: [0.9, 0.3] }}
-                  transition={phase === 'emerge' ? { duration: 3.2, times: [0, 0.1, 0.2, 0.45, 0.55, 0.7, 1] } : { duration: 1.8 }} />
-              )}
               {/* Sale de la tierra: se recorta a ras de suelo y sube temblando */}
+              {phase === 'lit' && <CastleLitFx />}
               <div className="absolute overflow-hidden pointer-events-none" style={{ left: -70, width: 140, top: -CASTLE_H - 30, height: CASTLE_H + 32 }}>
                 <motion.div className="absolute" style={{ left: 70, bottom: 2, x: '-50%' }}
-                  initial={false}
-                  animate={phase === 'emerge' ? { y: [CASTLE_H + 4, CASTLE_H * 0.7, CASTLE_H * 0.35, 0] } : { y: 0 }}
-                  transition={phase === 'emerge' ? { duration: 3.2, times: [0, 0.3, 0.65, 1], ease: 'easeOut' } : { duration: 0 }}>
-                  <CastleArt height={CASTLE_H} lit={phase !== 'emerge'} />
+                  initial={phase === 'rise' ? { y: CASTLE_H + 6 } : false}
+                  animate={{ y: phase === 'rise' ? CASTLE_H + 6 : phase === 'emerge' ? [CASTLE_H + 6, CASTLE_H * 0.72, CASTLE_H * 0.4, CASTLE_H * 0.12, 0] : 0 }}
+                  transition={phase === 'emerge' ? { duration: 3.2, times: [0, 0.25, 0.55, 0.85, 1], ease: 'easeOut' } : { duration: 0 }}>
+                  <CastleArt height={CASTLE_H} lit={phase !== 'emerge' && phase !== 'rise'} />
                 </motion.div>
               </div>
-              {phase === 'emerge' && <Dust w={150} repeat={2} />}
-              {phase === 'lit' && <div className="absolute" style={{ left: 0, top: -CASTLE_H * 0.4 }}><Embers n={18} w={90} h={110} colors={['#FF1F4B', '#FF4A1C', '#EDEBE0']} duration={2.4} /></div>}
+              {phase === 'emerge' && <CastleEmergeFx />}
               <div className="absolute flex justify-center" style={{ left: -60, width: 120, top: -CASTLE_H - 16 }}>
-                <motion.span initial={phase === 'emerge' ? { scale: 0, opacity: 0 } : false} animate={phase === 'emerge' ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+                <motion.span initial={phase === 'emerge' || phase === 'rise' ? { scale: 0, opacity: 0 } : false} animate={phase === 'emerge' || phase === 'rise' ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
                   transition={{ delay: phase === 'lit' ? 1 : 0, type: 'spring', stiffness: 500, damping: 14 }}>
                   <Pill tone="castle">
                     {castle.run ? t.castle_floor.replace('{n}', String(castle.run.stage + 1)).replace('{total}', total)
@@ -633,7 +693,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                 </motion.span>
               </div>
               <motion.div className="absolute flex flex-col items-center gap-[3px]" style={{ left: -80, width: 160, top: 16 }}
-                initial={false} animate={{ opacity: phase === 'emerge' ? 0 : 1 }} transition={{ delay: phase === 'lit' ? 1.2 : 0, duration: 0.8 }}>
+                initial={false} animate={{ opacity: phase === 'emerge' || phase === 'rise' ? 0 : 1 }} transition={{ delay: phase === 'lit' ? 1.2 : 0, duration: phase === 'rise' ? 0 : 0.8 }}>
                 <span className="font-display glow-crimson" style={{ fontSize: 13, lineHeight: '13px', letterSpacing: 2, color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
                 {/* Con una subida a medias, su mapa; si no, la frase del Castillo */}
                 {castle.run

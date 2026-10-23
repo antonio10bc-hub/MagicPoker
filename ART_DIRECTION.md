@@ -660,9 +660,12 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
     dentro muy despacio entre chispas de oro y carmesí, y al tocar tierra todo tiembla:
     dos ondas (oro y carmesí), polvo y su ciudad real se enciende. Sin etiqueta encima.
   - **El Castillo:** aviso "¡EL CASTILLO SE ALZA!"; la cámara sube mientras la niebla se
-    abre; el Castillo **emerge de la tierra** (recortado a ras de suelo) a tirones con el
-    mapa temblando, polvo a los lados y el cielo rasgándose en destellos carmesí; ya
-    arriba, se encienden las ventanas, el aura y el resplandor, salen brasas y aparecen
+    abre; el Castillo **emerge de la tierra** (recortado a ras de suelo; ya está montado
+    bajo tierra para no asomar nunca de golpe) a tirones con el mapa temblando: grietas
+    carmesí que se abren en el suelo, cascotes que caen de las murallas, polvo a los
+    lados, tres rayos carmesí con núcleo crema sobre las agujas y el cielo encendiéndose
+    con cada uno. Ya arriba: fogonazo, onda de choque, rayos de luz carmesí girando
+    detrás, se encienden las ventanas, el aura y el resplandor, salen brasas y aparecen
     su pastilla y su nombre. Sin anillo bajo los pies.
   Al terminar se elige lo nuevo y vuelve el control. Lo ya contado se anota
   (`magic_poker_map_seen`, `lib/mapReveal.ts`), así no se repite.
