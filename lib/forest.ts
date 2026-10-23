@@ -7,6 +7,7 @@
 import { Card, Difficulty, GameResult, Rank, SealId } from '@/types';
 import { createCard, createDeck, createSealCard, shuffle } from '@/lib/game-utils';
 import { getCastle } from '@/lib/castle';
+import { DeckConfig, MAX_COPIES, MAX_SEALS } from '@/lib/deck';
 
 export type Tier = 'normal' | 'hard' | 'nightmare';
 export const TIERS: Tier[] = ['normal', 'hard', 'nightmare'];
@@ -67,6 +68,21 @@ export const buildForestDeck = (a: Archetype, tier: Tier): Card[] => {
     ...a.seals.flatMap(s => Array.from({ length: copies }, () => createSealCard('opponent', s))),
     ...a.cards.flatMap(r => Array.from({ length: extra }, () => createCard('opponent', r))),
   ]);
+};
+
+/**
+ * Su mazo, en lo que tú puedes llevar (para copiarlo al editor): sus sellos, a 2 copias
+ * cada uno hasta llenar los 5. Sus cartas del Castillo no se copian: esas solo
+ * existen dentro del Castillo.
+ */
+export const forestDeckConfig = (a: Archetype): DeckConfig => {
+  const seals: DeckConfig['seals'] = {};
+  let left = MAX_SEALS;
+  // Primero una de cada, luego la segunda
+  for (let round = 0; round < MAX_COPIES; round++) {
+    a.seals.forEach(s => { if (left > 0) { seals[s] = (seals[s] ?? 0) + 1; left--; } });
+  }
+  return { seals, removed: [] };
 };
 
 // --- BESTIARIO Y RACHA (Local Storage, con suscripción para la interfaz) ---

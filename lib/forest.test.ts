@@ -8,7 +8,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (k: string) => { store.delete(k); },
 });
 
-const { ARCHETYPES, bestiaryComplete, buildForestDeck, forestAi, getForest, isForestUnlocked, recordForestDuel, rollEncounter, TIER_WEIGHTS } = await import('@/lib/forest');
+const { ARCHETYPES, bestiaryComplete, buildForestDeck, forestDeckConfig, forestAi, getForest, isForestUnlocked, recordForestDuel, rollEncounter, TIER_WEIGHTS } = await import('@/lib/forest');
 
 describe('el Bosque', () => {
   beforeEach(() => store.clear());
@@ -40,6 +40,11 @@ describe('el Bosque', () => {
     expect(buildForestDeck(witch, 'hard').every(c => c.owner === 'opponent')).toBe(true);
     expect(forestAi('normal')).toBe('normal');
     expect(forestAi('nightmare')).toBe('hard');
+  });
+
+  it('su mazo para copiar: sus sellos a 2 copias, sin pasar de 5', () => {
+    expect(forestDeckConfig(ARCHETYPES.find(a => a.id === 'witch')!)).toEqual({ seals: { poison: 2, mirror: 2 }, removed: [] });
+    expect(forestDeckConfig(ARCHETYPES.find(a => a.id === 'goblin')!)).toEqual({ seals: { shift: 2, echo: 2, swap: 1 }, removed: [] });
   });
 
   it('bestiario y racha', () => {

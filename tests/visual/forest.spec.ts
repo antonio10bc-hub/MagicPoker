@@ -79,5 +79,21 @@ test('bosque: buscar duelo, alguien sale y se abalanza; el duelo; volver al bosq
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_forest')!));
   expect(stored.duels).toBe(1);
   expect(stored.streak).toBe(1);
+  // Copiar su mazo y pegarlo en el editor (con el botón del mazo de esta misma pantalla)
+  await page.locator(`[aria-label="copy deck ${forest!.id}"]`).click();
+  await expect(page.getByText('¡Copiado! Pégalo en el editor')).toBeVisible();
+  await shot(page, info, 'bosque-8-copiado');
+  await page.locator('[aria-label="cerrar"]').first().click();
+  await expect(page.getByText('BESTIARIO')).toHaveCount(0);
+  await page.locator('[aria-label="mazo"]').click();
+  await page.locator('[aria-label="paste deck"]').click();
+  await expect(page.getByText('¡Pegado!')).toBeVisible();
+  await shot(page, info, 'bosque-9-pegado');
+  const code = await page.evaluate(() => localStorage.getItem('magic_poker_deck_clip'));
+  const decks = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_decks')!));
+  expect(code).toMatch(/^MP1:/);
+  const seals = Object.keys(decks.slots[decks.active].seals);
+  expect(seals.length).toBeGreaterThan(0);
+  code!.slice(4).split('|')[0].split('.').forEach(item => expect(seals).toContain(item.split('*')[0]));
   noErrors();
 });

@@ -5,11 +5,13 @@ import { useUiStore } from '@/store/useUiStore';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { Encounter, getForest, getServerForest, rollEncounter, subscribeForest } from '@/lib/forest';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
+import { track as trackEvent } from '@/lib/analytics';
+import { isCollectionUnlocked, isEditorUnlocked } from '@/lib/bosses';
 import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { ICONS, MASK } from '@/components/pixel/sprites';
+import { ICONS, MASK, SEAL_ICONS } from '@/components/pixel/sprites';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
 import { AmbientDust } from '@/components/fx/Ambient';
 
@@ -146,6 +148,8 @@ export const ForestScreen = () => {
   const seek = () => {
     if (busy) return;
     const e = rollEncounter();
+    // Analíticas: quién sale del bosque (y en qué dificultad)
+    trackEvent('forest_encounter', { rival: e.id, tier: e.tier, streak: forest.streak, duels: forest.duels });
     setEnc(e);
     setPhase('stir');
     playSound('click');
@@ -202,9 +206,23 @@ export const ForestScreen = () => {
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-[6px] pt-[6px]">
         <IconButton icon={ICONS.home} aria-label={t.aria_forest_back} onClick={() => { if (busy) return; playSound('click'); exitToMenu(); }} />
         <span className="font-display glow-amber" style={{ color: 'var(--ink-amber)', fontSize: 14, letterSpacing: 3 }}>{t.forest_title}</span>
-        <PxButton aria-label={t.aria_bestiary} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('bestiary'); }}>
-          <PixelSprite sprite={MASK} tint={INK.amber} />
-        </PxButton>
+        {/* Lo tuyo (sellos y mazo), como en el menú, y el bestiario */}
+        <span className="flex gap-[3px]">
+          {isCollectionUnlocked() && (
+            <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('collection'); }}>
+              <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} />
+            </PxButton>
+          )}
+          {isEditorUnlocked() && (
+            <PxButton aria-label={t.aria_deck} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('deck'); }}>
+              <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
+            </PxButton>
+          )}
+          <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />
+          <PxButton aria-label={t.aria_bestiary} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('bestiary'); }}>
+            <PixelSprite sprite={MASK} tint={INK.amber} />
+          </PxButton>
+        </span>
       </div>
 
       {/* Quién ha salido: nombre y dificultad */}

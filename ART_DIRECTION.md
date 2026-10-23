@@ -225,7 +225,7 @@ canales de 0,5 px → viñeta.
 ### Movimiento y game feel
 
 - **Golpe decisivo a cámara lenta:** la pelea que deja a alguien sin vidas se vive
-  más despacio: bandas de cine arriba y abajo, color apagado con viñeta, zoom lento al
+  más despacio: color apagado con viñeta (sin bandas de cine, que tapaban la mano), zoom lento al
   choque (2,4 s), la música se hunde y late un corazón grave; el impacto retumba más
   (destello, sacudida y vibración fuertes). Las animaciones de las cartas no se
   ralentizan (el reloj de Framer no se toca).
@@ -560,7 +560,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   troncos pintadas con el tramado de la niebla (lejanos finos y grises, medios, y cuatro
   enormes negros en los bordes con un filo de luz), que se mecen distinto; una banda de
   niebla en el fondo y, en ella, unos ojos ámbar que parpadean y miran a los lados.
-  Arriba, volver, el título en ámbar y el bestiario; abajo, "BUSCAR DUELO" con tu racha.
+  Arriba, volver, el título en ámbar y, como en el menú, tus sellos (verde) y tu mazo
+  (naranja), una rayita y el bestiario; abajo, "BUSCAR DUELO" con tu racha.
 - **Buscar duelo (gacha, por fases, input bloqueado):** los ojos parpadean nerviosos →
   se encienden en el color de su dificultad (normal crema, difícil naranja, pesadilla
   carmesí; 60/30/10 %) y alguien se dibuja alrededor en silueta, con su dificultad y su
@@ -575,8 +576,15 @@ se mueve rápido y una vibración leve a las masas naranjas.
   de su dificultad y la máscara crema. No hablan.
 - **Bestiario:** ventana ámbar con tus duelos, tu racha y tu mejor racha, y cada
   arquetipo: los encontrados con su estilo, lo que hacen y sus victorias en cada
-  dificultad; los demás, en sombra. Logros: Sin miedo (vencer en pesadilla) y
-  Bestiario (encontrarlos a todos).
+  dificultad, sus sellos (×copias) y "Copiar mazo": se copia como un código de texto
+  (`MP1:sello*n…|cartas quitadas`, al portapapeles y guardado en el juego) que se pega
+  con "Pegar" en el pie del editor de mazo, en el mazo activo. Solo se copian sus
+  sellos (a 2 copias, hasta 5): sus cartas del Castillo solo existen allí. Los demás, en
+  sombra. Logros: Sin miedo (vencer en pesadilla) y Bestiario (encontrarlos a todos).
+- **Analíticas del Bosque:** `forest_entered`, `forest_encounter` (rival, dificultad) y
+  `forest_duel_ended` (rival, dificultad, resultado, `win`, racha). En el panel de
+  PostHog: win rate por dificultad y por rival, apariciones por rival y dificultad, y
+  visitas y duelos por día.
 
 ## Cómo crear un escenario nuevo
 

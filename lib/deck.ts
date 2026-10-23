@@ -92,6 +92,64 @@ export const sanitizeDeckConfig = (config: DeckConfig, seals: SealId[] = unlocke
   return out;
 };
 
+// --- COPIAR Y PEGAR MAZOS ---
+// Un mazo se copia como un código corto de texto (va al portapapeles y se guarda
+// también aquí, por si el navegador no deja leer el portapapeles):
+//   MP1:shield*2.anchor*2|2.3   → sellos con sus copias | cartas quitadas
+const CODE_PREFIX = 'MP1:';
+const CLIP_KEY = 'magic_poker_deck_clip';
+
+export const encodeDeck = (config: DeckConfig): string => {
+  const seals = (Object.entries(config.seals) as [SealId, number][]).filter(([, n]) => n > 0).map(([s, n]) => `${s}*${n}`).join('.');
+  return `${CODE_PREFIX}${seals}|${config.removed.join('.')}`;
+};
+
+/** Lee un código de mazo (null si no lo es) */
+export const decodeDeck = (text: string): DeckConfig | null => {
+  const code = text.trim();
+  if (!code.startsWith(CODE_PREFIX)) return null;
+  const [sealPart = '', removedPart = ''] = code.slice(CODE_PREFIX.length).split('|');
+  const seals: DeckConfig['seals'] = {};
+  for (const item of sealPart.split('.').filter(Boolean)) {
+    const [seal, n] = item.split('*');
+    const copies = Number(n);
+    if (!seal || !Number.isFinite(copies)) return null;
+    seals[seal as SealId] = copies;
+  }
+  const removed = removedPart.split('.').filter(Boolean) as Rank[];
+  return { seals, removed };
+};
+
+/** Copia un mazo: al portapapeles (si se puede) y al del juego */
+export const copyDeck = (config: DeckConfig) => {
+  const code = encodeDeck(config);
+  try { localStorage.setItem(CLIP_KEY, code); } catch { /* sin almacenamiento */ }
+  try { void navigator.clipboard?.writeText(code).catch(() => {}); } catch { /* sin portapapeles */ }
+  return code;
+};
+
+/**
+ * El mazo copiado: primero el del juego (lo último que copiaste aquí); si no hay, el
+ * portapapeles del sistema (algunos navegadores piden permiso o no contestan: se espera
+ * poco).
+ */
+export const readCopiedDeck = async (): Promise<DeckConfig | null> => {
+  try {
+    const saved = localStorage.getItem(CLIP_KEY);
+    const fromGame = saved ? decodeDeck(saved) : null;
+    if (fromGame) return fromGame;
+  } catch { /* sin almacenamiento */ }
+  try {
+    const text = await Promise.race([
+      navigator.clipboard?.readText() ?? Promise.resolve(''),
+      new Promise<string>(resolve => setTimeout(() => resolve(''), 800)),
+    ]);
+    return text ? decodeDeck(text) : null;
+  } catch {
+    return null;
+  }
+};
+
 /** Mazo a partir de una configuración */
 export const buildDeckFrom = (config: DeckConfig): Card[] => {
   const removed = new Set(config.removed);

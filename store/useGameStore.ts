@@ -9,7 +9,7 @@ import {
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
-import { archetype, buildForestDeck, Encounter, FOREST_LIVES, forestAi, bestiaryComplete, recordForestDuel } from '@/lib/forest';
+import { archetype, buildForestDeck, Encounter, FOREST_LIVES, forestAi, bestiaryComplete, getForest, recordForestDuel } from '@/lib/forest';
 import { buildRunDeck, CastleOutcome, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin, trackCastleFight } from '@/lib/castle';
 import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSfx, playSound } from '@/lib/sounds';
@@ -178,6 +178,11 @@ export const useGameStore = create<GameState>((set, get) => {
       if (forest) {
         // Bosque: al bestiario (y su racha); sin jefes ni desbloqueos
         const f = recordForestDuel(forest, gameResult);
+        // Analíticas: el duelo del bosque, para el win rate por dificultad y por rival
+        trackEvent('forest_duel_ended', {
+          rival: forest.id, tier: forest.tier, result: gameResult, win: gameResult === 'win' ? 1 : 0,
+          rounds: roundNumber, lives_left: nextPlayer.lives, rival_lives_left: nextOpponent.lives, streak: f.streak, duels: f.duels,
+        });
         if (gameResult === 'win' && forest.tier === 'nightmare') award(['nightmare']);
         if (bestiaryComplete(f)) award(['bestiary']);
       } else if (castle) {
@@ -268,6 +273,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   enterForest: () => {
     cancelScheduled();
+    trackEvent('forest_entered', { duels: getForest().duels, streak: getForest().streak });
     set({ ...initialMatchState(), screen: 'forest' });
   },
 

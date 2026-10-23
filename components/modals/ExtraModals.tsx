@@ -15,11 +15,11 @@ import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
 import { CastleMap } from '@/components/game/CastleMap';
 import { ForestFigure, TIER_INK } from '@/components/game/ForestFigure';
-import { ARCHETYPES, getForest, TIERS } from '@/lib/forest';
+import { Archetype, ARCHETYPES, forestDeckConfig, getForest, TIERS } from '@/lib/forest';
 import { RARITY_UI } from '@/components/game/BoonChooser';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
-  sanitizeDeckConfig, saveDeckConfig, totalSeals,
+  copyDeck, readCopiedDeck, sanitizeDeckConfig, saveDeckConfig, totalSeals,
 } from '@/lib/deck';
 import { updateSettings } from '@/lib/settings';
 import { useSettings } from '@/hooks/useSettings';
@@ -97,6 +97,15 @@ export const DeckEditorModal = () => {
   };
   const total = totalSeals(config);
   const size = 14 - config.removed.length + total;
+  // Pegar un mazo copiado (del bestiario del Bosque o de otro editor) en el mazo activo
+  const [pasteNote, setPasteNote] = useState<string | null>(null);
+  const paste = async () => {
+    playSound('click');
+    const copied = await readCopiedDeck();
+    if (copied) update(copied);
+    setPasteNote(copied ? t.deck_pasted : t.deck_paste_none);
+    setTimeout(() => setPasteNote(null), 1600);
+  };
 
   const update = (next: DeckConfig) => {
     const clean = sanitizeDeckConfig(next, owned);
@@ -116,9 +125,12 @@ export const DeckEditorModal = () => {
 
   return (
     <Dialog title={t.deck_title} footer={
-      <div className="flex items-center justify-between gap-[6px]">
+      <div className="flex flex-wrap items-center justify-between gap-x-[6px] gap-y-[3px]">
         <span className="glow-text whitespace-nowrap" style={{ color: 'var(--ink-orange)' }}>{t.deck_size.replace('{n}', String(size))}</span>
-        <PxButton size="sm" className="px-btn-ghost" onClick={() => { playSound('click'); clearDeckConfig(); setConfig(defaultDeckConfig(owned)); }}>{t.deck_reset}</PxButton>
+        <span className="flex gap-[4px]">
+          <PxButton size="sm" aria-label="paste deck" onClick={paste}>{pasteNote ?? t.deck_paste}</PxButton>
+          <PxButton size="sm" className="px-btn-ghost" onClick={() => { playSound('click'); clearDeckConfig(); setConfig(defaultDeckConfig(owned)); }}>{t.deck_reset}</PxButton>
+        </span>
       </div>
     }>
       {/* Mazos guardados */}
@@ -353,9 +365,20 @@ export const ChallengesModal = () => {
 // Quién vive en el bosque: los que ya te has encontrado, con su estilo, lo que hacen y
 // cuántas veces los has vencido en cada dificultad; los que no, en sombra. Arriba, tus
 // duelos y tu racha.
+/** Sus sellos con sus copias, tal y como se copian */
+const forestSeals = (a: Archetype) => Object.entries(forestDeckConfig(a).seals) as [SealId, number][];
+
 export const BestiaryModal = () => {
   const t = useTranslations();
   const [f] = useState(() => getForest());
+  // El mazo de cada uno se puede copiar (sus sellos) y pegar en el editor
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = (a: Archetype) => {
+    playSfx('select', 0.7);
+    copyDeck(forestDeckConfig(a));
+    setCopied(a.id);
+    setTimeout(() => setCopied(c => (c === a.id ? null : c)), 1800);
+  };
   return (
     <Dialog title={t.forest_bestiary} size="lg" tone="amber">
       <DialogBody className="t-micro gap-[4px]">
@@ -384,6 +407,20 @@ export const BestiaryModal = () => {
                         {t[`tier_${tier}` as keyof Translations]} {rec[tier]?.wins ?? 0}
                       </span>
                     ))}
+                  </span>
+                )}
+                {/* Sus sellos, para llevarlos tú: se copian y se pegan en el editor de mazo */}
+                {rec && (
+                  <span className="flex items-center gap-[4px]">
+                    {forestSeals(a).map(([seal, n]) => (
+                      <span key={seal} className="flex items-center gap-[1px]">
+                        <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.volt} />
+                        <span className="font-display" style={{ color: 'var(--ink-volt)' }}>×{n}</span>
+                      </span>
+                    ))}
+                    <PxButton size="sm" aria-label={`copy deck ${a.id}`} className="ml-auto" onClick={() => copy(a)}>
+                      {copied === a.id ? t.forest_copied : t.forest_copy_deck}
+                    </PxButton>
                   </span>
                 )}
               </span>

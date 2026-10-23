@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildDeckFrom, defaultDeckConfig, MAX_SEALS, sanitizeDeckConfig, totalSeals } from '@/lib/deck';
+import { buildDeckFrom, decodeDeck, defaultDeckConfig, encodeDeck, MAX_SEALS, sanitizeDeckConfig, totalSeals } from '@/lib/deck';
 
 describe('editor de mazo', () => {
   it('por defecto: una copia de cada sello desbloqueado', () => {
@@ -43,5 +43,20 @@ describe('mazos guardados', () => {
     d.setActiveSlot(0);
     expect(d.getDeckConfig()?.seals.shield).toBe(2);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('copiar y pegar mazos', () => {
+  it('un mazo va y vuelve por su código', () => {
+    const config = { seals: { shield: 2, anchor: 1 }, removed: ['2', '3'] as const };
+    const code = encodeDeck({ ...config, removed: [...config.removed] });
+    expect(code).toBe('MP1:shield*2.anchor*1|2.3');
+    expect(decodeDeck(code)).toEqual({ seals: { shield: 2, anchor: 1 }, removed: ['2', '3'] });
+    expect(decodeDeck(' MP1:|')).toEqual({ seals: {}, removed: [] });
+  });
+
+  it('lo que no es un código de mazo no se pega', () => {
+    expect(decodeDeck('hola')).toBeNull();
+    expect(decodeDeck('MP1:shield*x|')).toBeNull();
   });
 });

@@ -7,8 +7,8 @@ import { useFxStore } from '@/components/fx/fxStore';
 // Solo presentación: escuchan el estado y la cámara (fxStore).
 
 /**
- * Momento decisivo a cámara lenta: bandas de cine que entran por arriba y por abajo,
- * el color se apaga y un viñeteado cierra el plano. Lo dispara el director de combate
+ * Momento decisivo a cámara lenta: el color se apaga y un viñeteado cierra el plano
+ * (sin bandas de cine: tapaban la mano y parecía que la pantalla cargaba mal). Lo dispara el director de combate
  * con fx.slowmo() en la pelea que deja a alguien sin vidas.
  */
 export const SlowMoLayer = () => {
@@ -21,7 +21,6 @@ export const SlowMoLayer = () => {
     const off = setTimeout(() => setActive(id => (id === slowmo.id ? null : id)), slowmo.intensity * 1000);
     return () => clearTimeout(off);
   }, [slowmo]);
-  const bar = { duration: 0.45, ease: 'easeOut' } as const;
   return (
     <AnimatePresence>
       {active !== null && (
@@ -30,11 +29,6 @@ export const SlowMoLayer = () => {
           <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
             style={{ backdropFilter: 'saturate(0.35) contrast(1.1)', WebkitBackdropFilter: 'saturate(0.35) contrast(1.1)',
               background: 'radial-gradient(ellipse 60% 55% at 50% 50%, transparent 45%, rgba(11,13,12,0.6) 100%)' }} />
-          {/* Bandas de cine */}
-          <motion.div className="absolute inset-x-0 top-0" style={{ height: '9%', background: 'var(--ink-black)' }}
-            initial={{ y: '-100%' }} animate={{ y: 0 }} exit={{ y: '-100%' }} transition={bar} />
-          <motion.div className="absolute inset-x-0 bottom-0" style={{ height: '9%', background: 'var(--ink-black)' }}
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={bar} />
         </motion.div>
       )}
     </AnimatePresence>
