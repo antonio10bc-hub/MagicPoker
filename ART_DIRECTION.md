@@ -321,6 +321,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
 
 ### Sellos y bosses
 
+- **El Soberano (batalla final) tiene dos mazos:** uno de póker y otro con todos sus
+  sellos. Empieza con 3 cartas y 1 sello, y cada ronda roba una carta de póker y un
+  sello, así siempre tiene algo que poner y un sello con el que adornarlo. El contador
+  de su mazo en el panel suma los dos.
 - **El As del rival:** no se carga su propia mesa cuando va claramente por delante
   (más de 6 puntos de fuerza: valor de las cartas y 4 por sello); con poca ventaja lo
   usa a veces (25 %); parejos o perdiendo, lo usa. Si solo le queda el As y no le

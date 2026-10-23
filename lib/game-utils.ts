@@ -269,6 +269,23 @@ export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = 
   };
 };
 
+/**
+ * El robo de cada ronda: `amount` cartas del mazo, o, con un mazo de sellos aparte (el
+ * Soberano), una carta de póker y un sello: así siempre tiene algo que poner en la mesa.
+ */
+export const drawRound = (state: PlayerState, amount: number, faceUp: boolean): PlayerState => {
+  if (!state.sealDeck) return drawCards(state, amount, faceUp);
+  const withCard = drawCards(state, 1, faceUp);
+  const [seal, ...rest] = state.sealDeck;
+  return seal ? { ...withCard, hand: [...withCard.hand, { ...seal, isFaceUp: faceUp }], sealDeck: rest } : withCard;
+};
+
+/** Le da un mazo de sellos aparte (y el primer sello a la mano inicial) */
+export const withSealDeck = (state: PlayerState, seals: Card[], faceUp: boolean): PlayerState => {
+  const [first, ...rest] = seals;
+  return { ...state, hand: first ? [...state.hand, { ...first, isFaceUp: faceUp }] : state.hand, sealDeck: rest };
+};
+
 export const drawCards = (state: PlayerState, amount: number, faceUp: boolean): PlayerState => {
   if (amount <= 0 || state.deck.length === 0) return state;
   const drawn = state.deck.slice(0, amount).map(c => ({ ...c, isFaceUp: faceUp }));

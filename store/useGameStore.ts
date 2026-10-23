@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
   applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isStalemate, risenPhoenixes, countRankOnBoard, createPlayerState,
-  drawCards, getGameResult, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent,
+  drawCards, drawRound, getGameResult, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent,
 } from '@/lib/game-utils';
 import {
-  ALL_SEALS, BOSSES, bossLives, buildBossDeck, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, rematchLevel, unlockedSeals,
+  ALL_SEALS, BOSSES, bossLives, createBossState, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, rematchLevel, unlockedSeals,
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
@@ -214,7 +214,7 @@ export const useGameStore = create<GameState>((set, get) => {
       castle: { stage: run.stage },
       intro: Date.now(),
       player: { ...createPlayerState(playerDeck, STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
-      opponent: createPlayerState(buildBossDeck(boss, level), STARTING_HAND_SIZE, false, castleBossLives(run)),
+      opponent: createBossState(boss, level, castleBossLives(run), STARTING_HAND_SIZE),
     });
   },
 
@@ -244,7 +244,7 @@ export const useGameStore = create<GameState>((set, get) => {
       rematchLevel: level,
       intro: Date.now(),
       player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
-      opponent: createPlayerState(buildBossDeck(boss, level), STARTING_HAND_SIZE, false, bossLives(boss, level)),
+      opponent: createBossState(boss, level, bossLives(boss, level), STARTING_HAND_SIZE),
     });
   },
 
@@ -516,11 +516,11 @@ export const useGameStore = create<GameState>((set, get) => {
       phase: 'placement',
       turn: 'player',
       roundNumber: roundNumber + 1,
-      player: drawCards(nextPlayer, CARDS_DRAWN_PER_ROUND, true),
+      player: drawRound(nextPlayer, CARDS_DRAWN_PER_ROUND, true),
       // En el tutorial el rival puede abrir la ronda (Rey y Reina a la vista)
       opponent: tutorial
         ? applyRivalMoves(drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false), TUTORIAL_OPENINGS[roundNumber + 1])
-        : drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
+        : drawRound(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
     });
   },
 };

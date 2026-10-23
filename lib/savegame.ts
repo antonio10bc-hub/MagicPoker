@@ -56,6 +56,7 @@ const isSide = (s: unknown): s is PlayerState => {
   const p = s as PlayerState;
   return !!p && typeof p.lives === 'number' && Array.isArray(p.hand) && Array.isArray(p.deck) && Array.isArray(p.board)
     && p.board.length === 4 && p.hand.every(isCard) && p.deck.every(isCard)
+    && (p.sealDeck === undefined || (Array.isArray(p.sealDeck) && p.sealDeck.every(isCard)))
     && p.board.every((slot, i) => slot?.index === i && (slot.card === null || isCard(slot.card)));
 };
 

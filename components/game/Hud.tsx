@@ -127,7 +127,7 @@ const TEAM_BAND_TEXT: Record<Owner, string> = { player: 'text-outline', opponent
 const usePlayerHud = (owner: Owner) => useGameStore(useShallow(s => ({
   lives: s[owner].lives,
   maxLives: s[owner].maxLives ?? STARTING_LIVES,
-  deckCount: s[owner].deck.length,
+  deckCount: s[owner].deck.length + (s[owner].sealDeck?.length ?? 0),
   handCount: s[owner].hand.length,
 })));
 

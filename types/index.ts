@@ -70,6 +70,8 @@ export interface PlayerState {
   isPassed: boolean;
   /** Vidas máximas (el sello de vida no puede superarlas). Por defecto STARTING_LIVES */
   maxLives?: number;
+  /** Mazo de sellos aparte (el Soberano): cada ronda roba una carta de póker y un sello */
+  sealDeck?: Card[];
 }
 
 export interface CombatResult {
