@@ -1,0 +1,83 @@
+import { expect, Page, test } from '@playwright/test';
+import { shot, watchErrors } from './helpers';
+
+// --- EL BOSQUE ---
+// Se abre al conquistar el Castillo (anunciándose por fases), su pantalla en primera
+// persona, buscar duelo (ojos → alguien sale → se abalanza), el duelo, volver al bosque
+// y el bestiario.
+
+type G = { __game: { getState: () => { screen: string; phase: string; forest: { id: string; tier: string } | null; debugWin: () => void } } };
+
+const seed = async (page: Page, items: Record<string, unknown>) => {
+  await page.addInitScript(p => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.clear();
+    localStorage.setItem('has_played_before', 'true');
+    localStorage.setItem('magic_poker_tutorial_done', '1');
+    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
+    Object.entries(p).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v)));
+  }, items);
+  await page.goto('/');
+  await page.waitForTimeout(1800);
+};
+
+const CONQUERED = { magic_poker_progress: { defeated: 12 }, magic_poker_map_seen: 12, magic_poker_castle: { best: 12, conquered: 1 } };
+
+test('el Bosque despierta al conquistar el Castillo y aparece su botón', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await seed(page, CONQUERED);
+  await expect(page.locator('[aria-label="forest awaken"]')).toBeAttached();
+  await page.waitForTimeout(1600);
+  await shot(page, info, 'despierta-1-ojos');
+  await page.waitForTimeout(1500);
+  await shot(page, info, 'despierta-2-titulo');
+  await expect(page.locator('[aria-label="forest awaken"]')).toHaveCount(0, { timeout: 6000 });
+  await expect(page.locator('[aria-label="forest"]')).toBeVisible();
+  await page.waitForTimeout(600);
+  await shot(page, info, 'despierta-3-boton');
+  expect(await page.evaluate(() => localStorage.getItem('magic_poker_forest_seen'))).toBe('1');
+  noErrors();
+});
+
+test('bosque: buscar duelo, alguien sale y se abalanza; el duelo; volver al bosque y el bestiario', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await seed(page, { ...CONQUERED, magic_poker_forest_seen: 1 });
+  await page.locator('[aria-label="forest"]').click();
+  await expect(page.getByText('BUSCAR DUELO')).toBeVisible();
+  await page.waitForTimeout(900);
+  await shot(page, info, 'bosque-1-quieto');
+  await page.getByText('BUSCAR DUELO').click({ force: true });
+  await expect(page.locator('[aria-label="forest encounter"]')).toBeAttached();
+  await page.waitForTimeout(700);
+  await shot(page, info, 'bosque-2-ojos');
+  await page.waitForTimeout(1400);
+  await shot(page, info, 'bosque-3-sale');
+  await page.waitForTimeout(1500);
+  await shot(page, info, 'bosque-4-se-abalanza');
+  await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement', undefined, { timeout: 8000 });
+  const forest = await page.evaluate(() => (window as unknown as G).__game.getState().forest);
+  expect(forest).not.toBeNull();
+  await page.waitForTimeout(800);
+  await shot(page, info, 'bosque-5-duelo');
+  await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
+  const back = page.getByText('VOLVER AL BOSQUE');
+  for (let i = 0; i < 12 && !(await back.isVisible()); i++) {
+    const vp = page.viewportSize()!;
+    await page.mouse.click(vp.width / 2, vp.height * 0.35);
+    await page.waitForTimeout(700);
+  }
+  await expect(back).toBeVisible();
+  await shot(page, info, 'bosque-6-victoria');
+  await back.click({ force: true });
+  await expect(page.getByText('BUSCAR DUELO')).toBeVisible();
+  // El bestiario ya lo conoce
+  await page.locator('[aria-label="bestiario"]').click();
+  await expect(page.locator(`[aria-label="bestiary ${forest!.id}"]`)).toBeVisible();
+  await page.waitForTimeout(400);
+  await shot(page, info, 'bosque-7-bestiario');
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_forest')!));
+  expect(stored.duels).toBe(1);
+  expect(stored.streak).toBe(1);
+  noErrors();
+});

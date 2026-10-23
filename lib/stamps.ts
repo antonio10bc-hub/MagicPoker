@@ -10,6 +10,8 @@ export const STAMP_IDS = [
   'bulwark', 'heist', 'purist', 'reflex', 'venom', 'rematch', 'collector',
   // El Castillo
   'castle',
+  // El Bosque
+  'nightmare', 'bestiary',
 ] as const;
 
 export type StampId = typeof STAMP_IDS[number];

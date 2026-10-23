@@ -40,6 +40,7 @@ los dos.
 | Carmesí | `#FF1F4B` | **exclusivo del Castillo**: rojo eléctrico de los jefes evolucionados, su página y sus mejoras |
 | Oro | `#E8B64A` | el Soberano (dorso, aura), lo **legendario** (cartas, rareza, cofre) |
 | Azul eléctrico | `#2E9BFF` | **exclusivo del mercader del Castillo** y de todo lo que sale de él |
+| Ámbar | `#FFC233` | **exclusivo del Bosque** (su botón, su título, los ojos que te miran, el bestiario) |
 
 **El naranja es el único color saturado y se reserva para lo importante.** Nunca hay
 dos fuentes de color compitiendo: el decorado es negro y grises fríos.
@@ -548,6 +549,34 @@ se mueve rápido y una vibración leve a las masas naranjas.
   cargan las fuentes.
 
 ---
+
+### El Bosque (PvE, tras conquistar el Castillo)
+
+- **Desbloqueo:** la primera vez que conquistas el Castillo, al volver al menú se apaga
+  todo (input bloqueado), en la oscuridad se abren unos ojos ámbar que parpadean, sale
+  "EL BOSQUE DESPIERTA" y, al irse, entra el botón ámbar "EL BOSQUE" encima de la acción
+  principal (`components/screens/ForestAwaken.tsx`).
+- **Su pantalla** (`ForestScreen.tsx`): en primera persona y de noche. Tres capas de
+  troncos pintadas con el tramado de la niebla (lejanos finos y grises, medios, y cuatro
+  enormes negros en los bordes con un filo de luz), que se mecen distinto; una banda de
+  niebla en el fondo y, en ella, unos ojos ámbar que parpadean y miran a los lados.
+  Arriba, volver, el título en ámbar y el bestiario; abajo, "BUSCAR DUELO" con tu racha.
+- **Buscar duelo (gacha, por fases, input bloqueado):** los ojos parpadean nerviosos →
+  se encienden en el color de su dificultad (normal crema, difícil naranja, pesadilla
+  carmesí; 60/30/10 %) y alguien se dibuja alrededor en silueta, con su dificultad y su
+  nombre arriba → se abalanza: crece de golpe, el bosque se acerca, tiembla todo y un
+  fogonazo de su color da paso al duelo. Al acabar, "VOLVER AL BOSQUE" y otra vez la
+  calma, con los ojos esperando.
+- **La gente del bosque** (`components/pixel/forest.ts`, `lib/forest.ts`): personas
+  enmascaradas en silueta, cada una con lo de su oficio y su manera de jugar (sus
+  sellos y, desde difícil, cartas del Castillo): el Leñador y el Ermitaño (defensivos),
+  la Cazadora y el Salteador (agresivos), la Bruja y el Trasgo (puñeteros). En el bosque
+  son negras con los ojos encendidos; de rival (panel, bestiario), el cuerpo en el color
+  de su dificultad y la máscara crema. No hablan.
+- **Bestiario:** ventana ámbar con tus duelos, tu racha y tu mejor racha, y cada
+  arquetipo: los encontrados con su estilo, lo que hacen y sus victorias en cada
+  dificultad; los demás, en sombra. Logros: Sin miedo (vencer en pesadilla) y
+  Bestiario (encontrarlos a todos).
 
 ## Cómo crear un escenario nuevo
 

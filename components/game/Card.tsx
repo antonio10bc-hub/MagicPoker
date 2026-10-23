@@ -279,7 +279,7 @@ export const CardBack = ({ owner, sealed, back = DEFAULT_BACK }: { owner: Owner;
 /** Dorso que llevan las cartas: el tuyo el que elijas, el rival el de su jefe */
 const useCardBack = (owner: Owner) => {
   const mine = usePlayerBack();
-  const theirs = useGameStore(s => (s.tutorialStep === null && s.screen === 'game' ? BOSSES[s.bossIndex]?.id : undefined));
+  const theirs = useGameStore(s => (s.tutorialStep === null && s.screen === 'game' && !s.forest ? BOSSES[s.bossIndex]?.id : undefined));
   return owner === 'player' ? mine : theirs ?? DEFAULT_BACK;
 };
 

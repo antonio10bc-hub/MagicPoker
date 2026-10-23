@@ -52,7 +52,8 @@ export const BossTaunt = () => {
   const { round, placement, boss, bossLives, playerLives } = useGameStore(useShallow(s => ({
     round: s.roundNumber,
     placement: s.phase === 'placement',
-    boss: s.tutorialStep === null ? BOSSES[s.bossIndex] : null,
+    // (la gente del bosque no habla)
+    boss: s.tutorialStep === null && !s.forest ? BOSSES[s.bossIndex] : null,
     bossLives: s.opponent.lives,
     playerLives: s.player.lives,
   })));

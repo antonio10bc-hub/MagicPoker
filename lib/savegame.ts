@@ -4,6 +4,7 @@
 import { Card, Difficulty, PlayerState, SealId } from '@/types';
 import { RANKS } from '@/lib/game-utils';
 import { ALL_SEALS, BOSSES } from '@/lib/bosses';
+import { archetype, Encounter, TIERS } from '@/lib/forest';
 
 const KEY = 'magic_poker_save';
 /** Sube al cambiar las reglas: las partidas de versiones anteriores se descartan */
@@ -23,6 +24,8 @@ export interface SavedGame {
   castle?: boolean;
   /** El Soberano del Castillo ya pasó a su fase 2 */
   phase2?: boolean;
+  /** Duelo del Bosque: contra quién y en qué dificultad */
+  forest?: Encounter;
   player: PlayerState;
   opponent: PlayerState;
 }
@@ -62,7 +65,8 @@ const isSide = (s: unknown): s is PlayerState => {
 
 const isValid = (g: SavedGame) =>
   g?.v === VERSION && isSide(g.player) && isSide(g.opponent) && typeof g.roundNumber === 'number'
-  && (g.bossIndex === undefined || (g.bossIndex >= 0 && g.bossIndex < BOSSES.length));
+  && (g.bossIndex === undefined || (g.bossIndex >= 0 && g.bossIndex < BOSSES.length))
+  && (g.forest === undefined || (!!archetype(g.forest.id) && TIERS.includes(g.forest.tier)));
 
 export const clearGame = () => {
   try { localStorage.removeItem(KEY); } catch { /* sin almacenamiento */ }

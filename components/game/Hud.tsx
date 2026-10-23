@@ -16,6 +16,7 @@ import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { Rect } from '@/theme/layout';
 import { Card } from './Card';
 import { deckSummary, forecastFight } from './forecast';
+import { ForestFigure } from './ForestFigure';
 import { BossFigure } from './BossFigure';
 import { Flinch } from './Juice';
 import { BOSSES } from '@/lib/bosses';
@@ -177,8 +178,10 @@ export const RivalPanel = () => {
   const shown = useUiStore(s => s.rivalLivesShown);
   const lives = shown ?? realLives;
   // El boss de esta partida (en el tutorial, un rival sin nombre)
-  const boss = useGameStore(s => (s.tutorialStep === null ? BOSSES[s.bossIndex] : null));
-  const name = boss ? t[`boss_${boss.id}` as keyof typeof t] : t.rival;
+  // En el Bosque, quien salió de entre los árboles (en el color de su dificultad)
+  const forest = useGameStore(s => s.forest);
+  const boss = useGameStore(s => (s.tutorialStep === null && !s.forest ? BOSSES[s.bossIndex] : null));
+  const name = forest ? t[`forest_${forest.id}` as keyof typeof t] : boss ? t[`boss_${boss.id}` as keyof typeof t] : t.rival;
   // En el Castillo: jefe evolucionado y el piso por el que vas
   const castle = useGameStore(s => s.castle);
   const floor = castle && (
@@ -190,7 +193,8 @@ export const RivalPanel = () => {
   if (compactPanels) {
     return (
       <>
-        <CompactPanel label={boss ? <Flinch><BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /></Flinch> : t.rival} owner="opponent" rect={rect}>
+        <CompactPanel label={forest ? <Flinch><ForestFigure id={forest.id} tier={forest.tier} height={22} mode="shadow" /></Flinch>
+          : boss ? <Flinch><BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /></Flinch> : t.rival} owner="opponent" rect={rect}>
           <Lives lives={lives} max={maxLives} owner="opponent" />
           <RivalHand count={handCount} />
           {floor}
@@ -204,6 +208,7 @@ export const RivalPanel = () => {
     <>
       <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
         {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><BossFigure id={boss.id} height={26} evolved={!!castle} /></Flinch></div>}
+        {forest && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><ForestFigure id={forest.id} tier={forest.tier} height={26} /></Flinch></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
         <RivalHand count={handCount} />
         <DeckCount owner="opponent" count={deckCount} />

@@ -103,9 +103,10 @@ export const EndScreen = () => {
   const startCastle = useGameStore(s => s.startCastle);
   const [hasNextBoss] = useState(() => result === 'win' && useGameStore.getState().tutorialStep === null && currentBossIndex() !== useGameStore.getState().bossIndex);
   const isLoss = gameResult === 'loss';
+  const [forest] = useState(() => useGameStore.getState().forest);
   // Jefe vencido por primera vez: el mapa tiene algo que contar (el siguiente, el secreto o el Castillo)
   const [toMap] = useState(() => {
-    if (result !== 'win' || useGameStore.getState().tutorialStep !== null || castleOutcome) return false;
+    if (result !== 'win' || useGameStore.getState().tutorialStep !== null || castleOutcome || useGameStore.getState().forest) return false;
     const { defeated } = getProgress();
     const seen = peekMapSeen();
     // Sin dato aún: lo nuevo es solo este jefe
@@ -171,6 +172,9 @@ export const EndScreen = () => {
               {/* Resumen de toda la subida: estadísticas y mazo final */}
               <PxButton size="md" tone="roof" aria-label={t.aria_run_summary} onClick={() => { playSound('click'); useUiStore.getState().openModal('summary'); }}>{t.sum_button}</PxButton>
             </>
+          ) : forest ? (
+            // Bosque: de vuelta entre los árboles, a esperar al siguiente
+            <PxButton size="lg" tone="amber" onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>{t.forest_again}</PxButton>
           ) : toMap ? (
             // Jefe nuevo vencido: al mapa, que cuenta lo que se desbloquea
             <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); exitToMenu(); }}>{t.to_map}</PxButton>

@@ -34,7 +34,7 @@ export const Panel = ({ title, band = 'var(--ink-slate)', dark, titleClassName, 
 );
 
 // --- BOTONES ---
-type Tone = 'white' | 'yellow' | 'green' | 'red' | 'blue' | 'roof';
+type Tone = 'white' | 'yellow' | 'green' | 'red' | 'blue' | 'roof' | 'amber';
 
 interface PxButtonProps extends HTMLMotionProps<'button'> {
   tone?: Tone;

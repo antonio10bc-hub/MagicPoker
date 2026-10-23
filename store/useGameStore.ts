@@ -9,6 +9,7 @@ import {
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
+import { archetype, buildForestDeck, Encounter, FOREST_LIVES, forestAi, bestiaryComplete, recordForestDuel } from '@/lib/forest';
 import { buildRunDeck, CastleOutcome, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin, trackCastleFight } from '@/lib/castle';
 import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSfx, playSound } from '@/lib/sounds';
@@ -46,6 +47,8 @@ interface GameState {
   phase2Fx: { id: number; from: number; to: number } | null;
   /** Cómo acabó la última pelea del Castillo (para la pantalla final) */
   castleOutcome: CastleOutcome | null;
+  /** Duelo del Bosque: quién salió y en qué dificultad */
+  forest: Encounter | null;
   /** Presentación del jefe al empezar una partida nueva (id del momento) */
   intro: number | null;
   /** Espía: carta de la mano del rival que acabas de ver */
@@ -60,6 +63,9 @@ interface GameState {
   startCastle: () => void;
   /** Empieza contra un boss ya alcanzado (por defecto, el actual) */
   startGame: (bossIndex?: number, rematch?: boolean) => void;
+  /** El Bosque: su pantalla y un duelo contra quien salga */
+  enterForest: () => void;
+  startForest: (e: Encounter) => void;
   /** Retoma la partida guardada (si la hay) */
   resumeGame: () => boolean;
   /** Partida guionizada que enseña a jugar */
@@ -129,6 +135,7 @@ const initialMatchState = () => ({
   rematchLevel: 0,
   castle: null,
   castleOutcome: null,
+  forest: null,
   phase2Fx: null,
   intro: null,
   sealFx: null,
@@ -152,9 +159,10 @@ export const useGameStore = create<GameState>((set, get) => {
     // Analíticas: cómo acaba cada partida (y si era la primera victoria contra ese jefe)
     {
       const { bossIndex, rematch, castle, rematchLevel: lvl } = get();
-      const firstWin = tutorialStep === null && !castle && !rematch && gameResult === 'win' && bossIndex >= getProgress().defeated;
+      const firstWin = tutorialStep === null && !castle && !rematch && !get().forest && gameResult === 'win' && bossIndex >= getProgress().defeated;
       trackEvent('match_ended', {
-        result: gameResult, mode: tutorialStep !== null ? 'tutorial' : castle ? 'castle' : rematch ? 'rematch' : 'boss',
+        result: gameResult, mode: tutorialStep !== null ? 'tutorial' : get().forest ? 'forest' : castle ? 'castle' : rematch ? 'rematch' : 'boss',
+        forest_rival: get().forest?.id ?? null, forest_tier: get().forest?.tier ?? null,
         boss: BOSSES[bossIndex]?.id, boss_index: bossIndex, level: lvl, floor: castle ? castle.stage + 1 : null,
         rounds: roundNumber, lives_left: nextPlayer.lives, rival_lives_left: nextOpponent.lives, first_win: firstWin,
       });
@@ -166,8 +174,13 @@ export const useGameStore = create<GameState>((set, get) => {
     } else {
       const stats = recordGameEnd(gameResult, difficulty, roundNumber, nextPlayer.lives === STARTING_LIVES);
       // Boss vencido: se desbloquea su sello (o la colección, con el primero)
-      const { bossIndex, rematch, castle } = get();
-      if (castle) {
+      const { bossIndex, rematch, castle, forest } = get();
+      if (forest) {
+        // Bosque: al bestiario (y su racha); sin jefes ni desbloqueos
+        const f = recordForestDuel(forest, gameResult);
+        if (gameResult === 'win' && forest.tier === 'nightmare') award(['nightmare']);
+        if (bestiaryComplete(f)) award(['bestiary']);
+      } else if (castle) {
         // Castillo: subes un piso (y eliges mejora) o se acaba la subida
         const outcome = gameResult === 'win' ? recordCastleWin(nextPlayer.lives) : recordCastleLoss();
         if (outcome.kind === 'conquered') award(['castle']);
@@ -182,7 +195,7 @@ export const useGameStore = create<GameState>((set, get) => {
         if (unlockedSeals().length === ALL_SEALS.length) award(['collector']);
       }
       award(endStamps({
-        result: gameResult, finalBoss: get().bossIndex === BOSSES.length - 1, rematch, sealsInDeck: sealsInDeck(), rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
+        result: gameResult, finalBoss: !forest && get().bossIndex === BOSSES.length - 1, rematch, sealsInDeck: sealsInDeck(), rounds: roundNumber, livesLeft: nextPlayer.lives, startingLives: STARTING_LIVES,
         streak: stats.currentStreak, totalGames: stats.totalGames, track,
       }));
     }
@@ -212,6 +225,7 @@ export const useGameStore = create<GameState>((set, get) => {
       ...initialMatchState(),
       screen: 'game',
       phase: 'placement',
+      difficulty: 'hard',
       bossIndex: run.stage,
       rematchLevel: level,
       castle: { stage: run.stage },
@@ -242,12 +256,40 @@ export const useGameStore = create<GameState>((set, get) => {
       ...initialMatchState(),
       screen: 'game',
       phase: 'placement',
+      difficulty: 'hard',
       bossIndex,
       rematch,
       rematchLevel: level,
       intro: Date.now(),
       player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
       opponent: createBossState(boss, level, bossLives(boss, level), STARTING_HAND_SIZE),
+    });
+  },
+
+  enterForest: () => {
+    cancelScheduled();
+    set({ ...initialMatchState(), screen: 'forest' });
+  },
+
+  startForest: (e) => {
+    const a = archetype(e.id);
+    if (!a) return;
+    cancelScheduled();
+    playSound('shuffle', 0.6);
+    incrementStat('totalGames');
+    track = newMatchTrack();
+    const playerDeck = buildMatchDeck();
+    deckSeals = countSeals(playerDeck);
+    trackEvent('match_started', { mode: 'forest', forest_rival: e.id, forest_tier: e.tier, seals_in_deck: deckSeals });
+    set({
+      ...initialMatchState(),
+      screen: 'game',
+      phase: 'placement',
+      // Cuánto aprieta: el rival normal o el difícil
+      difficulty: forestAi(e.tier),
+      forest: e,
+      player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
+      opponent: createPlayerState(buildForestDeck(a, e.tier), STARTING_HAND_SIZE, false, FOREST_LIVES[e.tier]),
     });
   },
 
@@ -276,6 +318,7 @@ export const useGameStore = create<GameState>((set, get) => {
       rematch: !!saved.rematch,
       rematchLevel: saved.rematchLevel ?? (saved.rematch ? 1 : 0),
       castle: saved.castle ? { stage: saved.bossIndex ?? 0, phase2: !!saved.phase2 } : null,
+      forest: saved.forest ?? null,
       player: saved.player,
       opponent: saved.opponent,
     });
@@ -561,7 +604,7 @@ if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
     if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
-      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, phase2: !!state.castle?.phase2, player: state.player, opponent: state.opponent });
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, phase2: !!state.castle?.phase2, forest: state.forest ?? undefined, player: state.player, opponent: state.opponent });
     }
     if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
   });

@@ -22,6 +22,8 @@ export const INK = {
   gold: '#E8B64A',
   // Exclusivo del mercader del Castillo y de todo lo que sale de él: azul eléctrico
   azure: '#2E9BFF',
+  // Exclusivo del Bosque (el PvE tras conquistar el Castillo): ámbar
+  amber: '#FFC233',
 } as const;
 
 export const PALETTE = {

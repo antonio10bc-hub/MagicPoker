@@ -244,6 +244,19 @@ export const FLAME = s(
   '.nnnnnnn.',
 );
 
+/** Máscara del bosque (logro del bestiario) 9×9 */
+export const MASK = s(
+  '.nnnnnnn.',
+  'nnnnnnnnn',
+  'nn..n..nn',
+  'nn..n..nn',
+  'nnnnnnnnn',
+  '.nnnnnnn.',
+  '.nn...nn.',
+  '..nnnnn..',
+  '...nnn...',
+);
+
 /** Estrella (insignia del As) 7×7 */
 export const STAR = s(
   '...o...',

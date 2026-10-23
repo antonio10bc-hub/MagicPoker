@@ -47,7 +47,7 @@ export const Overlay = ({ onClose, children }: { onClose?: () => void; children:
 export type DialogSize = 'sm' | 'md' | 'lg';
 const WIDTH: Record<DialogSize, number> = { sm: 210, md: 240, lg: 280 };
 
-const BAND = { default: 'var(--c-chip)', castle: 'var(--ink-crimson)', merchant: 'var(--ink-azure)' } as const;
+const BAND = { default: 'var(--c-chip)', castle: 'var(--ink-crimson)', merchant: 'var(--ink-azure)', amber: 'var(--ink-amber)' } as const;
 
 interface DialogProps {
   title: string;

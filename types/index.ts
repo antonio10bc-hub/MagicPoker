@@ -22,7 +22,7 @@ export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 
  */
 export type SealId = 'shield' | 'double' | 'shift' | 'swap' | 'life' | 'mirror' | 'poison' | 'echo' | 'anchor' | 'reveal';
 export type Difficulty = 'easy' | 'normal' | 'hard';
-export type Screen = 'menu' | 'game';
+export type Screen = 'menu' | 'game' | 'forest';
 export type GameResult = 'win' | 'loss' | 'draw';
 export type GamePhase = 'start' | 'placement' | 'combat' | 'combat-reveal' | 'end';
 

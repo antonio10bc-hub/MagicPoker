@@ -23,6 +23,7 @@
   --ink-gold: #E8B64A;
   /* Exclusivo del mercader del Castillo y de lo que te da */
   --ink-azure: #2E9BFF;
+  --ink-amber: #FFC233;
 
   --c-outline: var(--ink-black);
   --c-stone-dark: var(--ink-slate);
@@ -170,6 +171,15 @@ html, body {
   text-shadow: 0.5px 0 0 rgba(237, 235, 224, 0.25);
 }
 
+/* Botón del Bosque: masa ámbar con bloom; el texto, silueta oscura */
+.px-btn-amber {
+  --btn-bg: var(--ink-amber);
+  --btn-fg: var(--ink-black);
+  background-image: radial-gradient(ellipse at 50% 40%, #FFE08A 0%, transparent 75%);
+  box-shadow: 0 0 6px 1px rgba(255, 194, 51, 0.55), 0 0 18px 2px rgba(255, 194, 51, 0.25);
+}
+.px-btn-amber:hover { filter: brightness(1.08) saturate(1.1); }
+
 /* ===== SISTEMA DE MENÚS (ver ART_DIRECTION: "Sistema de interfaz") =====
    Tres alturas de botón y una jerarquía clara:
    primario (masa naranja), secundario (pizarra), terciario (sin fondo) y peligro
@@ -211,6 +221,10 @@ html, body {
 .bloom-azure { box-shadow: 0 0 5px 1px rgba(46, 155, 255, 0.7), 0 0 14px 3px rgba(46, 155, 255, 0.3); }
 .bloom-azure-shape { filter: drop-shadow(0 0 2px rgba(46, 155, 255, 0.95)); }
 .glow-azure { text-shadow: 0 0 4px rgba(46, 155, 255, 0.9), 0 0 10px rgba(46, 155, 255, 0.45); }
+/* Ámbar: exclusivo del Bosque */
+.bloom-amber { box-shadow: 0 0 5px 1px rgba(255, 194, 51, 0.7), 0 0 14px 3px rgba(255, 194, 51, 0.3); }
+.bloom-amber-shape { filter: drop-shadow(0 0 2px rgba(255, 194, 51, 0.95)); }
+.glow-amber { text-shadow: 0 0 4px rgba(255, 194, 51, 0.9), 0 0 10px rgba(255, 194, 51, 0.45); }
 .glow-volt { text-shadow: 0 0 4px rgba(125, 255, 43, 0.85), 0 0 10px rgba(125, 255, 43, 0.4); }
 .glow-text { text-shadow: 0 0 4px rgba(255, 74, 28, 0.8), 0 0 10px rgba(242, 101, 42, 0.4); }
 

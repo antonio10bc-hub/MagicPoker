@@ -14,6 +14,8 @@ import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
 import { CastleMap } from '@/components/game/CastleMap';
+import { ForestFigure, TIER_INK } from '@/components/game/ForestFigure';
+import { ARCHETYPES, getForest, TIERS } from '@/lib/forest';
 import { RARITY_UI } from '@/components/game/BoonChooser';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
@@ -347,6 +349,52 @@ export const ChallengesModal = () => {
   );
 };
 
+// --- BESTIARIO DEL BOSQUE ---
+// Quién vive en el bosque: los que ya te has encontrado, con su estilo, lo que hacen y
+// cuántas veces los has vencido en cada dificultad; los que no, en sombra. Arriba, tus
+// duelos y tu racha.
+export const BestiaryModal = () => {
+  const t = useTranslations();
+  const [f] = useState(() => getForest());
+  return (
+    <Dialog title={t.forest_bestiary} size="lg" tone="amber">
+      <DialogBody className="t-micro gap-[4px]">
+        <p className="t-note">{t.forest_bestiary_hint}</p>
+        <div className="flex justify-between" style={{ color: 'var(--ink-cream)' }}>
+          <span>{t.forest_duels.replace('{n}', String(f.duels))}</span>
+          <span>{t.forest_streak.replace('{n}', String(f.streak))}</span>
+          <span>{t.forest_best.replace('{n}', String(f.bestStreak))}</span>
+        </div>
+        {ARCHETYPES.map(a => {
+          const rec = f.seen[a.id];
+          const best = rec ? ([...TIERS].reverse().find(tier => rec[tier]) ?? 'normal') : 'normal';
+          return (
+            <div key={a.id} aria-label={`bestiary ${a.id}`} className="px-inset px-round flex items-center gap-[6px] p-[4px]">
+              <ForestFigure id={a.id} tier={best} height={34} dim={!rec} />
+              <span className="flex flex-col gap-[2px] flex-1 min-w-0">
+                <span style={{ color: rec ? 'var(--ink-cream)' : 'var(--ink-teal)' }}>
+                  {rec ? t[`forest_${a.id}` as keyof Translations] : '???'}
+                  {rec && <span style={{ color: 'var(--ink-amber)' }}> · {t[`style_${a.style}` as keyof Translations]}</span>}
+                </span>
+                <span style={{ color: 'var(--ink-mint)' }}>{rec ? t[`forest_${a.id}_desc` as keyof Translations] : t.forest_unknown}</span>
+                {rec && (
+                  <span className="flex gap-[6px]">
+                    {TIERS.map(tier => (
+                      <span key={tier} style={{ color: rec[tier] ? TIER_INK[tier] : 'var(--ink-slate)' }}>
+                        {t[`tier_${tier}` as keyof Translations]} {rec[tier]?.wins ?? 0}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </DialogBody>
+    </Dialog>
+  );
+};
+
 // --- DEPURACIÓN (solo con ?debug=1) ---
 // Repite en el mapa las revelaciones como si acabaras de ganar, sin tocar tu progreso.
 export const DebugModal = () => {
@@ -361,10 +409,12 @@ export const DebugModal = () => {
   return (
     <Dialog title="DEBUG" size="sm" width={220}>
       <DialogBody scroll={false} className="gap-[4px]">
-        <p className="t-note">Repite las animaciones del mapa (tu progreso no cambia).</p>
+        <p className="t-note">Repite las animaciones (tu progreso no cambia).</p>
         {row('Jefe vencido → siguiente', 3)}
         {row('Llega el Soberano', BOSSES.length - 1)}
         {row('Se alza el Castillo', BOSSES.length)}
+        <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestReplay(true); }}>El Bosque despierta</PxButton>
+        <PxButton size="md" tone="amber" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useGameStore.getState().enterForest(); }}>Entrar al Bosque</PxButton>
       </DialogBody>
     </Dialog>
   );

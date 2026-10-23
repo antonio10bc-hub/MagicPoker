@@ -9,6 +9,8 @@ import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
 import { loadGame } from '@/lib/savegame';
 import { isDebug } from '@/lib/debug';
+import { isForestUnlocked } from '@/lib/forest';
+import { forestAnnounced, ForestAwaken } from './ForestAwaken';
 import { isTutorialDone } from '@/lib/tutorial';
 import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
@@ -142,7 +144,14 @@ export const MenuScreen = () => {
   const selected = menuBoss ?? current;
   // La página de después del último jefe es el Castillo
   const castleSel = selected === CASTLE_INDEX && isCastleUnlocked(progress);
-  const castleRun = useSyncExternalStore(subscribeCastle, getCastle, getServerCastle).run;
+  const castleState = useSyncExternalStore(subscribeCastle, getCastle, getServerCastle);
+  const castleRun = castleState.run;
+  // El Bosque: tras conquistar el Castillo; la primera vez se anuncia por fases
+  const forestOpen = isForestUnlocked(castleState);
+  const forestReplay = useUiStore(s => s.forestReplay);
+  const [awaken, setAwaken] = useState<boolean | null>(null);
+  const awakening = !revealing && (forestReplay || (forestOpen && awaken === null && !forestAnnounced()));
+  const showForest = forestOpen && !awakening;
   const locked = !castleSel && selected > current;
   // Revancha: solo contra un boss ya vencido
   const canRematch = selected < progress.defeated;
@@ -169,13 +178,13 @@ export const MenuScreen = () => {
       <Backdrop />
       <AmbientDust />
       {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
-      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom} onRevealing={setRevealing}
+      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest && portrait ? 34 : 0)} onRevealing={setRevealing}
         replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} />
       {/* Cabecera y pie se funden con el mapa (en vertical flotan encima) */}
       {portrait && (
         <>
           <div className="absolute inset-x-0 top-0 z-20 pointer-events-none" style={{ height: mapSafeTop + 12, background: 'linear-gradient(to bottom, rgba(11,13,12,0.95) 55%, transparent)' }} />
-          <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20, background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
+          <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? 34 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
         </>
       )}
       {!portrait && <div className="absolute z-20 pointer-events-none" style={{ left: map.x - 12, top: 0, width: 24, height: map.h, background: 'linear-gradient(to right, transparent, rgba(11,13,12,0.6), transparent)' }} />}
@@ -212,6 +221,17 @@ export const MenuScreen = () => {
       <motion.div className="absolute z-30 flex flex-col items-stretch gap-[4px]" style={{ left: ctaBox.x, bottom: ctaBox.bottom, width: ctaBox.w }}
         initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: revealing ? 0.9 : 1, opacity: revealing ? 0 : 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 16, delay: revealing ? 0 : 0.5 }}>
+        {/* El Bosque: duelos contra quien salga de entre los árboles (encima de la acción principal) */}
+        {showForest && (
+          <motion.div initial={awaken ? { y: 30, opacity: 0, scale: 0.6 } : false} animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 14, delay: awaken ? 0.2 : 0 }}>
+            <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full h-[30px] flex-col gap-[1px] overflow-hidden"
+              onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>
+              <span className="text-title" style={{ lineHeight: '14px' }}>{t.forest_button}</span>
+              <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{t.forest_button_sub}</span>
+            </PxButton>
+          </motion.div>
+        )}
         {/* Qué cambia en la revancha */}
         {canRematch && !revealing && (
           <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
@@ -227,6 +247,8 @@ export const MenuScreen = () => {
         )}
       </motion.div>
 
+      {/* El Bosque despierta: se anuncia por fases la primera vez (o desde depuración) */}
+      {awakening && <ForestAwaken replay={!!forestReplay} onDone={() => { setAwaken(true); useUiStore.getState().setForestReplay(false); }} />}
       {/* Mientras se cuenta lo nuevo, nada responde */}
       {revealing && <div aria-label="map reveal" className="absolute inset-0 z-[500]" onClickCapture={e => e.stopPropagation()} />}
     </div>

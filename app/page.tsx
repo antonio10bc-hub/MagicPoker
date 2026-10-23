@@ -8,17 +8,19 @@ import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
 import { EndScreen } from '@/components/screens/EndScreen';
+import { ForestScreen } from '@/components/screens/ForestScreen';
 import { bossMusic } from '@/lib/bossMusic';
 import { BOSSES, getProgress } from '@/lib/bosses';
 import { getCastle } from '@/lib/castle';
 import { isTutorialDone } from '@/lib/tutorial';
 import { initAnalytics, track } from '@/lib/analytics';
 import { initDebugFromUrl } from '@/lib/debug';
+import { archetype } from '@/lib/forest';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
 import { UnlockToasts } from '@/components/game/UnlockToasts';
 
-const SCREENS = { menu: MenuScreen, game: GameScreen, end: EndScreen };
+const SCREENS = { menu: MenuScreen, forest: ForestScreen, game: GameScreen, end: EndScreen };
 
 /** Transición entre pantallas: iris circular que se abre, con un leve zoom */
 const IRIS = {
@@ -31,7 +33,7 @@ export default function Home() {
   const screen = useGameStore(s => s.screen);
   const isEnd = useGameStore(s => s.phase === 'end');
   const isFight = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
-  const current = screen === 'menu' ? 'menu' : isEnd ? 'end' : 'game';
+  const current = screen === 'menu' ? 'menu' : screen === 'forest' ? 'forest' : isEnd ? 'end' : 'game';
   const Screen = SCREENS[current];
 
   useEffect(preloadSounds, []);
@@ -65,10 +67,12 @@ export default function Home() {
 
   // --- CONTROL DE MÚSICA SEGÚN PANTALLA ---
   // Cada jefe suena a lo suyo (en el tutorial, el tema de siempre)
-  const musicBoss = useGameStore(s => (s.tutorialStep === null ? BOSSES[s.bossIndex]?.id : undefined));
+  // (en el Bosque, el del jefe que más se parece a quien ha salido)
+  const musicBoss = useGameStore(s => (s.tutorialStep !== null ? undefined : s.forest ? archetype(s.forest.id)?.music : BOSSES[s.bossIndex]?.id));
   const inCastle = useGameStore(s => !!s.castle);
   useEffect(() => {
     if (screen === 'menu') playMusic('menu_music', 0.55);
+    else if (screen === 'forest') playMusic('menu_music', 0.3);
     else if (isEnd) stopMusic();
     else playMusic('game_music', 0.4, musicBoss ? bossMusic(musicBoss, inCastle) : undefined);
   }, [screen, isEnd, musicBoss, inCastle]);

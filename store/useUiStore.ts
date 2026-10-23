@@ -5,7 +5,7 @@ import type { Unlock } from '@/lib/bosses';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
-export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges' | 'summary' | 'debug';
+export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'cards' | 'pause' | 'boons' | 'challenges' | 'summary' | 'debug' | 'bestiary';
 
 interface UiState {
   modal: ModalName | null;
@@ -30,6 +30,9 @@ interface UiState {
   /** Depuración: el mapa repite la revelación de "acabas de vencer a tantos" (sin tocar el progreso) */
   mapReplay: number | null;
   setMapReplay: (defeated: number | null) => void;
+  /** Depuración: repetir "el Bosque despierta" */
+  forestReplay: boolean;
+  setForestReplay: (on: boolean) => void;
 }
 
 export const useUiStore = create<UiState>(set => ({
@@ -50,4 +53,6 @@ export const useUiStore = create<UiState>(set => ({
   setRivalLivesShown: rivalLivesShown => set({ rivalLivesShown }),
   mapReplay: null,
   setMapReplay: mapReplay => set({ mapReplay }),
+  forestReplay: false,
+  setForestReplay: forestReplay => set({ forestReplay }),
 }));

@@ -18,7 +18,7 @@ import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { BOSSES, resetProgress, unlockedSeals } from '@/lib/bosses';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
-import { BackGallery, BoonsModal, ChallengesModal, RunSummaryModal, DebugModal, CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
+import { BackGallery, BoonsModal, ChallengesModal, RunSummaryModal, DebugModal, BestiaryModal, CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
@@ -43,6 +43,7 @@ export const Modals = () => {
       {modal === 'challenges' && <ChallengesModal key="challenges" />}
       {modal === 'summary' && <RunSummaryModal key="summary" />}
       {modal === 'debug' && <DebugModal key="debug" />}
+      {modal === 'bestiary' && <BestiaryModal key="bestiary" />}
     </AnimatePresence>
   );
 };
