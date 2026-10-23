@@ -664,7 +664,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
     bajo tierra para no asomar nunca de golpe) a tirones con el mapa temblando: grietas
     carmesí que se abren en el suelo, cascotes que caen de las murallas, polvo a los
     lados, tres rayos carmesí con núcleo crema sobre las agujas y el cielo encendiéndose
-    con cada uno. Ya arriba: fogonazo, onda de choque, rayos de luz carmesí girando
+    con cada uno. Ya arriba: fogonazo (la pantalla entera se blanquea y se apaga en
+    carmesí), onda de choque, rayos de luz carmesí girando
     detrás, se encienden las ventanas, el aura y el resplandor, salen brasas y aparecen
     su pastilla y su nombre. Sin anillo bajo los pies.
   Al terminar se elige lo nuevo y vuelve el control. Lo ya contado se anota

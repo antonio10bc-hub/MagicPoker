@@ -724,6 +724,15 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
         </motion.div>
       </div>
 
+      {/* Fogonazo del Castillo al encenderse: la pantalla entera se blanquea y se apaga en carmesí */}
+      <AnimatePresence>
+        {phase === 'lit' && (
+          <motion.div key="flash" className="absolute inset-0 z-40 pointer-events-none"
+            style={{ background: 'radial-gradient(circle at 50% 42%, rgba(255,246,240,1) 0%, rgba(255,120,140,0.85) 22%, rgba(255,31,75,0.55) 45%, rgba(11,13,12,0.2) 80%)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.85, 0.3, 0] }} exit={{ opacity: 0 }}
+            transition={{ duration: 1.3, times: [0, 0.08, 0.2, 0.5, 1], ease: 'easeOut' }} />
+        )}
+      </AnimatePresence>
       {/* Avisos grandes (fijos, sobre el mapa) */}
       <AnimatePresence>
         {phase === 'secret' && <Announce key="secret" title={t.map_secret_title} sub={t.map_secret_sub} tone="gold" />}
