@@ -517,7 +517,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
   concretas. Cada uno es un círculo de tinta con un icono en silueta: conseguido, masa
   naranja que brilla; por conseguir, anillo pizarra. Al ganarse se estampa en pantalla
   de golpe (escala ×3 → 1, desenfoque que se enfoca, anillo de tinta, crujido, brillo y
-  vibración), esperando a que termine el choque para no tapar la acción.
+  vibración), esperando a que termine el choque para no tapar la acción. En la lista
+  cada logro lleva solo su nombre y cómo se consigue (sin "por conseguir": ya lo dice
+  el anillo apagado). Gran golpe: robar una Reina con el sello de robo. Inmolación
+  (llama): tu As se lleva tu propio J, Q y K (la Republicana contra ti mismo).
 - **Estadísticas ampliadas:** victorias por dificultad, derrotas, empates, porcentaje,
   últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
   victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
@@ -599,13 +602,35 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   decide el cursor (con el dedo, el centro de la carta). Pulsar una carta quita su
   ficha, y la ficha por dejar el ratón encima tarda 1 s en salir para no tapar la mesa.
   También vale clic en la carta y clic en el hueco.
-- **Pantalla principal:** cada página de la lista de jefes tiene la misma estructura:
-  pastilla de estado arriba (naranja si es el próximo rival, pizarra si está
-  bloqueado, carmesí en el Castillo; un vencido lleva sus estrellas), la silueta, el nombre y una fila con
-  sus vidas y sus sellos. Flechas a los lados para cambiar de jefe sin deslizar.
-  Debajo, una sola acción principal ancha con el verbo grande y el contexto en pequeño
-  ("¡DESAFIAR!", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si hay, continuar
-  partida debajo, del mismo ancho.
+- **Pantalla principal: mapa de jefes** (`components/screens/SagaMap.tsx`). Un camino
+  continuo en vertical que se sube de abajo arriba: cada jefe de pie sobre un tapete en
+  miniatura (el de la partida), en zigzag suave, unidos por un sendero de puntos (crema
+  lo recorrido, pizarra lo que falta) entre bancos de niebla que se arrastran. Encima de
+  cada jefe su estado (pastilla naranja si es el próximo rival, estrellas si ya lo
+  venciste); debajo su nombre ("???" si está bloqueado) y, si está elegido, sus vidas y
+  sus sellos (con muchos, "×N"). Tocar un jefe lo elige (anillo crema bajo los pies).
+  Arriba del todo, el **Castillo** (silueta gótica negra de agujas cóncavas con aura
+  carmesí, ventanas y portón encendidos y un resplandor rojo; `CASTLE_ART`), con su
+  pastilla carmesí, su récord o el mapa de la subida y el resumen de la última. El
+  Soberano (con resplandor de oro) y el Castillo **no se ven** hasta alcanzarlos: lo
+  desconocido queda bajo una niebla densa que baja cuando se descubre.
+  - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
+    principal abajo, con degradados a negro para que se fundan. En horizontal: logo,
+    iconos y acción en la columna izquierda; el mapa a la derecha.
+  - Una sola acción principal ancha con el verbo grande y el contexto en pequeño
+    ("¡DESAFIAR! · El Trilero", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si
+    hay, continuar partida debajo.
+- **Revelaciones del mapa (por fases, input bloqueado):** al vencer a un jefe por
+  primera vez, el final de partida ofrece una sola acción, "¡AL MAPA!". Allí no
+  responde nada hasta acabar (la acción principal se oculta) y la cámara sigue cada
+  paso: el jefe vencido tiembla y le cae el sello "¡VENCIDO!" (naranja, ×3 → 1) y luego
+  sus estrellas → el sendero se dibuja punto a punto → el siguiente se enciende con
+  destello y onda ("¡NUEVO RIVAL!"). Si el que llega es el secreto: aviso grande
+  "¡JEFE SECRETO ACTIVADO!" en oro sobre el mapa oscurecido y el Soberano cae de la
+  niebla hasta su tapete con onda dorada. Si era el Soberano: "¡EL CASTILLO SE ALZA!" en
+  carmesí, la niebla baja y el Castillo emerge temblando con un fogonazo. Al terminar
+  se elige lo nuevo y vuelve el control. Lo ya contado se anota
+  (`magic_poker_map_seen`, `lib/mapReveal.ts`), así no se repite.
 - **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (colección en verde,
   mazo en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
   ajustes).

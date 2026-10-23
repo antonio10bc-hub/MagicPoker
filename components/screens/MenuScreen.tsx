@@ -1,4 +1,4 @@
-import { CSSProperties, useSyncExternalStore } from 'react';
+import { CSSProperties, useState, useSyncExternalStore } from 'react';
 import { clsx } from 'clsx';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
@@ -14,7 +14,7 @@ import { ACTIVE_THEME } from '@/themes';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
-import { BossCarousel } from './BossCarousel';
+import { CASTLE_INDEX, SagaMap } from './SagaMap';
 import { BOSSES, currentBossIndex, getProgress, getServerProgress, isCastleUnlocked, isCollectionUnlocked, isEditorUnlocked, rematchLevel, subscribeProgress } from '@/lib/bosses';
 import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
 import { INK } from '@/theme/tokens';
@@ -53,7 +53,7 @@ export const MenuBackground = () => {
 const MISREGISTER = '-1px 0 0 rgba(255,74,28,0.55), 1px 0.5px 0 rgba(94,122,118,0.6)';
 
 /** Una palabra del logo: letras que caen con muelle y luego ondulan sin parar */
-const LogoWord = ({ word, color, offset, glow }: { word: string; color: string; offset: number; glow?: boolean }) => (
+const LogoWord = ({ word, color, offset, glow, size = 46 }: { word: string; color: string; offset: number; glow?: boolean; size?: number }) => (
   <div className="flex font-display">
     {word.split('').map((ch, i) => (
       <motion.span
@@ -65,7 +65,7 @@ const LogoWord = ({ word, color, offset, glow }: { word: string; color: string; 
       >
         <span
           className="anim-wave"
-          style={{ fontSize: 46, lineHeight: '38px', letterSpacing: '0.04em', color, animationDelay: `${(offset + i) * 0.1}s`,
+          style={{ fontSize: size, lineHeight: `${Math.round(size * 0.83)}px`, letterSpacing: '0.04em', color, animationDelay: `${(offset + i) * 0.1}s`,
             textShadow: glow ? `${MISREGISTER}, 0 0 6px rgba(255,74,28,0.8), 0 0 16px rgba(242,101,42,0.4)` : MISREGISTER } as CSSProperties}
         >
           {ch}
@@ -75,10 +75,10 @@ const LogoWord = ({ word, color, offset, glow }: { word: string; color: string; 
   </div>
 );
 
-export const Logo = ({ x = 0, w, y }: { x?: number; w?: number; y: number }) => (
-  <div className="absolute flex flex-col items-center z-20" style={{ top: y, left: x, width: w ?? '100%' }}>
-    <LogoWord word="MAGIC" color="var(--ink-orange)" offset={0} glow />
-    <LogoWord word="POKER" color="var(--ink-cream)" offset={5} />
+export const Logo = ({ x = 0, w, y, size, align = 'center' }: { x?: number; w?: number; y: number; size?: number; align?: 'center' | 'start' }) => (
+  <div className={clsx('absolute flex flex-col z-20 pointer-events-none', align === 'start' ? 'items-start' : 'items-center')} style={{ top: y, left: x, width: w ?? '100%' }}>
+    <LogoWord word="MAGIC" color="var(--ink-orange)" offset={0} glow size={size} />
+    <LogoWord word="POKER" color="var(--ink-cream)" offset={5} size={size} />
   </div>
 );
 
@@ -126,7 +126,9 @@ export const MenuScreen = () => {
     } else startGame(selected, rematch);
   };
 
-  const { cx, logoX, logoW, logoY, playY, board, bossY, bossH } = useMenuLayout();
+  const { logoX, logoW, logoY, map, mapSafeTop, mapSafeBottom, cta: ctaBox } = useMenuLayout();
+  // Mientras el mapa cuenta algo nuevo, el input queda bloqueado
+  const [revealing, setRevealing] = useState(false);
   const stage = useStage();
   const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
   const collection = isCollectionUnlocked(progress);
@@ -135,7 +137,7 @@ export const MenuScreen = () => {
   const current = currentBossIndex(progress);
   const selected = menuBoss ?? current;
   // La página de después del último jefe es el Castillo
-  const castleSel = selected === BOSSES.length && isCastleUnlocked(progress);
+  const castleSel = selected === CASTLE_INDEX && isCastleUnlocked(progress);
   const castleRun = useSyncExternalStore(subscribeCastle, getCastle, getServerCastle).run;
   const locked = !castleSel && selected > current;
   // Revancha: solo contra un boss ya vencido
@@ -145,7 +147,6 @@ export const MenuScreen = () => {
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
   const resumeGame = useGameStore(s => s.resumeGame);
   // Botón principal: el verbo y, debajo, contra quién o qué pasa
-  const ctaW = Math.min(160, board.diorama.w - 40);
   const total = String(BOSSES.length);
   const cta = castleSel
     ? castleRun
@@ -156,16 +157,29 @@ export const MenuScreen = () => {
       // Un jefe vencido solo se juega en revancha (cada vez más fuerte)
       : canRematch
         ? { title: t.rematch, sub: t.rematch_level_sub.replace('{n}', String(level)) }
-        : { title: t.challenge, sub: '' };
+        : { title: t.challenge, sub: t[`boss_${BOSSES[selected]?.id}` as keyof Translations] ?? '' };
 
+  const portrait = stage.mode === 'portrait';
   return (
     <div className="absolute inset-0">
-      <MenuBackground />
+      <Backdrop />
+      <AmbientDust />
+      {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
+      <SagaMap rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom} onRevealing={setRevealing} />
+      {/* Cabecera y pie se funden con el mapa (en vertical flotan encima) */}
+      {portrait && (
+        <>
+          <div className="absolute inset-x-0 top-0 z-20 pointer-events-none" style={{ height: mapSafeTop + 12, background: 'linear-gradient(to bottom, rgba(11,13,12,0.95) 55%, transparent)' }} />
+          <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20, background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
+        </>
+      )}
+      {!portrait && <div className="absolute z-20 pointer-events-none" style={{ left: map.x - 12, top: 0, width: 24, height: map.h, background: 'linear-gradient(to right, transparent, rgba(11,13,12,0.6), transparent)' }} />}
+
       {/* Reglas, estadísticas y ajustes también desde el menú */}
       {/* En horizontal, debajo del logo; en vertical, arriba a la derecha */}
-      <div className="absolute z-30 flex gap-[3px]" style={stage.mode === 'landscape'
+      <div className="absolute z-30 flex gap-[3px]" style={!portrait
         ? { left: logoX + logoW / 2 - Math.round((buttons * 18 + (buttons - 1) * 3) / 2), top: logoY + 84 }
-        : { right: 4, top: 4 }}>
+        : { right: 4, top: 6 }}>
         {/* Todos los iconos con el mismo marco: lo tuyo (colección, mazo) lleva el icono
             de su color y va separado de lo del juego (reglas, estadísticas, ajustes) */}
         {collection && (
@@ -183,16 +197,17 @@ export const MenuScreen = () => {
         <IconButton icon={ICONS.trophy} aria-label={t.aria_stats} onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
         <IconButton icon={ICONS.gear} aria-label={t.aria_settings} onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
       </div>
-      <Logo x={logoX} w={logoW} y={logoY} />
-      {/* El boss a derrotar, grande en el centro del tapete; se desliza para ver la lista */}
-      <BossCarousel left={board.diorama.x + 4} top={bossY} width={board.diorama.w - 8} height={bossH} />
+      {portrait ? <Logo x={6} w={80} y={6} size={19} align="start" /> : <Logo x={logoX} w={logoW} y={logoY} />}
 
-      {/* Acciones: una principal (ancha, con el contexto debajo del verbo) y, si hay,
-          una fila de secundarias del mismo ancho */}
-      <motion.div className="absolute z-20 flex flex-col items-stretch gap-[4px]" style={{ left: cx - Math.floor(ctaW / 2), top: playY, width: ctaW }}
-        initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 16, delay: 0.7 }}>
-        <PxButton tone="yellow" onClick={() => handleStartGame(canRematch)} disabled={locked}
+      {/* Acción principal (ancha, con el contexto debajo del verbo) y, si hay, continuar partida */}
+      <motion.div className="absolute z-30 flex flex-col items-stretch gap-[4px]" style={{ left: ctaBox.x, bottom: ctaBox.bottom, width: ctaBox.w }}
+        initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: revealing ? 0.9 : 1, opacity: revealing ? 0 : 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 16, delay: revealing ? 0 : 0.5 }}>
+        {/* Qué cambia en la revancha */}
+        {canRematch && !revealing && (
+          <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
+        )}
+        <PxButton tone="yellow" onClick={() => handleStartGame(canRematch)} disabled={locked || revealing}
           className={clsx('w-full h-[30px] flex-col gap-[1px] overflow-hidden', locked ? 'opacity-50' : 'anim-breathe')}
           style={castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : undefined}>
           <span className="text-title" style={{ lineHeight: '14px' }}>{cta.title}</span>
@@ -201,12 +216,10 @@ export const MenuScreen = () => {
         {hasSave && (
           <PxButton size="md" onClick={() => { playSound('click'); resumeGame(); }}>{t.continue_game}</PxButton>
         )}
-        {/* Qué cambia en la revancha (solo en vertical, donde cabe) */}
-        {canRematch && stage.mode === 'portrait' && (
-          <span className="t-micro text-center whitespace-nowrap" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
-        )}
       </motion.div>
 
+      {/* Mientras se cuenta lo nuevo, nada responde */}
+      {revealing && <div aria-label="map reveal" className="absolute inset-0 z-[500]" onClickCapture={e => e.stopPropagation()} />}
     </div>
   );
 };

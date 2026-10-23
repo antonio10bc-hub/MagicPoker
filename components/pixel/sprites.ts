@@ -231,6 +231,19 @@ export const BURST = s(
   '......o......',
 );
 
+/** Llama (logro Inmolación) 9×9 */
+export const FLAME = s(
+  '....n....',
+  '...nn....',
+  '...nnn.n.',
+  '..nnnn.n.',
+  '.nnnnnnn.',
+  '.nnn.nnn.',
+  'nnn...nnn',
+  'nnn...nnn',
+  '.nnnnnnn.',
+);
+
 /** Estrella (insignia del As) 7×7 */
 export const STAR = s(
   '...o...',

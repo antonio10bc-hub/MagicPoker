@@ -29,12 +29,16 @@ export const UnlockToasts = () => {
   // El premio del boss va primero; los logros esperan a que termine
   const show = current && !busy && !modalOpen;
 
+  // El jefe secreto y el Castillo los cuenta el mapa del menú, por fases
+  const onMap = current?.kind === 'secret' || current?.kind === 'castle';
+  useEffect(() => { if (onMap) shift(); }, [onMap, current, shift]);
+
   useEffect(() => {
-    if (!show) return;
+    if (!show || onMap) return;
     const slam = setTimeout(() => { playSfx('wipe', 0.6, 1.3); playSfx('sparkle'); haptic('win'); }, 150);
     const done = setTimeout(shift, 3600);
     return () => { clearTimeout(slam); clearTimeout(done); };
-  }, [show, current, shift]);
+  }, [show, onMap, current, shift]);
 
   const w = Math.min(210, width - 16);
   const seal = current?.kind === 'seal' ? current.seal : null;
@@ -49,7 +53,7 @@ export const UnlockToasts = () => {
   const rgb = castle ? '255,31,75' : '125,255,43';
   return (
     <AnimatePresence>
-      {show && (
+      {show && !onMap && (
         <motion.button
           key={seal ?? backBoss ?? kind}
           className="absolute z-[300] flex flex-col items-center gap-[8px] cursor-pointer"

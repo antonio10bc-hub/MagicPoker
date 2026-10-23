@@ -4,7 +4,7 @@
 import { Card, CombatResult, GameResult, Rank } from '@/types';
 
 export const STAMP_IDS = [
-  'first_win', 'republicana', 'flawless', 'comeback', 'massacre', 'barrage',
+  'first_win', 'republicana', 'immolation', 'flawless', 'comeback', 'massacre', 'barrage',
   'lightning', 'hard_win', 'streak3', 'full_court', 'stalemate', 'veteran',
   // Ligados a los sellos
   'bulwark', 'heist', 'purist', 'reflex', 'venom', 'rematch', 'collector',
@@ -34,6 +34,9 @@ const FULL_COURT: Rank[] = ['J', 'Q', 'K', 'A', 'JOKER'];
 export const roundStamps = (result: CombatResult, mine: ReadonlySet<string> = new Set(), cards: ReadonlyMap<string, Card> = new Map()): StampId[] => {
   const out: StampId[] = [];
   if (result.isRepublicanaTriggered) out.push('republicana');
+  // Inmolación: tu As se lleva tu propio J, Q y K
+  const own = [...mine].flatMap(id => (cards.get(id) ? [cards.get(id)!.rank] : []));
+  if (result.voidedCardIds.length > 0 && (['A', 'J', 'Q', 'K'] as Rank[]).every(r => own.includes(r))) out.push('immolation');
   // Solo cuentan las cartas del rival que caen
   if (result.deadByOwner.opponent >= 3) out.push('massacre');
   if (result.opponentDamageTaken >= 3) out.push('barrage');

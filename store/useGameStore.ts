@@ -417,7 +417,7 @@ export const useGameStore = create<GameState>((set, get) => {
           sealFx: { id: Date.now(), events: pre.events },
         }));
         // Logro: robar un As con el sello de robo
-        if (get().tutorialStep === null && pre.events.some(e => e.kind === 'swap' && e.initiator === 'player' && pre.player[e.index].card?.rank === 'A')) award(['heist']);
+        if (get().tutorialStep === null && pre.events.some(e => e.kind === 'swap' && e.initiator === 'player' && pre.player[e.index].card?.rank === 'Q')) award(['heist']);
       }
 
       // 3. Se calcula el choque y se marcan las cartas afectadas

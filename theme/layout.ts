@@ -185,6 +185,12 @@ export interface MenuLayout {
   playY: number;
   /** Base de las dos siluetas, de pie en el centro del tapete */
   mascotY: number;
+  /** Menú: el mapa de jefes, y lo que le tapan arriba (cabecera) y abajo (acción principal) */
+  map: Rect;
+  mapSafeTop: number;
+  mapSafeBottom: number;
+  /** Menú: columna de la acción principal (x, ancho) y su borde inferior */
+  cta: { x: number; w: number; bottom: number };
 }
 
 const LOGO_HEIGHT = 76;
@@ -194,8 +200,11 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     // Horizontal: logo a la izquierda; tapete con el boss a la derecha y JUGAR debajo
     const board = computeBoard(150, 14, 222, false, 204);
     return {
-      board, cx: 150 + 111, logoX: 4, logoW: 142, logoY: 96,
+      board, cx: 150 + 111, logoX: 4, logoW: 142, logoY: 40,
       bossScale: 3, bossY: 26, bossH: 180, mascotY: 92, playY: 226,
+      // El mapa a la derecha, de arriba abajo; logo, iconos y acción en la columna izquierda
+      map: { x: 150, y: 0, w: W - 150, h: H }, mapSafeTop: 0, mapSafeBottom: 0,
+      cta: { x: 6, w: 138, bottom: 10 },
     };
   }
   // Vertical: logo arriba, tapete en el centro con las siluetas, JUGAR debajo
@@ -218,6 +227,9 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     bossH: boardH - 8,
     mascotY: boardY + Math.round(boardH / 2) - 26,
     playY: boardY + boardH + DIORAMA_SHADOW + 10,
+    // El mapa ocupa toda la pantalla; la cabecera y la acción flotan encima
+    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 78,
+    cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), bottom: 10 },
   };
 };
 

@@ -145,7 +145,7 @@ const StatsModal = () => {
             {picked ? (
               <>
                 <div className={stats.stamps[picked] !== undefined ? 'glow-text' : undefined} style={{ color: stats.stamps[picked] !== undefined ? 'var(--ink-orange)' : 'var(--ink-mint)' }}>
-                  {stampName(t, picked)}{stats.stamps[picked] === undefined && ` · ${t.stamp_locked}`}
+                  {stampName(t, picked)}
                 </div>
                 <div style={{ color: 'var(--ink-mint)' }}>{stampDesc(t, picked)}</div>
               </>

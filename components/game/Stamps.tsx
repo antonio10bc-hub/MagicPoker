@@ -7,7 +7,7 @@ import { haptic, playSfx } from '@/lib/sounds';
 import { StampId } from '@/lib/stamps';
 import { INK } from '@/theme/tokens';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { ALERT, BURST, CHARACTERS, CROSS, HEART, HEART_LOST, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { ALERT, BURST, CHARACTERS, CROSS, FLAME, HEART, HEART_LOST, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { useStage } from '@/components/pixel/Stage';
 
 // --- SELLOS ---
@@ -17,6 +17,7 @@ import { useStage } from '@/components/pixel/Stage';
 const ICON: Record<StampId, Sprite> = {
   first_win: ICONS.trophy,
   republicana: CHARACTERS.A!,
+  immolation: FLAME,
   flawless: HEART,
   comeback: HEART_LOST,
   massacre: BURST,

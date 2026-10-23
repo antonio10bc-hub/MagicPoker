@@ -61,3 +61,16 @@ describe('logros de sellos', () => {
     expect(endStamps(end({ sealsInDeck: 0, track }))).not.toContain('purist');
   });
 });
+
+describe('inmolación', () => {
+  const mine = new Set(['a', 'j', 'q', 'k']);
+  const cards = new Map(['A', 'J', 'Q', 'K'].map(r => [r.toLowerCase(), { id: r.toLowerCase(), rank: r }])) as unknown as Map<string, Card>;
+  it('tu As se lleva tu propio J, Q y K', () => {
+    expect(roundStamps(combat({ voidedCardIds: ['a', 'j', 'q', 'k'] }), mine, cards)).toContain('immolation');
+  });
+  it('sin As tuyo o sin la corte entera, no cuenta', () => {
+    expect(roundStamps(combat({ voidedCardIds: ['j', 'q', 'k'] }), new Set(['j', 'q', 'k']), cards)).not.toContain('immolation');
+    expect(roundStamps(combat({ voidedCardIds: ['a', 'q', 'k'] }), new Set(['a', 'q', 'k']), cards)).not.toContain('immolation');
+    expect(roundStamps(combat({}), mine, cards)).not.toContain('immolation');
+  });
+});

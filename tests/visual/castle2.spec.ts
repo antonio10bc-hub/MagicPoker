@@ -171,7 +171,6 @@ test('resumen al conquistar el Castillo: estadísticas y mazo final (y desde el 
   await page.keyboard.press('Escape');
   await page.evaluate(() => (window as unknown as { __game: { getState: () => { exitToMenu: () => void } } }).__game.getState().exitToMenu());
   await page.waitForTimeout(1500);
-  await page.locator('.no-scrollbar').first().evaluate(e => { e.scrollLeft = e.scrollWidth; });
   await page.waitForTimeout(700);
   await expect(page.locator('[aria-label="last summary"]')).toBeVisible();
   noErrors();

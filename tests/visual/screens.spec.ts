@@ -46,9 +46,9 @@ test('el jefe secreto no sale hasta vencer a los demás', async ({ page }, info)
 test('revancha: un solo botón REVANCHA con un jefe vencido', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 3, rematches: ['wall'] });
-  // Se desliza el carrusel hasta El Muro (vencido)
-  await page.locator('.no-scrollbar').first().evaluate(e => { e.scrollLeft = e.clientWidth; });
-  await page.waitForTimeout(600);
+  // Se elige El Muro (vencido) en el mapa
+  await page.locator('[aria-label="map boss 2"]').click();
+  await page.waitForTimeout(400);
   await expect(page.getByText('REVANCHA', { exact: true })).toBeVisible();
   await expect(page.getByText('nivel 2')).toBeVisible();
   await shot(page, info, 'menu-revancha');
@@ -150,7 +150,7 @@ test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ 
   noErrors();
 });
 
-test('al vencer a un jefe: SIGUIENTE JEFE y VOLVER AL MENÚ', async ({ page }, info) => {
+test('al vencer a un jefe nuevo: AL MAPA, que enciende el siguiente, y a por él', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 2 });
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
@@ -158,16 +158,21 @@ test('al vencer a un jefe: SIGUIENTE JEFE y VOLVER AL MENÚ', async ({ page }, i
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
   // Los avisos de desbloqueo y logros van antes: se cierran tocándolos
-  const next = page.getByText('¡SIGUIENTE JEFE!');
-  for (let i = 0; i < 12 && !(await next.isVisible()); i++) {
+  const toMap = page.getByText('¡AL MAPA!');
+  for (let i = 0; i < 12 && !(await toMap.isVisible()); i++) {
     const vp = page.viewportSize()!;
     await page.mouse.click(vp.width / 2, vp.height * 0.35);
     await page.waitForTimeout(700);
   }
-  await expect(next).toBeVisible();
-  await expect(page.getByText('Volver al menú')).toBeVisible();
+  await expect(toMap).toBeVisible();
   await shot(page, info, 'victoria');
-  await next.click({ force: true });
+  await toMap.click({ force: true });
+  // El mapa cuenta lo nuevo con el input bloqueado y luego devuelve el control
+  await expect(page.locator('[aria-label="map reveal"]')).toBeAttached();
+  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 8000 });
+  await expect(page.getByText('PRÓXIMO RIVAL')).toBeVisible();
+  await shot(page, info, 'mapa-tras-victoria');
+  await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
   expect(await page.evaluate(() => (window as unknown as G).__game.getState().bossIndex)).toBe(3);
   noErrors();

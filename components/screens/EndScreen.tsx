@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
-import { currentBossIndex } from '@/lib/bosses';
+import { currentBossIndex, getProgress } from '@/lib/bosses';
+import { peekMapSeen, setMapSeen } from '@/lib/mapReveal';
 import { MerchantScene } from '@/components/game/MerchantScene';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
@@ -102,6 +103,15 @@ export const EndScreen = () => {
   const startCastle = useGameStore(s => s.startCastle);
   const [hasNextBoss] = useState(() => result === 'win' && useGameStore.getState().tutorialStep === null && currentBossIndex() !== useGameStore.getState().bossIndex);
   const isLoss = gameResult === 'loss';
+  // Jefe vencido por primera vez: el mapa tiene algo que contar (el siguiente, el secreto o el Castillo)
+  const [toMap] = useState(() => {
+    if (result !== 'win' || useGameStore.getState().tutorialStep !== null || castleOutcome) return false;
+    const { defeated } = getProgress();
+    const seen = peekMapSeen();
+    // Sin dato aún: lo nuevo es solo este jefe
+    if (seen === null && defeated > 0) setMapSeen(defeated - 1);
+    return defeated > (seen ?? defeated - 1);
+  });
   // Orden de celebraciones: sello de carta > logros > resultado. El panel espera a que
   // se hayan mostrado los desbloqueos y los logros pendientes.
   const waiting = useUiStore(s => s.unlockQueue.length + s.stampQueue.length > 0);
@@ -161,13 +171,16 @@ export const EndScreen = () => {
               {/* Resumen de toda la subida: estadísticas y mazo final */}
               <PxButton size="md" tone="roof" aria-label={t.aria_run_summary} onClick={() => { playSound('click'); useUiStore.getState().openModal('summary'); }}>{t.sum_button}</PxButton>
             </>
+          ) : toMap ? (
+            // Jefe nuevo vencido: al mapa, que cuenta lo que se desbloquea
+            <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); exitToMenu(); }}>{t.to_map}</PxButton>
           ) : (
             // Si ganas, al siguiente jefe; si no, revancha contra el mismo
             <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startGame(wasTutorial || isWin ? undefined : bossIndex, rematch && !isWin); }}>
               {hasNextBoss ? t.next_boss : t.play_again}
             </PxButton>
           )}
-          <PxButton size="md" onClick={() => { playSound('click'); exitToMenu(); }}>{t.exit_menu}</PxButton>
+          {!toMap && <PxButton size="md" onClick={() => { playSound('click'); exitToMenu(); }}>{t.exit_menu}</PxButton>}
         </div>
       </Panel>
       </motion.div>}
