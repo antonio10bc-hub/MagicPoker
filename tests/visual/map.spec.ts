@@ -76,7 +76,8 @@ test('revelación: el jefe secreto despierta y cae a su sitio', async ({ page },
   await shot(page, info, 'secreto-3-en-su-sitio');
   await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 6000 });
   await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible();
-  await expect(page.getByText('JEFE SECRETO')).toBeVisible();
+  await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible();
+  await expect(page.getByText('¡DESAFIAR!', { exact: true })).toBeVisible();
   noErrors();
 });
 

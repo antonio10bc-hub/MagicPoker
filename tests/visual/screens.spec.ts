@@ -36,11 +36,12 @@ test('el jefe secreto no sale hasta vencer a los demás', async ({ page }, info)
   await shot(page, info, 'menu-sin-secreto');
   await page.evaluate(() => localStorage.setItem('magic_poker_progress', JSON.stringify({ defeated: 11 })));
   await page.reload();
-  // El mapa lo cuenta por fases (jefe secreto activado) y luego lo deja en su sitio
+  // El mapa lo cuenta por fases (baja en su haz de oro) y luego lo deja en su sitio
   await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible({ timeout: 20000 });
-  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 6000 });
+  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 12000 });
   expect(await bossPages(page)).toBe(12);
-  await expect(page.getByText('JEFE SECRETO')).toBeVisible();
+  await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible();
+  await expect(page.getByText('¡DESAFIAR!', { exact: true })).toBeVisible();
   await shot(page, info, 'menu-jefe-secreto');
   noErrors();
 });

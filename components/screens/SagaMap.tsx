@@ -25,16 +25,16 @@ import { CastleMap } from '@/components/game/CastleMap';
 // Un camino de tierra que sube por el campo de abajo arriba, entre bosques. Cada jefe
 // es una parada del camino, en un sitio que cuenta quién es (el fortín del Muro, la
 // guarida de la Ladrona, la taberna del Bardo… ver mapStations.ts). Sobre el camino,
-// un sendero de puntos: crema lo recorrido, pizarra lo que falta. Las paradas que aún
-// no has alcanzado tienen las luces apagadas. Arriba del todo, el Castillo. Lo que aún no conoces no se ve: el
-// Soberano y el Castillo esperan ocultos en la niebla hasta que los alcanzas.
-// Tocar un jefe lo elige (la acción principal del menú juega contra él).
+// un sendero de puntos: crema lo recorrido, pizarra lo que falta. Los pueblos que aún
+// no has alcanzado tienen las luces apagadas; el de un jefe vencido, una bandera blanca.
+// Arriba del todo, el Castillo. El Soberano y el Castillo esperan ocultos en la niebla
+// hasta que los alcanzas. Tocar un jefe lo elige (la acción principal juega contra él).
 //
 // Revelaciones: al volver al menú tras vencer a un jefe nuevo, se bloquea el input y se
-// cuenta por fases, con la cámara siguiendo: el jefe vencido recibe su sello
-// "¡VENCIDO!", el sendero avanza y el siguiente se enciende. Si el que llega es el
-// secreto: aviso "¡JEFE SECRETO ACTIVADO!" y el Soberano cae de la niebla a su sitio. Si
-// era el Soberano: aviso y el Castillo se alza. Al terminar vuelve el control.
+// cuenta despacio, por fases, con la cámara siguiendo: el jefe vencido se desvanece y
+// queda su bandera blanca, el sendero avanza y el siguiente se enciende. Si el que
+// llega es el secreto: aviso en la sombra y el Soberano baja en un haz de oro. Si era el
+// Soberano: aviso y el Castillo emerge de la tierra. Al terminar vuelve el control.
 
 /** Selección del Castillo: el índice después del último jefe */
 export const CASTLE_INDEX = BOSSES.length;
@@ -233,6 +233,9 @@ const WhiteFlag = ({ fresh }: { fresh: boolean }) => {
   );
 };
 
+/** Jefe quieto en su sitio */
+const AT_REST = { y: 0, opacity: 1, scale: 1, scaleX: 1, scaleY: 1, filter: 'brightness(1)' };
+
 /** Chispas que suben (deterministas) */
 const Embers = ({ n, w, h, colors, duration = 1.8 }: { n: number; w: number; h: number; colors: string[]; duration?: number }) => (
   <>
@@ -268,7 +271,7 @@ const Dust = ({ w, repeat = 0 }: { w: number; repeat?: number }) => (
 const SummonFx = ({ landed, h }: { landed: boolean; h: number }) => (
   <>
     <motion.div className="absolute pointer-events-none" style={{ left: -18, width: 36, top: -320, height: 322, transformOrigin: '50% 0%',
-      background: 'linear-gradient(to bottom, transparent 0%, rgba(232,182,74,0.35) 35%, rgba(255,233,168,0.75) 85%, rgba(237,235,224,0.9) 100%)',
+      background: 'linear-gradient(to bottom, transparent 0%, rgba(232,182,74,0.28) 35%, rgba(255,233,168,0.5) 85%, rgba(237,235,224,0.75) 100%)',
       maskImage: 'repeating-linear-gradient(to bottom, #000 0 2px, rgba(0,0,0,0.55) 2px 3px)', WebkitMaskImage: 'repeating-linear-gradient(to bottom, #000 0 2px, rgba(0,0,0,0.55) 2px 3px)' }}
       initial={{ scaleY: 0, opacity: 0 }} animate={landed ? { scaleY: 1, opacity: 0, scaleX: 2.2 } : { scaleY: 1, opacity: 1, scaleX: [1, 0.85, 1] }}
       transition={landed ? { duration: 0.9 } : { scaleY: { duration: 0.9, ease: 'easeOut' }, scaleX: { duration: 1.2, repeat: Infinity }, opacity: { duration: 0.4 } }} />
@@ -524,16 +527,19 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                   <span className="absolute rounded-[50%] anim-pulse-soft pointer-events-none" style={{ left: -30, top: -9, width: 60, height: 18,
                     boxShadow: '0 0 0 1px var(--ink-cream), 0 0 8px 1px rgba(237,235,224,0.45)' }} />
                 )}
+                {/* El haz de oro va detrás: él baja por dentro, delante de la luz */}
+                {summoning && <SummonFx landed={phase === 'land'} h={figureH + 8} />}
                 {/* Vencido: se desvanece de su pueblo y queda una bandera blanca */}
                 {beaten && <WhiteFlag fresh={justBeaten} />}
                 <AnimatePresence>
                   {!beaten && (
                     <motion.div key="boss" className="absolute" style={{ left: 0, bottom: 2, x: '-50%', transformOrigin: '50% 100%' }}
-                      initial={summoning ? { y: -260, scale: 1.7, opacity: 0, filter: 'brightness(3)' } : false}
+                      initial={summoning ? { y: -200, scale: 1.7, opacity: 0, filter: 'brightness(1.6)' } : false}
+                      // Siempre con su sitio final: lo que falta en `animate` vuelve a `initial`
                       animate={summoning && phase === 'summon'
-                        ? { y: [-260, -50, 0], scale: [1.7, 1.15, 1], opacity: [0, 1, 1], filter: ['brightness(3)', 'brightness(2.2)', 'brightness(1.5)'] }
-                        : summoning ? { scaleY: [0.82, 1.1, 1], scaleX: [1.15, 0.95, 1], filter: ['brightness(3.5)', 'brightness(1)'] }
-                          : arriving ? { scale: [1, 1.25, 1], filter: ['brightness(1)', 'brightness(2.6)', 'brightness(1)'] } : {}}
+                        ? { ...AT_REST, y: [-200, -40, 0], scale: [1.7, 1.15, 1], opacity: [0, 1, 1], filter: ['brightness(1.6)', 'brightness(1.3)', 'brightness(1.2)'] }
+                        : summoning ? { ...AT_REST, scaleY: [0.82, 1.1, 1], scaleX: [1.15, 0.95, 1], filter: ['brightness(3.5)', 'brightness(1)'] }
+                          : arriving ? { ...AT_REST, scale: [1, 1.25, 1], filter: ['brightness(1)', 'brightness(2.6)', 'brightness(1)'] } : AT_REST}
                       exit={{ opacity: 0, y: -10, filter: 'brightness(2.2) blur(1px)', transition: { duration: 1.6, ease: 'easeIn' } }}
                       transition={summoning && phase === 'summon' ? { duration: 3, times: [0, 0.78, 1], ease: 'easeInOut' } : { duration: summoning ? 0.7 : 0.6 }}>
                       <div className={isCurrent ? 'anim-breathe' : undefined}>
@@ -542,7 +548,6 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                     </motion.div>
                   )}
                 </AnimatePresence>
-                {summoning && <SummonFx landed={phase === 'land'} h={figureH + 8} />}
                 {/* Onda al llegar */}
                 {arriving && !summoning && (
                   <motion.span className="absolute rounded-full pointer-events-none" style={{ left: -30, top: -50, width: 60, height: 60,

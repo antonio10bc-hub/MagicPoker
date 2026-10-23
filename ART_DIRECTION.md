@@ -651,7 +651,7 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   (sube un poco, se aclara y desaparece) y en su sitio se alza una **bandera blanca** de
   rendición → el sendero se dibuja punto a punto → el siguiente se enciende con destello
   y onda, y su pueblo enciende sus luces. Unos 7 s en total.
-  - **El Soberano:** aviso "¡JEFE SECRETO ACTIVADO!" en oro sobre el mapa oscurecido;
+  - **El Soberano:** aviso "ALGO DESPIERTA EN LA SOMBRA…" en oro sobre el mapa oscurecido;
     luego un haz de luz dorada con tramado baja del cielo sobre su ciudad, él desciende
     dentro muy despacio entre chispas de oro y carmesí, y al tocar tierra todo tiembla:
     dos ondas (oro y carmesí), polvo y su ciudad real se enciende. Sin etiqueta encima.
