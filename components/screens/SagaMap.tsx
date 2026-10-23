@@ -1,5 +1,6 @@
 import { CSSProperties, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { clsx } from 'clsx';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { useUiStore } from '@/store/useUiStore';
 import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
@@ -13,14 +14,19 @@ import { Rect } from '@/theme/layout';
 import { PixelSprite, spriteSize } from '@/components/pixel/PixelSprite';
 import { CASTLE_ART, spriteAura } from '@/components/pixel/bosses';
 import { HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
-import { FLOOR_TILE, STONE_FACE_TILE, patternUri } from '@/components/pixel/patterns';
+import { Sprite } from '@/components/pixel/PixelSprite';
+import { SCENERY } from '@/components/pixel/scenery';
+import { MapTerrain, Pt } from './MapTerrain';
+import { StationProp, STATIONS } from './mapStations';
 import { BossFigure } from '@/components/game/BossFigure';
 import { CastleMap } from '@/components/game/CastleMap';
 
 // --- MAPA DE JEFES (menú) ---
-// Un camino continuo en vertical, de abajo arriba: cada jefe de pie sobre su pequeño
-// tapete, unidos por un sendero de puntos (crema lo recorrido, pizarra lo que falta).
-// Arriba del todo, entre la niebla, el Castillo. Lo que aún no conoces no se ve: el
+// Un camino de tierra que sube por el campo de abajo arriba, entre bosques. Cada jefe
+// es una parada del camino, en un sitio que cuenta quién es (el fortín del Muro, la
+// guarida de la Ladrona, la taberna del Bardo… ver mapStations.ts). Sobre el camino,
+// un sendero de puntos: crema lo recorrido, pizarra lo que falta. Las paradas que aún
+// no has alcanzado tienen las luces apagadas. Arriba del todo, el Castillo. Lo que aún no conoces no se ve: el
 // Soberano y el Castillo esperan ocultos en la niebla hasta que los alcanzas.
 // Tocar un jefe lo elige (la acción principal del menú juega contra él).
 //
@@ -33,8 +39,8 @@ import { CastleMap } from '@/components/game/CastleMap';
 /** Selección del Castillo: el índice después del último jefe */
 export const CASTLE_INDEX = BOSSES.length;
 
-const STEP = 96;
-const BOTTOM = 110;
+const STEP = 150;
+const BOTTOM = 120;
 const CASTLE_GAP = 150;
 /** Sitio sobre el Castillo para su pastilla y la cabecera del menú */
 const TOP = 80;
@@ -48,29 +54,51 @@ const geometry = (w: number) => {
   const n = BOSSES.length;
   const castle = { x: Math.round(w / 2), y: TOP + CASTLE_H };
   const contentH = castle.y + CASTLE_GAP + (n - 1) * STEP + BOTTOM;
-  const amp = Math.min(54, Math.round(w * 0.24));
-  const nodes = BOSSES.map((_, i) => ({ x: Math.round(w / 2 + amp * Math.sin(i * 1.15 + 0.4)), y: contentH - BOTTOM - i * STEP }));
-  return { contentH, nodes, castle };
+  // Las paradas, a un lado y a otro del centro; el Soberano, en medio, ante su puerta
+  const amp = Math.round(w * 0.13);
+  const nodes = BOSSES.map((b, i) => ({ x: b.secret ? Math.round(w / 2) : Math.round(w / 2 + sideOf(i) * amp), y: contentH - BOTTOM - i * STEP }));
+  // El camino entero: entra por abajo, pasa por cada parada y llega al Castillo
+  const stops = [{ x: nodes[0].x - 10, y: contentH + 10 }, ...nodes, castle];
+  const road: Pt[] = stops.slice(1).flatMap((b, n) => curve(stops[n], b, 1));
+  const terrain = BOSSES.map((b, i) => {
+    const st = STATIONS[b.id];
+    const side = sideOf(i);
+    return {
+      clearing: nodes[i],
+      keep: { x: nodes[i].x + side * 24, y: nodes[i].y - 16, rx: 74, ry: 48 },
+      biome: st?.biome && { kind: st.biome.kind, x: nodes[i].x + side * st.biome.dx, y: nodes[i].y + st.biome.dy, rx: st.biome.rx, ry: st.biome.ry },
+    };
+  });
+  return {
+    contentH, nodes, castle, road,
+    clearings: [...terrain.map(t => t.clearing), castle],
+    keepOut: [...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 50, rx: 70, ry: 70 }],
+    biomes: terrain.flatMap(t => (t.biome ? [t.biome] : [])),
+  };
 };
 
-/** Puntos del sendero entre dos sitios (curva suave, un punto cada 6 px) */
-const trail = (a: { x: number; y: number }, b: { x: number; y: number }, endPad = 16) => {
+/** Lado de cada parada: -1 izquierda, 1 derecha (el decorado va hacia fuera) */
+const sideOf = (i: number) => (BOSSES[i]?.secret ? 1 : i % 2 === 0 ? -1 : 1);
+
+/** Curva suave entre dos sitios (salidas en vertical), un punto cada `every` px */
+const curve = (a: Pt, b: Pt, every: number): Pt[] => {
   const c1 = { x: a.x, y: a.y - (a.y - b.y) * 0.55 };
   const c2 = { x: b.x, y: b.y + (a.y - b.y) * 0.55 };
-  const len = Math.hypot(b.x - a.x, b.y - a.y);
-  const count = Math.max(4, Math.floor(len / 6));
-  const pts: { x: number; y: number }[] = [];
-  // Ni sobre el tapete de salida ni sobre el de llegada (ni sobre el texto del Castillo)
-  for (let i = 1; i < count; i++) {
+  const count = Math.max(4, Math.floor(Math.hypot(b.x - a.x, b.y - a.y) * 1.2 / every));
+  return Array.from({ length: count }, (_, i) => {
     const t = i / count;
     const u = 1 - t;
-    pts.push({
-      x: Math.round(u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x),
-      y: Math.round(u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y),
-    });
-  }
-  return pts.filter(p => Math.hypot(p.x - a.x, p.y - a.y) > 18 && Math.hypot(p.x - b.x, p.y - b.y) > endPad);
+    return {
+      x: u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x,
+      y: u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y,
+    };
+  });
 };
+
+/** Puntos del sendero sobre el camino (uno cada 6 px), sin pisar las paradas */
+const trail = (a: Pt, b: Pt, endPad = 16) =>
+  curve(a, b, 6).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }))
+    .filter(p => Math.hypot(p.x - a.x, p.y - a.y) > 18 && Math.hypot(p.x - b.x, p.y - b.y) > endPad);
 
 const Trail = ({ a, b, lit, drawing, endPad }: { a: { x: number; y: number }; b: { x: number; y: number }; lit: boolean; drawing?: boolean; endPad?: number }) => {
   const pts = useMemo(() => trail(a, b, endPad), [a, b, endPad]);
@@ -86,18 +114,58 @@ const Trail = ({ a, b, lit, drawing, endPad }: { a: { x: number; y: number }; b:
   );
 };
 
-/** Pequeño tapete sobre el que está cada jefe (como el de la partida, en miniatura) */
-const Plinth = ({ lit, castle }: { lit: boolean; castle?: boolean }) => (
-  <div className="absolute pointer-events-none" style={{ left: -24, top: -6, width: 48, height: 14 }}>
-    {/* Niebla (o brasa carmesí en el Castillo) a ras de suelo */}
-    <div className="absolute" style={{ left: -16, top: -14, width: 80, height: 34,
-      background: castle ? 'radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255,31,75,0.3) 0%, transparent 70%)'
-        : `radial-gradient(ellipse 50% 50% at 50% 55%, rgba(237,235,224,${lit ? 0.26 : 0.1}) 0%, rgba(111,143,90,0.04) 55%, transparent 72%)` }} />
-    <div className="absolute inset-x-0" style={{ top: 6, height: 8, borderRadius: '0 0 6px 6px', backgroundImage: patternUri('stone-face', STONE_FACE_TILE), backgroundSize: 12 }} />
-    <div className="absolute inset-x-0 top-0" style={{ height: 9, borderRadius: 6, backgroundImage: patternUri('floor', FLOOR_TILE), backgroundSize: 16,
-      boxShadow: 'inset 0 0 0 1px rgba(11,13,12,0.6)' }} />
-  </div>
+/** Sombra a los pies (y, en el Castillo, brasa carmesí) */
+const Ground = ({ castle }: { castle?: boolean }) => (
+  <div className="absolute pointer-events-none" style={{ left: -26, top: -6, width: 52, height: 12, borderRadius: '50%',
+    background: castle ? 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,31,75,0.35) 0%, transparent 70%)'
+      : 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(11,13,12,0.85) 30%, transparent 72%)' }} />
 );
+
+// --- Decorados de las paradas ---
+const LIGHTS = /[xyk]/g;
+const split = new Map<Sprite, { unlit: Sprite; lights: Sprite; gold: boolean }>();
+/** El decorado sin luces (apagado) y sus luces aparte (para que brillen) */
+const lightsOf = (sprite: Sprite) => {
+  let v = split.get(sprite);
+  if (!v) {
+    v = {
+      unlit: { rows: sprite.rows.map(r => r.replace(LIGHTS, 'd')) },
+      lights: { rows: sprite.rows.map(r => r.replace(/[^xyk]/g, '.')) },
+      gold: sprite.rows.some(r => r.includes('k')),
+    };
+    split.set(sprite, v);
+  }
+  return v;
+};
+
+/** Los decorados, algo más grandes que su dibujo para que estén a la escala de los jefes */
+const PROP_SCALE = 1.5;
+
+const MapProp = ({ prop, at, side, lit, z, mapW }: { prop: StationProp; at: Pt; side: number; lit: boolean; z: number; mapW: number }) => {
+  const sprite = SCENERY[prop.id];
+  const size = spriteSize(sprite);
+  const w = size.width * PROP_SCALE;
+  const h = size.height * PROP_SCALE;
+  const { unlit, lights, gold } = lightsOf(sprite);
+  const mirror = (side < 0) !== !!prop.flip;
+  const anim = prop.anim === 'smoke' ? { y: [0, -6], opacity: [0.9, 0] }
+    : prop.anim === 'float' ? { y: [0, -3, 0] } : undefined;
+  return (
+    <motion.div className="absolute pointer-events-none"
+      style={{ left: Math.round(Math.max(2, Math.min(mapW - w - 2, at.x + side * prop.dx - w / 2))), top: at.y + prop.dy - h, width: w, height: h, zIndex: z, scaleX: mirror ? -1 : 1 }}
+      animate={lit || prop.anim === 'float' ? anim : undefined}
+      transition={anim ? { duration: prop.anim === 'smoke' ? 2.6 : 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}>
+      {/* Lo que aún no conoces: sus sitios a oscuras; el humo y las notas, solo si hay alguien */}
+      {(lit || (prop.anim !== 'smoke' && prop.anim !== 'float')) && (
+        <PixelSprite sprite={lit ? sprite : unlit} style={{ position: 'absolute', inset: 0, width: w, height: h, opacity: lit ? 1 : 0.8 }} />
+      )}
+      {lit && (
+        <PixelSprite sprite={lights} className={clsx(gold ? 'bloom-gold-shape' : 'bloom-shape', prop.anim === 'flicker' && 'anim-flicker', prop.anim === 'twinkle' && 'anim-pulse-soft')}
+          style={{ position: 'absolute', inset: 0, width: w, height: h }} />
+      )}
+    </motion.div>
+  );
+};
 
 /** Etiqueta de estado: pastilla con el color de lo que significa */
 const Pill = ({ children, tone, style }: { children: ReactNode; tone: 'hot' | 'muted' | 'castle'; style?: CSSProperties }) => {
@@ -190,7 +258,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
   const setMenuBoss = useUiStore(s => s.setMenuBoss);
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
-  const { contentH, nodes, castle: castlePt } = useMemo(() => geometry(rect.w), [rect.w]);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w), [rect.w]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
   // (se decide al montar en el navegador: en el servidor no hay progreso)
@@ -309,6 +377,16 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
       <div ref={scroller} className="no-scrollbar absolute inset-0 overflow-y-auto overflow-x-hidden"
         style={{ touchAction: revealing ? 'none' : 'pan-y', overflowY: revealing ? 'hidden' : 'auto', overscrollBehavior: 'contain' }}>
         <div className="relative" style={{ height: contentH, width: rect.w }}>
+          {/* El campo: camino de tierra, claros, agua y bosque */}
+          <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} />
+          {/* Los sitios de cada jefe (detrás y delante de él) */}
+          {BOSSES.map((boss, i) => {
+            if (!visible(i)) return null;
+            const lit = i < shown || (i === current && !pendingLocked(i));
+            return (STATIONS[boss.id]?.props ?? []).map((prop, n) => (
+              <MapProp key={`${boss.id}-${n}`} prop={prop} at={nodes[i]} side={sideOf(i)} lit={lit} z={1} mapW={rect.w} />
+            ));
+          })}
           {/* Bancos de niebla que se arrastran despacio por la ladera */}
           {[0.15, 0.38, 0.62, 0.85].map((f, i) => (
             <motion.div key={i} className="absolute pointer-events-none" style={{ top: contentH * f - 40, left: -rect.w * 0.3, width: rect.w * 1.6, height: 80,
@@ -342,7 +420,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
             const seals = Array.from(new Set(bossSeals(boss)));
             return (
               <div key={boss.id} className="absolute" style={{ left: p.x, top: p.y, width: 0, height: 0, zIndex: isSel ? 5 : 2 }}>
-                <Plinth lit={beaten || isCurrent} />
+                <Ground />
                 {/* El Soberano: resplandor de oro detrás */}
                 {boss.secret && (
                   <span className="absolute pointer-events-none anim-pulse-soft" style={{ left: -45, top: -figureH - 30, width: 90, height: figureH + 40,
@@ -418,7 +496,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
             <div className="absolute" style={{ left: castlePt.x, top: castlePt.y, width: 0, height: 0, zIndex: 3 }}>
               <button aria-label="map castle" onClick={() => pick(CASTLE_INDEX)} className="absolute cursor-pointer"
                 style={{ left: -50, top: -CASTLE_H, width: 100, height: CASTLE_H + 24 }} />
-              <Plinth lit castle />
+              <Ground castle />
               {selected === CASTLE_INDEX && !revealing && (
                 <span className="absolute rounded-[50%] anim-pulse-soft pointer-events-none" style={{ left: -44, top: -10, width: 88, height: 20,
                   boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px 2px rgba(255,31,75,0.5)' }} />

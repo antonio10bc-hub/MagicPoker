@@ -603,12 +603,28 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   ficha, y la ficha por dejar el ratón encima tarda 1 s en salir para no tapar la mesa.
   También vale clic en la carta y clic en el hueco.
 - **Pantalla principal: mapa de jefes** (`components/screens/SagaMap.tsx`). Un camino
-  continuo en vertical que se sube de abajo arriba: cada jefe de pie sobre un tapete en
-  miniatura (el de la partida), en zigzag suave, unidos por un sendero de puntos (crema
-  lo recorrido, pizarra lo que falta) entre bancos de niebla que se arrastran. Encima de
-  cada jefe su estado (pastilla naranja si es el próximo rival, estrellas si ya lo
-  venciste); debajo su nombre ("???" si está bloqueado) y, si está elegido, sus vidas y
-  sus sellos (con muchos, "×N"). Tocar un jefe lo elige (anillo crema bajo los pies).
+  de tierra que sube por el campo de abajo arriba, entre bosques de pinos y robles en
+  silueta, más cerrados hacia los bordes (`MapTerrain.tsx`: se pinta una vez en un
+  lienzo con el mismo tramado estocástico que la niebla: campo oscuro con manchas,
+  camino de tierra clara con rodadas y arcén negro, agua con olas, ciénaga, surcos).
+  Cada jefe es una **parada del camino** en un claro de niebla, en un sitio que cuenta
+  quién es (`mapStations.ts`, sprites en `components/pixel/scenery.ts`): el Forastero en
+  un cruce con poste indicador y hoguera; el Muro ante un fortín de piedra con
+  antorchas; la Duelista en un palenque con espadas clavadas y banderolas; el Trilero
+  junto a una carpa de feria a rayas y su mesa de cubiletes; la Ladrona en su guarida
+  con el carro y el botín (sacos, cofre de oro, monedas); la Matriarca en su casa de
+  campo con humo, pozo y huerto; el Espejista junto a un estanque con espejos de pie;
+  la Tóxica en una ciénaga con árboles muertos y un caldero; el Bardo ante su taberna
+  con música en el aire; el Marinero en el muelle con su barca y un ancla; la Vidente al
+  pie de una torre con un ojo encendido, menhires y chispas; el Soberano bajo una puerta
+  real con estandartes de oro y braseros. Los decorados son siluetas negras y pizarra
+  (a ×1,5); sus luces (ventanas, fuego, oro) brillan solo en las paradas que ya has
+  alcanzado: las que faltan están a oscuras, y sin humo ni música. Las paradas se
+  alternan a cada lado del camino y su decorado va hacia fuera. Sobre el camino, un
+  sendero de puntos (crema lo recorrido, pizarra lo que falta). Encima de cada jefe su
+  estado (pastilla naranja si es el próximo rival, estrellas si ya lo venciste); debajo
+  su nombre ("???" si está bloqueado) y, si está elegido, sus vidas y sus sellos (con
+  muchos, "×N"). Tocar un jefe lo elige (anillo crema bajo los pies).
   Arriba del todo, el **Castillo** (silueta gótica negra de agujas cóncavas con aura
   carmesí, ventanas y portón encendidos y un resplandor rojo; `CASTLE_ART`), con su
   pastilla carmesí, su récord o el mapa de la subida y el resumen de la última. El

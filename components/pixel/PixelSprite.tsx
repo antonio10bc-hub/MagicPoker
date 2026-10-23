@@ -1,5 +1,5 @@
 import { CSSProperties, memo, useMemo } from 'react';
-import { PALETTE, TEAM } from '@/theme/tokens';
+import { INK, PALETTE, TEAM } from '@/theme/tokens';
 import { Owner } from '@/types';
 
 // --- SPRITES DE PÍXELES ---
@@ -32,6 +32,7 @@ const BASE_COLORS: Record<string, string> = {
   M: PALETTE.woodDark,
   s: PALETTE.skin,
   S: PALETTE.skinShade,
+  k: INK.gold,
 };
 
 export const spriteColors = (owner: Owner = 'player'): Record<string, string> => ({
