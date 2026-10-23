@@ -39,16 +39,22 @@ import { CastleMap } from '@/components/game/CastleMap';
 /** Selección del Castillo: el índice después del último jefe */
 export const CASTLE_INDEX = BOSSES.length;
 
-const STEP = 150;
+const STEP = 200;
 const BOTTOM = 120;
 const CASTLE_GAP = 150;
 /** Sitio sobre el Castillo para su pastilla y la cabecera del menú */
 const TOP = 80;
 const CASTLE_H = 104;
 
-type Phase = 'idle' | 'focus' | 'beaten' | 'path' | 'next' | 'secret' | 'summon' | 'castle' | 'rise';
+type Phase = 'idle' | 'focus' | 'beaten' | 'path' | 'next' | 'secret' | 'summon' | 'land' | 'castle' | 'rise' | 'emerge' | 'lit';
 /** Momentos de cada fase (ms desde que empieza el paso) */
-const T = { beaten: 750, path: 2000, arrive: 3100, nextDone: 4400, summon: 5200, secretDone: 7400, rise: 5000, castleDone: 8000 };
+const T = {
+  beaten: 1000, path: 3700, arrive: 5600, nextDone: 7400,
+  // Soberano: aviso → haz de luz y descenso lento → aterriza
+  summon: 8400, land: 11600, secretDone: 14400,
+  // Castillo: aviso → la cámara sube y la niebla se abre → emerge de la tierra → se enciende
+  rise: 8400, emerge: 10000, lit: 13400, castleDone: 15600,
+};
 
 const geometry = (w: number) => {
   const n = BOSSES.length;
@@ -65,7 +71,7 @@ const geometry = (w: number) => {
     const side = sideOf(i);
     return {
       clearing: nodes[i],
-      keep: { x: nodes[i].x + side * 24, y: nodes[i].y - 16, rx: 74, ry: 48 },
+      keep: { x: nodes[i].x, y: nodes[i].y - 12, rx: 104, ry: 64 },
       biome: st?.biome && { kind: st.biome.kind, x: nodes[i].x + side * st.biome.dx, y: nodes[i].y + st.biome.dy, rx: st.biome.rx, ry: st.biome.ry },
     };
   });
@@ -108,7 +114,7 @@ const Trail = ({ a, b, lit, drawing, endPad }: { a: { x: number; y: number }; b:
         <motion.span key={i} className="absolute pointer-events-none" style={{ left: p.x - 1, top: p.y - 1, width: 2, height: 2,
           background: lit ? 'var(--ink-cream)' : 'var(--ink-slate)', boxShadow: lit ? '0 0 3px rgba(237,235,224,0.6)' : undefined }}
           initial={drawing ? { opacity: 0, scale: 2.5 } : false} animate={{ opacity: lit ? 0.9 : 0.6, scale: 1 }}
-          transition={drawing ? { delay: (i / pts.length) * 0.9, duration: 0.2 } : undefined} />
+          transition={drawing ? { delay: (i / pts.length) * 1.6, duration: 0.25 } : undefined} />
       ))}
     </>
   );
@@ -195,31 +201,94 @@ const Stars = ({ lit, pop }: { lit: number; pop?: boolean }) => (
 );
 
 /** El Castillo: silueta negra con aura carmesí, ventanas encendidas y un resplandor detrás */
-const CastleArt = ({ height }: { height: number }) => {
+const CastleArt = ({ height, lit = true }: { height: number; lit?: boolean }) => {
   const { width: w, height: h } = spriteSize(CASTLE_ART.body);
   const size = { width: (w * height) / h, height };
   const layer: CSSProperties = { position: 'absolute', inset: 0, ...size };
   return (
     <div className="relative" style={size}>
-      <div className="absolute pointer-events-none anim-pulse-soft" style={{ left: '-60%', top: '-20%', width: '220%', height: '140%',
-        background: 'radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255,31,75,0.42) 0%, rgba(255,31,75,0.14) 42%, transparent 70%)' }} />
-      <PixelSprite sprite={spriteAura(CASTLE_ART.body, 2, 'castle')} tint={INK.crimson} className="anim-flicker bloom-crimson-shape" style={layer} />
+      {/* Al emerger, apagado: solo la silueta; al encenderse, resplandor, aura y ventanas */}
+      <motion.div className="absolute inset-0" initial={false} animate={{ opacity: lit ? 1 : 0 }} transition={{ duration: 1.6 }}>
+        <div className="absolute pointer-events-none anim-pulse-soft" style={{ left: '-60%', top: '-20%', width: '220%', height: '140%',
+          background: 'radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255,31,75,0.42) 0%, rgba(255,31,75,0.14) 42%, transparent 70%)' }} />
+        <PixelSprite sprite={spriteAura(CASTLE_ART.body, 2, 'castle')} tint={INK.crimson} className="anim-flicker bloom-crimson-shape" style={layer} />
+      </motion.div>
       <PixelSprite sprite={CASTLE_ART.body} tint={INK.black} style={layer} />
-      <PixelSprite sprite={CASTLE_ART.windows} tint={INK.crimson} className="bloom-crimson-shape anim-pulse-soft" style={layer} />
+      <motion.div className="absolute inset-0" initial={false} animate={{ opacity: lit ? [0, 1, 0.3, 1] : 0 }} transition={{ duration: 1.2, times: [0, 0.3, 0.5, 1] }}>
+        <PixelSprite sprite={CASTLE_ART.windows} tint={INK.crimson} className="bloom-crimson-shape anim-pulse-soft" style={layer} />
+      </motion.div>
     </div>
   );
 };
 
-/** Sello que cae sobre el jefe recién vencido */
-const BeatenStamp = ({ text }: { text: string }) => (
-  <motion.span className="absolute font-display whitespace-nowrap px-[6px] rounded-[3px] pointer-events-none z-30"
-    style={{ left: 0, top: -30, fontSize: 14, lineHeight: '16px', paddingTop: 2, color: 'var(--ink-black)', background: 'var(--ink-orange)',
-      boxShadow: '0 0 0 2px var(--ink-black), 0 0 0 3px var(--ink-orange), 0 0 14px 3px rgba(255,74,28,0.6)', x: '-50%' }}
-    initial={{ scale: 3.2, rotate: -24, opacity: 0 }} animate={{ scale: 1, rotate: -8, opacity: 1 }}
-    exit={{ opacity: 0, transition: { duration: 0.3 } }}
-    transition={{ type: 'spring', stiffness: 520, damping: 16 }}>
-    {text}
-  </motion.span>
+/** Bandera blanca: el jefe vencido se ha ido y su pueblo se rinde */
+const WhiteFlag = ({ fresh }: { fresh: boolean }) => {
+  const { width: w, height: h } = spriteSize(SCENERY.white_flag);
+  return (
+    <motion.div className="absolute pointer-events-none" style={{ left: -3, bottom: 0, width: w * PROP_SCALE, height: h * PROP_SCALE, transformOrigin: '10% 100%' }}
+      initial={fresh ? { scaleY: 0, opacity: 0 } : false} animate={{ scaleY: 1, opacity: 1 }}
+      transition={{ delay: fresh ? 1.6 : 0, duration: 0.8, ease: 'easeOut' }}>
+      <PixelSprite sprite={SCENERY.white_flag} className="bloom-cream" style={{ width: w * PROP_SCALE, height: h * PROP_SCALE }} />
+    </motion.div>
+  );
+};
+
+/** Chispas que suben (deterministas) */
+const Embers = ({ n, w, h, colors, duration = 1.8 }: { n: number; w: number; h: number; colors: string[]; duration?: number }) => (
+  <>
+    {Array.from({ length: n }, (_, i) => {
+      const x = ((i * 37) % 23) / 22 - 0.5;
+      return (
+        <motion.span key={i} className="absolute pointer-events-none" style={{ left: x * w - 1, top: -2, width: i % 3 ? 2 : 3, height: i % 3 ? 2 : 3,
+          background: colors[i % colors.length], boxShadow: `0 0 4px ${colors[i % colors.length]}` }}
+          initial={{ y: 0, opacity: 0 }} animate={{ y: [0, -h * (0.5 + ((i * 53) % 10) / 20)], opacity: [0, 1, 0] }}
+          transition={{ duration, delay: (i % 7) * 0.22, repeat: Infinity, ease: 'easeOut' }} />
+      );
+    })}
+  </>
+);
+
+/** Polvo que levanta algo al tocar tierra (motas crema que salen hacia los lados) */
+const Dust = ({ w, repeat = 0 }: { w: number; repeat?: number }) => (
+  <>
+    {Array.from({ length: 18 }, (_, i) => {
+      const dir = i % 2 ? 1 : -1;
+      const far = 0.3 + ((i * 29) % 10) / 14;
+      return (
+        <motion.span key={i} className="absolute pointer-events-none" style={{ left: -1, top: -3, width: 3, height: 2, background: i % 3 ? 'var(--ink-mint)' : 'var(--ink-cream)' }}
+          initial={{ x: 0, y: 0, opacity: 0 }}
+          animate={{ x: dir * far * w * 0.5, y: [0, -6 - (i % 4) * 3, 2], opacity: [0, 0.9, 0] }}
+          transition={{ duration: 1.1, delay: (i % 5) * 0.05, repeat, repeatDelay: 0.15, ease: 'easeOut' }} />
+      );
+    })}
+  </>
+);
+
+/** Llegada del Soberano: un haz de oro baja del cielo, él desciende dentro despacio y, al tocar tierra, onda y polvo */
+const SummonFx = ({ landed, h }: { landed: boolean; h: number }) => (
+  <>
+    <motion.div className="absolute pointer-events-none" style={{ left: -18, width: 36, top: -320, height: 322, transformOrigin: '50% 0%',
+      background: 'linear-gradient(to bottom, transparent 0%, rgba(232,182,74,0.35) 35%, rgba(255,233,168,0.75) 85%, rgba(237,235,224,0.9) 100%)',
+      maskImage: 'repeating-linear-gradient(to bottom, #000 0 2px, rgba(0,0,0,0.55) 2px 3px)', WebkitMaskImage: 'repeating-linear-gradient(to bottom, #000 0 2px, rgba(0,0,0,0.55) 2px 3px)' }}
+      initial={{ scaleY: 0, opacity: 0 }} animate={landed ? { scaleY: 1, opacity: 0, scaleX: 2.2 } : { scaleY: 1, opacity: 1, scaleX: [1, 0.85, 1] }}
+      transition={landed ? { duration: 0.9 } : { scaleY: { duration: 0.9, ease: 'easeOut' }, scaleX: { duration: 1.2, repeat: Infinity }, opacity: { duration: 0.4 } }} />
+    {/* Resplandor de oro en el suelo, creciendo */}
+    <motion.div className="absolute pointer-events-none" style={{ left: -60, width: 120, top: -h - 30, height: h + 50,
+      background: 'radial-gradient(ellipse 50% 50% at 50% 70%, rgba(255,233,168,0.55) 0%, rgba(232,182,74,0.22) 40%, transparent 70%)' }}
+      initial={{ opacity: 0 }} animate={{ opacity: landed ? [1, 0.35] : [0, 0.8] }} transition={{ duration: landed ? 1.4 : 2.6 }} />
+    {!landed && <Embers n={16} w={44} h={90} colors={['#E8B64A', '#FFE9A8', '#FF1F4B']} />}
+    {landed && (
+      <>
+        {[0, 0.18].map((d, i) => (
+          <motion.span key={i} className="absolute rounded-full pointer-events-none" style={{ left: -40, top: -h / 2 - 40, width: 80, height: 80,
+            boxShadow: i ? '0 0 0 2px rgba(255,31,75,0.9), 0 0 16px 4px rgba(255,31,75,0.45)' : '0 0 0 3px rgba(232,182,74,0.95), 0 0 18px 5px rgba(232,182,74,0.5)' }}
+            initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 2.6], opacity: [0, 1, 0] }} transition={{ delay: d, duration: 1.3, ease: 'easeOut' }} />
+        ))}
+        <Dust w={110} />
+        <Embers n={20} w={70} h={120} colors={['#E8B64A', '#FFE9A8']} duration={2.2} />
+      </>
+    )}
+  </>
 );
 
 /** Aviso grande en el centro (jefe secreto, Castillo): oscurece el mapa y lo dice claro */
@@ -258,6 +327,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
   const setMenuBoss = useUiStore(s => s.setMenuBoss);
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
+  const camera = useRef(0);
   const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w), [rect.w]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
@@ -278,8 +348,19 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
     if (!el) return;
     const visible = rect.h - safeTop - safeBottom;
     const top = Math.max(0, Math.min(contentH - rect.h, y - safeTop - visible * 0.58));
-    if (smooth) el.scrollTo({ top, behavior: 'smooth' });
-    else el.scrollTop = top;
+    cancelAnimationFrame(camera.current);
+    if (!smooth) { el.scrollTop = top; return; }
+    // Travelling lento y suave (el scroll suave del navegador va demasiado rápido)
+    const from = el.scrollTop;
+    const start = performance.now();
+    const DURATION = 1500;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / DURATION);
+      const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+      el.scrollTop = from + (top - from) * e;
+      if (t < 1) camera.current = requestAnimationFrame(tick);
+    };
+    camera.current = requestAnimationFrame(tick);
   };
   const yOf = (i: number) => (i >= CASTLE_INDEX ? castlePt.y : nodes[i].y);
 
@@ -315,20 +396,26 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
       const k = s.beaten;
       const next = s.then === 'castle' ? CASTLE_INDEX : k + 1;
       at(clock, () => { setStep(s); setPhase('focus'); lookAt(yOf(k)); });
-      at(clock + T.beaten, () => { setPhase('beaten'); setShown(k + 1); playSfx('crush', 0.6, 1.3); playSfx('pop', 0.8, 1.1); haptic('stamp'); });
+      at(clock + T.beaten, () => { setPhase('beaten'); setShown(k + 1); playSfx('whoosh', 0.6, 0.7); });
+      at(clock + T.beaten + 1700, () => { playSfx('flip', 0.6, 0.8); haptic('stamp'); });
       at(clock + T.path, () => { setPhase('path'); playSfx('whoosh', 0.5, 1.2); lookAt((yOf(k) + yOf(next)) / 2); });
       if (s.then === 'next') {
         at(clock + T.arrive, () => { setPhase('next'); lookAt(yOf(next)); playSfx('flip', 0.7, 0.9); playSfx('sparkle', 0.6, 1.2); haptic('stamp'); });
         clock += T.nextDone;
       } else if (s.then === 'secret') {
         at(clock + T.arrive, () => { setPhase('secret'); lookAt(yOf(next)); playSfx('zap', 0.8, 0.5); playSfx('heartbeat', 0.8); haptic('lifeLost'); });
-        at(clock + T.summon, () => { setPhase('summon'); playSfx('wipe', 0.7, 0.8); playSfx('sparkle', 0.8, 0.7); haptic('win'); });
+        at(clock + T.summon, () => { setPhase('summon'); playSfx('reveal', 0.8, 0.6); playSfx('sparkle', 0.7, 0.6); });
+        at(clock + T.summon + 1400, () => playSfx('heartbeat', 0.9));
+        at(clock + T.land, () => { setPhase('land'); playSfx('crush', 1, 0.45); playSfx('wipe', 0.8, 0.7); haptic('win'); });
+        at(clock + T.land + 500, () => playSfx('sparkle', 0.9, 0.8));
         clock += T.secretDone;
       } else {
         at(clock + T.arrive, () => { setPhase('castle'); playSfx('crush', 1, 0.5); haptic('lifeLost'); });
-        at(clock + T.rise, () => { setPhase('rise'); lookAt(yOf(CASTLE_INDEX)); playSfx('wipe', 0.8, 0.6); });
-        at(clock + T.rise + 900, () => { playSfx('crush', 0.8, 0.4); haptic('win'); });
-        at(clock + T.rise + 1700, () => playSfx('sparkle', 0.8, 0.8));
+        at(clock + T.rise, () => { setPhase('rise'); lookAt(yOf(CASTLE_INDEX)); playSfx('whoosh', 0.6, 0.5); });
+        at(clock + T.emerge, () => { setPhase('emerge'); playSfx('crush', 1, 0.35); haptic('lifeLost'); });
+        at(clock + T.emerge + 1100, () => { playSfx('crush', 0.8, 0.4); haptic('stamp'); });
+        at(clock + T.emerge + 2200, () => { playSfx('crush', 0.7, 0.5); haptic('stamp'); });
+        at(clock + T.lit, () => { setPhase('lit'); playSfx('zap', 0.9, 0.5); playSfx('sparkle', 0.9, 0.6); haptic('win'); });
         clock += T.castleDone;
       }
     });
@@ -346,6 +433,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
     });
     return () => {
       timers.forEach(clearTimeout);
+      cancelAnimationFrame(camera.current);
       useUiStore.getState().setCinematic(false);
       onRevealing?.(false);
     };
@@ -357,11 +445,12 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
   const before = (p: Phase[]) => step !== null && p.includes(phase);
   const pendingLocked = (i: number) => i === target && before(['focus', 'beaten', 'path']);
   const hidden = (i: number) => (i === target && step?.then === 'secret' && before(['focus', 'beaten', 'path', 'secret']));
-  const castleVisible = castleOpen && !(target === CASTLE_INDEX && before(['focus', 'beaten', 'path', 'castle']));
+  const castleVisible = castleOpen && !(target === CASTLE_INDEX && before(['focus', 'beaten', 'path', 'castle', 'rise']));
   const trailLit = (i: number) => i < shown && !(step?.beaten === i && before(['focus', 'beaten']));
   const visible = (i: number) => (!BOSSES[i].secret || shown >= i) && !hidden(i);
   // La niebla tapa todo lo que está por encima de lo último que conoces
-  const topKnown = castleVisible ? castlePt.y - CASTLE_H - 40
+  const castleRising = target === CASTLE_INDEX && ['rise', 'emerge', 'lit'].includes(phase);
+  const topKnown = castleVisible || castleRising ? castlePt.y - CASTLE_H - 40
     : nodes[[...BOSSES.keys()].reverse().find(i => visible(i)) ?? 0].y - 70;
 
   const pick = (i: number) => {
@@ -376,14 +465,17 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
     <div className="absolute z-10" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}>
       <div ref={scroller} className="no-scrollbar absolute inset-0 overflow-y-auto overflow-x-hidden"
         style={{ touchAction: revealing ? 'none' : 'pan-y', overflowY: revealing ? 'hidden' : 'auto', overscrollBehavior: 'contain' }}>
-        <div className="relative" style={{ height: contentH, width: rect.w }}>
+        <motion.div className="relative" style={{ height: contentH, width: rect.w }}
+          animate={phase === 'land' ? { x: [0, -4, 4, -3, 3, -1, 0], y: [0, 2, -2, 1, 0] }
+            : phase === 'emerge' ? { x: [0, -2, 2, -2, 2, -1, 1, -2, 2, 0], y: [0, 1, 0, 1, 0] } : { x: 0, y: 0 }}
+          transition={phase === 'emerge' ? { duration: 3.2, ease: 'linear' } : { duration: 0.6 }}>
           {/* El campo: camino de tierra, claros, agua y bosque */}
           <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} />
           {/* Los sitios de cada jefe (detrás y delante de él) */}
           {BOSSES.map((boss, i) => {
             if (!visible(i)) return null;
-            const lit = i < shown || (i === current && !pendingLocked(i));
-            return (STATIONS[boss.id]?.props ?? []).map((prop, n) => (
+            const lit = (i < shown || (i === current && !pendingLocked(i))) && !(i === target && phase === 'summon');
+            return [...(STATIONS[boss.id]?.props ?? [])].sort((a, b) => a.dy - b.dy).map((prop, n) => (
               <MapProp key={`${boss.id}-${n}`} prop={prop} at={nodes[i]} side={sideOf(i)} lit={lit} z={1} mapW={rect.w} />
             ));
           })}
@@ -416,8 +508,9 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
             const isSel = selected === i && !revealing;
             const wins = Math.min(bossWins(i, progress), WINS_FOR_BACK);
             const justBeaten = step?.beaten === i && phase !== 'focus';
-            const arriving = i === target && (phase === 'next' || phase === 'summon');
+            const arriving = i === target && (phase === 'next' || phase === 'summon' || phase === 'land');
             const seals = Array.from(new Set(bossSeals(boss)));
+            const summoning = arriving && step?.then === 'secret';
             return (
               <div key={boss.id} className="absolute" style={{ left: p.x, top: p.y, width: 0, height: 0, zIndex: isSel ? 5 : 2 }}>
                 <Ground />
@@ -431,36 +524,41 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                   <span className="absolute rounded-[50%] anim-pulse-soft pointer-events-none" style={{ left: -30, top: -9, width: 60, height: 18,
                     boxShadow: '0 0 0 1px var(--ink-cream), 0 0 8px 1px rgba(237,235,224,0.45)' }} />
                 )}
-                {/* Silueta de pie sobre el tapete */}
-                <motion.div className="absolute" style={{ left: 0, bottom: 2, x: '-50%', transformOrigin: '50% 100%' }}
-                  initial={arriving && step?.then === 'secret' ? { y: -180, scale: 2.2, opacity: 0, filter: 'brightness(3)' } : false}
-                  animate={arriving && step?.then === 'secret'
-                    ? { y: [-180, 0, 0], scale: [2.2, 1.25, 1], opacity: [0, 1, 1], filter: ['brightness(3)', 'brightness(2)', 'brightness(1)'] }
-                    : arriving ? { scale: [1, 1.25, 1], filter: ['brightness(1)', 'brightness(2.6)', 'brightness(1)'] }
-                      : justBeaten && phase === 'beaten' ? { x: ['-50%', '-56%', '-44%', '-50%'] } : {}}
-                  transition={arriving && step?.then === 'secret' ? { duration: 1.6, times: [0, 0.55, 1], ease: 'easeOut' } : { duration: 0.6 }}>
-                  <div className={isCurrent ? 'anim-breathe' : undefined} style={{ opacity: beaten && !isSel ? 0.62 : 1 }}>
-                    <BossFigure id={boss.id} height={boss.secret ? figureH + 8 : figureH} dim={locked} />
-                  </div>
-                </motion.div>
+                {/* Vencido: se desvanece de su pueblo y queda una bandera blanca */}
+                {beaten && <WhiteFlag fresh={justBeaten} />}
+                <AnimatePresence>
+                  {!beaten && (
+                    <motion.div key="boss" className="absolute" style={{ left: 0, bottom: 2, x: '-50%', transformOrigin: '50% 100%' }}
+                      initial={summoning ? { y: -260, scale: 1.7, opacity: 0, filter: 'brightness(3)' } : false}
+                      animate={summoning && phase === 'summon'
+                        ? { y: [-260, -50, 0], scale: [1.7, 1.15, 1], opacity: [0, 1, 1], filter: ['brightness(3)', 'brightness(2.2)', 'brightness(1.5)'] }
+                        : summoning ? { scaleY: [0.82, 1.1, 1], scaleX: [1.15, 0.95, 1], filter: ['brightness(3.5)', 'brightness(1)'] }
+                          : arriving ? { scale: [1, 1.25, 1], filter: ['brightness(1)', 'brightness(2.6)', 'brightness(1)'] } : {}}
+                      exit={{ opacity: 0, y: -10, filter: 'brightness(2.2) blur(1px)', transition: { duration: 1.6, ease: 'easeIn' } }}
+                      transition={summoning && phase === 'summon' ? { duration: 3, times: [0, 0.78, 1], ease: 'easeInOut' } : { duration: summoning ? 0.7 : 0.6 }}>
+                      <div className={isCurrent ? 'anim-breathe' : undefined}>
+                        <BossFigure id={boss.id} height={boss.secret ? figureH + 8 : figureH} dim={locked} />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                {summoning && <SummonFx landed={phase === 'land'} h={figureH + 8} />}
                 {/* Onda al llegar */}
-                {arriving && (
+                {arriving && !summoning && (
                   <motion.span className="absolute rounded-full pointer-events-none" style={{ left: -30, top: -50, width: 60, height: 60,
                     boxShadow: boss.secret ? '0 0 0 2px rgba(232,182,74,0.95), 0 0 14px 4px rgba(255,31,75,0.5)' : '0 0 0 2px rgba(255,74,28,0.9), 0 0 12px 3px rgba(255,74,28,0.4)' }}
                     initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 1.8], opacity: [0, 1, 0] }}
                     transition={{ delay: boss.secret ? 0.85 : 0.15, duration: 0.9, ease: 'easeOut' }} />
                 )}
-                {/* El sello de vencido cae sobre la figura */}
-                <AnimatePresence>{justBeaten && phase === 'beaten' && <BeatenStamp text={t.map_beaten} />}</AnimatePresence>
                 {/* Arriba: estado (o sus estrellas si ya lo venciste) */}
                 <div className="absolute flex justify-center" style={{ left: -50, width: 100, top: -(figureH + (boss.secret ? 22 : 14)) }}>
                   <AnimatePresence mode="wait">
                     {justBeaten && phase === 'beaten' ? null
-                      : beaten ? <Stars key="stars" lit={wins} pop={justBeaten} />
-                        : isCurrent ? (
+                      : beaten && !boss.secret ? <Stars key="stars" lit={wins} pop={justBeaten} />
+                        : isCurrent && !boss.secret ? (
                           <motion.span key="hot" initial={arriving ? { scale: 0, opacity: 0 } : false} animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: arriving ? 0.35 : 0, type: 'spring', stiffness: 500, damping: 14 }}>
-                            <Pill tone="hot">{arriving && !boss.secret ? t.map_new_rival : boss.secret ? t.secret_boss : t.next_rival}</Pill>
+                            <Pill tone="hot">{arriving ? t.map_new_rival : t.next_rival}</Pill>
                           </motion.span>
                         ) : isSel ? <Pill key="n" tone="muted">{t.boss_n.replace('{n}', String(i + 1)).replace('{total}', total)}</Pill> : null}
                   </AnimatePresence>
@@ -496,31 +594,41 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
             <div className="absolute" style={{ left: castlePt.x, top: castlePt.y, width: 0, height: 0, zIndex: 3 }}>
               <button aria-label="map castle" onClick={() => pick(CASTLE_INDEX)} className="absolute cursor-pointer"
                 style={{ left: -50, top: -CASTLE_H, width: 100, height: CASTLE_H + 24 }} />
-              <Ground castle />
+              {/* Elegido: resplandor carmesí detrás (sin anillo) */}
               {selected === CASTLE_INDEX && !revealing && (
-                <span className="absolute rounded-[50%] anim-pulse-soft pointer-events-none" style={{ left: -44, top: -10, width: 88, height: 20,
-                  boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px 2px rgba(255,31,75,0.5)' }} />
+                <span className="absolute pointer-events-none anim-pulse-soft" style={{ left: -80, top: -CASTLE_H - 20, width: 160, height: CASTLE_H + 40,
+                  background: 'radial-gradient(ellipse 50% 50% at 50% 60%, rgba(255,31,75,0.22) 0%, transparent 70%)' }} />
               )}
-              <motion.div className="absolute" style={{ left: 0, bottom: 2, x: '-50%', transformOrigin: '50% 100%' }}
-                initial={phase === 'rise' ? { y: 60, scaleY: 0.2, opacity: 0, filter: 'brightness(0)' } : false}
-                animate={{ y: 0, scaleY: 1, opacity: 1, filter: 'brightness(1)', x: phase === 'rise' ? ['-50%', '-53%', '-47%', '-52%', '-48%', '-50%'] : '-50%' }}
-                transition={{ duration: 1.9, ease: 'easeOut' }}>
-                <CastleArt height={CASTLE_H} />
-              </motion.div>
-              {phase === 'rise' && (
-                <motion.span className="absolute pointer-events-none" style={{ left: -90, top: -CASTLE_H - 30, width: 180, height: CASTLE_H + 60,
-                  background: 'radial-gradient(ellipse 50% 50% at 50% 60%, rgba(255,31,75,0.85) 0%, rgba(255,31,75,0.3) 40%, transparent 70%)' }}
-                  initial={{ opacity: 0 }} animate={{ opacity: [0, 0, 0.55, 0] }} transition={{ duration: 2.2, times: [0, 0.75, 0.82, 1] }} />
+              {/* El cielo se rasga en carmesí mientras emerge, y estalla al encenderse */}
+              {(phase === 'emerge' || phase === 'lit') && (
+                <motion.span className="absolute pointer-events-none" style={{ left: -110, top: -CASTLE_H - 60, width: 220, height: CASTLE_H + 90,
+                  background: 'radial-gradient(ellipse 50% 50% at 50% 55%, rgba(255,31,75,0.8) 0%, rgba(255,31,75,0.25) 40%, transparent 70%)' }}
+                  initial={{ opacity: 0 }}
+                  animate={phase === 'emerge' ? { opacity: [0, 0.5, 0.05, 0.25, 0.6, 0.1, 0.35] } : { opacity: [0.9, 0.3] }}
+                  transition={phase === 'emerge' ? { duration: 3.2, times: [0, 0.1, 0.2, 0.45, 0.55, 0.7, 1] } : { duration: 1.8 }} />
               )}
+              {/* Sale de la tierra: se recorta a ras de suelo y sube temblando */}
+              <div className="absolute overflow-hidden pointer-events-none" style={{ left: -70, width: 140, top: -CASTLE_H - 30, height: CASTLE_H + 32 }}>
+                <motion.div className="absolute" style={{ left: 70, bottom: 2, x: '-50%' }}
+                  initial={false}
+                  animate={phase === 'emerge' ? { y: [CASTLE_H + 4, CASTLE_H * 0.7, CASTLE_H * 0.35, 0] } : { y: 0 }}
+                  transition={phase === 'emerge' ? { duration: 3.2, times: [0, 0.3, 0.65, 1], ease: 'easeOut' } : { duration: 0 }}>
+                  <CastleArt height={CASTLE_H} lit={phase !== 'emerge'} />
+                </motion.div>
+              </div>
+              {phase === 'emerge' && <Dust w={150} repeat={2} />}
+              {phase === 'lit' && <div className="absolute" style={{ left: 0, top: -CASTLE_H * 0.4 }}><Embers n={18} w={90} h={110} colors={['#FF1F4B', '#FF4A1C', '#EDEBE0']} duration={2.4} /></div>}
               <div className="absolute flex justify-center" style={{ left: -60, width: 120, top: -CASTLE_H - 16 }}>
-                <motion.span initial={phase === 'rise' ? { scale: 0, opacity: 0 } : false} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.9, type: 'spring', stiffness: 500, damping: 14 }}>
+                <motion.span initial={phase === 'emerge' ? { scale: 0, opacity: 0 } : false} animate={phase === 'emerge' ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+                  transition={{ delay: phase === 'lit' ? 1 : 0, type: 'spring', stiffness: 500, damping: 14 }}>
                   <Pill tone="castle">
                     {castle.run ? t.castle_floor.replace('{n}', String(castle.run.stage + 1)).replace('{total}', total)
                       : t.castle_best.replace('{n}', String(castle.best)).replace('{total}', total)}
                   </Pill>
                 </motion.span>
               </div>
-              <div className="absolute flex flex-col items-center gap-[3px]" style={{ left: -80, width: 160, top: 16 }}>
+              <motion.div className="absolute flex flex-col items-center gap-[3px]" style={{ left: -80, width: 160, top: 16 }}
+                initial={false} animate={{ opacity: phase === 'emerge' ? 0 : 1 }} transition={{ delay: phase === 'lit' ? 1.2 : 0, duration: 0.8 }}>
                 <span className="font-display glow-crimson" style={{ fontSize: 13, lineHeight: '13px', letterSpacing: 2, color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
                 {/* Con una subida a medias, su mapa; si no, la frase del Castillo */}
                 {castle.run
@@ -534,13 +642,13 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                     {t.sum_last}
                   </span>
                 )}
-              </div>
+              </motion.div>
             </div>
           )}
 
           {/* Niebla sobre lo desconocido: tapa la parte de arriba del camino */}
           <motion.div className="absolute inset-x-0 top-0 pointer-events-none" initial={false}
-            animate={{ height: Math.max(0, topKnown) }} transition={{ duration: phase === 'rise' ? 1.6 : 0.9, ease: 'easeOut' }}
+            animate={{ height: Math.max(0, topKnown) }} transition={{ duration: phase === 'emerge' || phase === 'rise' ? 2.6 : 0.9, ease: 'easeOut' }}
             style={{ background: 'linear-gradient(to bottom, rgba(11,13,12,1) 0%, rgba(30,42,40,0.92) 45%, rgba(94,122,118,0.28) 82%, transparent 100%)' }}>
             {[0.3, 0.6, 0.85].map((f, i) => (
               <motion.div key={i} className="absolute" style={{ top: `${f * 100}%`, left: '-30%', width: '160%', height: 60, marginTop: -30,
@@ -548,7 +656,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing }: {
                 animate={{ x: [i % 2 ? -24 : 24, i % 2 ? 24 : -24] }} transition={{ duration: 7 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
             ))}
           </motion.div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Avisos grandes (fijos, sobre el mapa) */}

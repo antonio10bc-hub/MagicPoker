@@ -37,7 +37,7 @@ test('el jefe secreto no sale hasta vencer a los demás', async ({ page }, info)
   await page.evaluate(() => localStorage.setItem('magic_poker_progress', JSON.stringify({ defeated: 11 })));
   await page.reload();
   // El mapa lo cuenta por fases (jefe secreto activado) y luego lo deja en su sitio
-  await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible({ timeout: 12000 });
+  await expect(page.locator('[aria-label="map boss 12"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 6000 });
   expect(await bossPages(page)).toBe(12);
   await expect(page.getByText('JEFE SECRETO')).toBeVisible();
@@ -171,7 +171,7 @@ test('al vencer a un jefe nuevo: AL MAPA, que enciende el siguiente, y a por él
   await toMap.click({ force: true });
   // El mapa cuenta lo nuevo con el input bloqueado y luego devuelve el control
   await expect(page.locator('[aria-label="map reveal"]')).toBeAttached();
-  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 8000 });
+  await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 14000 });
   await expect(page.getByText('PRÓXIMO RIVAL')).toBeVisible();
   await shot(page, info, 'mapa-tras-victoria');
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });

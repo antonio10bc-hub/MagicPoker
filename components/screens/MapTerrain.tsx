@@ -85,8 +85,8 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
         if (edge < 0.14) L -= (0.14 - edge) * 1.2;
         // Claros de niebla en las paradas
         clearings.forEach(c => {
-          if (Math.abs(y - c.y) > 60) return;
-          const k = inside({ ...c, rx: 78, ry: 50 }, x, y + 10);
+          if (Math.abs(y - c.y) > 76) return;
+          const k = inside({ ...c, rx: 100, ry: 66 }, x, y + 12);
           if (k < 1) L += (1 - k) * (1 - k) * 0.42;
         });
         // Agua, ciénaga, huerto
