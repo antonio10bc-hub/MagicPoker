@@ -62,7 +62,7 @@ export const RunStatus = ({ run, width }: { run: CastleRun; width?: number }) =>
             className={i < run.lives ? (extra ? 'bloom-azure-shape' : 'bloom-shape') : undefined} />;
         })}
       </span>
-      <button aria-label="run deck" onClick={toggle}
+      <button aria-label={t.aria_run_deck} onClick={toggle}
         className="font-display px-[5px] rounded-[2px] cursor-pointer"
         style={{ fontSize: 8, lineHeight: '11px', height: 11, paddingTop: 1, color: open ? 'var(--ink-black)' : 'var(--ink-azure)',
           background: open ? 'var(--ink-azure)' : 'transparent', boxShadow: 'inset 0 0 0 1px var(--ink-azure)' }}>
@@ -71,7 +71,7 @@ export const RunStatus = ({ run, width }: { run: CastleRun; width?: number }) =>
       {/* El mazo, desplegado encima de lo que haya debajo; se cierra tocándolo */}
       <AnimatePresence>
         {open && (
-          <motion.button key="deck" aria-label="close run deck" onClick={toggle}
+          <motion.button key="deck" aria-label={t.aria_close_run_deck} onClick={toggle}
             className="absolute left-0 z-30 flex flex-col gap-[4px] p-[5px] rounded-[3px] text-left cursor-pointer"
             style={{ top: 15, width: width ?? '100%', background: 'rgba(11,13,12,0.97)', boxShadow: 'inset 0 0 0 1px rgba(46,155,255,0.6), 0 6px 16px rgba(0,0,0,0.6)' }}
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}>

@@ -227,6 +227,7 @@ export const ActionButton = ({ canPlay, tutorial }: { canPlay: boolean; tutorial
 
 // --- BOTONES DE MENÚ (inicio, reglas, estadísticas) ---
 export const MenuButtons = () => {
+  const t = useTranslations();
   const openModal = useUiStore(s => s.openModal);
   const { menuButtons: pos, menuButtonSize: size } = useGameLayout();
   const sized = { width: size, height: size };
@@ -248,14 +249,14 @@ export const MenuButtons = () => {
 
   return (
     <div className="absolute flex gap-[3px]" style={{ left: pos.x, top: pos.y }}>
-      <IconButton icon={ICONS.home} onClick={handleHome} aria-label="home" style={sized} />
+      <IconButton icon={ICONS.home} onClick={handleHome} aria-label={t.aria_home} style={sized} />
       {/* Pausa: reglas, estadísticas y seguir */}
-      <IconButton icon={ICONS.pause} onClick={() => { playSound('click'); openModal('pause'); }} aria-label="pause" style={sized} />
-      <PxButton aria-label="speed" style={{ ...sized, ...(speed === 2 ? { boxShadow: '0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : {}) }}
+      <IconButton icon={ICONS.pause} onClick={() => { playSound('click'); openModal('pause'); }} aria-label={t.aria_pause} style={sized} />
+      <PxButton aria-label={t.aria_speed} style={{ ...sized, ...(speed === 2 ? { boxShadow: '0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : {}) }}
         onClick={() => { playSfx('select', 0.6); updateSettings({ speed: speed === 2 ? 1 : 2 }); }}>
         <span className="font-display" style={{ fontSize: size >= 18 ? 10 : 8, lineHeight: '8px', paddingTop: 1, color: speed === 2 ? 'var(--ink-orange)' : 'var(--ink-cream)' }}>x{speed}</span>
       </PxButton>
-      <IconButton icon={ICONS.gear} onClick={() => { playSound('click'); openModal('settings'); }} aria-label="settings" style={sized} />
+      <IconButton icon={ICONS.gear} onClick={() => { playSound('click'); openModal('settings'); }} aria-label={t.aria_settings} style={sized} />
     </div>
   );
 };

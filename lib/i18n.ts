@@ -453,6 +453,19 @@ const es = {
   rarity_common: "COMÚN",
   rarity_rare: "RARA",
   rarity_legendary: "LEGENDARIA",
+  aria_close: "cerrar",
+  aria_mute: "silenciar",
+  aria_deck: "mazo",
+  aria_home: "inicio",
+  aria_pause: "pausa",
+  aria_speed: "velocidad",
+  aria_settings: "ajustes",
+  aria_collection: "colección",
+  aria_rules: "reglas",
+  aria_stats: "estadísticas",
+  aria_run_deck: "mazo de la subida",
+  aria_close_run_deck: "cerrar el mazo de la subida",
+  aria_run_summary: "resumen de la subida",
 };
 
 const en: Translations = {
@@ -906,6 +919,19 @@ const en: Translations = {
   rarity_common: "COMMON",
   rarity_rare: "RARE",
   rarity_legendary: "LEGENDARY",
+  aria_close: "close",
+  aria_mute: "mute",
+  aria_deck: "deck",
+  aria_home: "home",
+  aria_pause: "pause",
+  aria_speed: "speed",
+  aria_settings: "settings",
+  aria_collection: "collection",
+  aria_rules: "rules",
+  aria_stats: "stats",
+  aria_run_deck: "run deck",
+  aria_close_run_deck: "close run deck",
+  aria_run_summary: "run summary",
 };
 
 export type Translations = typeof es;
@@ -914,10 +940,29 @@ export type Lang = 'es' | 'en';
 const TRANSLATIONS: Record<Lang, Translations> = { es, en };
 
 // --- DETECCIÓN DE IDIOMA ---
-// En servidor se renderiza en español; en cliente se usa el idioma del navegador.
+// Inglés por defecto (también lo que sale del servidor). Español si el navegador está en
+// español (cualquiera de sus idiomas preferidos) o si la zona horaria es de España.
+const SPAIN_TZ = ['Europe/Madrid', 'Africa/Ceuta', 'Atlantic/Canary'];
+export const detectLang = (): Lang => {
+  try {
+    const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
+    if (langs.some(l => l?.toLowerCase().startsWith('es'))) return 'es';
+  } catch { /* sin navigator */ }
+  try {
+    if (SPAIN_TZ.includes(Intl.DateTimeFormat().resolvedOptions().timeZone)) return 'es';
+  } catch { /* sin Intl */ }
+  return 'en';
+};
 const noopSubscribe = () => () => {};
-const getBrowserLang = (): Lang => (navigator.language.split('-')[0] === 'es' ? 'es' : 'en');
-const getServerLang = (): Lang => 'es';
+let browserLang: Lang | null = null;
+const getBrowserLang = (): Lang => {
+  if (!browserLang) {
+    browserLang = detectLang();
+    document.documentElement.lang = browserLang;
+  }
+  return browserLang;
+};
+const getServerLang = (): Lang => 'en';
 
 export const useTranslations = (): Translations =>
   TRANSLATIONS[useSyncExternalStore(noopSubscribe, getBrowserLang, getServerLang)];

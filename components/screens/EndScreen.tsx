@@ -159,7 +159,7 @@ export const EndScreen = () => {
             <>
               <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
               {/* Resumen de toda la subida: estadísticas y mazo final */}
-              <PxButton size="md" tone="roof" aria-label="run summary" onClick={() => { playSound('click'); useUiStore.getState().openModal('summary'); }}>{t.sum_button}</PxButton>
+              <PxButton size="md" tone="roof" aria-label={t.aria_run_summary} onClick={() => { playSound('click'); useUiStore.getState().openModal('summary'); }}>{t.sum_button}</PxButton>
             </>
           ) : (
             // Si ganas, al siguiente jefe; si no, revancha contra el mismo

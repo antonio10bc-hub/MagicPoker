@@ -23,7 +23,8 @@ lib/
   constants.ts          Reglas (vidas, tamaño del tablero, robos), tiempos y colores
   game-utils.ts         Lógica pura: definición de cartas (RANKS), mazo, combate, fin de partida
   ai.ts                 Estrategias del rival por dificultad
-  i18n.ts               Textos ES/EN y hook useTranslations
+  i18n.ts               Textos ES/EN y hook useTranslations (inglés por defecto; español si el navegador
+                        está en español o la zona horaria es de España)
   sounds.ts             Efectos y música (con caché y silencio)
   stats.ts              Estadísticas y logros en localStorage
 store/

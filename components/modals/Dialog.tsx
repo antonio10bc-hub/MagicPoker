@@ -6,6 +6,7 @@ import { playSfx, playSound } from '@/lib/sounds';
 import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { ICONS } from '@/components/pixel/sprites';
 import { useStage } from '@/components/pixel/Stage';
+import { useTranslations } from '@/lib/i18n';
 
 // --- VENTANAS: UN SOLO SISTEMA ---
 // Todas las ventanas comparten estructura: cabecera (banda con título y cerrar),
@@ -66,6 +67,7 @@ interface DialogProps {
 
 export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, footer, modal, onClose = closeWithClick, children }: DialogProps) => {
   const stage = useStage();
+  const t = useTranslations();
   const portrait = stage.mode === 'portrait';
   const w = Math.min(width ?? WIDTH[size], stage.width - 16);
   const maxH = stage.height - (portrait ? 48 : 16);
@@ -83,7 +85,7 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
         {!modal && (
           <div className="absolute flex gap-[3px] z-10" style={{ right: 2, top: -13 }}>
             {actions}
-            <IconButton icon={ICONS.close} onClick={onClose} aria-label="close" className="!w-[13px] !h-[11px]" />
+            <IconButton icon={ICONS.close} onClick={onClose} aria-label={t.aria_close} className="!w-[13px] !h-[11px]" />
           </div>
         )}
         <div className={clsx('flex-1 min-h-0 flex flex-col', size !== 'lg' && 'overflow-y-auto')}>{children}</div>

@@ -334,11 +334,12 @@ const LEGEND: { icon: ReactNode; text: keyof Translations }[] = [
 ];
 
 const MuteButton = () => {
+  const t = useTranslations();
   const isMuted = useMuted();
   const handleToggle = () => {
     if (!toggleMute()) playSound('click');
   };
-  return <IconButton icon={isMuted ? ICONS.soundOff : ICONS.soundOn} onClick={handleToggle} aria-label="mute" className="!w-[13px] !h-[12px]" />;
+  return <IconButton icon={isMuted ? ICONS.soundOff : ICONS.soundOn} onClick={handleToggle} aria-label={t.aria_mute} className="!w-[13px] !h-[12px]" />;
 };
 
 const RulesModal = () => {
