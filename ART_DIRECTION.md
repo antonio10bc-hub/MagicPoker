@@ -550,6 +550,18 @@ se mueve rápido y una vibración leve a las masas naranjas.
 
 ---
 
+### La IA de los rivales (`lib/ai.ts`)
+
+Antes de cada jugada prueba todas sus cartas en todos los huecos con las reglas reales
+(sellos de antes del choque y la pelea, con un azar fijo para el Príncipe) y puntúa lo
+que pasaría: daño hecho y recibido, vidas curadas, cartas que caen de cada lado, lo que
+queda en pie y si la pelea acaba la partida; gastar una carta buena para nada resta un
+poco. **Normal** juega casi siempre de lo mejor (a veces no); **difícil** juega lo mejor
+y se planta cuando ninguna jugada mejora lo que hay. Los cuatro primeros jefes usan la
+normal (aprieta como la difícil de antes); del quinto en adelante, las revanchas, el
+Castillo y el Bosque desde difícil, la difícil (gana ~87 % de las partidas a la difícil
+de antes en la arena de tests, `lib/ai-arena.test.ts`).
+
 ### El Bosque (PvE, tras conquistar el Castillo)
 
 - **Desbloqueo:** la primera vez que conquistas el Castillo, al volver al menú se apaga
@@ -562,21 +574,29 @@ se mueve rápido y una vibración leve a las masas naranjas.
   niebla en el fondo y, en ella, unos ojos ámbar que parpadean y miran a los lados.
   Arriba, volver, el título en ámbar y, como en el menú, tus sellos (verde) y tu mazo
   (naranja), una rayita y el bestiario; abajo, "BUSCAR DUELO" con tu racha.
-- **Buscar duelo (gacha, por fases, input bloqueado):** los ojos parpadean nerviosos →
-  se encienden en el color de su dificultad (normal crema, difícil naranja, pesadilla
-  carmesí; 60/30/10 %) y alguien se dibuja alrededor en silueta, con su dificultad y su
-  nombre arriba → se abalanza: crece de golpe, el bosque se acerca, tiembla todo y un
-  fogonazo de su color da paso al duelo. Al acabar, "VOLVER AL BOSQUE" y otra vez la
-  calma, con los ojos esperando.
+- **Buscar duelo (gacha, por fases, input bloqueado):** primero se sortea el nivel
+  (normal 57 %, difícil 28 %, pesadilla 10 %, único 5 %) y luego quién de ese nivel. Los
+  ojos parpadean nerviosos → se encienden en el color de su nivel (normal crema, difícil
+  naranja, pesadilla carmesí, único oro) y alguien se dibuja alrededor en silueta, con su
+  nivel y su nombre arriba → se abalanza: crece de golpe, el bosque se acerca, tiembla
+  todo y un fogonazo de su color da paso al duelo. Los únicos se quedan más a la vista
+  (con rayos de oro y carmesí girando y un sonido de realeza). Al acabar, "VOLVER AL
+  BOSQUE" y otra vez la calma, con los ojos esperando.
 - **La gente del bosque** (`components/pixel/forest.ts`, `lib/forest.ts`): personas
-  enmascaradas en silueta, cada una con lo de su oficio y su manera de jugar (sus
-  sellos y, desde difícil, cartas del Castillo): el Leñador y el Ermitaño (defensivos),
-  la Cazadora y el Salteador (agresivos), la Bruja y el Trasgo (puñeteros). En el bosque
-  son negras con los ojos encendidos; de rival (panel, bestiario), el cuerpo en el color
-  de su dificultad y la máscara crema. No hablan.
-- **Bestiario:** ventana ámbar con tus duelos, tu racha y tu mejor racha, y cada
-  arquetipo: los encontrados con su estilo, lo que hacen y sus victorias en cada
-  dificultad, sus sellos (×copias) y "Copiar mazo": se copia como un código de texto
+  enmascaradas en silueta, cada una de un nivel, con lo de su oficio y su manera de jugar
+  (sus sellos y, desde difícil, cartas del Castillo):
+  - Normales: el Leñador y el Pastor (defensivos), la Cazadora (agresiva), el Trasgo (puñetero).
+  - Difíciles: el Ermitaño (defensivo), el Salteador y el Verdugo (agresivos), la Bruja (puñetera).
+  - Pesadillas: el Sepulturero (defensivo), el Lobo (agresivo), el Espantapájaros y la
+    Plañidera (puñeteros).
+  - **Únicos** (la realeza): el Príncipe, la Reina y el Rey, que llevan su figura tres
+    veces en vez de Príncipe, Reina y Rey. Cuerpo de oro con aura de oro y carmesí,
+    resplandor y, en grande, rayos girando (como el Soberano); coronas, cetro y abanico.
+  En el bosque son negros con los ojos encendidos; de rival (panel, bestiario), el cuerpo
+  en el color de su nivel y la máscara crema. No hablan.
+- **Bestiario:** ventana ámbar con tus duelos, tu racha y tu mejor racha y, por niveles
+  (Normales, Difíciles, Pesadillas y, aparte en oro, Únicos), cada personaje: los
+  encontrados con su estilo, lo que hacen y sus victorias y derrotas, sus sellos (×copias) y "Copiar mazo": se copia como un código de texto
   (`MP1:sello*n…|cartas quitadas`, al portapapeles y guardado en el juego) que se pega
   con "Pegar" en el pie del editor de mazo, en el mazo activo. Solo se copian sus
   sellos (a 2 copias, hasta 5): sus cartas del Castillo solo existen allí. Los demás, en

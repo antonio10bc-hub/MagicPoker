@@ -97,3 +97,37 @@ test('bosque: buscar duelo, alguien sale y se abalanza; el duelo; volver al bosq
   code!.slice(4).split('|')[0].split('.').forEach(item => expect(seals).toContain(item.split('*')[0]));
   noErrors();
 });
+
+test('únicos: el Rey sale con su aura (forzado desde depuración) y lleva tres Reyes; bestiario por niveles', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await seed(page, {
+    ...CONQUERED, magic_poker_forest_seen: 1, magic_poker_debug: 1,
+    magic_poker_forest: { seen: { woodcutter: { normal: { wins: 2, losses: 1 } }, witch: { hard: { wins: 1, losses: 0 } }, wolf: { nightmare: { wins: 0, losses: 2 } }, queen: { unique: { wins: 1, losses: 0 } } }, duels: 7, streak: 1, bestStreak: 2 },
+  });
+  await page.locator('[aria-label="debug"]').click();
+  await page.getByText('Rey', { exact: true }).click();
+  await expect(page.getByText('BUSCAR DUELO')).toBeVisible();
+  await page.waitForTimeout(1000);
+  await page.getByText('BUSCAR DUELO').click({ force: true });
+  await expect(page.locator('[aria-label="forest encounter"]')).toBeAttached();
+  await page.waitForTimeout(2600);
+  await shot(page, info, 'unico-1-rey');
+  await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement', undefined, { timeout: 10000 });
+  const kings = await page.evaluate(() => {
+    const s = (window as unknown as { __game: { getState: () => { forest: { tier: string }; opponent: { hand: { rank: string }[]; deck: { rank: string }[] } } } }).__game.getState();
+    return { tier: s.forest.tier, k: [...s.opponent.hand, ...s.opponent.deck].filter(c => c.rank === 'K').length, q: [...s.opponent.hand, ...s.opponent.deck].filter(c => c.rank === 'Q' || c.rank === 'J').length };
+  });
+  expect(kings).toEqual({ tier: 'unique', k: 3, q: 0 });
+  await page.waitForTimeout(600);
+  await shot(page, info, 'unico-2-duelo');
+  // Al bestiario, por niveles
+  await page.evaluate(() => (window as unknown as { __game: { getState: () => { enterForest: () => void } } }).__game.getState().enterForest());
+  await page.locator('[aria-label="bestiario"]').click();
+  await expect(page.getByText('Únicos', { exact: true })).toBeVisible();
+  await page.waitForTimeout(400);
+  await shot(page, info, 'unico-3-bestiario');
+  await page.locator('[aria-label="bestiary queen"]').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shot(page, info, 'unico-4-bestiario-unicos');
+  noErrors();
+});

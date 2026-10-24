@@ -14,8 +14,8 @@ import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
 import { CastleMap } from '@/components/game/CastleMap';
-import { ForestFigure, TIER_INK } from '@/components/game/ForestFigure';
-import { Archetype, ARCHETYPES, forestDeckConfig, getForest, TIERS } from '@/lib/forest';
+import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
+import { Archetype, archetypesOf, forestDeckConfig, getForest, recordOf, TIERS } from '@/lib/forest';
 import { RARITY_UI } from '@/components/game/BoonChooser';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
@@ -388,45 +388,49 @@ export const BestiaryModal = () => {
           <span>{t.forest_streak.replace('{n}', String(f.streak))}</span>
           <span>{t.forest_best.replace('{n}', String(f.bestStreak))}</span>
         </div>
-        {ARCHETYPES.map(a => {
-          const rec = f.seen[a.id];
-          const best = rec ? ([...TIERS].reverse().find(tier => rec[tier]) ?? 'normal') : 'normal';
-          return (
-            <div key={a.id} aria-label={`bestiary ${a.id}`} className="px-inset px-round flex items-center gap-[6px] p-[4px]">
-              <ForestFigure id={a.id} tier={best} height={34} dim={!rec} />
-              <span className="flex flex-col gap-[2px] flex-1 min-w-0">
-                <span style={{ color: rec ? 'var(--ink-cream)' : 'var(--ink-teal)' }}>
-                  {rec ? t[`forest_${a.id}` as keyof Translations] : '???'}
-                  {rec && <span style={{ color: 'var(--ink-amber)' }}> · {t[`style_${a.style}` as keyof Translations]}</span>}
-                </span>
-                <span style={{ color: 'var(--ink-mint)' }}>{rec ? t[`forest_${a.id}_desc` as keyof Translations] : t.forest_unknown}</span>
-                {rec && (
-                  <span className="flex gap-[6px]">
-                    {TIERS.map(tier => (
-                      <span key={tier} style={{ color: rec[tier] ? TIER_INK[tier] : 'var(--ink-slate)' }}>
-                        {t[`tier_${tier}` as keyof Translations]} {rec[tier]?.wins ?? 0}
-                      </span>
-                    ))}
-                  </span>
-                )}
-                {/* Sus sellos, para llevarlos tú: se copian y se pegan en el editor de mazo */}
-                {rec && (
-                  <span className="flex items-center gap-[4px]">
-                    {forestSeals(a).map(([seal, n]) => (
-                      <span key={seal} className="flex items-center gap-[1px]">
-                        <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.volt} />
-                        <span className="font-display" style={{ color: 'var(--ink-volt)' }}>×{n}</span>
-                      </span>
-                    ))}
-                    <PxButton size="sm" aria-label={`copy deck ${a.id}`} className="ml-auto" onClick={() => copy(a)}>
-                      {copied === a.id ? t.forest_copied : t.forest_copy_deck}
-                    </PxButton>
-                  </span>
-                )}
+        {/* Por niveles: normales, difíciles, pesadillas y, aparte, los únicos */}
+        {TIERS.map(tier => (
+          <div key={tier} className="flex flex-col gap-[4px]">
+            <div className="flex items-center gap-[5px] mt-[3px]">
+              <span className={clsx('font-display', tier === 'unique' && 'glow-gold')} style={{ color: TIER_INK[tier], fontSize: 10, letterSpacing: 1 }}>
+                {t[`tier_section_${tier}` as keyof Translations]}
               </span>
+              <span className="flex-1 h-[1px]" style={{ background: `rgba(${TIER_RGB[tier]},0.35)` }} />
             </div>
-          );
-        })}
+            {tier === 'unique' && <p className="t-note">{t.forest_unique_hint}</p>}
+            {archetypesOf(tier).map(a => {
+              const rec = recordOf(f, a.id);
+              return (
+                <div key={a.id} aria-label={`bestiary ${a.id}`} className="px-inset px-round flex items-center gap-[6px] p-[4px]"
+                  style={tier === 'unique' ? { boxShadow: `inset 0 0 0 1px rgba(232,182,74,${rec ? 0.7 : 0.25})${rec ? ', 0 0 8px rgba(232,182,74,0.35)' : ''}` } : undefined}>
+                  <ForestFigure id={a.id} tier={a.tier} height={34} dim={!rec} />
+                  <span className="flex flex-col gap-[2px] flex-1 min-w-0">
+                    <span style={{ color: rec ? (tier === 'unique' ? 'var(--ink-gold)' : 'var(--ink-cream)') : 'var(--ink-teal)' }}>
+                      {rec ? t[`forest_${a.id}` as keyof Translations] : '???'}
+                      {rec && <span style={{ color: 'var(--ink-amber)' }}> · {t[`style_${a.style}` as keyof Translations]}</span>}
+                    </span>
+                    <span style={{ color: 'var(--ink-mint)' }}>{rec ? t[`forest_${a.id}_desc` as keyof Translations] : t.forest_unknown}</span>
+                    {rec && <span style={{ color: TIER_INK[tier] }}>{t.forest_record.replace('{w}', String(rec.wins)).replace('{l}', String(rec.losses))}</span>}
+                    {/* Sus sellos, para llevarlos tú: se copian y se pegan en el editor de mazo */}
+                    {rec && (
+                      <span className="flex items-center gap-[4px]">
+                        {forestSeals(a).map(([seal, n]) => (
+                          <span key={seal} className="flex items-center gap-[1px]">
+                            <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.volt} />
+                            <span className="font-display" style={{ color: 'var(--ink-volt)' }}>×{n}</span>
+                          </span>
+                        ))}
+                        <PxButton size="sm" aria-label={`copy deck ${a.id}`} className="ml-auto" onClick={() => copy(a)}>
+                          {copied === a.id ? t.forest_copied : t.forest_copy_deck}
+                        </PxButton>
+                      </span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </DialogBody>
     </Dialog>
   );
@@ -452,6 +456,13 @@ export const DebugModal = () => {
         {row('Se alza el Castillo', BOSSES.length)}
         <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestReplay(true); }}>El Bosque despierta</PxButton>
         <PxButton size="md" tone="amber" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useGameStore.getState().enterForest(); }}>Entrar al Bosque</PxButton>
+        <span className="flex gap-[3px]">
+          {(['prince', 'queen', 'king'] as const).map(id => (
+            <PxButton key={id} size="sm" className="flex-1" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestForce({ id, tier: 'unique' }); useGameStore.getState().enterForest(); }}>
+              {id === 'prince' ? 'Príncipe' : id === 'queen' ? 'Reina' : 'Rey'}
+            </PxButton>
+          ))}
+        </span>
       </DialogBody>
     </Dialog>
   );

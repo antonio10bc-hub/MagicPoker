@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { track } from '@/lib/analytics';
 import { StampId } from '@/lib/stamps';
 import type { Unlock } from '@/lib/bosses';
+import type { Tier } from '@/lib/forest';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
@@ -33,6 +34,9 @@ interface UiState {
   /** Depuración: repetir "el Bosque despierta" */
   forestReplay: boolean;
   setForestReplay: (on: boolean) => void;
+  /** Depuración: quién sale en el próximo duelo del Bosque */
+  forestForce: { id: string; tier: Tier } | null;
+  setForestForce: (e: { id: string; tier: Tier } | null) => void;
 }
 
 export const useUiStore = create<UiState>(set => ({
@@ -55,4 +59,6 @@ export const useUiStore = create<UiState>(set => ({
   setMapReplay: mapReplay => set({ mapReplay }),
   forestReplay: false,
   setForestReplay: forestReplay => set({ forestReplay }),
+  forestForce: null,
+  setForestForce: forestForce => set({ forestForce }),
 }));

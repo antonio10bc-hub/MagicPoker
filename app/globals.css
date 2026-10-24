@@ -221,6 +221,8 @@ html, body {
 .bloom-azure { box-shadow: 0 0 5px 1px rgba(46, 155, 255, 0.7), 0 0 14px 3px rgba(46, 155, 255, 0.3); }
 .bloom-azure-shape { filter: drop-shadow(0 0 2px rgba(46, 155, 255, 0.95)); }
 .glow-azure { text-shadow: 0 0 4px rgba(46, 155, 255, 0.9), 0 0 10px rgba(46, 155, 255, 0.45); }
+/* Oro: el Soberano y lo legendario (y los únicos del Bosque) */
+.glow-gold { text-shadow: 0 0 4px rgba(232, 182, 74, 0.9), 0 0 10px rgba(232, 182, 74, 0.45); }
 /* Ámbar: exclusivo del Bosque */
 .bloom-amber { box-shadow: 0 0 5px 1px rgba(255, 194, 51, 0.7), 0 0 14px 3px rgba(255, 194, 51, 0.3); }
 .bloom-amber-shape { filter: drop-shadow(0 0 2px rgba(255, 194, 51, 0.95)); }

@@ -18,20 +18,33 @@ describe('el Bosque', () => {
     expect(isForestUnlocked({ best: 12, conquered: 1 } as never)).toBe(true);
   });
 
-  it('el sorteo respeta 60/30/10 y elige un arquetipo que existe', () => {
+  it('el sorteo respeta 57/28/10/5 y saca a alguien de ese nivel', () => {
     let seed = 1;
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     const n = 20000;
-    const count = { normal: 0, hard: 0, nightmare: 0 };
+    const count = { normal: 0, hard: 0, nightmare: 0, unique: 0 };
     for (let i = 0; i < n; i++) {
       const e = rollEncounter(rng);
-      expect(ARCHETYPES.some(a => a.id === e.id)).toBe(true);
+      expect(ARCHETYPES.find(a => a.id === e.id)?.tier).toBe(e.tier);
       count[e.tier]++;
     }
     (Object.keys(count) as (keyof typeof count)[]).forEach(t => expect(Math.abs(count[t] / n * 100 - TIER_WEIGHTS[t])).toBeLessThan(1.5));
   });
 
-  it('la dificultad endurece el mazo: más sellos y cartas del Castillo', () => {
+  it('cuatro por nivel y tres únicos', () => {
+    expect(['normal', 'hard', 'nightmare'].map(t => ARCHETYPES.filter(a => a.tier === t).length)).toEqual([4, 4, 4]);
+    expect(ARCHETYPES.filter(a => a.tier === 'unique').map(a => a.id)).toEqual(['prince', 'queen', 'king']);
+  });
+
+  it('los únicos llevan su figura tres veces en vez de Príncipe, Reina y Rey', () => {
+    const queen = buildForestDeck(ARCHETYPES.find(a => a.id === 'queen')!);
+    expect(queen.filter(c => c.rank === 'Q')).toHaveLength(3);
+    expect(queen.filter(c => c.rank === 'J' || c.rank === 'K')).toHaveLength(0);
+    const king = buildForestDeck(ARCHETYPES.find(a => a.id === 'king')!);
+    expect(king.filter(c => c.rank === 'K')).toHaveLength(3);
+  });
+
+  it('el nivel endurece el mazo: más sellos y cartas del Castillo', () => {
     const witch = ARCHETYPES.find(a => a.id === 'witch')!;
     const seals = (t: 'normal' | 'hard' | 'nightmare') => buildForestDeck(witch, t).filter(c => c.rank === 'SEAL').length;
     const spies = (t: 'normal' | 'hard' | 'nightmare') => buildForestDeck(witch, t).filter(c => c.rank === 'SPY').length;

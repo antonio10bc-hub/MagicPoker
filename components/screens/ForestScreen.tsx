@@ -29,6 +29,8 @@ import { AmbientDust } from '@/components/fx/Ambient';
 
 type Phase = 'idle' | 'stir' | 'reveal' | 'lunge';
 const T = { reveal: 1100, lunge: 3300, start: 4100 };
+/** Los únicos se quedan más a la vista antes de abalanzarse */
+const UNIQUE_EXTRA_MS = 1400;
 
 const RAMP: [number, number, number][] = ['#0B0D0C', '#1E2A28', '#5E7A76', '#B9CFC8', '#EDEBE0']
   .map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
@@ -147,7 +149,10 @@ export const ForestScreen = () => {
 
   const seek = () => {
     if (busy) return;
-    const e = rollEncounter();
+    // (depuración: alguien elegido a mano)
+    const forced = useUiStore.getState().forestForce;
+    const e = forced ?? rollEncounter();
+    if (forced) useUiStore.getState().setForestForce(null);
     // Analíticas: quién sale del bosque (y en qué dificultad)
     trackEvent('forest_encounter', { rival: e.id, tier: e.tier, streak: forest.streak, duels: forest.duels });
     setEnc(e);
@@ -159,10 +164,13 @@ export const ForestScreen = () => {
   // Toda la secuencia cuelga del encuentro (si colgara de la fase, cada cambio la cortaría)
   useEffect(() => {
     if (!enc) return;
+    const extra = enc.tier === 'unique' ? UNIQUE_EXTRA_MS : 0;
     const timers = [
       setTimeout(() => { setPhase('reveal'); playSfx('reveal', 0.9, enc.tier === 'nightmare' ? 0.5 : enc.tier === 'hard' ? 0.7 : 0.9); haptic('stamp'); }, T.reveal),
-      setTimeout(() => { setPhase('lunge'); playSfx('whoosh', 1, 0.6); playSfx('crush', 0.8, 0.6); haptic('lifeLost'); }, T.lunge),
-      setTimeout(() => useGameStore.getState().startForest(enc), T.start),
+      // Los únicos se hacen esperar más (y suenan a realeza)
+      ...(enc.tier === 'unique' ? [setTimeout(() => { playSfx('sparkle', 1, 0.6); playSfx('zap', 0.7, 0.5); haptic('win'); }, T.reveal + 500)] : []),
+      setTimeout(() => { setPhase('lunge'); playSfx('whoosh', 1, 0.6); playSfx('crush', 0.8, 0.6); haptic('lifeLost'); }, T.lunge + extra),
+      setTimeout(() => useGameStore.getState().startForest(enc), T.start + extra),
     ];
     return () => timers.forEach(clearTimeout);
   }, [enc]);

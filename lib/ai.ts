@@ -1,28 +1,7 @@
 import { BoardSlot, Card, Difficulty, Rng, SealId } from '@/types';
-import { getAvailableSlots, getSealTargets, isSealCard, RANKS } from '@/lib/game-utils';
+import { applyPreCombatSeals, calculateCombat, getAvailableSlots, getSealTargets, isSealCard, lifeGains, playCardToSlot, RANKS } from '@/lib/game-utils';
 
 const pickRandom = <T,>(items: T[], rng: Rng): T => items[Math.floor(rng() * items.length)];
-
-/** Probabilidad de que el rival en "normal" se coloque frente a una carta tuya */
-const NORMAL_DEFENSIVE_CHANCE = 0.3;
-
-type Strategy = (card: Card, available: number[], defensive: number[], playerBoard: BoardSlot[], rng: Rng) => number;
-
-const STRATEGIES: Record<Difficulty, Strategy> = {
-  easy: (_card, available, _defensive, _board, rng) => pickRandom(available, rng),
-
-  normal: (_card, available, defensive, _board, rng) =>
-    defensive.length > 0 && rng() < NORMAL_DEFENSIVE_CHANCE
-      ? pickRandom(defensive, rng)
-      : pickRandom(available, rng),
-
-  // Busca un hueco donde su carta gane a la tuya; si no, se pone delante de alguna; si no, al azar
-  hard: (card, available, defensive, playerBoard, rng) => {
-    const winning = defensive.find(i => card.value > (playerBoard[i].card?.value ?? Infinity));
-    if (winning !== undefined) return winning;
-    return pickRandom(defensive.length > 0 ? defensive : available, rng);
-  },
-};
 
 export interface OpponentMove {
   cardId: string;
@@ -89,25 +68,101 @@ export const aceWorthIt = (opponentBoard: BoardSlot[], playerBoard: BoardSlot[],
   return true;
 };
 
+// --- IA QUE PIENSA (normal y difícil) ---
+// Antes de cada jugada prueba en su cabeza todas las cartas de su mano en todos los
+// huecos: aplica los sellos de antes del choque y calcula la pelea con las mismas
+// reglas del juego (el Príncipe, con un azar fijo). Puntúa lo que pasaría: daño que
+// hace y que recibe, vidas que se curan, cartas que caen de cada lado y lo que queda en
+// pie para las rondas siguientes; si con eso gana o pierde la partida, manda eso. Gastar
+// una carta buena para nada resta un poco (se la guarda), y poner un sello suma un poco.
+//  - normal: casi siempre una de sus mejores jugadas, pero no siempre la mejor.
+//  - difícil (jefes, Castillo y Bosque desde difícil): la mejor; y se planta si ninguna
+//    jugada mejora lo que ya hay, o si tú ya te has plantado y no gana nada jugando.
+// "Fácil" sigue siendo el rival al azar de siempre.
+
+export interface AiContext {
+  /** Sus vidas y las tuyas (para ver si una pelea acaba la partida) */
+  lives?: number;
+  playerLives?: number;
+  /** Te has plantado: ya no vas a poner más cartas esta ronda */
+  playerPassed?: boolean;
+}
+
+/** El Príncipe golpea al azar: para pensar, un azar fijo */
+const SIM_RNG: Rng = () => 0.5;
+
+const sumValues = (cards: (Card | null | undefined)[]) => cards.reduce((n, c) => n + (c?.value ?? 0), 0);
+
+/** Lo bien que le iría la pelea con estas mesas (mayor = mejor para el rival) */
+export const evaluateFight = (playerBoard: BoardSlot[], opponentBoard: BoardSlot[], ctx: AiContext = {}): number => {
+  const pre = applyPreCombatSeals(playerBoard, opponentBoard);
+  const r = calculateCombat(pre.player, pre.opponent, SIM_RNG);
+  const gone = new Set([...r.deadCardIds, ...r.voidedCardIds]);
+  const lost = (board: BoardSlot[]) => sumValues(board.map(s => (s.card && gone.has(s.card.id) ? s.card : null)));
+  const standing = (board: BoardSlot[]) => sumValues(board.map(s => (s.card && !gone.has(s.card.id) ? s.card : null)));
+  const healed = lifeGains(pre.opponent, r);
+  const theirHeal = lifeGains(pre.player, r);
+  let score = 10 * (r.playerDamageTaken - r.opponentDamageTaken) + 10 * (healed - theirHeal)
+    + 0.6 * (lost(pre.player) - lost(pre.opponent))
+    + 0.25 * (standing(pre.opponent) - standing(pre.player));
+  if (ctx.playerLives !== undefined && r.playerDamageTaken - theirHeal >= ctx.playerLives) score += 200;
+  if (ctx.lives !== undefined && r.opponentDamageTaken - healed >= ctx.lives) score -= 200;
+  return score;
+};
+
+interface Candidate { cardId: string; slotIndex: number; score: number }
+
+/** Todas sus jugadas posibles, puntuadas, de la mejor a la peor */
+export const rankMoves = (hand: Card[], opponentBoard: BoardSlot[], playerBoard: BoardSlot[], ctx: AiContext = {}): Candidate[] => {
+  const state = { lives: 0, hand, deck: [], board: opponentBoard, isPassed: false };
+  const out: Candidate[] = [];
+  hand.forEach(card => {
+    if (card.wild) return;
+    opponentBoard.forEach((_, slotIndex) => {
+      const next = playCardToSlot(state, card.id, slotIndex, false);
+      if (!next) return;
+      // Gastar una carta cuesta un poco (mejor guardar las buenas); un sello puesto suma
+      const cost = isSealCard(card) ? -1 : 0.3 * card.value;
+      out.push({ cardId: card.id, slotIndex, score: evaluateFight(playerBoard, next.board, ctx) - cost });
+    });
+  });
+  return out.sort((a, b) => b.score - a.score);
+};
+
 /** Decide qué carta juega el rival y dónde. Devuelve null si debe plantarse. */
 export const chooseOpponentMove = (
   hand: Card[],
   opponentBoard: BoardSlot[],
   playerBoard: BoardSlot[],
   difficulty: Difficulty,
-  rng: Rng = Math.random
+  rng: Rng = Math.random,
+  ctx: AiContext = {},
 ): OpponentMove | null => {
-  // Los bosses usan su sello en cuanto tienen dónde ponerlo
+  if (difficulty === 'easy') return easyMove(hand, opponentBoard, playerBoard, rng);
+  const moves = rankMoves(hand, opponentBoard, playerBoard, ctx);
+  if (moves.length === 0) return null;
+  if (difficulty === 'normal') {
+    // Casi siempre de las mejores; a veces, cualquiera
+    const r = rng();
+    const pick = r < 0.55 ? moves[0] : r < 0.8 ? moves[Math.min(1, moves.length - 1)] : moves[Math.floor(rng() * moves.length)];
+    return { cardId: pick.cardId, slotIndex: pick.slotIndex };
+  }
+  // Difícil: la mejor, salvo que plantarse sea mejor
+  const best = moves[0];
+  const now = evaluateFight(playerBoard, opponentBoard, ctx);
+  if (best.score < now) return null;
+  if (ctx.playerPassed && best.score < now + 1) return null;
+  return { cardId: best.cardId, slotIndex: best.slotIndex };
+};
+
+/** El rival al azar de siempre ("fácil"): su sello si tiene dónde, luego su primera carta en un hueco cualquiera */
+const easyMove = (hand: Card[], opponentBoard: BoardSlot[], playerBoard: BoardSlot[], rng: Rng): OpponentMove | null => {
   const seal = sealMove(hand, opponentBoard, playerBoard);
   if (seal) return seal;
-
-  // El As solo si le compensa; si no, otra carta (o se planta y lo guarda)
   const normal = hand.filter(c => !isSealCard(c));
   const aceOk = !normal.some(c => RANKS[c.rank].wipesBoard) || aceWorthIt(opponentBoard, playerBoard, rng);
   const card = normal.find(c => aceOk || !RANKS[c.rank].wipesBoard);
   const available = getAvailableSlots(opponentBoard);
   if (!card || available.length === 0) return null;
-
-  const defensive = available.filter(i => playerBoard[i].card !== null);
-  return { cardId: card.id, slotIndex: STRATEGIES[difficulty](card, available, defensive, playerBoard, rng) };
+  return { cardId: card.id, slotIndex: pickRandom(available, rng) };
 };

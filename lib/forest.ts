@@ -1,72 +1,97 @@
 // --- EL BOSQUE (PvE, tras conquistar el Castillo) ---
-// Un gacha de duelos: al buscar duelo, alguien sale de entre los árboles. Quién es (un
-// arquetipo) y cuánto aprieta (normal, difícil o pesadilla) se sortea. Cada arquetipo
-// juega a su manera por sus sellos y sus cartas: defensivos, agresivos o puñeteros
-// (troll). No hay premios que cambien el juego: se lleva un bestiario (a quién has
-// encontrado y a cuántos has vencido en cada dificultad) y tu racha.
+// Un gacha de duelos: al buscar duelo, alguien sale de entre los árboles. Primero se
+// sortea el nivel (normal, difícil, pesadilla o único) y luego quién de ese nivel. Cada
+// personaje es de un nivel y juega a su manera por sus sellos y sus cartas: defensivos,
+// agresivos o puñeteros (troll). Los únicos son tres, de la realeza: el Príncipe, la
+// Reina y el Rey, que llevan su figura repetida tres veces en vez de las tres figuras.
+// No hay premios que cambien el juego: se lleva un bestiario (a quién has encontrado y
+// cuántas veces lo has vencido) y tu racha.
 import { Card, Difficulty, GameResult, Rank, SealId } from '@/types';
 import { createCard, createDeck, createSealCard, shuffle } from '@/lib/game-utils';
 import { getCastle } from '@/lib/castle';
 import { DeckConfig, MAX_COPIES, MAX_SEALS } from '@/lib/deck';
 
-export type Tier = 'normal' | 'hard' | 'nightmare';
-export const TIERS: Tier[] = ['normal', 'hard', 'nightmare'];
-/** Probabilidad (de 100) de cada dificultad */
-export const TIER_WEIGHTS: Record<Tier, number> = { normal: 60, hard: 30, nightmare: 10 };
+export type Tier = 'normal' | 'hard' | 'nightmare' | 'unique';
+export const TIERS: Tier[] = ['normal', 'hard', 'nightmare', 'unique'];
+/** Probabilidad (de 100) de cada nivel */
+export const TIER_WEIGHTS: Record<Tier, number> = { normal: 57, hard: 28, nightmare: 10, unique: 5 };
 
 export type Style = 'defensive' | 'aggressive' | 'troll';
 
 export interface Archetype {
   id: string;
+  tier: Tier;
   style: Style;
   /** Sellos con los que juega */
   seals: SealId[];
-  /** Cartas del Castillo que lleva desde "difícil" */
+  /** Cartas del Castillo que lleva (1 copia en difícil, 2 en pesadilla) */
   cards: Rank[];
+  /** Los únicos: su figura, tres veces, en lugar de Príncipe, Reina y Rey */
+  royal?: 'J' | 'Q' | 'K';
   /** Tema de música (el del jefe que más se le parece) */
   music: string;
 }
 
 export const ARCHETYPES: Archetype[] = [
-  // Defensivos: aguantan y te desgastan
-  { id: 'woodcutter', style: 'defensive', seals: ['shield', 'anchor'], cards: ['TOWER'], music: 'wall' },
-  { id: 'hermit', style: 'defensive', seals: ['life', 'shield'], cards: ['PRIESTESS'], music: 'matriarch' },
-  // Agresivos: golpean dos veces y van a por tus huecos
-  { id: 'huntress', style: 'aggressive', seals: ['double', 'reveal'], cards: ['KNIGHT'], music: 'duelist' },
-  { id: 'bandit', style: 'aggressive', seals: ['swap', 'double'], cards: ['BOMB'], music: 'thief' },
-  // Troll: te cambian las cartas de sitio, te envenenan, te devuelven los golpes
-  { id: 'witch', style: 'troll', seals: ['poison', 'mirror'], cards: ['SPY'], music: 'poisoner' },
-  { id: 'goblin', style: 'troll', seals: ['shift', 'echo', 'swap'], cards: ['JESTER'], music: 'trickster' },
+  // --- Normal ---
+  { id: 'woodcutter', tier: 'normal', style: 'defensive', seals: ['shield', 'anchor'], cards: ['TOWER'], music: 'wall' },
+  { id: 'shepherd', tier: 'normal', style: 'defensive', seals: ['life', 'shield'], cards: ['PRIESTESS'], music: 'drifter' },
+  { id: 'huntress', tier: 'normal', style: 'aggressive', seals: ['double', 'reveal'], cards: ['KNIGHT'], music: 'duelist' },
+  { id: 'goblin', tier: 'normal', style: 'troll', seals: ['shift', 'echo', 'swap'], cards: ['JESTER'], music: 'trickster' },
+  // --- Difícil ---
+  { id: 'hermit', tier: 'hard', style: 'defensive', seals: ['life', 'shield'], cards: ['PRIESTESS'], music: 'matriarch' },
+  { id: 'bandit', tier: 'hard', style: 'aggressive', seals: ['swap', 'double'], cards: ['BOMB'], music: 'thief' },
+  { id: 'executioner', tier: 'hard', style: 'aggressive', seals: ['double', 'poison'], cards: ['KNIGHT'], music: 'duelist' },
+  { id: 'witch', tier: 'hard', style: 'troll', seals: ['poison', 'mirror'], cards: ['SPY'], music: 'poisoner' },
+  // --- Pesadilla ---
+  { id: 'gravedigger', tier: 'nightmare', style: 'defensive', seals: ['anchor', 'shield', 'life'], cards: ['TOWER'], music: 'sailor' },
+  { id: 'wolf', tier: 'nightmare', style: 'aggressive', seals: ['double', 'swap', 'reveal'], cards: ['KNIGHT'], music: 'thief' },
+  { id: 'scarecrow', tier: 'nightmare', style: 'troll', seals: ['shift', 'mirror', 'echo'], cards: ['JESTER'], music: 'trickster' },
+  { id: 'mourner', tier: 'nightmare', style: 'troll', seals: ['poison', 'echo', 'life'], cards: ['SPY'], music: 'seer' },
+  // --- Únicos: la realeza del bosque ---
+  { id: 'prince', tier: 'unique', style: 'aggressive', seals: ['double', 'reveal'], cards: [], royal: 'J', music: 'sovereign' },
+  { id: 'queen', tier: 'unique', style: 'troll', seals: ['mirror', 'shift'], cards: [], royal: 'Q', music: 'sovereign' },
+  { id: 'king', tier: 'unique', style: 'defensive', seals: ['shield', 'anchor'], cards: [], royal: 'K', music: 'sovereign' },
 ];
 
 export const archetype = (id: string) => ARCHETYPES.find(a => a.id === id);
+export const archetypesOf = (tier: Tier) => ARCHETYPES.filter(a => a.tier === tier);
 
 /** El Bosque se abre al conquistar el Castillo por primera vez */
 export const isForestUnlocked = (castle = getCastle()) => castle.conquered > 0;
 
 export interface Encounter { id: string; tier: Tier }
 
-/** Quién sale del bosque (y en qué dificultad) */
+/** Quién sale del bosque: primero el nivel, luego alguien de ese nivel */
 export const rollEncounter = (rng: () => number = Math.random): Encounter => {
-  const id = ARCHETYPES[Math.min(ARCHETYPES.length - 1, Math.floor(rng() * ARCHETYPES.length))].id;
   let roll = rng() * 100;
   const tier = TIERS.find(t => (roll -= TIER_WEIGHTS[t]) < 0) ?? 'normal';
-  return { id, tier };
+  const pool = archetypesOf(tier);
+  return { id: pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))].id, tier };
 };
 
-/** Vidas del rival por dificultad */
-export const FOREST_LIVES: Record<Tier, number> = { normal: 4, hard: 5, nightmare: 6 };
-/** Cómo piensa: en normal, el rival normal; en difícil y pesadilla, el difícil */
+/** Vidas del rival por nivel */
+export const FOREST_LIVES: Record<Tier, number> = { normal: 4, hard: 5, nightmare: 6, unique: 7 };
+/** Cómo piensa: en normal, la IA normal; desde difícil, la difícil */
 export const forestAi = (tier: Tier): Difficulty => (tier === 'normal' ? 'normal' : 'hard');
 
-/** Mazo del rival: el estándar, sus sellos (1, 2 o 3 copias) y sus cartas del Castillo (0, 1 o 2) */
-export const buildForestDeck = (a: Archetype, tier: Tier): Card[] => {
-  const copies = TIERS.indexOf(tier) + 1;
-  const extra = TIERS.indexOf(tier);
+/** Copias de sus sellos y de sus cartas del Castillo según el nivel */
+const SEAL_COPIES: Record<Tier, number> = { normal: 1, hard: 2, nightmare: 3, unique: 2 };
+const CARD_COPIES: Record<Tier, number> = { normal: 0, hard: 1, nightmare: 2, unique: 0 };
+
+/**
+ * Mazo del rival: el estándar, sus sellos y sus cartas del Castillo. Los únicos cambian
+ * las tres figuras (Príncipe, Reina y Rey) por tres copias de la suya.
+ */
+export const buildForestDeck = (a: Archetype, tier: Tier = a.tier): Card[] => {
+  const royal = a.royal;
+  const base = royal
+    ? [...createDeck('opponent').filter(c => !['J', 'Q', 'K'].includes(c.rank)), ...Array.from({ length: 3 }, () => createCard('opponent', royal))]
+    : createDeck('opponent');
   return shuffle([
-    ...createDeck('opponent'),
-    ...a.seals.flatMap(s => Array.from({ length: copies }, () => createSealCard('opponent', s))),
-    ...a.cards.flatMap(r => Array.from({ length: extra }, () => createCard('opponent', r))),
+    ...base,
+    ...a.seals.flatMap(s => Array.from({ length: SEAL_COPIES[tier] }, () => createSealCard('opponent', s))),
+    ...a.cards.flatMap(r => Array.from({ length: CARD_COPIES[tier] }, () => createCard('opponent', r))),
   ]);
 };
 
@@ -136,6 +161,13 @@ export const recordForestDuel = (e: Encounter, result: GameResult): ForestState 
   };
   save(next);
   return next;
+};
+
+/** Victorias y derrotas contra alguien, sumando todos sus encuentros */
+export const recordOf = (f: ForestState, id: string): TierRecord | null => {
+  const rec = f.seen[id];
+  if (!rec) return null;
+  return Object.values(rec).reduce<TierRecord>((t, r) => ({ wins: t.wins + (r?.wins ?? 0), losses: t.losses + (r?.losses ?? 0) }), { wins: 0, losses: 0 });
 };
 
 /** Ya has visto a todos los arquetipos */

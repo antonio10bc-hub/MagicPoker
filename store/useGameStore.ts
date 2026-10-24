@@ -121,6 +121,9 @@ const revealFor = (played: Card | undefined, slot: number, enemy: PlayerState, e
   return { enemy: { ...enemy, board: r.board }, fx: { id: Date.now(), events: [{ kind: 'reveal' as const, owner: enemyOwner, index: r.index }] } };
 };
 
+/** Jefes del principio contra la IA normal (los demás, la difícil) */
+const EASY_BOSSES = 4;
+
 const award = (ids: StampId[]) => ids.forEach(id => { if (unlockStamp(id)) useUiStore.getState().pushStamp(id); });
 
 const initialMatchState = () => ({
@@ -209,7 +212,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   return {
   screen: 'menu',
-  // Sin selector: siempre se juega contra el rival difícil
+  // Sin selector: cada partida decide lo fino que juega el rival (ver startGame, startForest)
   difficulty: 'hard',
   ...initialMatchState(),
 
@@ -261,7 +264,9 @@ export const useGameStore = create<GameState>((set, get) => {
       ...initialMatchState(),
       screen: 'game',
       phase: 'placement',
-      difficulty: 'hard',
+      // Los primeros jefes piensan pero aprietan menos (la IA normal); del 5.º en
+      // adelante, y en las revanchas, la difícil
+      difficulty: bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard',
       bossIndex,
       rematch,
       rematchLevel: level,
@@ -424,7 +429,9 @@ export const useGameStore = create<GameState>((set, get) => {
     const { opponent, player, difficulty, phase, tutorialStep } = get();
     if (phase !== 'placement' || tutorialStep !== null) return;
 
-    const move = chooseOpponentMove(opponent.hand, opponent.board, player.board, difficulty);
+    // Piensa con lo que hay: sus vidas, las tuyas y si ya te has plantado
+    const move = chooseOpponentMove(opponent.hand, opponent.board, player.board, difficulty, Math.random,
+      { lives: opponent.lives, playerLives: player.lives, playerPassed: player.isPassed });
     const nextOpponent = move && playCardToSlot(opponent, move.cardId, move.slotIndex, false);
 
     // Sin cartas o sin huecos: el rival se planta
