@@ -121,50 +121,83 @@ const HAND_SCALE_SMALL = 0.875;
 /** Lo máximo que crece el tapete en móviles altos */
 const BOARD_GROW_MAX = 80;
 
-export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): GameLayout => {
-  if (mode === 'landscape') {
-    // Horizontal (ordenador): columna de paneles a la izquierda, turno y acción a la
-    // derecha y, en medio, el tablero con la mano debajo. En 4:3 (384 de ancho) las
-    // columnas son estrechas y la mano algo más pequeña que la mesa; en panorámico
-    // las columnas se ensanchan (cabe el nombre del jefe) y la mano va a tamaño real.
-    const wide = W >= 440;
-    const side = wide ? 84 : 62;
-    const right = wide ? 84 : 66;
-    const midX = M + side + (wide ? 8 : 4);
-    const midW = W - M - right - (wide ? 8 : 4) - midX;
-    const handScale = wide ? 1 : HAND_SCALE_SMALL;
-    const handH = Math.round(CARD_SIZE.height * handScale);
-    // Margen bajo la mano: las cartas de los extremos bajan y giran en abanico
-    const handY = H - M - handH - (wide ? 10 : 6);
-    const top = wide ? 10 : 12;
-    const available = handY - (wide ? 6 : 15) - top;
-    const boardH = Math.max(boardMinHeight(), Math.min(wide ? 212 : 196, available - DIORAMA_SHADOW));
-    const boardY = top + Math.max(0, Math.floor((available - boardH - DIORAMA_SHADOW) / 2));
-    const boardW = Math.min(wide ? 264 : 240, midW);
-    const buttonSize = wide ? 18 : 14;
-    const buttonsY = M + 62 + 4;
-    const roundY = buttonsY + buttonSize + (wide ? 8 : 12);
-    const playerH = wide ? 58 : 54;
-    const actionH = wide ? 26 : 22;
-    return {
-      mode,
-      board: computeBoard(midX + Math.floor((midW - boardW) / 2), boardY, boardW, false, boardH),
-      rivalPanel: { x: M, y: M, w: side, h: 62 },
-      playerPanel: { x: M, y: H - M - playerH, w: side, h: playerH },
-      menuButtons: { x: M, y: buttonsY },
-      menuButtonSize: buttonSize,
-      turnBox: { x: W - M - right, y: M, w: right, h: 36 },
-      // En panorámico, a la altura de la mano (donde ya está el ratón); en 4:3, sobre ella
-      actionButton: wide
-        ? { x: W - M - right, y: handY + Math.round((handH - actionH) / 2), w: right, h: actionH }
-        : { x: W - M - right, y: 196, w: right, h: actionH },
-      hand: { x: midX, y: handY, w: midW, scale: handScale },
-      compactPanels: false,
-      sidebar: { x: 1, y: 1, w: side + 2 * M - 2, h: H - 2 },
-      roundBox: { x: M + 2, y: roundY, w: side - 4, h: 44 },
-    };
-  }
+/** Horizontal: ancho máximo de la zona de juego (en ultrapanorámico, centrada; el fondo llena el resto) */
+const PLAY_MAX_W = 600;
 
+export const computeGameLayout = ({ width: stageW, height: H, mode }: StageSize): GameLayout => {
+  if (mode === 'landscape') {
+    // En pantallas muy anchas la mesa y sus columnas no se separan más: van juntas en el centro
+    const W = Math.min(stageW, PLAY_MAX_W);
+    const ox = Math.floor((stageW - W) / 2);
+    return shift(landscapeGame(W, H), ox);
+  }
+  return portraitGame(stageW, H);
+};
+
+const shiftRect = (r: Rect, dx: number): Rect => ({ ...r, x: r.x + dx });
+const shift = (l: GameLayout, dx: number): GameLayout => (dx === 0 ? l : {
+  ...l,
+  board: {
+    ...l.board,
+    diorama: shiftRect(l.board.diorama, dx),
+    slots: { player: l.board.slots.player.map(p => ({ ...p, x: p.x + dx })), opponent: l.board.slots.opponent.map(p => ({ ...p, x: p.x + dx })) },
+    strip: shiftRect(l.board.strip, dx),
+    centerLine: shiftRect(l.board.centerLine, dx),
+  },
+  rivalPanel: shiftRect(l.rivalPanel, dx),
+  playerPanel: shiftRect(l.playerPanel, dx),
+  menuButtons: { ...l.menuButtons, x: l.menuButtons.x + dx },
+  turnBox: shiftRect(l.turnBox, dx),
+  actionButton: shiftRect(l.actionButton, dx),
+  hand: { ...l.hand, x: l.hand.x + dx },
+  sidebar: shiftRect(l.sidebar, dx),
+  roundBox: shiftRect(l.roundBox, dx),
+});
+
+const landscapeGame = (W: number, H: number): GameLayout => {
+  // Horizontal (ordenador): columna de paneles a la izquierda, turno y acción a la
+  // derecha y, en medio, el tablero con la mano debajo. En 4:3 (384 de ancho) las
+  // columnas son estrechas y la mano algo más pequeña que la mesa; en panorámico
+  // las columnas se ensanchan (cabe el nombre del jefe) y la mano va a tamaño real.
+  const wide = W >= 440;
+  const side = wide ? 84 : 62;
+  const right = wide ? 84 : 66;
+  const midX = M + side + (wide ? 8 : 4);
+  const midW = W - M - right - (wide ? 8 : 4) - midX;
+  const handScale = wide ? 1 : HAND_SCALE_SMALL;
+  const handH = Math.round(CARD_SIZE.height * handScale);
+  // Margen bajo la mano: las cartas de los extremos bajan y giran en abanico
+  const handY = H - M - handH - (wide ? 10 : 6);
+  const top = wide ? 10 : 12;
+  const available = handY - (wide ? 6 : 15) - top;
+  const boardH = Math.max(boardMinHeight(), Math.min(wide ? 212 : 196, available - DIORAMA_SHADOW));
+  const boardY = top + Math.max(0, Math.floor((available - boardH - DIORAMA_SHADOW) / 2));
+  const boardW = Math.min(wide ? 264 : 240, midW);
+  const buttonSize = wide ? 18 : 14;
+  const buttonsY = M + 62 + 4;
+  const roundY = buttonsY + buttonSize + (wide ? 8 : 12);
+  const playerH = wide ? 58 : 54;
+  const actionH = wide ? 26 : 22;
+  return {
+    mode: 'landscape',
+    board: computeBoard(midX + Math.floor((midW - boardW) / 2), boardY, boardW, false, boardH),
+    rivalPanel: { x: M, y: M, w: side, h: 62 },
+    playerPanel: { x: M, y: H - M - playerH, w: side, h: playerH },
+    menuButtons: { x: M, y: buttonsY },
+    menuButtonSize: buttonSize,
+    turnBox: { x: W - M - right, y: M, w: right, h: 36 },
+    // En panorámico, a la altura de la mano (donde ya está el ratón); en 4:3, sobre ella
+    actionButton: wide
+      ? { x: W - M - right, y: handY + Math.round((handH - actionH) / 2), w: right, h: actionH }
+      : { x: W - M - right, y: 196, w: right, h: actionH },
+    hand: { x: midX, y: handY, w: midW, scale: handScale },
+    compactPanels: false,
+    sidebar: { x: 1, y: 1, w: side + 2 * M - 2, h: H - 2 },
+    roundBox: { x: M + 2, y: roundY, w: side - 4, h: 44 },
+  };
+};
+
+const portraitGame = (W: number, H: number): GameLayout => {
   // Vertical: de abajo arriba → mano y fila del jugador (panel + acción) en la zona del
   // pulgar; arriba → barra del rival; entre la barra y el tablero, en el hueco que dejan
   // farolas y banderolas, el cuadro de turno y los botones de menú. El tablero se centra.
@@ -184,7 +217,7 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
   const buttonsW = 4 * 18 + 3 * 3;
 
   return {
-    mode,
+    mode: 'portrait',
     board: computeBoard(M, boardY, boardW, true, boardH),
     rivalPanel: { x: M, y: M, w: W - 2 * M, h: 28 },
     menuButtons: { x: W - M - buttonsW, y: statusY },
@@ -221,6 +254,8 @@ export interface MenuLayout {
   map: Rect;
   mapSafeTop: number;
   mapSafeBottom: number;
+  /** Horizontal: la columna del logo flota sobre el mapa (el camino se centra a su derecha) */
+  mapSafeLeft: number;
   /** Menú: columna de la acción principal (x, ancho) y su borde inferior */
   cta: { x: number; w: number; bottom: number };
 }
@@ -237,8 +272,9 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     return {
       board, cx: boardX + 111, logoX: 4, logoW: 142, logoY: 40 + dy,
       bossScale: 3, bossY: 26 + dy, bossH: 180, mascotY: 92 + dy, playY: 226 + dy,
-      // El mapa a la derecha, de arriba abajo; logo, iconos y acción en la columna izquierda
-      map: { x: 150, y: 0, w: W - 150, h: H }, mapSafeTop: 0, mapSafeBottom: 0,
+      // El mapa ocupa toda la pantalla; logo, iconos y acción flotan encima a la izquierda
+      // (fundidos con un degradado) y el camino se centra en lo que queda a la derecha
+      map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 0, mapSafeBottom: 0, mapSafeLeft: 150,
       cta: { x: 6, w: 138, bottom: 22 },
     };
   }
@@ -263,7 +299,7 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     mascotY: boardY + Math.round(boardH / 2) - 26,
     playY: boardY + boardH + DIORAMA_SHADOW + 10,
     // El mapa ocupa toda la pantalla; la cabecera y la acción flotan encima
-    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 92,
+    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 92, mapSafeLeft: 0,
     cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), bottom: 24 },
   };
 };

@@ -129,7 +129,7 @@ export const MenuScreen = () => {
     } else startGame(selected, rematch);
   };
 
-  const { logoX, logoW, logoY, map, mapSafeTop, mapSafeBottom, cta: ctaBox } = useMenuLayout();
+  const { logoX, logoW, logoY, map, mapSafeTop, mapSafeBottom, mapSafeLeft, cta: ctaBox } = useMenuLayout();
   // Mientras el mapa cuenta algo nuevo, el input queda bloqueado
   const [revealing, setRevealing] = useState(false);
   // Depuración (?debug=1): repetir las animaciones del mapa
@@ -178,7 +178,7 @@ export const MenuScreen = () => {
       <Backdrop />
       <AmbientDust />
       {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
-      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest && portrait ? 34 : 0)} onRevealing={setRevealing}
+      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest && portrait ? 34 : 0)} safeLeft={mapSafeLeft} onRevealing={setRevealing}
         replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} />
       {/* Cabecera y pie se funden con el mapa (en vertical flotan encima) */}
       {portrait && (
@@ -187,7 +187,11 @@ export const MenuScreen = () => {
           <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? 34 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
         </>
       )}
-      {!portrait && <div className="absolute z-20 pointer-events-none" style={{ left: map.x - 12, top: 0, width: 24, height: map.h, background: 'linear-gradient(to right, transparent, rgba(11,13,12,0.6), transparent)' }} />}
+      {/* En horizontal, la columna del logo se funde con el mapa: penumbra que se abre hacia la derecha */}
+      {!portrait && (
+        <div className="absolute inset-y-0 left-0 z-20 pointer-events-none" style={{ width: mapSafeLeft + 70,
+          background: 'radial-gradient(ellipse 100% 60% at 0% 50%, rgba(11,13,12,0.55) 0%, transparent 100%), linear-gradient(to right, rgba(11,13,12,0.88) 0%, rgba(11,13,12,0.72) 55%, rgba(11,13,12,0.3) 80%, transparent 100%)' }} />
+      )}
 
       {/* Reglas, estadísticas y ajustes también desde el menú */}
       {/* En horizontal, debajo del logo; en vertical, arriba a la derecha */}

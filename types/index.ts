@@ -49,6 +49,8 @@ export interface Card {
   isReflecting?: boolean;
   /** Expuesta por un sello de revelar: vale 1 menos en la próxima pelea */
   isExposed?: boolean;
+  /** Tuya, en la mesa y aún sin revelar: el rival no sabe qué es (solo ve su sello) */
+  hidden?: boolean;
   /** Comodín de sello (carta de sello sin sello fijo): eliges cuál al jugarlo */
   wild?: boolean;
   /** Mejora del Castillo: puntos de valor de más */

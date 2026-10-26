@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
   applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isIdleDraw, isQuietFight, isStalemate, nextIdleTurns, risenPhoenixes, countRankOnBoard, createPlayerState,
-  drawCards, drawRound, getGameResult, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent,
+  drawCards, drawRound, getGameResult, hideFromRival, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent, unhideBoard,
 } from '@/lib/game-utils';
 import {
   ALL_SEALS, BOSSES, bossLives, createBossState, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, rematchLevel, unlockedSeals,
@@ -57,6 +57,10 @@ interface GameState {
   sealFx: { id: number; events: SealEvent[] } | null;
   /** Paso del tutorial guiado (null = partida normal) */
   tutorialStep: number | null;
+  /** Cara o cruz al empezar: quién abre la partida (se lanza tras la presentación) */
+  coin: { id: number; opener: Owner } | null;
+  /** Quién abre la ronda en curso (las rondas se alternan) */
+  opener: Owner;
 
   setDifficulty: (diff: Difficulty) => void;
   /** Entra en el Castillo: la pelea del piso en el que vas (o una subida nueva) */
@@ -81,6 +85,8 @@ interface GameState {
   drawCard: (target: Owner, amount?: number) => void;
   /** Truco de pruebas: gana la partida en curso */
   debugWin: () => void;
+  /** Tras el cara o cruz: empieza la primera ronda, la abra quien la abra */
+  beginMatch: () => void;
 }
 
 // --- TEMPORIZADORES ---
@@ -124,11 +130,19 @@ const revealFor = (played: Card | undefined, slot: number, enemy: PlayerState, e
 /** Jefes del principio contra la IA normal (los demás, la difícil) */
 const EASY_BOSSES = 4;
 
+/** Cara (empiezas tú) o cruz (empieza el rival): la partida espera en 'start' a la moneda */
+const tossCoin = () => ({ phase: 'start' as GamePhase, coin: { id: Date.now(), opener: (Math.random() < 0.5 ? 'player' : 'opponent') as Owner } });
+const other = (o: Owner): Owner => (o === 'player' ? 'opponent' : 'player');
+/** Si abre el rival, espera a que pase el cartel de la ronda antes de pensar */
+const RIVAL_OPENS_MS = 1300;
+
 const award = (ids: StampId[]) => ids.forEach(id => { if (unlockStamp(id)) useUiStore.getState().pushStamp(id); });
 
 const initialMatchState = () => ({
   phase: 'start' as GamePhase,
   turn: 'player' as Owner,
+  coin: null as { id: number; opener: Owner } | null,
+  opener: 'player' as Owner,
   roundNumber: 1,
   idleTurns: 0,
   pendingCombatResult: null,
@@ -232,7 +246,7 @@ export const useGameStore = create<GameState>((set, get) => {
     set({
       ...initialMatchState(),
       screen: 'game',
-      phase: 'placement',
+      ...tossCoin(),
       difficulty: 'hard',
       bossIndex: run.stage,
       rematchLevel: level,
@@ -263,7 +277,7 @@ export const useGameStore = create<GameState>((set, get) => {
     set({
       ...initialMatchState(),
       screen: 'game',
-      phase: 'placement',
+      ...tossCoin(),
       // Los primeros jefes piensan pero aprietan menos (la IA normal); del 5.º en
       // adelante, y en las revanchas, la difícil
       difficulty: bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard',
@@ -295,7 +309,7 @@ export const useGameStore = create<GameState>((set, get) => {
     set({
       ...initialMatchState(),
       screen: 'game',
-      phase: 'placement',
+      ...tossCoin(),
       // Cuánto aprieta: el rival normal o el difícil
       difficulty: forestAi(e.tier),
       forest: e,
@@ -330,6 +344,7 @@ export const useGameStore = create<GameState>((set, get) => {
       rematchLevel: saved.rematchLevel ?? (saved.rematch ? 1 : 0),
       castle: saved.castle ? { stage: saved.bossIndex ?? 0, phase2: !!saved.phase2 } : null,
       forest: saved.forest ?? null,
+      opener: saved.opener ?? 'player',
       player: saved.player,
       opponent: saved.opponent,
     });
@@ -353,8 +368,10 @@ export const useGameStore = create<GameState>((set, get) => {
     const step = tutorialStep !== null ? TUTORIAL_STEPS[tutorialStep] : undefined;
     if (tutorialStep !== null && (step?.kind !== 'play' || step.slot !== slotIndex || stepCard(player.hand, step)?.id !== cardId)) return;
 
-    const nextPlayer = playCardToSlot(player, cardId, slotIndex, true, wildSeal);
-    if (!nextPlayer) return;
+    const placed = playCardToSlot(player, cardId, slotIndex, true, wildSeal);
+    if (!placed) return;
+    // El rival no sabe qué carta es hasta la pelea (un sello puesto encima sí lo ve)
+    const nextPlayer = hideFromRival(placed, player.hand.find(c => c.id === cardId), slotIndex);
 
     if (step?.kind === 'play') {
       playSound('click', 0.5);
@@ -430,8 +447,9 @@ export const useGameStore = create<GameState>((set, get) => {
     if (phase !== 'placement' || tutorialStep !== null) return;
 
     // Piensa con lo que hay: sus vidas, las tuyas y si ya te has plantado
+    // Tus cartas boca abajo no las ve: las imagina entre las que aún no conoce
     const move = chooseOpponentMove(opponent.hand, opponent.board, player.board, difficulty, Math.random,
-      { lives: opponent.lives, playerLives: player.lives, playerPassed: player.isPassed });
+      { lives: opponent.lives, playerLives: player.lives, playerPassed: player.isPassed, unseen: [...player.hand, ...player.deck] });
     const nextOpponent = move && playCardToSlot(opponent, move.cardId, move.slotIndex, false);
 
     // Sin cartas o sin huecos: el rival se planta
@@ -463,7 +481,7 @@ export const useGameStore = create<GameState>((set, get) => {
     // 1. Se revelan las cartas del rival y los Jokers dan cartas extra
     schedule(() => {
       const { player, opponent } = get();
-      set({ opponent: { ...opponent, board: revealBoard(opponent.board) } });
+      set({ opponent: { ...opponent, board: revealBoard(opponent.board) }, player: { ...player, board: unhideBoard(player.board) } });
       get().drawCard('player', countRankOnBoard(player.board, 'JOKER') * JOKER_DRAW_BONUS);
       get().drawCard('opponent', countRankOnBoard(opponent.board, 'JOKER') * JOKER_DRAW_BONUS);
 
@@ -573,10 +591,13 @@ export const useGameStore = create<GameState>((set, get) => {
       return;
     }
 
+    // Las rondas se alternan: abre quien no abrió la anterior (en el tutorial, siempre tú)
+    const opener = tutorial ? 'player' : other(get().opener);
     set({
       pendingCombatResult: null,
       phase: 'placement',
-      turn: 'player',
+      turn: opener,
+      opener,
       roundNumber: roundNumber + 1,
       // Si la pelea cambió algo, la partida se mueve: la cuenta de inactividad vuelve a 0
       idleTurns: isQuietFight(player, opponent, result) ? idle : 0,
@@ -586,6 +607,14 @@ export const useGameStore = create<GameState>((set, get) => {
         ? applyRivalMoves(drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false), TUTORIAL_OPENINGS[roundNumber + 1])
         : drawRound(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
     });
+    if (opener === 'opponent') schedule(get().opponentTurnAction, RIVAL_OPENS_MS);
+  },
+
+  beginMatch: () => {
+    const { phase, coin } = get();
+    if (phase !== 'start' || !coin) return;
+    set({ phase: 'placement', turn: coin.opener, opener: coin.opener, coin: null });
+    if (coin.opener === 'opponent') schedule(get().opponentTurnAction, RIVAL_OPENS_MS);
   },
 };
 });
@@ -617,7 +646,7 @@ if (typeof window !== 'undefined') {
   useGameStore.subscribe((state, prev) => {
     if (state.screen === 'game' && state.phase === 'placement' && state.turn === 'player' && state.tutorialStep === null
       && (state.player !== prev.player || state.opponent !== prev.opponent || state.turn !== prev.turn)) {
-      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, phase2: !!state.castle?.phase2, forest: state.forest ?? undefined, player: state.player, opponent: state.opponent });
+      saveGame({ difficulty: state.difficulty, roundNumber: state.roundNumber, bossIndex: state.bossIndex, rematch: state.rematch, rematchLevel: state.rematchLevel, castle: !!state.castle, phase2: !!state.castle?.phase2, forest: state.forest ?? undefined, opener: state.opener, player: state.player, opponent: state.opponent });
     }
     if ((state.phase === 'end' && prev.phase !== 'end') || (state.screen === 'menu' && prev.screen === 'game')) clearGame();
   });

@@ -92,3 +92,27 @@ describe('el As del rival', () => {
     expect(chooseOpponentMove(hand, boardOf([]), yours, 'hard', fixed(0.5))!.cardId).toBe('ace');
   });
 });
+
+describe('no mira tus cartas boca abajo', () => {
+  const low = (['2', '3', '4', '5', '6'] as Rank[]).map((r, i) => card(r, 'player', `u${i}`));
+
+  it('tu As oculto no le asusta: no sabe que lo es', () => {
+    const yours = boardOf([card('A', 'player', 'pa', { hidden: true })]);
+    const move = chooseOpponentMove([card('K', 'opponent', 'k')], boardOf([]), yours, 'hard', fixed(0.5), { unseen: low });
+    expect(move?.cardId).toBe('k');
+  });
+
+  it('el mismo As ya revelado sí lo tiene en cuenta (se planta)', () => {
+    const yours = boardOf([card('A', 'player', 'pa')]);
+    expect(chooseOpponentMove([card('K', 'opponent', 'k')], boardOf([]), yours, 'hard', fixed(0.5), { unseen: low })).toBeNull();
+  });
+
+  it('un sello puesto en tu carta oculta sí lo ve', async () => {
+    const { guessBoards } = await import('@/lib/ai');
+    const yours = boardOf([card('A', 'player', 'pa', { hidden: true, seal: 'shield' })]);
+    const guesses = guessBoards(yours, { unseen: low });
+    expect(guesses.length).toBeGreaterThan(1);
+    expect(guesses.every(b => b[0].card?.seal === 'shield' && b[0].card.id === 'pa')).toBe(true);
+    expect(guesses.some(b => b[0].card?.rank !== 'A')).toBe(true);
+  });
+});

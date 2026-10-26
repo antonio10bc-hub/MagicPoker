@@ -137,6 +137,14 @@ canales de 0,5 px → viñeta.
   del jefe), botones de partida de 18, mano a tamaño real y PLANTARSE a la altura de
   la mano. La pantalla final centra su tapete en toda la pantalla. Esc cierra las
   ventanas que se cierran tocando fuera.
+- **Ultrapanorámico (hasta 32:9):** el escenario llega hasta 1100 de ancho; la partida
+  agrupa mesa y columnas en una zona central de 600 como mucho y el fondo llena el
+  resto.
+- **Cara o cruz:** al empezar una partida (tras la presentación del jefe) la mesa se
+  desenfoca y en el centro se lanza una moneda: cara crema con tu corazón (empiezas
+  tú), cruz naranja con la silueta del rival (empieza él). Sube girando, cae, se lee
+  "¡CARA!/¡CRUZ!" y quién empieza, y arranca la ronda. Las rondas se alternan; el
+  cartel de ronda dice "EMPIEZA EL RIVAL" cuando le toca abrir a él.
 - Lo que se pinta ya no es *pixel art* nítido: texturas de grano fundidas con un leve
   desenfoque, grano fino a resolución de pantalla encima y fuentes vectoriales.
 
@@ -453,8 +461,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
   (el verde del sello manda) y las vidas de más por encima de las 4 de partida.
 - **Resumen de la subida:** al conquistar o caer, la pantalla final del Castillo lleva
-  el botón RESUMEN (naranja, bajo ¡OTRA SUBIDA!), y la página del Castillo del menú un
-  enlace "Ver el resumen de la última subida". Ventana grande de banda carmesí: cómo
+  el botón RESUMEN (naranja, bajo ¡OTRA SUBIDA!), y el Castillo del mapa un botón
+  redondo (i) arriba a su derecha. Ventana grande de banda carmesí: cómo
   acabó (¡CASTILLO CONQUISTADO! en oro o "Caíste en el piso n" en carmesí), el mapa,
   los desafíos en pastillas carmesí, las estadísticas (pisos, peleas, tiempo, vidas
   quitadas y perdidas, cartas tumbadas y perdidas, mejor pelea, mejoras por rareza en
@@ -698,17 +706,21 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   alternan a cada lado del camino y su decorado va hacia fuera. Sobre el camino, un
   sendero de puntos (crema lo recorrido, pizarra lo que falta). Encima de cada jefe, nada
   (ni etiquetas de "próximo rival": el jefe a batir es el que está en pie y respira; un
-  vencido deja estrellas sobre su bandera); debajo
+  vencido deja estrellas sobre su bandera, el Soberano también); debajo
   su nombre ("???" si está bloqueado) y, si está elegido, sus vidas y sus sellos (con
   muchos, "×N"). Tocar un jefe lo elige (anillo crema bajo los pies).
   Arriba del todo, el **Castillo** (silueta gótica negra de agujas cóncavas con aura
   carmesí, ventanas y portón encendidos y un resplandor rojo; `CASTLE_ART`), con su
-  pastilla carmesí, su récord o el mapa de la subida y el resumen de la última. El
+  pastilla carmesí y su récord o el mapa de la subida; arriba a su derecha, un botón
+  redondo (i) de filo carmesí abre el resumen de la última subida. Entre el Soberano y
+  el Castillo hay más camino que entre pueblos (los dos son grandes y llevan texto). El
   Soberano (con resplandor de oro) y el Castillo **no se ven** hasta alcanzarlos: lo
   desconocido queda bajo una niebla densa que baja cuando se descubre.
   - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
-    principal abajo, con degradados a negro para que se fundan. En horizontal: logo,
-    iconos y acción en la columna izquierda; el mapa a la derecha.
+    principal abajo, con degradados a negro para que se fundan. En horizontal también
+    lo llena: logo, iconos y acción flotan a la izquierda sobre una penumbra que se
+    abre hacia la derecha (una sola escena, sin corte), y el camino se centra en lo
+    que queda a la derecha.
   - Una sola acción principal ancha con el verbo grande y el contexto en pequeño
     ("¡DESAFIAR! · El Trilero", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si
     hay, continuar partida debajo.

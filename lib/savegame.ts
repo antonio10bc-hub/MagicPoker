@@ -1,7 +1,7 @@
 // --- PARTIDA GUARDADA (Local Storage) ---
 // Se guarda en cada momento "estable" (tu turno de colocar) para poder retomarla si
 // se cierra la app. Se borra al terminar la partida o al salir al menú.
-import { Card, Difficulty, PlayerState, SealId } from '@/types';
+import { Card, Difficulty, Owner, PlayerState, SealId } from '@/types';
 import { RANKS } from '@/lib/game-utils';
 import { ALL_SEALS, BOSSES } from '@/lib/bosses';
 import { archetype, Encounter, TIERS } from '@/lib/forest';
@@ -26,6 +26,8 @@ export interface SavedGame {
   phase2?: boolean;
   /** Duelo del Bosque: contra quién y en qué dificultad */
   forest?: Encounter;
+  /** Quién abrió la ronda guardada (las rondas se alternan) */
+  opener?: Owner;
   player: PlayerState;
   opponent: PlayerState;
 }

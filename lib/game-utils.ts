@@ -545,6 +545,19 @@ export const clearDefeatedCards = (board: BoardSlot[]): BoardSlot[] =>
     return slot;
   });
 
+/** Tu carta recién puesta queda oculta para el rival (los sellos van encima, a la vista) */
+export const hideFromRival = (state: PlayerState, played: Card | undefined, slotIndex: number): PlayerState => {
+  const card = state.board[slotIndex]?.card;
+  if (!card || !played || isSealCard(played)) return state;
+  const board = [...state.board];
+  board[slotIndex] = { ...state.board[slotIndex], card: { ...card, hidden: true } };
+  return { ...state, board };
+};
+
+/** En la pelea se ven tus cartas: el rival ya sabe qué son */
+export const unhideBoard = (board: BoardSlot[]): BoardSlot[] =>
+  board.map(slot => (slot.card?.hidden ? { ...slot, card: { ...slot.card, hidden: false } } : slot));
+
 export const revealBoard = (board: BoardSlot[]): BoardSlot[] =>
   board.map(slot => (slot.card && !slot.card.isFaceUp ? { ...slot, card: { ...slot.card, isFaceUp: true } } : slot));
 

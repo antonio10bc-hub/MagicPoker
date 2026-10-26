@@ -9,15 +9,15 @@ import { FilmGrain } from '@/components/fx/FilmGrain';
 // La escala se calcula en píxeles FÍSICOS (devicePixelRatio) para que cada píxel
 // interno ocupe un número entero de píxeles reales.
 //  - Horizontal (ordenador): el alto interno ronda los 288 px y el ancho sigue la
-//    proporción de la pantalla (de 4:3 a ~2:1), así el juego la llena sin franjas
+//    proporción de la pantalla (de 4:3 a 32:9), así el juego la llena sin franjas
 //    negras. Se busca el entero n que deja el alto en [LANDSCAPE_MIN_H, LANDSCAPE_MAX_H];
 //    si no hay, ajuste exacto a 288 de alto.
 //  - Vertical (móvil): se elige el entero n que deja un ancho interno ≤ 260 px y el
 //    alto interno se adapta a la pantalla, así el juego la llena entera.
 const LANDSCAPE_MIN_H = 260;
 const LANDSCAPE_MAX_H = 330;
-// Más ancho que esto (pantallas ultrapanorámicas) deja franjas a los lados
-const LANDSCAPE_MAX_W = 576;
+// Tope de ancho (hasta 32:9): las distribuciones centran lo importante y el fondo llena
+const LANDSCAPE_MAX_W = 1100;
 // Ancho interno mínimo en vertical: el tablero de 4 cartas cabe justo. Cuanto más
 // estrecho, más grande se ve todo en el móvil.
 const PORTRAIT_MIN_W = 180;

@@ -86,7 +86,47 @@ export interface AiContext {
   playerLives?: number;
   /** Te has plantado: ya no vas a poner más cartas esta ronda */
   playerPassed?: boolean;
+  /** Tus cartas que aún no ha visto (mano y mazo). Con ellas imagina lo que tienes boca
+   *  abajo en la mesa; sin esto ve tu mesa tal cual */
+  unseen?: Card[];
 }
+
+// --- SIN MIRAR TUS CARTAS ---
+// Tus cartas de la mesa sin revelar (hidden) no las conoce: ve su sello (se ve aunque
+// estén boca abajo), pero no qué carta es. Piensa cada jugada contra varias mesas tuyas
+// imaginadas, sacando lo oculto de entre las cartas que aún no ha visto (incluidas las
+// ocultas), y se queda con la media. Igual que tu pronóstico cuenta sus ocultas como
+// "posibles". El azar lleva semilla: la misma mesa se imagina siempre igual.
+const GUESSES = 12;
+
+const seeded = (seed: number): Rng => () => {
+  seed = (seed + 0x6D2B79F5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+const isHidden = (s: BoardSlot) => !!s.card?.hidden && !s.card.isExposed;
+
+/** Las mesas tuyas que se imagina (solo la real si no hay nada oculto) */
+export const guessBoards = (playerBoard: BoardSlot[], ctx: AiContext = {}): BoardSlot[][] => {
+  const hidden = playerBoard.filter(isHidden).map(s => s.card!);
+  const pool = [...(ctx.unseen ?? []), ...hidden].filter(c => !isSealCard(c));
+  if (hidden.length === 0 || !ctx.unseen || pool.length === 0) return [playerBoard];
+  const rng = seeded(pool.length * 131 + hidden.length * 17 + playerBoard.reduce((n, s) => n * 3 + (s.card ? 1 : 0), 0));
+  return Array.from({ length: GUESSES }, () => {
+    const bag = [...pool];
+    return playerBoard.map(s => {
+      if (!isHidden(s) || bag.length === 0) return s;
+      const pick = bag.splice(Math.floor(rng() * bag.length), 1)[0];
+      return { ...s, card: { ...pick, id: s.card!.id, owner: s.card!.owner, isFaceUp: true, seal: s.card!.seal, hidden: false } };
+    });
+  });
+};
+
+/** Lo bien que le iría la pelea, de media entre las mesas que se imagina */
+const expectedFight = (guesses: BoardSlot[][], opponentBoard: BoardSlot[], ctx: AiContext) =>
+  guesses.reduce((n, b) => n + evaluateFight(b, opponentBoard, ctx), 0) / guesses.length;
 
 /** El Príncipe golpea al azar: para pensar, un azar fijo */
 const SIM_RNG: Rng = () => 0.5;
@@ -115,6 +155,7 @@ interface Candidate { cardId: string; slotIndex: number; score: number }
 /** Todas sus jugadas posibles, puntuadas, de la mejor a la peor */
 export const rankMoves = (hand: Card[], opponentBoard: BoardSlot[], playerBoard: BoardSlot[], ctx: AiContext = {}): Candidate[] => {
   const state = { lives: 0, hand, deck: [], board: opponentBoard, isPassed: false };
+  const guesses = guessBoards(playerBoard, ctx);
   const out: Candidate[] = [];
   hand.forEach(card => {
     if (card.wild) return;
@@ -123,7 +164,7 @@ export const rankMoves = (hand: Card[], opponentBoard: BoardSlot[], playerBoard:
       if (!next) return;
       // Gastar una carta cuesta un poco (mejor guardar las buenas); un sello puesto suma
       const cost = isSealCard(card) ? -1 : 0.3 * card.value;
-      out.push({ cardId: card.id, slotIndex, score: evaluateFight(playerBoard, next.board, ctx) - cost });
+      out.push({ cardId: card.id, slotIndex, score: expectedFight(guesses, next.board, ctx) - cost });
     });
   });
   return out.sort((a, b) => b.score - a.score);
@@ -138,7 +179,7 @@ export const chooseOpponentMove = (
   rng: Rng = Math.random,
   ctx: AiContext = {},
 ): OpponentMove | null => {
-  if (difficulty === 'easy') return easyMove(hand, opponentBoard, playerBoard, rng);
+  if (difficulty === 'easy') return easyMove(hand, opponentBoard, guessBoards(playerBoard, ctx)[0], rng);
   const moves = rankMoves(hand, opponentBoard, playerBoard, ctx);
   if (moves.length === 0) return null;
   if (difficulty === 'normal') {
@@ -149,7 +190,7 @@ export const chooseOpponentMove = (
   }
   // Difícil: la mejor, salvo que plantarse sea mejor
   const best = moves[0];
-  const now = evaluateFight(playerBoard, opponentBoard, ctx);
+  const now = expectedFight(guessBoards(playerBoard, ctx), opponentBoard, ctx);
   if (best.score < now) return null;
   if (ctx.playerPassed && best.score < now + 1) return null;
   return { cardId: best.cardId, slotIndex: best.slotIndex };

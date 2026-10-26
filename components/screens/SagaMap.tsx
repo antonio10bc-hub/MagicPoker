@@ -13,7 +13,7 @@ import { INK } from '@/theme/tokens';
 import { Rect } from '@/theme/layout';
 import { PixelSprite, spriteSize } from '@/components/pixel/PixelSprite';
 import { CASTLE_ART, spriteAura } from '@/components/pixel/bosses';
-import { HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { HEART, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { Sprite } from '@/components/pixel/PixelSprite';
 import { SCENERY } from '@/components/pixel/scenery';
 import { MapTerrain, Pt } from './MapTerrain';
@@ -41,7 +41,8 @@ export const CASTLE_INDEX = BOSSES.length;
 
 const STEP = 200;
 const BOTTOM = 120;
-const CASTLE_GAP = 150;
+/** Del Soberano al Castillo: más camino que entre pueblos (los dos son grandes y llevan texto) */
+const CASTLE_GAP = 250;
 /** Sitio sobre el Castillo para su pastilla y la cabecera del menú */
 const TOP = 80;
 const CASTLE_H = 104;
@@ -56,13 +57,15 @@ const T = {
   rise: 8400, emerge: 10000, lit: 13400, castleDone: 15600,
 };
 
-const geometry = (w: number) => {
+/** `safeLeft`: lo que tapa la interfaz a la izquierda (el camino se centra en el resto) */
+const geometry = (w: number, safeLeft = 0) => {
   const n = BOSSES.length;
-  const castle = { x: Math.round(w / 2), y: TOP + CASTLE_H };
+  const cx = Math.round(safeLeft + (w - safeLeft) / 2);
+  const castle = { x: cx, y: TOP + CASTLE_H };
   const contentH = castle.y + CASTLE_GAP + (n - 1) * STEP + BOTTOM;
   // Las paradas, a un lado y a otro del centro; el Soberano, en medio, ante su puerta
-  const amp = Math.round(w * 0.13);
-  const nodes = BOSSES.map((b, i) => ({ x: b.secret ? Math.round(w / 2) : Math.round(w / 2 + sideOf(i) * amp), y: contentH - BOTTOM - i * STEP }));
+  const amp = Math.round((w - safeLeft) * 0.13);
+  const nodes = BOSSES.map((b, i) => ({ x: b.secret ? cx : cx + sideOf(i) * amp, y: contentH - BOTTOM - i * STEP }));
   // El camino entero: entra por abajo, pasa por cada parada y llega al Castillo
   const stops = [{ x: nodes[0].x - 10, y: contentH + 10 }, ...nodes, castle];
   const road: Pt[] = stops.slice(1).flatMap((b, n) => curve(stops[n], b, 1));
@@ -382,12 +385,14 @@ const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gol
   );
 };
 
-export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay = null, onReplayDone }: {
+export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, safeLeft = 0, onRevealing, replay = null, onReplayDone }: {
   /** Zona del escenario que ocupa el mapa */
   rect: Rect;
-  /** Lo que tapan arriba y abajo la cabecera y la acción principal (para centrar bien) */
+  /** Lo que tapan arriba, abajo y a la izquierda la cabecera, la acción principal y el
+   *  logo (para centrar bien) */
   safeTop?: number;
   safeBottom?: number;
+  safeLeft?: number;
   /** Mientras se cuenta algo nuevo (input bloqueado) */
   onRevealing?: (on: boolean) => void;
   /** Depuración: repetir la revelación de haber vencido a tantos jefes (sin tocar el progreso) */
@@ -402,7 +407,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
-  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w), [rect.w]);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w, safeLeft), [rect.w, safeLeft]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
   // (se decide al montar en el navegador: en el servidor no hay progreso)
@@ -632,7 +637,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                 <div className="absolute flex justify-center" style={{ left: -50, width: 100, top: -(figureH + (boss.secret ? 22 : 14)) }}>
                   <AnimatePresence mode="wait">
                     {justBeaten && phase === 'beaten' ? null
-                      : beaten && !boss.secret ? <Stars key="stars" lit={wins} pop={justBeaten} />
+                      : beaten ? <Stars key="stars" lit={wins} pop={justBeaten} />
                         : isSel && !isCurrent ? <Pill key="n" tone="muted">{t.boss_n.replace('{n}', String(i + 1)).replace('{total}', total)}</Pill> : null}
                   </AnimatePresence>
                 </div>
@@ -701,13 +706,17 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                   : <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>
                     {castle.conquered > 0 ? t.ch_record.replace('{n}', String(castle.bestChallenges ?? 0)) : t.castle_tagline}
                   </span>}
-                {!castle.run && castle.lastSummary && (
-                  <span role="button" aria-label="last summary" className="t-micro underline cursor-pointer" style={{ color: 'var(--ink-crimson)' }}
-                    onClick={e => { e.stopPropagation(); playSfx('open', 0.6); useUiStore.getState().openModal('summary'); }}>
-                    {t.sum_last}
-                  </span>
-                )}
               </motion.div>
+              {/* Arriba a la derecha: (i) el resumen de la última subida */}
+              {!castle.run && castle.lastSummary && phase !== 'emerge' && phase !== 'rise' && (
+                <button aria-label="last summary" title={t.sum_last}
+                  className="absolute z-10 rounded-full flex items-center justify-center cursor-pointer transition-[filter] hover:brightness-125"
+                  style={{ left: 40, top: -CASTLE_H - 8, width: 16, height: 16, background: 'var(--ink-black)',
+                    boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 6px 1px rgba(255,31,75,0.55)' }}
+                  onClick={e => { e.stopPropagation(); playSfx('open', 0.6); useUiStore.getState().openModal('summary'); }}>
+                  <PixelSprite sprite={ICONS.info} tint={INK.cream} />
+                </button>
+              )}
             </div>
           )}
 

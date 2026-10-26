@@ -65,6 +65,8 @@ export const TurnBox = () => {
 /** Barre la pantalla al empezar cada ronda. Se monta con key={ronda}. */
 const RoundBanner = ({ round }: { round: number }) => {
   const t = useTranslations();
+  // Las rondas se alternan: a veces abre el rival
+  const [rivalOpens] = useState(() => useGameStore.getState().opener === 'opponent');
   const { width } = useStage();
   // Pasa sobre la franja central del tablero, entre las dos filas de cartas
   const { board } = useGameLayout();
@@ -83,7 +85,7 @@ const RoundBanner = ({ round }: { round: number }) => {
       transition={{ duration: 1.1, times: [0, 0.22, 0.72, 1], ease: 'easeInOut' }}
     >
       <WavyText text={`${t.round} ${round}`} className="text-title text-outline glow-text" style={{ color: 'var(--ink-orange)' }} />
-      <WavyText text={t.your_turn} className="text-outline" style={{ color: 'var(--c-cyan)' }} />
+      <WavyText text={rivalOpens ? t.rival_opens : t.your_turn} className="text-outline" style={{ color: rivalOpens ? 'var(--ink-orange)' : 'var(--c-cyan)' }} />
     </motion.div>
   );
 };
