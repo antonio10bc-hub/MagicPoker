@@ -227,7 +227,7 @@ export const MenuScreen = () => {
           <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
         )}
         <PxButton tone="yellow" onClick={() => handleStartGame(canRematch)} disabled={locked || revealing}
-          className={clsx('w-full h-[30px] flex-col gap-[1px] overflow-hidden', locked ? 'opacity-50' : 'anim-breathe')}
+          className={clsx('w-full h-[30px] flex-col gap-[1px] overflow-hidden', locked && 'opacity-50')}
           style={castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : undefined}>
           <span className="text-title" style={{ lineHeight: '14px' }}>{cta.title}</span>
           {cta.sub && <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>}
