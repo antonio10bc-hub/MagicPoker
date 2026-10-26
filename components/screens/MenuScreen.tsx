@@ -175,11 +175,11 @@ export const MenuScreen = () => {
       <Backdrop />
       <AmbientDust />
       {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
-      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest ? 34 : 0)} onRevealing={setRevealing}
+      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest ? ctaBox.h + 4 : 0)} onRevealing={setRevealing}
         replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} />
       {/* El mapa llena la pantalla; cabecera y pie flotan encima y se funden con él */}
       <div className="absolute inset-x-0 top-0 z-20 pointer-events-none" style={{ height: mapSafeTop + 12, background: 'linear-gradient(to bottom, rgba(11,13,12,0.95) 55%, transparent)' }} />
-      <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? 34 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
+      <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? ctaBox.h + 4 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
 
       {/* Arriba a la derecha: lo tuyo (colección, mazo) y reglas, estadísticas y ajustes */}
       <div className="absolute z-30 flex gap-[3px]" style={{ right: 4, top: 6 }}>
@@ -215,7 +215,7 @@ export const MenuScreen = () => {
         {showForest && (
           <motion.div initial={awaken ? { y: 30, opacity: 0, scale: 0.6 } : false} animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 14, delay: awaken ? 0.2 : 0 }}>
-            <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full h-[30px] flex-col gap-[1px] overflow-hidden"
+            <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full flex-col gap-[1px] overflow-hidden" style={{ height: ctaBox.h }}
               onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>
               <span className="text-title" style={{ lineHeight: '14px' }}>{t.forest_button}</span>
               <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{t.forest_button_sub}</span>
@@ -227,8 +227,8 @@ export const MenuScreen = () => {
           <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
         )}
         <PxButton tone="yellow" onClick={() => handleStartGame(canRematch)} disabled={locked || revealing}
-          className={clsx('w-full h-[30px] flex-col gap-[1px] overflow-hidden', locked && 'opacity-50')}
-          style={castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : undefined}>
+          className={clsx('w-full flex-col gap-[1px] overflow-hidden', locked && 'opacity-50')}
+          style={{ height: ctaBox.h, ...(castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : {}) }}>
           <span className="text-title" style={{ lineHeight: '14px' }}>{cta.title}</span>
           {cta.sub && <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>}
         </PxButton>

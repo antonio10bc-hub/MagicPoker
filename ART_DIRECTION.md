@@ -464,8 +464,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   insignia de valor de las cartas mejoradas (+2), un filo azul en las que ha sellado
   (el verde del sello manda) y las vidas de más por encima de las 4 de partida.
 - **Resumen de la subida:** al conquistar o caer, la pantalla final del Castillo lleva
-  el botón RESUMEN (naranja, bajo ¡OTRA SUBIDA!), y el Castillo del mapa un botón
-  redondo (i) arriba a su derecha. Ventana grande de banda carmesí: cómo
+  el botón RESUMEN (naranja, bajo ¡OTRA SUBIDA!), y el Castillo del mapa una pastilla
+  (i) junto a la de su récord. Ventana grande de banda carmesí: cómo
   acabó (¡CASTILLO CONQUISTADO! en oro o "Caíste en el piso n" en carmesí), el mapa,
   los desafíos en pastillas carmesí, las estadísticas (pisos, peleas, tiempo, vidas
   quitadas y perdidas, cartas tumbadas y perdidas, mejor pelea, mejoras por rareza en
@@ -714,8 +714,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   muchos, "×N"). Tocar un jefe lo elige (anillo crema bajo los pies).
   Arriba del todo, el **Castillo** (silueta gótica negra de agujas cóncavas con aura
   carmesí, ventanas y portón encendidos y un resplandor rojo; `CASTLE_ART`), con su
-  pastilla carmesí y su récord o el mapa de la subida; arriba a su derecha, un botón
-  redondo (i) de filo carmesí abre el resumen de la última subida. Entre el Soberano y
+  pastilla carmesí y su récord o el mapa de la subida; pegada a la pastilla, otra
+  cuadrada igual (masa carmesí, la i en silueta) abre el resumen de la última subida. Entre el Soberano y
   el Castillo hay más camino que entre pueblos (los dos son grandes y llevan texto). El
   Soberano (con resplandor de oro) y el Castillo **no se ven** hasta alcanzarlos: lo
   desconocido queda bajo una niebla densa que baja cuando se descubre.

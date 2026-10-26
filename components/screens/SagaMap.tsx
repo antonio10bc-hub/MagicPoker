@@ -438,8 +438,9 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     };
     camera.current = requestAnimationFrame(tick);
   };
-  // El Castillo es alto: se encuadra por su mitad (si no, su pastilla queda bajo la cabecera)
-  const yOf = (i: number) => (i >= CASTLE_INDEX ? castlePt.y - Math.round(CASTLE_H / 2) : nodes[i].y);
+  // El Castillo es alto (pastilla arriba, nombre y récord debajo): se encuadra por el
+  // centro de todo su bloque para que quepa entero entre la cabecera y los botones
+  const yOf = (i: number) => (i >= CASTLE_INDEX ? castlePt.y - 30 : nodes[i].y);
 
   // Al abrir: la cámara en el jefe a derrotar (o en el Castillo); con algo por contar,
   // en el último vencido de antes
@@ -686,16 +687,27 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                 </motion.div>
               </div>
               {phase === 'emerge' && <CastleEmergeFx />}
-              <div className="absolute flex justify-center" style={{ left: -60, width: 120, top: -CASTLE_H - 16 }}>
-                <motion.span initial={phase === 'emerge' || phase === 'rise' ? { scale: 0, opacity: 0 } : false} animate={phase === 'emerge' || phase === 'rise' ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+              <div className="absolute flex justify-center" style={{ left: -80, width: 160, top: -CASTLE_H - 16 }}>
+                <motion.span className="flex items-center gap-[2px]"
+                  initial={phase === 'emerge' || phase === 'rise' ? { scale: 0, opacity: 0 } : false} animate={phase === 'emerge' || phase === 'rise' ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
                   transition={{ delay: phase === 'lit' ? 1 : 0, type: 'spring', stiffness: 500, damping: 14 }}>
                   <Pill tone="castle">
                     {castle.run ? t.castle_floor.replace('{n}', String(castle.run.stage + 1)).replace('{total}', total)
                       : t.castle_best.replace('{n}', String(castle.best)).replace('{total}', total)}
                   </Pill>
+                  {/* Junto al récord, (i): el resumen de la última subida. Misma pieza que la
+                      pastilla (masa carmesí con brillo), con la i en silueta */}
+                  {!castle.run && castle.lastSummary && (
+                    <button aria-label="last summary" title={t.sum_last}
+                      className="relative z-10 flex items-center justify-center rounded-[2px] cursor-pointer transition-[filter] hover:brightness-125"
+                      style={{ width: 11, height: 11, background: 'var(--ink-crimson)', boxShadow: '0 0 6px rgba(255,31,75,0.6)' }}
+                      onClick={e => { e.stopPropagation(); playSfx('open', 0.6); useUiStore.getState().openModal('summary'); }}>
+                      <PixelSprite sprite={ICONS.info} tint={INK.black} />
+                    </button>
+                  )}
                 </motion.span>
               </div>
-              <motion.div className="absolute flex flex-col items-center gap-[3px]" style={{ left: -80, width: 160, top: 16 }}
+              <motion.div className="absolute flex flex-col items-center gap-[3px]" style={{ left: -95, width: 190, top: 16 }}
                 initial={false} animate={{ opacity: phase === 'emerge' || phase === 'rise' ? 0 : 1 }} transition={{ delay: phase === 'lit' ? 1.2 : 0, duration: phase === 'rise' ? 0 : 0.8 }}>
                 <span className="font-display glow-crimson" style={{ fontSize: 13, lineHeight: '13px', letterSpacing: 2, color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
                 {/* Con una subida a medias, su mapa; si no, la frase del Castillo */}
@@ -705,16 +717,6 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                     {castle.conquered > 0 ? t.ch_record.replace('{n}', String(castle.bestChallenges ?? 0)) : t.castle_tagline}
                   </span>}
               </motion.div>
-              {/* Arriba a la derecha: (i) el resumen de la última subida */}
-              {!castle.run && castle.lastSummary && phase !== 'emerge' && phase !== 'rise' && (
-                <button aria-label="last summary" title={t.sum_last}
-                  className="absolute z-10 rounded-full flex items-center justify-center cursor-pointer transition-[filter] hover:brightness-125"
-                  style={{ left: 40, top: -CASTLE_H - 8, width: 16, height: 16, background: 'var(--ink-black)',
-                    boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 6px 1px rgba(255,31,75,0.55)' }}
-                  onClick={e => { e.stopPropagation(); playSfx('open', 0.6); useUiStore.getState().openModal('summary'); }}>
-                  <PixelSprite sprite={ICONS.info} tint={INK.cream} />
-                </button>
-              )}
             </div>
           )}
 

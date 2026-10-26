@@ -286,7 +286,6 @@ export const BackGallery = () => {
           );
         })}
       </div>
-      {castleOpen && <p className="t-micro" style={{ color: 'var(--ink-crimson)' }}>{t.backs_castle_hint}</p>}
     </DialogBody>
   );
 };
