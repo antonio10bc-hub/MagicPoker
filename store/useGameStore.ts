@@ -59,7 +59,7 @@ interface GameState {
   tutorialStep: number | null;
   /** Cara o cruz al empezar: quién abre la partida (se lanza tras la presentación) */
   coin: { id: number; opener: Owner } | null;
-  /** Quién abre la ronda en curso (la 1.ª, la moneda; luego, quien va ganando) */
+  /** Quién abre la ronda en curso (la 1.ª, la moneda; luego, quien tiene más vidas) */
   opener: Owner;
 
   setDifficulty: (diff: Difficulty) => void;
@@ -590,8 +590,8 @@ export const useGameStore = create<GameState>((set, get) => {
       return;
     }
 
-    // Abre la ronda quien va ganando; si van igual, quien abrió la anterior (en el
-    // tutorial, siempre tú)
+    // Abre la ronda quien tiene más vidas (abrir es desventaja); si tienen las mismas,
+    // quien abrió la anterior (en el tutorial, siempre tú)
     const opener = tutorial ? 'player' : nextOpener(nextPlayer, nextOpponent, get().opener);
     set({
       pendingCombatResult: null,

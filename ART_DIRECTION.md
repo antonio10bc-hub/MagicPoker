@@ -145,8 +145,8 @@ canales de 0,5 px → viñeta.
   tú), cruz naranja con la silueta del rival (empieza él). Sube girando, cae, se lee
   "¡CARA!/¡CRUZ!" y quién empieza; la ronda no arranca hasta que tocas ("Toca para
   empezar" late debajo; en el ordenador, también Intro o Espacio). La moneda sale una
-  vez por duelo: después abre cada ronda quien va ganando (más parte de sus vidas en
-  pie) y, si van igual, quien abrió la anterior. El cartel de ronda dice "EMPIEZA EL
+  vez por duelo: después abre cada ronda quien tiene más vidas (abrir es desventaja:
+  se la lleva quien va por delante) y, si tienen las mismas, quien abrió la anterior. El cartel de ronda dice "EMPIEZA EL
   RIVAL" cuando le toca abrir a él.
 - Lo que se pinta ya no es *pixel art* nítido: texturas de grano fundidas con un leve
   desenfoque, grano fino a resolución de pantalla encima y fuentes vectoriales.

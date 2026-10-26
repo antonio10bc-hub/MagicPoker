@@ -65,7 +65,7 @@ export const TurnBox = () => {
 /** Barre la pantalla al empezar cada ronda. Se monta con key={ronda}. */
 const RoundBanner = ({ round }: { round: number }) => {
   const t = useTranslations();
-  // Abre quien va ganando (la primera, la moneda): a veces, el rival
+  // Abre quien tiene más vidas (la primera, la moneda): a veces, el rival
   const [rivalOpens] = useState(() => useGameStore.getState().opener === 'opponent');
   const { width } = useStage();
   // Pasa sobre la franja central del tablero, entre las dos filas de cartas

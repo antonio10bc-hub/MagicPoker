@@ -206,13 +206,12 @@ describe('mano inicial y bloqueos', () => {
 
 describe('quién abre la ronda (tras el cara o cruz)', () => {
   const side = (lives: number, maxLives: number) => ({ ...createPlayerState([], 0, true, lives), maxLives });
-  it('abre quien va ganando, por la parte de sus vidas que le queda', () => {
-    // 3/4 tuyas contra 4/6 del jefe: vas ganando aunque él tenga más vidas sueltas
-    expect(nextOpener(side(3, 4), side(4, 6), 'opponent')).toBe('player');
-    expect(nextOpener(side(2, 4), side(4, 6), 'player')).toBe('opponent');
+  it('abre quien tiene más vidas (en vidas sueltas, sin mirar el máximo)', () => {
+    expect(nextOpener(side(3, 4), side(4, 6), 'player')).toBe('opponent');
+    expect(nextOpener(side(4, 4), side(2, 6), 'opponent')).toBe('player');
   });
-  it('si van igual, repite quien abrió la anterior', () => {
-    expect(nextOpener(side(2, 4), side(3, 6), 'opponent')).toBe('opponent');
-    expect(nextOpener(side(4, 4), side(5, 5), 'player')).toBe('player');
+  it('si tienen las mismas, repite quien abrió la anterior', () => {
+    expect(nextOpener(side(3, 4), side(3, 6), 'opponent')).toBe('opponent');
+    expect(nextOpener(side(4, 4), side(4, 5), 'player')).toBe('player');
   });
 });
