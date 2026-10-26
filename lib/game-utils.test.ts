@@ -3,6 +3,7 @@ import { BoardSlot, Card, Owner, Rank } from '@/types';
 import {
   calculateCombat, createDeck, createEmptyBoard, createPlayerState, drawCards, getGameResult,
   getTargetIndices, isIdleDraw, isStalemate, nextIdleTurns, playCardToSlot, RANKS, shuffle,
+  nextOpener,
 } from '@/lib/game-utils';
 import { chooseOpponentMove } from '@/lib/ai';
 
@@ -200,5 +201,18 @@ describe('mano inicial y bloqueos', () => {
     const r = calculateCombat(p.board, o.board);
     expect(r.opponentDamageTaken).toBeGreaterThan(0);
     expect(isIdleDraw(6, p, o, r)).toBe(false);
+  });
+});
+
+describe('quién abre la ronda (tras el cara o cruz)', () => {
+  const side = (lives: number, maxLives: number) => ({ ...createPlayerState([], 0, true, lives), maxLives });
+  it('abre quien va ganando, por la parte de sus vidas que le queda', () => {
+    // 3/4 tuyas contra 4/6 del jefe: vas ganando aunque él tenga más vidas sueltas
+    expect(nextOpener(side(3, 4), side(4, 6), 'opponent')).toBe('player');
+    expect(nextOpener(side(2, 4), side(4, 6), 'player')).toBe('opponent');
+  });
+  it('si van igual, repite quien abrió la anterior', () => {
+    expect(nextOpener(side(2, 4), side(3, 6), 'opponent')).toBe('opponent');
+    expect(nextOpener(side(4, 4), side(5, 5), 'player')).toBe('player');
   });
 });

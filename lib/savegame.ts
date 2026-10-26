@@ -26,7 +26,7 @@ export interface SavedGame {
   phase2?: boolean;
   /** Duelo del Bosque: contra quién y en qué dificultad */
   forest?: Encounter;
-  /** Quién abrió la ronda guardada (las rondas se alternan) */
+  /** Quién abrió la ronda guardada (decide quién abre la siguiente si van igual) */
   opener?: Owner;
   player: PlayerState;
   opponent: PlayerState;

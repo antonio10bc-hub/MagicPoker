@@ -558,6 +558,18 @@ export const hideFromRival = (state: PlayerState, played: Card | undefined, slot
 export const unhideBoard = (board: BoardSlot[]): BoardSlot[] =>
   board.map(slot => (slot.card?.hidden ? { ...slot, card: { ...slot.card, hidden: false } } : slot));
 
+/**
+ * Quién abre la ronda siguiente: quien va ganando, medido por la parte de sus vidas
+ * que le queda (los jefes tienen más vidas: en vidas sueltas siempre irían por
+ * delante). Si van igual, repite quien abrió la anterior. (La primera la decide el
+ * cara o cruz.)
+ */
+export const nextOpener = (player: PlayerState, opponent: PlayerState, last: Owner): Owner => {
+  const mine = player.lives * (opponent.maxLives ?? opponent.lives);
+  const theirs = opponent.lives * (player.maxLives ?? player.lives);
+  return mine > theirs ? 'player' : theirs > mine ? 'opponent' : last;
+};
+
 export const revealBoard = (board: BoardSlot[]): BoardSlot[] =>
   board.map(slot => (slot.card && !slot.card.isFaceUp ? { ...slot, card: { ...slot.card, isFaceUp: true } } : slot));
 

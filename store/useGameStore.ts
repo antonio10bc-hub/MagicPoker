@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
   applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isIdleDraw, isQuietFight, isStalemate, nextIdleTurns, risenPhoenixes, countRankOnBoard, createPlayerState,
-  drawCards, drawRound, getGameResult, hideFromRival, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent, unhideBoard,
+  drawCards, drawRound, getGameResult, hideFromRival, nextOpener, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent, unhideBoard,
 } from '@/lib/game-utils';
 import {
   ALL_SEALS, BOSSES, bossLives, createBossState, currentBossIndex, getProgress, recordBossDefeat, recordRematchWin, rematchLevel, unlockedSeals,
@@ -59,7 +59,7 @@ interface GameState {
   tutorialStep: number | null;
   /** Cara o cruz al empezar: quién abre la partida (se lanza tras la presentación) */
   coin: { id: number; opener: Owner } | null;
-  /** Quién abre la ronda en curso (las rondas se alternan) */
+  /** Quién abre la ronda en curso (la 1.ª, la moneda; luego, quien va ganando) */
   opener: Owner;
 
   setDifficulty: (diff: Difficulty) => void;
@@ -132,7 +132,6 @@ const EASY_BOSSES = 4;
 
 /** Cara (empiezas tú) o cruz (empieza el rival): la partida espera en 'start' a la moneda */
 const tossCoin = () => ({ phase: 'start' as GamePhase, coin: { id: Date.now(), opener: (Math.random() < 0.5 ? 'player' : 'opponent') as Owner } });
-const other = (o: Owner): Owner => (o === 'player' ? 'opponent' : 'player');
 /** Si abre el rival, espera a que pase el cartel de la ronda antes de pensar */
 const RIVAL_OPENS_MS = 1300;
 
@@ -591,8 +590,9 @@ export const useGameStore = create<GameState>((set, get) => {
       return;
     }
 
-    // Las rondas se alternan: abre quien no abrió la anterior (en el tutorial, siempre tú)
-    const opener = tutorial ? 'player' : other(get().opener);
+    // Abre la ronda quien va ganando; si van igual, quien abrió la anterior (en el
+    // tutorial, siempre tú)
+    const opener = tutorial ? 'player' : nextOpener(nextPlayer, nextOpponent, get().opener);
     set({
       pendingCombatResult: null,
       phase: 'placement',
