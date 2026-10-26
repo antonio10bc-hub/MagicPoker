@@ -217,7 +217,7 @@ export const MenuScreen = () => {
             transition={{ type: 'spring', stiffness: 260, damping: 14, delay: awaken ? 0.2 : 0 }}>
             <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full flex-col gap-[1px] overflow-hidden" style={{ height: ctaBox.h }}
               onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>
-              <span className="text-title" style={{ lineHeight: '14px' }}>{t.forest_button}</span>
+              <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{t.forest_button}</span>
               <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{t.forest_button_sub}</span>
             </PxButton>
           </motion.div>
@@ -229,7 +229,7 @@ export const MenuScreen = () => {
         <PxButton tone="yellow" onClick={() => handleStartGame(canRematch)} disabled={locked || revealing}
           className={clsx('w-full flex-col gap-[1px] overflow-hidden', locked && 'opacity-50')}
           style={{ height: ctaBox.h, ...(castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : {}) }}>
-          <span className="text-title" style={{ lineHeight: '14px' }}>{cta.title}</span>
+          <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{cta.title}</span>
           {cta.sub && <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>}
         </PxButton>
         {hasSave && (

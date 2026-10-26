@@ -250,8 +250,9 @@ export interface MenuLayout {
   map: Rect;
   mapSafeTop: number;
   mapSafeBottom: number;
-  /** Menú: columna de la acción principal (x, ancho, alto de cada botón) y su borde inferior */
-  cta: { x: number; w: number; h: number; bottom: number };
+  /** Menú: columna de la acción principal (x, ancho, alto de cada botón, tamaño del
+   *  verbo) y su borde inferior */
+  cta: { x: number; w: number; h: number; titleSize: number; bottom: number };
   /** Menú: tamaño del logo pequeño de arriba a la izquierda */
   logoSize: number;
 }
@@ -273,7 +274,7 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
       // (en horizontal hay poco alto: cabecera baja, el logo va en la esquina y no tapa
       // el centro, y botones algo más bajos, para que el pueblo actual quepa entre ambos)
       map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 30, mapSafeBottom: 40,
-      cta: { x: Math.floor((W - ctaW) / 2), w: ctaW, h: 26, bottom: 10 },
+      cta: { x: Math.floor((W - ctaW) / 2), w: ctaW, h: 26, titleSize: 15, bottom: 10 },
       logoSize: 21,
     };
   }
@@ -296,7 +297,7 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     playY: boardY + boardH + DIORAMA_SHADOW + 10,
     // El mapa ocupa toda la pantalla; la cabecera y la acción flotan encima
     map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 92,
-    cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), h: 30, bottom: 24 },
+    cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), h: 30, titleSize: 17, bottom: 24 },
     logoSize: 19,
   };
 };
