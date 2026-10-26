@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { card, fight, shot, startScenario, watchErrors } from './helpers';
+import { card, fight, passCoin, shot, startScenario, watchErrors } from './helpers';
 
 // --- CASTILLO: COFRE, MAPA, DESAFÍOS, LEGENDARIAS, FASE 2 DEL SOBERANO Y CÁMARA LENTA ---
 
@@ -28,6 +28,7 @@ const closeIntro = async (page: Page) => {
   const intro = page.locator('[aria-label="boss intro"]');
   if (await intro.isVisible()) await intro.click();
   await expect(intro).toBeHidden();
+  await passCoin(page);
 };
 
 test('cofre tras el piso 3: se abre, da su premio y luego llega el mercader con el mapa', async ({ page }, info) => {

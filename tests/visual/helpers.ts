@@ -100,6 +100,13 @@ export const finish = async (page: Page) => {
   await page.waitForFunction(() => (window as unknown as GameWindow).__game.getState().phase === 'placement');
 };
 
+/** Cara o cruz: espera a que caiga la moneda y toca para empezar la partida */
+export const passCoin = async (page: Page) => {
+  await page.locator('[data-coin-ready]').waitFor({ timeout: 15_000 });
+  await page.locator('[aria-label="coin toss"]').click();
+  await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase !== 'start');
+};
+
 /** Captura para revisar a ojo (se adjunta al informe y se guarda en test-results) */
 export const shot = async (page: Page, info: TestInfo, name: string) => {
   const path = info.outputPath(`${name}.png`);

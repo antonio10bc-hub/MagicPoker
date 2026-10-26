@@ -57,14 +57,13 @@ const T = {
   rise: 8400, emerge: 10000, lit: 13400, castleDone: 15600,
 };
 
-/** `safeLeft`: lo que tapa la interfaz a la izquierda (el camino se centra en el resto) */
-const geometry = (w: number, safeLeft = 0) => {
+const geometry = (w: number) => {
   const n = BOSSES.length;
-  const cx = Math.round(safeLeft + (w - safeLeft) / 2);
+  const cx = Math.round(w / 2);
   const castle = { x: cx, y: TOP + CASTLE_H };
   const contentH = castle.y + CASTLE_GAP + (n - 1) * STEP + BOTTOM;
   // Las paradas, a un lado y a otro del centro; el Soberano, en medio, ante su puerta
-  const amp = Math.round((w - safeLeft) * 0.13);
+  const amp = Math.round(w * 0.13);
   const nodes = BOSSES.map((b, i) => ({ x: b.secret ? cx : cx + sideOf(i) * amp, y: contentH - BOTTOM - i * STEP }));
   // El camino entero: entra por abajo, pasa por cada parada y llega al Castillo
   const stops = [{ x: nodes[0].x - 10, y: contentH + 10 }, ...nodes, castle];
@@ -385,14 +384,12 @@ const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gol
   );
 };
 
-export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, safeLeft = 0, onRevealing, replay = null, onReplayDone }: {
+export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay = null, onReplayDone }: {
   /** Zona del escenario que ocupa el mapa */
   rect: Rect;
-  /** Lo que tapan arriba, abajo y a la izquierda la cabecera, la acción principal y el
-   *  logo (para centrar bien) */
+  /** Lo que tapan arriba y abajo la cabecera y la acción principal (para centrar bien) */
   safeTop?: number;
   safeBottom?: number;
-  safeLeft?: number;
   /** Mientras se cuenta algo nuevo (input bloqueado) */
   onRevealing?: (on: boolean) => void;
   /** Depuración: repetir la revelación de haber vencido a tantos jefes (sin tocar el progreso) */
@@ -407,7 +404,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, safeLeft = 0, onRev
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
-  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w, safeLeft), [rect.w, safeLeft]);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w), [rect.w]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
   // (se decide al montar en el navegador: en el servidor no hay progreso)
@@ -441,7 +438,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, safeLeft = 0, onRev
     };
     camera.current = requestAnimationFrame(tick);
   };
-  const yOf = (i: number) => (i >= CASTLE_INDEX ? castlePt.y : nodes[i].y);
+  // El Castillo es alto: se encuadra por su mitad (si no, su pastilla queda bajo la cabecera)
+  const yOf = (i: number) => (i >= CASTLE_INDEX ? castlePt.y - Math.round(CASTLE_H / 2) : nodes[i].y);
 
   // Al abrir: la cámara en el jefe a derrotar (o en el Castillo); con algo por contar,
   // en el último vencido de antes

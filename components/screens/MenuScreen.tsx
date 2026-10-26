@@ -21,7 +21,7 @@ import { CASTLE_INDEX, SagaMap } from './SagaMap';
 import { BOSSES, currentBossIndex, getProgress, getServerProgress, isCastleUnlocked, isCollectionUnlocked, isEditorUnlocked, rematchLevel, subscribeProgress } from '@/lib/bosses';
 import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
 import { INK } from '@/theme/tokens';
-import { useMenuLayout, useStage } from '@/components/pixel/Stage';
+import { useMenuLayout } from '@/components/pixel/Stage';
 
 const noSubscribe = () => () => {};
 const hasSavedGame = () => loadGame() !== null;
@@ -129,17 +129,15 @@ export const MenuScreen = () => {
     } else startGame(selected, rematch);
   };
 
-  const { logoX, logoW, logoY, map, mapSafeTop, mapSafeBottom, mapSafeLeft, cta: ctaBox } = useMenuLayout();
+  const { map, mapSafeTop, mapSafeBottom, cta: ctaBox, logoSize } = useMenuLayout();
   // Mientras el mapa cuenta algo nuevo, el input queda bloqueado
   const [revealing, setRevealing] = useState(false);
   // Depuración (?debug=1): repetir las animaciones del mapa
   const mapReplay = useUiStore(s => s.mapReplay);
   const debug = useSyncExternalStore(noSubscribe, isDebug, () => false);
-  const stage = useStage();
   const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
   const collection = isCollectionUnlocked(progress);
   const editor = isEditorUnlocked(progress);
-  const buttons = 3 + Number(collection) + Number(editor) + (collection || editor ? 0.4 : 0);
   const current = currentBossIndex(progress);
   const selected = menuBoss ?? current;
   // La página de después del último jefe es el Castillo
@@ -172,32 +170,19 @@ export const MenuScreen = () => {
         ? { title: t.rematch, sub: t.rematch_level_sub.replace('{n}', String(level)) }
         : { title: t.challenge, sub: t[`boss_${BOSSES[selected]?.id}` as keyof Translations] ?? '' };
 
-  const portrait = stage.mode === 'portrait';
   return (
     <div className="absolute inset-0">
       <Backdrop />
       <AmbientDust />
       {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
-      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest && portrait ? 34 : 0)} safeLeft={mapSafeLeft} onRevealing={setRevealing}
+      <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest ? 34 : 0)} onRevealing={setRevealing}
         replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} />
-      {/* Cabecera y pie se funden con el mapa (en vertical flotan encima) */}
-      {portrait && (
-        <>
-          <div className="absolute inset-x-0 top-0 z-20 pointer-events-none" style={{ height: mapSafeTop + 12, background: 'linear-gradient(to bottom, rgba(11,13,12,0.95) 55%, transparent)' }} />
-          <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? 34 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
-        </>
-      )}
-      {/* En horizontal, la columna del logo se funde con el mapa: penumbra que se abre hacia la derecha */}
-      {!portrait && (
-        <div className="absolute inset-y-0 left-0 z-20 pointer-events-none" style={{ width: mapSafeLeft + 70,
-          background: 'radial-gradient(ellipse 100% 60% at 0% 50%, rgba(11,13,12,0.55) 0%, transparent 100%), linear-gradient(to right, rgba(11,13,12,0.88) 0%, rgba(11,13,12,0.72) 55%, rgba(11,13,12,0.3) 80%, transparent 100%)' }} />
-      )}
+      {/* El mapa llena la pantalla; cabecera y pie flotan encima y se funden con él */}
+      <div className="absolute inset-x-0 top-0 z-20 pointer-events-none" style={{ height: mapSafeTop + 12, background: 'linear-gradient(to bottom, rgba(11,13,12,0.95) 55%, transparent)' }} />
+      <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? 34 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />
 
-      {/* Reglas, estadísticas y ajustes también desde el menú */}
-      {/* En horizontal, debajo del logo; en vertical, arriba a la derecha */}
-      <div className="absolute z-30 flex gap-[3px]" style={!portrait
-        ? { left: logoX + logoW / 2 - Math.round((buttons * 18 + (buttons - 1) * 3) / 2), top: logoY + 84 }
-        : { right: 4, top: 6 }}>
+      {/* Arriba a la derecha: lo tuyo (colección, mazo) y reglas, estadísticas y ajustes */}
+      <div className="absolute z-30 flex gap-[3px]" style={{ right: 4, top: 6 }}>
         {/* Todos los iconos con el mismo marco: lo tuyo (colección, mazo) lleva el icono
             de su color y va separado de lo del juego (reglas, estadísticas, ajustes) */}
         {collection && (
@@ -219,7 +204,8 @@ export const MenuScreen = () => {
             onClick={() => { playSound('click'); useUiStore.getState().openModal('debug'); }}>DB</PxButton>
         )}
       </div>
-      {portrait ? <Logo x={6} w={80} y={6} size={19} align="start" /> : <Logo x={logoX} w={logoW} y={logoY} />}
+      {/* Arriba a la izquierda, el logo en pequeño */}
+      <Logo x={6} y={6} size={logoSize} align="start" />
 
       {/* Acción principal (ancha, con el contexto debajo del verbo) y, si hay, continuar partida */}
       <motion.div className="absolute z-30 flex flex-col items-stretch gap-[4px]" style={{ left: ctaBox.x, bottom: ctaBox.bottom, width: ctaBox.w }}

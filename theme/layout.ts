@@ -238,10 +238,6 @@ export interface MenuLayout {
   board: BoardGeometry;
   /** Centro horizontal del tapete (boss y botones) */
   cx: number;
-  /** Zona del logo (centrado en [logoX, logoX + logoW]) */
-  logoX: number;
-  logoW: number;
-  logoY: number;
   /** Boss del menú: escala de la silueta y alto de la zona deslizable */
   bossScale: number;
   bossY: number;
@@ -254,28 +250,29 @@ export interface MenuLayout {
   map: Rect;
   mapSafeTop: number;
   mapSafeBottom: number;
-  /** Horizontal: la columna del logo flota sobre el mapa (el camino se centra a su derecha) */
-  mapSafeLeft: number;
   /** Menú: columna de la acción principal (x, ancho) y su borde inferior */
   cta: { x: number; w: number; bottom: number };
+  /** Menú: tamaño del logo pequeño de arriba a la izquierda */
+  logoSize: number;
 }
 
 const LOGO_HEIGHT = 76;
 
 export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): MenuLayout => {
   if (mode === 'landscape') {
-    // Horizontal: logo a la izquierda y el mapa a la derecha. El tapete (con el boss y
-    // JUGAR debajo) es el de la pantalla final, que no lleva logo: va centrado
+    // Horizontal: igual que en vertical, el mapa llena la pantalla y la interfaz flota
+    // encima (logo arriba a la izquierda, iconos arriba a la derecha, acción centrada
+    // abajo). El tapete es el de la pantalla final: centrado
     const boardX = Math.floor((W - 222) / 2);
     const dy = Math.floor((H - STAGE.height) / 2);
     const board = computeBoard(boardX, 14 + dy, 222, false, 204);
+    const ctaW = Math.min(190, W - 24);
     return {
-      board, cx: boardX + 111, logoX: 4, logoW: 142, logoY: 40 + dy,
+      board, cx: boardX + 111,
       bossScale: 3, bossY: 26 + dy, bossH: 180, mascotY: 92 + dy, playY: 226 + dy,
-      // El mapa ocupa toda la pantalla; logo, iconos y acción flotan encima a la izquierda
-      // (fundidos con un degradado) y el camino se centra en lo que queda a la derecha
-      map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 0, mapSafeBottom: 0, mapSafeLeft: 150,
-      cta: { x: 6, w: 138, bottom: 22 },
+      map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 40, mapSafeBottom: 62,
+      cta: { x: Math.floor((W - ctaW) / 2), w: ctaW, bottom: 12 },
+      logoSize: 21,
     };
   }
   // Vertical: logo arriba, tapete en el centro con las siluetas, JUGAR debajo
@@ -289,9 +286,6 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
   return {
     board: computeBoard(M, boardY, W - 2 * M, true, boardH),
     cx: Math.floor(W / 2),
-    logoX: 0,
-    logoW: W,
-    logoY: top,
     // El boss, grande y centrado sobre el tapete (×3 si cabe con su nombre debajo)
     bossScale: boardH >= 42 * 3 + 30 ? 3 : 2,
     bossY: boardY + 4,
@@ -299,8 +293,9 @@ export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): Men
     mascotY: boardY + Math.round(boardH / 2) - 26,
     playY: boardY + boardH + DIORAMA_SHADOW + 10,
     // El mapa ocupa toda la pantalla; la cabecera y la acción flotan encima
-    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 92, mapSafeLeft: 0,
+    map: { x: 0, y: 0, w: W, h: H }, mapSafeTop: 44, mapSafeBottom: 92,
     cta: { x: Math.floor((W - Math.min(170, W - 24)) / 2), w: Math.min(170, W - 24), bottom: 24 },
+    logoSize: 19,
   };
 };
 

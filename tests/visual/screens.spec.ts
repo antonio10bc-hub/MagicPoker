@@ -1,15 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
-import { card, shot, startScenario, watchErrors } from './helpers';
+import { card, passCoin, shot, startScenario, watchErrors } from './helpers';
 
 // --- MENÚ, VENTANAS Y PAUSA ---
-
-/** Cierra la presentación del jefe (tocándola) si está a la vista */
-const dismissIntro = async (page: Page) => {
-  await page.waitForTimeout(700);
-  const vp = page.viewportSize()!;
-  await page.mouse.click(vp.width / 2, vp.height / 2);
-  await page.waitForTimeout(400);
-};
 
 const openMenu = async (page: Page, progress: { defeated: number; rematches?: string[]; wins?: Record<string, number> }, extra: Record<string, string> = {}) => {
   await page.addInitScript((p: { progress: object; extra: Record<string, string> }) => {
@@ -57,7 +49,8 @@ test('revancha: un solo botón REVANCHA con un jefe vencido', async ({ page }, i
   await shot(page, info, 'menu-revancha');
   await page.getByText('REVANCHA', { exact: true }).click({ force: true });
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { rematch: boolean } } }).__game.getState().rematch);
-  await page.waitForTimeout(2500);
+  await passCoin(page);
+  await page.waitForTimeout(1500);
   await shot(page, info, 'partida-revancha');
   noErrors();
 });
@@ -124,8 +117,7 @@ test('x2: varias peleas seguidas sin atascarse y sin cartas fantasma', async ({ 
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 4 });
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
-  await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
-  await dismissIntro(page);
+  await passCoin(page);
   await page.locator('[aria-label=velocidad]').click();
   type G = { __game: { getState: () => { phase: string; turn: string; player: { hand: { id: string; rank: string }[]; board: { index: number; card: unknown }[] }; opponent: { board: { card: unknown }[] }; placeCard: (id: string, s: number) => void; passTurn: () => void } } };
   for (let round = 0; round < 3; round++) {
@@ -158,6 +150,7 @@ test('al vencer a un jefe nuevo: AL MAPA, que enciende el siguiente, y a por él
   await openMenu(page, { defeated: 2 });
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
   type G = { __game: { getState: () => { phase: string; bossIndex: number; debugWin: () => void } } };
+  await passCoin(page);
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
   // Los avisos de desbloqueo y logros van antes: se cierran tocándolos
@@ -176,6 +169,7 @@ test('al vencer a un jefe nuevo: AL MAPA, que enciende el siguiente, y a por él
   await expect(page.getByText('¡DESAFIAR!', { exact: true })).toBeVisible();
   await shot(page, info, 'mapa-tras-victoria');
   await page.getByText('¡DESAFIAR!', { exact: true }).click({ force: true });
+  await passCoin(page);
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement');
   expect(await page.evaluate(() => (window as unknown as G).__game.getState().bossIndex)).toBe(3);
   noErrors();

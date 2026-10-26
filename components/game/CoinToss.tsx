@@ -15,15 +15,15 @@ import { ForestFigure } from './ForestFigure';
 // --- CARA O CRUZ ---
 // Al empezar una partida (tras la presentación del jefe) se lanza una moneda en el
 // centro, con la mesa detrás desenfocada: cara (crema, tu corazón) empiezas tú; cruz
-// (naranja, la silueta del rival) empieza él. Sube girando, cae, se lee el resultado y
-// arranca la primera ronda (sola o al tocar).
+// (naranja, la silueta del rival) empieza él. Sube girando, cae y se lee el resultado;
+// la primera ronda no arranca hasta que tocas (así nadie se pierde quién empieza).
 
 const SIZE = 64;
 const SPIN_S = 1.5;
 /** Vueltas completas antes de caer */
 const TURNS = 5;
-/** Tras caer, lo que se queda el resultado a la vista */
-const HOLD_MS = 1200;
+/** Tras caer, cuándo aparece "toca para empezar" (y desde cuándo vale tocar) */
+const READY_MS = 600;
 /** Sin cinemáticas durante este rato: ya se puede lanzar */
 const CALM_MS = 350;
 
@@ -66,6 +66,8 @@ export const CoinToss = () => {
   const [landed, setLanded] = useState<number | null>(null);
   const heads = coin?.opener === 'player';
   const done = !!coin && landed === coin.id;
+  const [ready, setReady] = useState<number | null>(null);
+  const canStart = !!coin && ready === coin.id;
 
   useEffect(() => {
     if (!show || !coin) return;
@@ -80,20 +82,36 @@ export const CoinToss = () => {
     return () => { flips.forEach(clearTimeout); clearTimeout(land); };
   }, [show, coin]);
 
-  // Tras leer el resultado, empieza la ronda
+  // Tras leer el resultado se espera a que toques (en el ordenador, también Intro o Espacio)
   useEffect(() => {
-    if (!done) return;
-    const go = setTimeout(() => useGameStore.getState().beginMatch(), HOLD_MS);
-    return () => clearTimeout(go);
-  }, [done]);
+    if (!done || !coin) return;
+    const t = setTimeout(() => setReady(coin.id), READY_MS);
+    return () => clearTimeout(t);
+  }, [done, coin]);
+  const start = () => {
+    if (!canStart) return;
+    playSfx('select', 0.7);
+    useGameStore.getState().beginMatch();
+  };
+  useEffect(() => {
+    if (!canStart) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      playSfx('select', 0.7);
+      useGameStore.getState().beginMatch();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [canStart]);
 
   return (
     <AnimatePresence>
       {show && coin && (
         <motion.button key={coin.id} type="button" aria-label="coin toss"
-          className="absolute inset-0 z-[150] flex flex-col items-center justify-center gap-[10px] cursor-pointer"
+          className={`absolute inset-0 z-[150] flex flex-col items-center justify-center gap-[10px] ${canStart ? 'cursor-pointer' : 'cursor-default'}`}
           style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(30,42,40,0.55) 0%, rgba(11,13,12,0.8) 75%)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
-          onClick={() => { if (done) useGameStore.getState().beginMatch(); }}
+          onClick={start}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }}>
           <motion.span className="text-title text-outline glow-text" style={{ color: 'var(--ink-cream)' }}
             initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
@@ -121,7 +139,7 @@ export const CoinToss = () => {
           <motion.div className="rounded-full -mt-[8px]" style={{ width: SIZE * 0.8, height: 5, background: 'rgba(0,0,0,0.55)' }}
             animate={{ scaleX: [1, 0.5, 1, 0.9, 1], opacity: [0.8, 0.3, 0.8, 0.7, 0.8] }}
             transition={{ duration: SPIN_S, times: [0, 0.45, 0.85, 0.93, 1] }} />
-          <div className="h-[34px] flex flex-col items-center gap-[3px]">
+          <div className="h-[52px] flex flex-col items-center gap-[3px]">
             {done ? (
               <>
                 <motion.span className="text-title text-outline" style={{ fontSize: 22, lineHeight: '20px', color: heads ? 'var(--ink-cream)' : 'var(--ink-orange)' }}
@@ -132,6 +150,12 @@ export const CoinToss = () => {
                   initial={{ y: 4, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
                   {heads ? t.coin_you_start : t.coin_rival_starts}
                 </motion.span>
+                {canStart && (
+                  <motion.span data-coin-ready className="mt-[8px] anim-pulse" style={{ color: 'var(--ink-cream)' }}
+                    initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
+                    {t.coin_tap}
+                  </motion.span>
+                )}
               </>
             ) : (
               <span className="t-note">{t.coin_rule}</span>

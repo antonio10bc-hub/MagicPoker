@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { shot, watchErrors } from './helpers';
+import { passCoin, shot, watchErrors } from './helpers';
 
 // --- EL BOSQUE ---
 // Se abre al conquistar el Castillo (anunciándose por fases), su pantalla en primera
@@ -55,6 +55,7 @@ test('bosque: buscar duelo, alguien sale y se abalanza; el duelo; volver al bosq
   await shot(page, info, 'bosque-3-sale');
   await page.waitForTimeout(1500);
   await shot(page, info, 'bosque-4-se-abalanza');
+  await passCoin(page);
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement', undefined, { timeout: 8000 });
   const forest = await page.evaluate(() => (window as unknown as G).__game.getState().forest);
   expect(forest).not.toBeNull();
@@ -112,6 +113,7 @@ test('únicos: el Rey sale con su aura (forzado desde depuración) y lleva tres 
   await expect(page.locator('[aria-label="forest encounter"]')).toBeAttached();
   await page.waitForTimeout(2600);
   await shot(page, info, 'unico-1-rey');
+  await passCoin(page);
   await page.waitForFunction(() => (window as unknown as G).__game.getState().phase === 'placement', undefined, { timeout: 10000 });
   const kings = await page.evaluate(() => {
     const s = (window as unknown as { __game: { getState: () => { forest: { tier: string }; opponent: { hand: { rank: string }[]; deck: { rank: string }[] } } } }).__game.getState();

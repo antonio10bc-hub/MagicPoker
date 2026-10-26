@@ -22,6 +22,7 @@ import {
   copyDeck, readCopiedDeck, sanitizeDeckConfig, saveDeckConfig, totalSeals,
 } from '@/lib/deck';
 import { updateSettings } from '@/lib/settings';
+import { lockAll, unlockAll } from '@/lib/debug';
 import { useSettings } from '@/hooks/useSettings';
 import { Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
@@ -450,12 +451,18 @@ export const DebugModal = () => {
   return (
     <Dialog title="DEBUG" size="sm" width={220}>
       <DialogBody scroll={false} className="gap-[4px]">
-        <p className="t-note">Repite las animaciones (tu progreso no cambia).</p>
+        <div className="t-section">Animaciones (tu progreso no cambia)</div>
         {row('Jefe vencido → siguiente', 3)}
         {row('Llega el Soberano', BOSSES.length - 1)}
         {row('Se alza el Castillo', BOSSES.length)}
         <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestReplay(true); }}>El Bosque despierta</PxButton>
         <PxButton size="md" tone="amber" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useGameStore.getState().enterForest(); }}>Entrar al Bosque</PxButton>
+        <div className="t-section mt-[4px]">Progreso</div>
+        <span className="flex gap-[3px]">
+          <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
+          <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
+        </span>
+        <div className="t-section mt-[4px]">El Bosque</div>
         <span className="flex gap-[3px]">
           {(['prince', 'queen', 'king'] as const).map(id => (
             <PxButton key={id} size="sm" className="flex-1" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestForce({ id, tier: 'unique' }); useGameStore.getState().enterForest(); }}>

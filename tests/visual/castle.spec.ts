@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { card, filmFight, fight, sealCard, shot, startScenario, state, waitFought, watchErrors } from './helpers';
+import { card, filmFight, fight, passCoin, sealCard, shot, startScenario, state, waitFought, watchErrors } from './helpers';
 
 // --- EL CASTILLO, DORSOS Y CARTAS NUEVAS ---
 
@@ -33,6 +33,7 @@ test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y s
   await expect(page.locator('[aria-label="boss intro"]')).toBeVisible();
   await page.locator('[aria-label="boss intro"]').click();
   await expect(page.locator('[aria-label="boss intro"]')).toBeHidden();
+  await passCoin(page);
   await shot(page, info, 'piso-1');
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
   const choose = page.getByText('Elige una mejora');

@@ -42,9 +42,11 @@ export const BossIntro = () => {
   })));
   const [closed, setClosed] = useState<number | null>(null);
   const open = intro !== null && closed !== intro;
-  // Mientras se ve, los avisos (logros) esperan
+  // Mientras se ve, los avisos (logros) y el cara o cruz esperan. Solo se marca estando
+  // abierta: cerrada no toca la marca (si no, pisaría la de otra cinemática en curso)
   useEffect(() => {
-    useUiStore.getState().setCinematic(open);
+    if (!open) return;
+    useUiStore.getState().setCinematic(true);
     return () => useUiStore.getState().setCinematic(false);
   }, [open]);
 

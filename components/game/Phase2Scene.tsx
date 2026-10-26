@@ -41,9 +41,11 @@ export const Phase2Scene = () => {
   const open = fx !== null && closed !== fx.id;
   const figureH = Math.min(140, Math.round(height * 0.3));
 
-  // Mientras se ve, los avisos (logros) esperan
+  // Mientras se ve, los avisos (logros) y el cara o cruz esperan. Solo se marca estando
+  // abierta: cerrada no toca la marca (si no, pisaría la de otra cinemática en curso)
   useEffect(() => {
-    useUiStore.getState().setCinematic(open);
+    if (!open) return;
+    useUiStore.getState().setCinematic(true);
     return () => useUiStore.getState().setCinematic(false);
   }, [open]);
 

@@ -143,7 +143,8 @@ canales de 0,5 px → viñeta.
 - **Cara o cruz:** al empezar una partida (tras la presentación del jefe) la mesa se
   desenfoca y en el centro se lanza una moneda: cara crema con tu corazón (empiezas
   tú), cruz naranja con la silueta del rival (empieza él). Sube girando, cae, se lee
-  "¡CARA!/¡CRUZ!" y quién empieza, y arranca la ronda. Las rondas se alternan; el
+  "¡CARA!/¡CRUZ!" y quién empieza; la ronda no arranca hasta que tocas ("Toca para
+  empezar" late debajo; en el ordenador, también Intro o Espacio). Las rondas se alternan; el
   cartel de ronda dice "EMPIEZA EL RIVAL" cuando le toca abrir a él.
 - Lo que se pinta ya no es *pixel art* nítido: texturas de grano fundidas con un leve
   desenfoque, grano fino a resolución de pantalla encima y fuentes vectoriales.
@@ -717,10 +718,11 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   Soberano (con resplandor de oro) y el Castillo **no se ven** hasta alcanzarlos: lo
   desconocido queda bajo una niebla densa que baja cuando se descubre.
   - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
-    principal abajo, con degradados a negro para que se fundan. En horizontal también
-    lo llena: logo, iconos y acción flotan a la izquierda sobre una penumbra que se
-    abre hacia la derecha (una sola escena, sin corte), y el camino se centra en lo
-    que queda a la derecha.
+    principal abajo, con degradados a negro para que se fundan. En horizontal, igual:
+    el mapa llena la pantalla, el logo pequeño arriba a la izquierda, los iconos
+    (colección y mazo | reglas, estadísticas, ajustes) arriba a la derecha y la acción
+    principal centrada abajo (el Bosque, encima). La cámara encuadra el pueblo actual
+    en el hueco que dejan cabecera y botones, nunca debajo de ellos.
   - Una sola acción principal ancha con el verbo grande y el contexto en pequeño
     ("¡DESAFIAR! · El Trilero", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si
     hay, continuar partida debajo.
