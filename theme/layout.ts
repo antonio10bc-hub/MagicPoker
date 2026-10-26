@@ -109,6 +109,9 @@ export interface GameLayout {
   hand: { x: number; y: number; w: number; scale: number };
   /** Paneles en fila (vertical) o en columna (horizontal) */
   compactPanels: boolean;
+  /** Horizontal: marco de la columna izquierda y contador de ronda dentro de él */
+  sidebar: Rect;
+  roundBox: Rect;
 }
 
 const M = 4; // margen
@@ -120,18 +123,45 @@ const BOARD_GROW_MAX = 80;
 
 export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): GameLayout => {
   if (mode === 'landscape') {
+    // Horizontal (ordenador): columna de paneles a la izquierda, turno y acción a la
+    // derecha y, en medio, el tablero con la mano debajo. En 4:3 (384 de ancho) las
+    // columnas son estrechas y la mano algo más pequeña que la mesa; en panorámico
+    // las columnas se ensanchan (cabe el nombre del jefe) y la mano va a tamaño real.
+    const wide = W >= 440;
+    const side = wide ? 84 : 62;
+    const right = wide ? 84 : 66;
+    const midX = M + side + (wide ? 8 : 4);
+    const midW = W - M - right - (wide ? 8 : 4) - midX;
+    const handScale = wide ? 1 : HAND_SCALE_SMALL;
+    const handH = Math.round(CARD_SIZE.height * handScale);
+    // Margen bajo la mano: las cartas de los extremos bajan y giran en abanico
+    const handY = H - M - handH - (wide ? 10 : 6);
+    const top = wide ? 10 : 12;
+    const available = handY - (wide ? 6 : 15) - top;
+    const boardH = Math.max(boardMinHeight(), Math.min(wide ? 212 : 196, available - DIORAMA_SHADOW));
+    const boardY = top + Math.max(0, Math.floor((available - boardH - DIORAMA_SHADOW) / 2));
+    const boardW = Math.min(wide ? 264 : 240, midW);
+    const buttonSize = wide ? 18 : 14;
+    const buttonsY = M + 62 + 4;
+    const roundY = buttonsY + buttonSize + (wide ? 8 : 12);
+    const playerH = wide ? 58 : 54;
+    const actionH = wide ? 26 : 22;
     return {
       mode,
-      board: computeBoard(70, 12, 240, false, 196),
-      rivalPanel: { x: M, y: M, w: 62, h: 62 },
-      playerPanel: { x: M, y: 230, w: 62, h: 54 },
-      menuButtons: { x: M, y: 70 },
-      menuButtonSize: 14,
-      turnBox: { x: 314, y: M, w: 66, h: 36 },
-      actionButton: { x: 314, y: 196, w: 66, h: 22 },
-      // Mano un poco más pequeña que la mesa (35×49), pegada abajo
-      hand: { x: 72, y: 229, w: 236, scale: HAND_SCALE_SMALL },
+      board: computeBoard(midX + Math.floor((midW - boardW) / 2), boardY, boardW, false, boardH),
+      rivalPanel: { x: M, y: M, w: side, h: 62 },
+      playerPanel: { x: M, y: H - M - playerH, w: side, h: playerH },
+      menuButtons: { x: M, y: buttonsY },
+      menuButtonSize: buttonSize,
+      turnBox: { x: W - M - right, y: M, w: right, h: 36 },
+      // En panorámico, a la altura de la mano (donde ya está el ratón); en 4:3, sobre ella
+      actionButton: wide
+        ? { x: W - M - right, y: handY + Math.round((handH - actionH) / 2), w: right, h: actionH }
+        : { x: W - M - right, y: 196, w: right, h: actionH },
+      hand: { x: midX, y: handY, w: midW, scale: handScale },
       compactPanels: false,
+      sidebar: { x: 1, y: 1, w: side + 2 * M - 2, h: H - 2 },
+      roundBox: { x: M + 2, y: roundY, w: side - 4, h: 44 },
     };
   }
 
@@ -164,6 +194,8 @@ export const computeGameLayout = ({ width: W, height: H, mode }: StageSize): Gam
     actionButton: { x: W - M - actionW, y: playerRowY + 3, w: actionW, h: 22 },
     hand: { x: M, y: handY, w: W - 2 * M, scale: handScale },
     compactPanels: true,
+    sidebar: { x: 0, y: 0, w: 0, h: 0 },
+    roundBox: { x: 0, y: 0, w: 0, h: 0 },
   };
 };
 
@@ -197,11 +229,14 @@ const LOGO_HEIGHT = 76;
 
 export const computeMenuLayout = ({ width: W, height: H, mode }: StageSize): MenuLayout => {
   if (mode === 'landscape') {
-    // Horizontal: logo a la izquierda; tapete con el boss a la derecha y JUGAR debajo
-    const board = computeBoard(150, 14, 222, false, 204);
+    // Horizontal: logo a la izquierda y el mapa a la derecha. El tapete (con el boss y
+    // JUGAR debajo) es el de la pantalla final, que no lleva logo: va centrado
+    const boardX = Math.floor((W - 222) / 2);
+    const dy = Math.floor((H - STAGE.height) / 2);
+    const board = computeBoard(boardX, 14 + dy, 222, false, 204);
     return {
-      board, cx: 150 + 111, logoX: 4, logoW: 142, logoY: 40,
-      bossScale: 3, bossY: 26, bossH: 180, mascotY: 92, playY: 226,
+      board, cx: boardX + 111, logoX: 4, logoW: 142, logoY: 40 + dy,
+      bossScale: 3, bossY: 26 + dy, bossH: 180, mascotY: 92 + dy, playY: 226 + dy,
       // El mapa a la derecha, de arriba abajo; logo, iconos y acción en la columna izquierda
       map: { x: 150, y: 0, w: W - 150, h: H }, mapSafeTop: 0, mapSafeBottom: 0,
       cta: { x: 6, w: 138, bottom: 22 },

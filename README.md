@@ -31,7 +31,7 @@ store/
   useGameStore.ts       Estado de la partida y flujo de turnos (temporizadores cancelables)
   useUiStore.ts         Modal abierto (reglas / estadísticas / salir)
 theme/
-  tokens.ts             Paleta, resolución interna (384×288), tamaños y easings
+  tokens.ts             Paleta, resolución interna (384×288 de base), tamaños y easings
 themes/
   index.ts              ACTIVE_THEME: punto único para cambiar de escenario
   pieces.tsx            Piezas de diorama reutilizables (plataforma, barandilla, props)

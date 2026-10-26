@@ -128,8 +128,15 @@ canales de 0,5 px → viñeta.
 
 ## 4. Resolución
 
-- La maquetación sigue en píxeles internos (384×288 en horizontal; ancho ~180–300 en
-  vertical) escalados por enteros, así que **posiciones y tamaños no cambian**.
+- La maquetación sigue en píxeles internos escalados por enteros, así que **posiciones
+  y tamaños no cambian**. En vertical, ancho ~180–300. En horizontal (ordenador), alto
+  ~260–330 y el ancho sigue la proporción de la pantalla (de 384 en 4:3 hasta 576,
+  ~2:1): el juego llena el monitor sin franjas negras. Las distribuciones se calculan
+  a partir de ese ancho y alto (`theme/layout.ts`), nunca con coordenadas fijas.
+- **Horizontal panorámico (≥440 de ancho):** columnas laterales de 84 (cabe el nombre
+  del jefe), botones de partida de 18, mano a tamaño real y PLANTARSE a la altura de
+  la mano. La pantalla final centra su tapete en toda la pantalla. Esc cierra las
+  ventanas que se cierran tocando fuera.
 - Lo que se pinta ya no es *pixel art* nítido: texturas de grano fundidas con un leve
   desenfoque, grano fino a resolución de pantalla encima y fuentes vectoriales.
 
@@ -656,8 +663,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
 - **Capas y orden:** solo una ventana a la vez. Al cambiar de pantalla o acabar la
   partida se cierra la que hubiera. Los avisos (sello nuevo, logro) esperan a que no
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
-- **Mano:** algo más pequeña que antes: ×1,375 en móviles altos (55×77) y ×0,875 en
-  horizontal y móviles bajos (35×49); siempre en píxeles enteros.
+- **Mano:** ×1,375 en móviles altos (55×77), ×1 en horizontal panorámico (40×56) y
+  ×0,875 en 4:3 y móviles bajos (35×49); siempre en píxeles enteros.
 - **Arrastrar con ratón (PC):** cursor de mano (agarrar/agarrando); la carta crece
   desde su centro y queda bajo el cursor donde se agarró; el hueco de destino lo
   decide el cursor (con el dedo, el centro de la carta). Pulsar una carta quita su

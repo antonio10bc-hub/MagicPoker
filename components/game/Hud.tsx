@@ -206,7 +206,7 @@ export const RivalPanel = () => {
   }
   return (
     <>
-      <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > 11 ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
+      <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > Math.floor((rect.w - 10) / 6) ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
         {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><BossFigure id={boss.id} height={26} evolved={!!castle} /></Flinch></div>}
         {forest && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><ForestFigure id={forest.id} tier={forest.tier} height={26} /></Flinch></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
@@ -559,13 +559,13 @@ export const Hand = ({ selectedCardId, canPlay, onlyCardId, handlers }: HandProp
 // --- BARRA LATERAL (horizontal): marco oscuro que agrupa la información + contador de ronda ---
 export const Sidebar = () => {
   const t = useTranslations();
-  const { compactPanels } = useGameLayout();
+  const { compactPanels, sidebar, roundBox } = useGameLayout();
   const round = useGameStore(s => s.roundNumber);
   if (compactPanels) return null;
   return (
     <>
-      <div className="absolute px-panel-dark px-round" style={{ left: 1, top: 1, width: 68, height: 286, opacity: 0.85 }} />
-      <div className="absolute px-inset flex flex-col items-center justify-center" style={{ left: 6, top: 96, width: 58, height: 44 }}>
+      <div className="absolute px-panel-dark px-round" style={{ left: sidebar.x, top: sidebar.y, width: sidebar.w, height: sidebar.h, opacity: 0.85 }} />
+      <div className="absolute px-inset flex flex-col items-center justify-center" style={{ left: roundBox.x, top: roundBox.y, width: roundBox.w, height: roundBox.h }}>
         <span style={{ color: 'var(--c-ui-muted)' }}>{t.round}</span>
         <motion.span
           key={round}

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
@@ -73,6 +73,13 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
   const maxH = stage.height - (portrait ? 48 : 16);
   // Las grandes tienen alto fijo (en vertical aprovechan la pantalla); el resto, al contenido
   const height = size === 'lg' ? Math.min(portrait ? 420 : 270, maxH) : undefined;
+  // En el ordenador, Esc cierra (igual que tocar fuera)
+  useEffect(() => {
+    if (modal) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [modal, onClose]);
   return (
     <Overlay onClose={modal ? undefined : onClose}>
       <Panel

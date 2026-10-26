@@ -8,11 +8,16 @@ import { FilmGrain } from '@/components/fx/FilmGrain';
 // --- ESCALADO ENTERO ---
 // La escala se calcula en píxeles FÍSICOS (devicePixelRatio) para que cada píxel
 // interno ocupe un número entero de píxeles reales.
-//  - Horizontal: escenario fijo 384×288. Si el entero deja el juego por debajo del
-//    80 % del hueco, se usa el ajuste exacto.
+//  - Horizontal (ordenador): el alto interno ronda los 288 px y el ancho sigue la
+//    proporción de la pantalla (de 4:3 a ~2:1), así el juego la llena sin franjas
+//    negras. Se busca el entero n que deja el alto en [LANDSCAPE_MIN_H, LANDSCAPE_MAX_H];
+//    si no hay, ajuste exacto a 288 de alto.
 //  - Vertical (móvil): se elige el entero n que deja un ancho interno ≤ 260 px y el
 //    alto interno se adapta a la pantalla, así el juego la llena entera.
-const MIN_FILL = 0.8;
+const LANDSCAPE_MIN_H = 260;
+const LANDSCAPE_MAX_H = 330;
+// Más ancho que esto (pantallas ultrapanorámicas) deja franjas a los lados
+const LANDSCAPE_MAX_W = 576;
 // Ancho interno mínimo en vertical: el tablero de 4 cartas cabe justo. Cuanto más
 // estrecho, más grande se ve todo en el móvil.
 const PORTRAIT_MIN_W = 180;
@@ -21,10 +26,22 @@ const PORTRAIT_MIN_H = 330;
 const PORTRAIT_RATIO = 1.15; // alto / ancho a partir del cual se considera vertical
 
 const landscape = (vw: number, vh: number, dpr: number): StageSize => {
-  const fit = Math.min(vw / STAGE.width, vh / STAGE.height);
-  const integer = Math.floor(fit * dpr) / dpr;
-  const scale = integer >= fit * MIN_FILL && integer > 0 ? integer : fit;
-  return { width: STAGE.width, height: STAGE.height, scale, mode: 'landscape' };
+  const devW = vw * dpr;
+  const devH = vh * dpr;
+  for (let n = Math.floor(devH / LANDSCAPE_MIN_H); n >= 1; n--) {
+    const height = Math.floor(devH / n);
+    if (height > LANDSCAPE_MAX_H) break;
+    const width = Math.min(LANDSCAPE_MAX_W, Math.floor(devW / n));
+    if (width >= STAGE.width) return { width, height, scale: n / dpr, mode: 'landscape' };
+  }
+  // Sin entero que cuadre: ajuste exacto (288 de alto o 384 de ancho, lo que limite)
+  const scale = Math.min(vw / STAGE.width, vh / STAGE.height);
+  return {
+    width: Math.min(LANDSCAPE_MAX_W, Math.floor(vw / scale)),
+    height: Math.min(LANDSCAPE_MAX_H, Math.floor(vh / scale)),
+    scale,
+    mode: 'landscape',
+  };
 };
 
 /** Elige el mayor factor entero n que deja al menos PORTRAIT_MIN_W × PORTRAIT_MIN_H internos */
