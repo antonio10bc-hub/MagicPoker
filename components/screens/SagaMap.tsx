@@ -9,6 +9,7 @@ import {
 } from '@/lib/bosses';
 import { getMapSeen, revealSteps, RevealStep, setMapSeen } from '@/lib/mapReveal';
 import { haptic, playSfx } from '@/lib/sounds';
+import { useLowPower } from '@/lib/quality';
 import { INK } from '@/theme/tokens';
 import { Rect } from '@/theme/layout';
 import { PixelSprite, spriteSize } from '@/components/pixel/PixelSprite';
@@ -540,6 +541,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   };
   const total = String(BOSSES.length);
   const figureH = 42;
+  const lowPower = useLowPower();
 
   return (
     <div className="absolute z-10" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}>
@@ -559,11 +561,12 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
               <MapProp key={`${boss.id}-${n}`} prop={prop} at={nodes[i]} side={sideOf(i)} lit={lit} z={1} mapW={rect.w} />
             ));
           })}
-          {/* Bancos de niebla que se arrastran despacio por la ladera */}
+          {/* Bancos de niebla que se arrastran despacio por la ladera. Van por encima de
+              pueblos y jefes: animados por debajo, harían capa aparte de todo lo que tapan */}
           {[0.15, 0.38, 0.62, 0.85].map((f, i) => (
-            <motion.div key={i} className="absolute pointer-events-none" style={{ top: contentH * f - 40, left: -rect.w * 0.3, width: rect.w * 1.6, height: 80,
+            <motion.div key={i} className="absolute pointer-events-none" style={{ top: contentH * f - 40, left: -rect.w * 0.3, width: rect.w * 1.6, height: 80, zIndex: 4,
               background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(185,207,200,0.07) 0%, transparent 70%)' }}
-              animate={{ x: [i % 2 ? -18 : 18, i % 2 ? 18 : -18] }} transition={{ duration: 9 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
+              animate={lowPower ? undefined : { x: [i % 2 ? -18 : 18, i % 2 ? 18 : -18] }} transition={{ duration: 9 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
           ))}
 
           {/* El sendero */}
@@ -727,7 +730,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
             {[0.3, 0.6, 0.85].map((f, i) => (
               <motion.div key={i} className="absolute" style={{ top: `${f * 100}%`, left: '-30%', width: '160%', height: 60, marginTop: -30,
                 background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(185,207,200,0.16) 0%, transparent 70%)' }}
-                animate={{ x: [i % 2 ? -24 : 24, i % 2 ? 24 : -24] }} transition={{ duration: 7 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
+                animate={lowPower ? undefined : { x: [i % 2 ? -24 : 24, i % 2 ? 24 : -24] }} transition={{ duration: 7 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
             ))}
           </motion.div>
         </motion.div>

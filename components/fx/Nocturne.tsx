@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/useGameStore';
 import { useStage } from '@/components/pixel/Stage';
 import { useSettings } from '@/hooks/useSettings';
+import { useLowPower } from '@/lib/quality';
 
 // --- FONDO: NOCHE CON NIEBLA ---
 // Negro como espacio negativo y una banda de niebla crema que se arrastra despacio
@@ -36,8 +37,10 @@ export const Nocturne = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fighting = useGameStore(s => s.phase === 'combat' || s.phase === 'combat-reveal');
   const fightRef = useRef(fighting);
-  // Modo rendimiento (grano apagado): la niebla se pinta una vez y queda quieta
-  const still = useSettings().grain === 'off';
+  // Modo rendimiento (grano apagado o bajo consumo): la niebla se pinta una vez y
+  // queda quieta. Viva, cada fotograma suyo obliga a recomponer la pantalla entera
+  const lowPower = useLowPower();
+  const still = useSettings().grain === 'off' || lowPower;
 
   useEffect(() => { fightRef.current = fighting; }, [fighting]);
 

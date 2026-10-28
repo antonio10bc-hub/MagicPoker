@@ -15,6 +15,7 @@ import { getCastle } from '@/lib/castle';
 import { isTutorialDone } from '@/lib/tutorial';
 import { initAnalytics, track } from '@/lib/analytics';
 import { initDebugFromUrl } from '@/lib/debug';
+import { startQualityProbe } from '@/lib/quality';
 import { archetype } from '@/lib/forest';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
@@ -38,6 +39,8 @@ export default function Home() {
 
   useEffect(preloadSounds, []);
   useEffect(initDebugFromUrl, []);
+  // Calidad gráfica: si el dispositivo va justo, bajo consumo
+  useEffect(startQualityProbe, []);
 
   // Analíticas: arrancan una vez con el dispositivo y el progreso del jugador
   useEffect(() => {

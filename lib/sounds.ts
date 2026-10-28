@@ -84,7 +84,21 @@ const unlock = () => {
 };
 if (isBrowser()) {
   ['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+  // En segundo plano el audio se para del todo: la música generativa y la reverb
+  // gastan CPU (y batería) aunque nadie la oiga
+  document.addEventListener('visibilitychange', () => {
+    if (!engine) return;
+    if (document.hidden) engine.ctx.suspend().catch(() => {});
+    else engine.ctx.resume().catch(() => {});
+  });
 }
+
+/** Música a 0 o todo silenciado: no se sintetiza (se retoma al volver a subirla) */
+const musicSilent = () => isMuted || getSettings().music <= 0;
+const silenceTrack = () => {
+  currentTrack?.handle.stop(MUSIC_FADE_S);
+  currentTrack = null;
+};
 
 const loadBuffer = (file: string): Promise<AudioBuffer | null> => {
   let p = buffers.get(file);
@@ -115,6 +129,8 @@ if (isBrowser()) {
     const t = engine.ctx.currentTime;
     engine.musicLevel.gain.setTargetAtTime(music, t, 0.05);
     engine.sfxBus.gain.setTargetAtTime(sfx, t, 0.05);
+    if (musicSilent()) silenceTrack();
+    else if (desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume, desiredMusic.variant);
   });
 }
 
@@ -130,7 +146,8 @@ export const toggleMute = (): boolean => {
   isMuted = !isMuted;
   const e = getEngine();
   if (e) e.master.gain.setTargetAtTime(isMuted ? 0 : MASTER_VOLUME, e.ctx.currentTime, 0.05);
-  if (!isMuted && desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume, desiredMusic.variant);
+  if (isMuted) silenceTrack();
+  else if (desiredMusic && !currentTrack) playMusic(desiredMusic.name, desiredMusic.volume, desiredMusic.variant);
   muteListeners.forEach(l => l());
   return isMuted;
 };
@@ -216,6 +233,7 @@ export const playMusic = (name: MusicName, volume = 0.3, variant?: TrackVariant)
   if (!isBrowser()) return;
   desiredMusic = { name, volume, variant };
   if (currentTrack?.name === name && currentTrack.key === variant?.key) return;
+  if (musicSilent()) { silenceTrack(); return; }
 
   const e = getEngine();
   if (!e || e.ctx.state !== 'running') return; // arrancará al desbloquear el audio

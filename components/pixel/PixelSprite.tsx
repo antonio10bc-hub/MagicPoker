@@ -4,8 +4,9 @@ import { Owner } from '@/types';
 
 // --- SPRITES DE PÍXELES ---
 // Un sprite es una cuadrícula de caracteres; cada carácter es un color de la paleta.
-// Se dibuja como SVG con rectángulos y `shape-rendering: crispEdges`, así que escala
-// por enteros sin suavizado. '.' es transparente.
+// Se dibuja como SVG con `shape-rendering: crispEdges`, así que escala por enteros sin
+// suavizado. '.' es transparente. Un solo trazado por color (no un rectángulo por
+// tramo): el mapa pasaba de 7000 nodos SVG y eso pesa en móviles.
 
 export interface Sprite {
   rows: string[];
@@ -87,11 +88,18 @@ interface PixelSpriteProps {
   style?: CSSProperties;
 }
 
+/** Los tramos de cada color, juntos en un trazado (tramo = M x y, h ancho, v 1, h -ancho) */
+const toPaths = (sprite: Sprite, colors: Record<string, string>) => {
+  const byFill = new Map<string, string>();
+  toRects(sprite, colors).forEach(r => byFill.set(r.fill, `${byFill.get(r.fill) ?? ''}M${r.x} ${r.y}h${r.w}v1h-${r.w}z`));
+  return [...byFill].map(([fill, d]) => ({ fill, d }));
+};
+
 const PixelSpriteComponent = ({ sprite, owner = 'player', scale = 1, tint, className, style }: PixelSpriteProps) => {
   const { width, height } = spriteSize(sprite);
-  const rects = useMemo(() => {
+  const paths = useMemo(() => {
     const colors = owner === 'player' ? PLAYER_COLORS : OPPONENT_COLORS;
-    return toRects(sprite, tint ? Object.fromEntries(Object.keys(colors).map(k => [k, tint])) : colors);
+    return toPaths(sprite, tint ? Object.fromEntries(Object.keys(colors).map(k => [k, tint])) : colors);
   }, [sprite, owner, tint]);
   return (
     <svg
@@ -103,7 +111,7 @@ const PixelSpriteComponent = ({ sprite, owner = 'player', scale = 1, tint, class
       style={{ display: 'block', ...style }}
       aria-hidden
     >
-      {rects.map((r, i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={1} fill={r.fill} />)}
+      {paths.map(p => <path key={p.fill} d={p.d} fill={p.fill} />)}
     </svg>
   );
 };

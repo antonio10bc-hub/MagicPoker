@@ -10,7 +10,7 @@ const openMenu = async (page: Page, progress: { defeated: number; rematches?: st
     localStorage.clear();
     localStorage.setItem('has_played_before', 'true');
     localStorage.setItem('magic_poker_tutorial_done', '1');
-    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
+    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', quality: 'high', music: 0, sfx: 0 }));
     localStorage.setItem('magic_poker_progress', JSON.stringify(p.progress));
     Object.entries(p.extra).forEach(([k, v]) => localStorage.setItem(k, v));
   }, { progress, extra });

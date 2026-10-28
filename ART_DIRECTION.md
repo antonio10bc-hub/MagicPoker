@@ -113,6 +113,23 @@ Se aplica sin *shaders* WebGL, con capas baratas de composición:
 - **El fondo** se calcula a media resolución, a 8 fps y con lo estático precalculado.
 - Referencia medida (móvil simulado, CPU ×4 más lenta): de ~22 fps a ~55 fps; el
   JavaScript por segundo bajó de ~450 ms a ~60 ms.
+- **Nada infinito escondido:** una animación que no se ve (la barra de la pantalla de
+  carga ya oculta) sigue obligando a producir fotogramas. Se apaga al ocultarse.
+- **Sprites como un trazado por color** (`PixelSprite`), no un rectángulo por tramo.
+- **Lo animado, por encima de lo quieto:** una capa animada pintada *debajo* de otras
+  hace capa aparte de todo lo que se le monta encima (los bancos de niebla del mapa
+  generaban cientos de capas). Si algo decorativo se anima, va arriba.
+- **Calidad (Ajustes → Calidad: auto / alta / baja, `lib/quality.ts`).** En *auto* el
+  juego mide sus fps al arrancar; si no llega a ~42, pasa a **bajo consumo** y lo
+  recuerda. Bajo consumo = sin grano (la mezcla overlay a pantalla completa es lo que
+  más cuesta a la GPU), niebla del fondo quieta, sin polvo y sin los bucles que solo
+  decoran (`.low-power .anim-*`). Se quedan los que informan: carta jugable, hueco
+  donde soltar, vida al límite, jefe actual. El aspecto se mantiene: solo se quita
+  movimiento y grano.
+- El audio no se sintetiza con la música a 0 o en silencio, y se suspende en segundo
+  plano.
+- Referencia medida (2026-10, CPU ×4 más lenta): menú en móvil de ~11 a ~47 fps en
+  calidad alta; en baja, ~57-60 fps en menú, Bosque y partida, en móvil y portátil.
 
 Si en el futuro se pasa a WebGL, el *shader* equivalente sería: grano (ruido azul
 animado a 8 fps, mezcla overlay) → umbral de brillo sobre naranjas y cremas → dos

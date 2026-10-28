@@ -50,7 +50,7 @@ export const startScenario = async (page: Page, s: Scenario) => {
     localStorage.clear();
     localStorage.setItem('has_played_before', 'true');
     localStorage.setItem('magic_poker_tutorial_done', '1');
-    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
+    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', quality: 'high', music: 0, sfx: 0 }));
     localStorage.setItem('magic_poker_progress', JSON.stringify({ defeated: progress }));
     localStorage.setItem('magic_poker_save', JSON.stringify(saved));
     if (castleState) localStorage.setItem('magic_poker_castle', JSON.stringify(castleState));

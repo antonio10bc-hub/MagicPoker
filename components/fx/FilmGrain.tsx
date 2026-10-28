@@ -1,5 +1,6 @@
 import { CSSProperties, useSyncExternalStore } from 'react';
 import { useSettings } from '@/hooks/useSettings';
+import { useLowPower } from '@/lib/quality';
 
 // --- POSTPROCESADO: GRANO DE PELÍCULA ---
 // Un mosaico de ruido a resolución de pantalla (1 punto = 1 px CSS, no un píxel
@@ -57,7 +58,9 @@ export const FilmGrain = ({ scale }: { scale: number }) => {
   const grain = useSyncExternalStore(noSubscribe, getGrain, () => null);
   // Ajuste del jugador: grano completo, suave o apagado (modo rendimiento)
   const level = useSettings().grain;
-  if (!grain || level === 'off') return null;
+  // En bajo consumo, fuera: mezclar a pantalla completa es lo que más cuesta a la GPU
+  const lowPower = useLowPower();
+  if (!grain || level === 'off' || lowPower) return null;
   const k = level === 'soft' ? 0.5 : 1;
 
   // El escenario se escala por `scale`: dividimos para que 1 punto de ruido = 1 px CSS.

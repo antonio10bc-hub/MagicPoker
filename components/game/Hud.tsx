@@ -157,18 +157,6 @@ const RivalHand = ({ count }: { count: number }) => (
   </div>
 );
 
-/** Botón invisible de pruebas sobre el icono del rival: 3 toques rápidos ganan la partida */
-const SecretWin = ({ rect }: { rect: Rect }) => {
-  const taps = useRef<number[]>([]);
-  const debugWin = useGameStore(s => s.debugWin);
-  const onTap = () => {
-    const now = Date.now();
-    taps.current = [...taps.current.filter(t => now - t < 700), now];
-    if (taps.current.length >= 3) { taps.current = []; debugWin(); }
-  };
-  return <button type="button" aria-hidden tabIndex={-1} className="absolute z-[5] opacity-0 cursor-default" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} onPointerDown={onTap} />;
-};
-
 // --- PANEL DEL RIVAL ---
 export const RivalPanel = () => {
   const t = useTranslations();
@@ -200,7 +188,6 @@ export const RivalPanel = () => {
           {floor}
           <div className="ml-auto"><DeckCount owner="opponent" count={deckCount} /></div>
         </CompactPanel>
-        <SecretWin rect={{ ...rect, w: 36 }} />
       </>
     );
   }
@@ -214,7 +201,6 @@ export const RivalPanel = () => {
         <DeckCount owner="opponent" count={deckCount} />
         {floor}
       </Panel>
-      <SecretWin rect={rect} />
     </>
   );
 };

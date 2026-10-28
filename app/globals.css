@@ -78,6 +78,9 @@ html, body {
   transition: opacity 0.5s ease, visibility 0.5s;
 }
 .ready #splash { opacity: 0; visibility: hidden; pointer-events: none; }
+/* Oculta también deja de animarse: una animación infinita, aunque no se vea, obliga a
+   producir fotogramas todo el rato (en móviles hundía el menú a ~10 fps) */
+.ready .splash-bar span { animation: none; }
 .splash-logo { display: flex; flex-direction: column; align-items: center; font-family: var(--font-display), Impact, sans-serif; line-height: 0.85; letter-spacing: 0.04em; }
 .splash-magic { font-size: 72px; color: var(--ink-orange); text-shadow: -2px 0 0 rgba(255, 74, 28, 0.55), 2px 1px 0 rgba(94, 122, 118, 0.6), 0 0 12px rgba(255, 74, 28, 0.8), 0 0 30px rgba(242, 101, 42, 0.4); }
 .splash-poker { font-size: 72px; color: var(--ink-cream); text-shadow: -2px 0 0 rgba(255, 74, 28, 0.55), 2px 1px 0 rgba(94, 122, 118, 0.6); }
@@ -322,3 +325,8 @@ html, body {
   .anim-sway, .anim-float, .anim-pulse, .anim-pulse-soft, .anim-throb, .anim-heartbeat, .anim-wave, .anim-dot, .anim-ring, .anim-spin { animation: none; }
   .grain { animation: none !important; }
 }
+/* Bajo consumo (lib/quality): fuera los bucles que solo decoran; se quedan los que
+   dicen algo (carta jugable, hueco donde soltar, vida al límite, jefe actual) */
+.low-power .anim-wave, .low-power .anim-flicker, .low-power .anim-pulse-soft, .low-power .anim-spin,
+.low-power .anim-lamp, .low-power .anim-banner, .low-power .anim-ember, .low-power .anim-shine,
+.low-power .anim-sway, .low-power .anim-float, .low-power .anim-bob { animation: none; }

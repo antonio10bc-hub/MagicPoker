@@ -15,7 +15,7 @@ const seed = async (page: Page, items: Record<string, unknown>) => {
     localStorage.clear();
     localStorage.setItem('has_played_before', 'true');
     localStorage.setItem('magic_poker_tutorial_done', '1');
-    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
+    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', quality: 'high', music: 0, sfx: 0 }));
     Object.entries(p).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v)));
   }, items);
   await page.goto('/');

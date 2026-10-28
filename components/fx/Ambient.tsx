@@ -1,6 +1,7 @@
 import { CSSProperties, useEffect } from 'react';
 import { useStage } from '@/components/pixel/Stage';
 import { playSfx } from '@/lib/sounds';
+import { useLowPower } from '@/lib/quality';
 
 // --- AMBIENTE ---
 
@@ -16,6 +17,7 @@ const MOTES = Array.from({ length: 14 }, (_, i) => ({
 
 export const AmbientDust = () => {
   const { width, height } = useStage();
+  if (useLowPower()) return null;
   return (
     <div className="absolute inset-0 pointer-events-none z-[5] overflow-hidden">
       {MOTES.map((m, i) => (

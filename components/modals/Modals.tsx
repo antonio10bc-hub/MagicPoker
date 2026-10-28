@@ -6,7 +6,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { getStats } from '@/lib/stats';
 import { haptic, playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/sounds';
-import { GrainLevel, updateSettings } from '@/lib/settings';
+import { GrainLevel, Quality, updateSettings } from '@/lib/settings';
 import { useSettings } from '@/hooks/useSettings';
 import { useMuted } from '@/hooks/useMuted';
 import { Rank } from '@/types';
@@ -274,6 +274,10 @@ const SettingsModal = () => {
           <Tabs<GrainLevel> value={settings.grain} options={[['full', t.grain_full], ['soft', t.grain_soft], ['off', t.grain_off]]}
             onChange={grain => updateSettings({ grain })} />
           <p className="t-note">{t.grain_hint}</p>
+          <span>{t.set_quality}</span>
+          <Tabs<Quality> value={settings.quality} options={[['auto', t.quality_auto], ['high', t.quality_high], ['low', t.quality_low]]}
+            onChange={quality => updateSettings({ quality })} />
+          <p className="t-note">{t.quality_hint}</p>
         </Section>
         <Section title={t.sec_more} className="flex flex-col gap-[4px]">
           <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().openModal('cards'); }}>{t.cards_button}</PxButton>

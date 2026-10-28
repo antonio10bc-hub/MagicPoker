@@ -9,7 +9,7 @@ const seed = async (page: Page, defeated: number) => {
     localStorage.clear();
     localStorage.setItem('has_played_before', 'true');
     localStorage.setItem('magic_poker_tutorial_done', '1');
-    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', music: 0, sfx: 0 }));
+    localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', quality: 'high', music: 0, sfx: 0 }));
     localStorage.setItem('magic_poker_progress', JSON.stringify({ defeated: d }));
   }, defeated);
   await page.goto('/');

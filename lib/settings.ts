@@ -2,6 +2,8 @@
 // Pequeño almacén con suscripción, para usarlo con useSyncExternalStore.
 
 export type GrainLevel = 'full' | 'soft' | 'off';
+/** Calidad gráfica: auto (baja sola si el dispositivo va justo), alta o baja */
+export type Quality = 'auto' | 'high' | 'low';
 
 export interface Settings {
   /** 0–1 */
@@ -11,6 +13,7 @@ export interface Settings {
   vibration: boolean;
   /** Postprocesado: grano completo, suave o apagado (modo rendimiento) */
   grain: GrainLevel;
+  quality: Quality;
   /** Pedir confirmación (con el pronóstico) al plantarse */
   confirmStand: boolean;
   /** Velocidad de la partida (x1 o x2) */
@@ -18,7 +21,7 @@ export interface Settings {
 }
 
 const KEY = 'magic_poker_settings';
-const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full', confirmStand: true, speed: 1 };
+const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full', quality: 'auto', confirmStand: true, speed: 1 };
 
 const listeners = new Set<() => void>();
 let current: Settings = DEFAULTS;
