@@ -440,6 +440,7 @@ export const BestiaryModal = () => {
 // --- DEPURACIÓN (solo con ?debug=1) ---
 // Repite en el mapa las revelaciones como si acabaras de ganar, sin tocar tu progreso.
 export const DebugModal = () => {
+  const t = useTranslations();
   const replay = (defeated: number) => {
     playSound('click');
     useUiStore.getState().closeModal();
@@ -449,8 +450,8 @@ export const DebugModal = () => {
     <PxButton key={label} size="md" onClick={() => replay(defeated)}>{label}</PxButton>
   );
   return (
-    <Dialog title="DEBUG" size="sm" width={220}>
-      <DialogBody scroll={false} className="gap-[4px]">
+    <Dialog title="DEBUG" size="sm" width={240}>
+      <DialogBody className="gap-[4px]">
         <div className="t-section">Animaciones (tu progreso no cambia)</div>
         {row('Jefe vencido → siguiente', 3)}
         {row('Llega el Soberano', BOSSES.length - 1)}
@@ -462,17 +463,18 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
-        <div className="t-section mt-[4px]">El Bosque</div>
-        <span className="flex gap-[3px]">
-          {(['prince', 'queen', 'king'] as const).map(id => (
-            <PxButton key={id} size="sm" className="flex-1" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestForce({ id, tier: 'unique' }); useGameStore.getState().enterForest(); }}>
-              {id === 'prince' ? 'Príncipe' : id === 'queen' ? 'Reina' : 'Rey'}
-            </PxButton>
-          ))}
-          <PxButton size="sm" className="flex-1" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestForce({ id: 'anchorite', tier: 'renegade' }); useGameStore.getState().enterForest(); }}>
-            Anacoreta
-          </PxButton>
-        </span>
+        <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
+        {TIERS.map(tier => (
+          <div key={tier} className="flex flex-wrap gap-[3px]">
+            {archetypesOf(tier).map(a => (
+              <PxButton key={a.id} size="sm" aria-label={`debug forest ${a.id}`} className="flex items-center gap-[3px]" style={{ width: 'calc(50% - 2px)' }}
+                onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestForce({ id: a.id, tier }); useGameStore.getState().enterForest(); }}>
+                <ForestFigure id={a.id} tier={tier} height={14} />
+                <span className="truncate" style={{ color: TIER_INK[tier] }}>{t[`forest_${a.id}` as keyof Translations].replace(/^(El|La|The) /, '')}</span>
+              </PxButton>
+            ))}
+          </div>
+        ))}
       </DialogBody>
     </Dialog>
   );
