@@ -4,6 +4,8 @@
 // personaje es de un nivel y juega a su manera por sus sellos y sus cartas: defensivos,
 // agresivos o puñeteros (troll). Los únicos son tres, de la realeza: el Príncipe, la
 // Reina y el Rey, que llevan su figura repetida tres veces en vez de las tres figuras.
+// Aparte, los renegados: tan duros como las pesadillas y tan raros como los únicos, con
+// un mazo hecho a mano (el estándar entero y sus sellos contados uno a uno).
 // No hay premios que cambien el juego: se lleva un bestiario (a quién has encontrado y
 // cuántas veces lo has vencido) y tu racha.
 import { Card, Difficulty, GameResult, Rank, SealId } from '@/types';
@@ -11,10 +13,10 @@ import { createCard, createDeck, createSealCard, shuffle } from '@/lib/game-util
 import { getCastle } from '@/lib/castle';
 import { DeckConfig, MAX_COPIES, MAX_SEALS } from '@/lib/deck';
 
-export type Tier = 'normal' | 'hard' | 'nightmare' | 'unique';
-export const TIERS: Tier[] = ['normal', 'hard', 'nightmare', 'unique'];
+export type Tier = 'normal' | 'hard' | 'nightmare' | 'unique' | 'renegade';
+export const TIERS: Tier[] = ['normal', 'hard', 'nightmare', 'unique', 'renegade'];
 /** Probabilidad (de 100) de cada nivel */
-export const TIER_WEIGHTS: Record<Tier, number> = { normal: 57, hard: 28, nightmare: 10, unique: 5 };
+export const TIER_WEIGHTS: Record<Tier, number> = { normal: 52, hard: 28, nightmare: 10, unique: 5, renegade: 5 };
 
 export type Style = 'defensive' | 'aggressive' | 'troll';
 
@@ -22,7 +24,7 @@ export interface Archetype {
   id: string;
   tier: Tier;
   style: Style;
-  /** Sellos con los que juega */
+  /** Sellos con los que juega (repetido = una copia más; los renegados, contados a mano) */
   seals: SealId[];
   /** Cartas del Castillo que lleva (1 copia en difícil, 2 en pesadilla) */
   cards: Rank[];
@@ -52,6 +54,10 @@ export const ARCHETYPES: Archetype[] = [
   { id: 'prince', tier: 'unique', style: 'aggressive', seals: ['double', 'reveal'], cards: [], royal: 'J', music: 'sovereign' },
   { id: 'queen', tier: 'unique', style: 'troll', seals: ['mirror', 'shift'], cards: [], royal: 'Q', music: 'sovereign' },
   { id: 'king', tier: 'unique', style: 'defensive', seals: ['shield', 'anchor'], cards: [], royal: 'K', music: 'sovereign' },
+  // --- Renegados ---
+  // El Anacoreta: se emparedó para rezar y salió sin fe. Roba, se cura dos veces, te
+  // devuelve los golpes y deja eco al caer
+  { id: 'anchorite', tier: 'renegade', style: 'defensive', seals: ['swap', 'life', 'life', 'mirror', 'echo'], cards: [], music: 'seer' },
 ];
 
 export const archetype = (id: string) => ARCHETYPES.find(a => a.id === id);
@@ -71,13 +77,13 @@ export const rollEncounter = (rng: () => number = Math.random): Encounter => {
 };
 
 /** Vidas del rival por nivel */
-export const FOREST_LIVES: Record<Tier, number> = { normal: 4, hard: 5, nightmare: 6, unique: 7 };
+export const FOREST_LIVES: Record<Tier, number> = { normal: 4, hard: 5, nightmare: 6, unique: 7, renegade: 6 };
 /** Cómo piensa: en normal, la IA normal; desde difícil, la difícil */
 export const forestAi = (tier: Tier): Difficulty => (tier === 'normal' ? 'normal' : 'hard');
 
 /** Copias de sus sellos y de sus cartas del Castillo según el nivel */
-const SEAL_COPIES: Record<Tier, number> = { normal: 1, hard: 2, nightmare: 3, unique: 2 };
-const CARD_COPIES: Record<Tier, number> = { normal: 0, hard: 1, nightmare: 2, unique: 0 };
+const SEAL_COPIES: Record<Tier, number> = { normal: 1, hard: 2, nightmare: 3, unique: 2, renegade: 1 };
+const CARD_COPIES: Record<Tier, number> = { normal: 0, hard: 1, nightmare: 2, unique: 0, renegade: 0 };
 
 /**
  * Mazo del rival: el estándar, sus sellos y sus cartas del Castillo. Los únicos cambian

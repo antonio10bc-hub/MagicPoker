@@ -8,7 +8,8 @@ vi.stubGlobal('localStorage', {
   removeItem: (k: string) => { store.delete(k); },
 });
 
-const { ARCHETYPES, bestiaryComplete, buildForestDeck, forestDeckConfig, forestAi, getForest, isForestUnlocked, recordForestDuel, rollEncounter, TIER_WEIGHTS } = await import('@/lib/forest');
+const { ARCHETYPES, bestiaryComplete, buildForestDeck, FOREST_LIVES, forestDeckConfig, forestAi, getForest, isForestUnlocked, recordForestDuel, rollEncounter, TIER_WEIGHTS } = await import('@/lib/forest');
+const { createDeck } = await import('@/lib/game-utils');
 
 describe('el Bosque', () => {
   beforeEach(() => store.clear());
@@ -18,11 +19,11 @@ describe('el Bosque', () => {
     expect(isForestUnlocked({ best: 12, conquered: 1 } as never)).toBe(true);
   });
 
-  it('el sorteo respeta 57/28/10/5 y saca a alguien de ese nivel', () => {
+  it('el sorteo respeta 52/28/10/5/5 y saca a alguien de ese nivel', () => {
     let seed = 1;
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     const n = 20000;
-    const count = { normal: 0, hard: 0, nightmare: 0, unique: 0 };
+    const count = { normal: 0, hard: 0, nightmare: 0, unique: 0, renegade: 0 };
     for (let i = 0; i < n; i++) {
       const e = rollEncounter(rng);
       expect(ARCHETYPES.find(a => a.id === e.id)?.tier).toBe(e.tier);
@@ -34,6 +35,20 @@ describe('el Bosque', () => {
   it('cuatro por nivel y tres únicos', () => {
     expect(['normal', 'hard', 'nightmare'].map(t => ARCHETYPES.filter(a => a.tier === t).length)).toEqual([4, 4, 4]);
     expect(ARCHETYPES.filter(a => a.tier === 'unique').map(a => a.id)).toEqual(['prince', 'queen', 'king']);
+    expect(ARCHETYPES.filter(a => a.tier === 'renegade').map(a => a.id)).toEqual(['anchorite']);
+  });
+
+  it('el Anacoreta: el mazo estándar entero más robo, 2 vidas, espejo y eco; tan duro como una pesadilla', () => {
+    const a = ARCHETYPES.find(x => x.id === 'anchorite')!;
+    const deck = buildForestDeck(a);
+    const std = createDeck('opponent');
+    expect(deck.filter(c => c.rank !== 'SEAL').map(c => c.rank).sort()).toEqual(std.map(c => c.rank).sort());
+    const seals = deck.filter(c => c.rank === 'SEAL').reduce<Record<string, number>>((m, c) => ({ ...m, [c.seal!]: (m[c.seal!] ?? 0) + 1 }), {});
+    expect(seals).toEqual({ swap: 1, life: 2, mirror: 1, echo: 1 });
+    expect(forestDeckConfig(a)).toEqual({ seals: { swap: 1, life: 2, mirror: 1, echo: 1 }, removed: [] });
+    expect(FOREST_LIVES.renegade).toBe(FOREST_LIVES.nightmare);
+    expect(forestAi('renegade')).toBe('hard');
+    expect(TIER_WEIGHTS.renegade).toBe(TIER_WEIGHTS.unique);
   });
 
   it('los únicos llevan su figura tres veces en vez de Príncipe, Reina y Rey', () => {

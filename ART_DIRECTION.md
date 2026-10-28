@@ -627,14 +627,20 @@ de antes en la arena de tests, `lib/ai-arena.test.ts`).
   - **Únicos** (la realeza): el Príncipe, la Reina y el Rey, que llevan su figura tres
     veces en vez de Príncipe, Reina y Rey. Cuerpo de oro con aura de oro y carmesí,
     resplandor y, en grande, rayos girando (como el Soberano); coronas, cetro y abanico.
+  - **Renegados** (azur, el único color libre en el bosque): tan duros como las
+    pesadillas (6 vidas, IA difícil) y tan raros como los únicos (5 %), con un mazo
+    contado a mano. El Anacoreta: capucha puntiaguda y halo de espinas, máscara con la
+    boca cosida, barba crema hasta la cintura, cuerda de cáñamo, grillete roto con la
+    cadena colgando y rosario con su cruz; juega el mazo estándar entero más robo,
+    2 vidas, espejo y eco.
   En el bosque son negros con los ojos encendidos; de rival (panel, bestiario), el cuerpo
   en el color de su nivel y la máscara crema. No hablan.
 - **Bestiario:** ventana ámbar con tus duelos, tu racha y tu mejor racha y, por niveles
-  (Normales, Difíciles, Pesadillas y, aparte en oro, Únicos), cada personaje: los
+  (Normales, Difíciles, Pesadillas y, aparte, Únicos en oro y Renegados en azur), cada personaje: los
   encontrados con su estilo, lo que hacen y sus victorias y derrotas, sus sellos (×copias) y "Copiar mazo": se copia como un código de texto
   (`MP1:sello*n…|cartas quitadas`, al portapapeles y guardado en el juego) que se pega
   con "Pegar" en el pie del editor de mazo, en el mazo activo. Solo se copian sus
-  sellos (a 2 copias, hasta 5): sus cartas del Castillo solo existen allí. Los demás, en
+  sellos (a 2 copias, hasta 5; los renegados, tal cual): sus cartas del Castillo solo existen allí. Los demás, en
   sombra. Logros: Sin miedo (vencer en pesadilla) y Bestiario (encontrarlos a todos).
 - **Analíticas del Bosque:** `forest_entered`, `forest_encounter` (rival, dificultad) y
   `forest_duel_ended` (rival, dificultad, resultado, `win`, racha). En el panel de

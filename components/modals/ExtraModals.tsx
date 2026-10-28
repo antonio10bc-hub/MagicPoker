@@ -388,16 +388,17 @@ export const BestiaryModal = () => {
           <span>{t.forest_streak.replace('{n}', String(f.streak))}</span>
           <span>{t.forest_best.replace('{n}', String(f.bestStreak))}</span>
         </div>
-        {/* Por niveles: normales, difíciles, pesadillas y, aparte, los únicos */}
+        {/* Por niveles: normales, difíciles, pesadillas y, aparte, los únicos y los renegados */}
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-col gap-[4px]">
             <div className="flex items-center gap-[5px] mt-[3px]">
-              <span className={clsx('font-display', tier === 'unique' && 'glow-gold')} style={{ color: TIER_INK[tier], fontSize: 10, letterSpacing: 1 }}>
+              <span className={clsx('font-display', tier === 'unique' && 'glow-gold', tier === 'renegade' && 'glow-azure')} style={{ color: TIER_INK[tier], fontSize: 10, letterSpacing: 1 }}>
                 {t[`tier_section_${tier}` as keyof Translations]}
               </span>
               <span className="flex-1 h-[1px]" style={{ background: `rgba(${TIER_RGB[tier]},0.35)` }} />
             </div>
             {tier === 'unique' && <p className="t-note">{t.forest_unique_hint}</p>}
+            {tier === 'renegade' && <p className="t-note">{t.forest_renegade_hint}</p>}
             {archetypesOf(tier).map(a => {
               const rec = recordOf(f, a.id);
               return (
@@ -468,6 +469,9 @@ export const DebugModal = () => {
               {id === 'prince' ? 'Príncipe' : id === 'queen' ? 'Reina' : 'Rey'}
             </PxButton>
           ))}
+          <PxButton size="sm" className="flex-1" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestForce({ id: 'anchorite', tier: 'renegade' }); useGameStore.getState().enterForest(); }}>
+            Anacoreta
+          </PxButton>
         </span>
       </DialogBody>
     </Dialog>

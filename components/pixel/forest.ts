@@ -7,7 +7,8 @@ import { Sprite } from './PixelSprite';
 // cuernas de la cazadora, el sombrero y el puñal del salteador, el sombrero y el bastón
 // de la bruja, el gorro de cascabeles del trasgo, el cayado del pastor, el espadón del
 // verdugo, la pala del sepulturero, la piel del lobo, la paja del espantapájaros, el
-// velo y la vela de la plañidera; los únicos, sus coronas, el cetro, el abanico.
+// velo y la vela de la plañidera; los únicos, sus coronas, el cetro, el abanico; el
+// anacoreta, su halo de espinas, la boca cosida y el grillete roto.
 
 export interface ForestSprite { body: Sprite; mask: Sprite; eyes: Sprite }
 
@@ -674,5 +675,51 @@ export const FOREST_SPRITES: Record<string, ForestSprite> = {
     '.oooooooooooooooooooooooooooooo.',
     'oooooooooooooooooooooooooooooooo',
     'oooooooooooooooooooooooooooooooo',
+  ]),
+  // El Anacoreta (renegado): capucha y halo de espinas, boca cosida, barba hasta la
+  // cintura, cuerda de cáñamo, grillete roto en una muñeca y rosario en la otra
+  anchorite: person([
+    '.........o.....o.....o..........',
+    '..........o.ooooooooo...........',
+    '..........oo........oo..........',
+    '.........oo....oo....oo.........',
+    '........oo....oooo....oo........',
+    '......o.o....oooooo....oo.......',
+    '.......o....oooooooo....o.......',
+    '.......o....oooooooo....o.......',
+    '......o....ooommmmooo....o......',
+    '......o....oommmmmmoo....o......',
+    '...oo.o....oomemmemoo....ooo....',
+    '......o....oomemmemoo....o......',
+    '......o....oommmmmmoo....o......',
+    '.......o...ooomomomoo...o.......',
+    '...........oomomomooo...........',
+    '..........ooommmmmmooo..........',
+    '..........ooommmmmmooo..........',
+    '.........oooommmmmmoooo.........',
+    '.........ooommmmmmmmooo.........',
+    '........ooooommmmmmmoooo........',
+    '.......oo.oommmmmmmooo.oo.......',
+    '.......oo.ooommmmmmooo.oo.......',
+    '......oo..oooommmmmmoo..oo......',
+    '......oo.ooooommmmooooo.oo......',
+    '.....oo..oooommmmmooooo..oo.....',
+    '.....oo..oooooommmmoooo..ooo....',
+    '....oooo.oooooommoooooo....o....',
+    '....o..o.oooooommoooooo.........',
+    '.....o...ooooooomoooooo....o....',
+    '....o...ommmmmmmmmmmmmmo........',
+    '.....o..oooooomooooooooo...o....',
+    '....o...oooooomooooooooo........',
+    '.....o..ooooomomoooooooo...o....',
+    '........oooooooooooooooo........',
+    '....o...oooooooooooooooo...o....',
+    '........ooooooooooooooooo.ooo...',
+    '.......oo.oo.oo..oo.oo.oo..o....',
+    '.......o..o..o....o.o..o...o....',
+    '..........o..o....o....o........',
+    '.............o....o.............',
+    '.............o....o.............',
+    '...........ooo....ooo...........',
   ]),
 };

@@ -12,9 +12,9 @@ import { spriteAura } from '@/components/pixel/bosses';
 //  - shadow: entre los árboles: silueta negra, la máscara apenas se adivina y los ojos
 //            brillan en el color de su dificultad.
 
-/** Color de cada nivel: normal crema, difícil naranja, pesadilla carmesí, únicos oro */
-export const TIER_INK: Record<Tier, string> = { normal: INK.cream, hard: INK.orange, nightmare: INK.crimson, unique: INK.gold };
-export const TIER_RGB: Record<Tier, string> = { normal: '237,235,224', hard: '255,74,28', nightmare: '255,31,75', unique: '232,182,74' };
+/** Color de cada nivel: normal crema, difícil naranja, pesadilla carmesí, únicos oro, renegados azur */
+export const TIER_INK: Record<Tier, string> = { normal: INK.cream, hard: INK.orange, nightmare: INK.crimson, unique: INK.gold, renegade: INK.azure };
+export const TIER_RGB: Record<Tier, string> = { normal: '237,235,224', hard: '255,74,28', nightmare: '255,31,75', unique: '232,182,74', renegade: '46,155,255' };
 
 export const ForestFigure = ({ id, tier, height, mode = 'lit', dim, style }: {
   id: string; tier: Tier; height: number; mode?: 'lit' | 'shadow';

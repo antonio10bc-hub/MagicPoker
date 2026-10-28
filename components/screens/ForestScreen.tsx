@@ -166,7 +166,7 @@ export const ForestScreen = () => {
     if (!enc) return;
     const extra = enc.tier === 'unique' ? UNIQUE_EXTRA_MS : 0;
     const timers = [
-      setTimeout(() => { setPhase('reveal'); playSfx('reveal', 0.9, enc.tier === 'nightmare' ? 0.5 : enc.tier === 'hard' ? 0.7 : 0.9); haptic('stamp'); }, T.reveal),
+      setTimeout(() => { setPhase('reveal'); playSfx('reveal', 0.9, enc.tier === 'nightmare' || enc.tier === 'renegade' ? 0.5 : enc.tier === 'hard' ? 0.7 : 0.9); haptic('stamp'); }, T.reveal),
       // Los únicos se hacen esperar más (y suenan a realeza)
       ...(enc.tier === 'unique' ? [setTimeout(() => { playSfx('sparkle', 1, 0.6); playSfx('zap', 0.7, 0.5); haptic('win'); }, T.reveal + 500)] : []),
       setTimeout(() => { setPhase('lunge'); playSfx('whoosh', 1, 0.6); playSfx('crush', 0.8, 0.6); haptic('lifeLost'); }, T.lunge + extra),
