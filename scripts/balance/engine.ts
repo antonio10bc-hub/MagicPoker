@@ -11,7 +11,7 @@ import { BoardSlot, Card, Difficulty, GameResult, Owner, PlayerState, SealId } f
 import {
   applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState, drawCards, drawRound,
   getGameResult, hideFromRival, isIdleDraw, isQuietFight, isStalemate, lifeGains, markCombatResult, nextOpener, playCardToSlot,
-  revealBoard, risenPhoenixes, unhideBoard,
+  revealBoard, risenPhoenixes, unhideBoard, withSealDeck,
 } from '@/lib/game-utils';
 import { chooseOpponentMove } from '@/lib/ai';
 import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS, STARTING_HAND_SIZE, STARTING_LIVES } from '@/lib/constants';
@@ -94,7 +94,39 @@ const cantrip = (s: PlayerState, before: number): PlayerState => {
   return out;
 };
 
+// --- ¿Y SI...? REGLAS DE ROBO (no están en el juego; se fijan para todo el proceso) ---
+//  game         · como ahora (sellos dentro del mazo; el Soberano, mazo aparte con 1 carta + 1 sello)
+//  dual1        · doble mazo para todos: 3 cartas + 1 sello al empezar, 1 carta + 1 sello por ronda
+//                 (sin sellos en el mazo aparte, solo 1 carta: como el Soberano hoy)
+//  dual1refill  · igual, pero sin sellos que robar se vuelve a 2 cartas
+//  dual2        · doble mazo, 2 cartas + 1 sello por ronda
+export type DrawRule = 'game' | 'dual1' | 'dual1refill' | 'dual2';
+let RULE: DrawRule = 'game';
+export const setDrawRule = (r: DrawRule) => { RULE = r; };
+
+/** Pasa un estado al doble mazo: los sellos (de mano y mazo) a un mazo aparte; 3 cartas + 1 sello en mano */
+const toDual = (s: PlayerState, faceUp: boolean): PlayerState => {
+  if (s.sealDeck) return s;
+  const all = [...s.hand, ...s.deck];
+  const seals = all.filter(c => c.rank === 'SEAL');
+  const normal = all.filter(c => c.rank !== 'SEAL');
+  const base = { ...createPlayerState(normal, STARTING_HAND_SIZE, faceUp, s.lives), maxLives: s.maxLives };
+  return withSealDeck(base, seals, faceUp);
+};
+
+/** El robo de cada ronda según la regla */
+const drawFor = (s: PlayerState, faceUp: boolean): PlayerState => {
+  if (!s.sealDeck || RULE === 'game' || RULE === 'dual1') return drawRound(s, CARDS_DRAWN_PER_ROUND, faceUp);
+  if (RULE === 'dual1refill' && s.sealDeck.length === 0) return drawCards(s, CARDS_DRAWN_PER_ROUND, faceUp);
+  if (RULE === 'dual1refill') return drawRound(s, CARDS_DRAWN_PER_ROUND, faceUp);
+  // dual2: 2 cartas y un sello
+  const withCards = drawCards(s, CARDS_DRAWN_PER_ROUND, faceUp);
+  const [seal, ...rest] = s.sealDeck;
+  return seal ? { ...withCards, hand: [...withCards.hand, { ...seal, isFaceUp: faceUp }], sealDeck: rest } : withCards;
+};
+
 export const playMatch = (m: MatchSetup): MatchResult => {
+  if (RULE !== 'game') { m = { ...m, player: toDual(m.player, true), opponent: toDual(m.opponent, false) }; }
   let P = m.sealCantrip ? cantrip(m.player, 0) : m.player;
   let O = m.rivalCantrip ? cantrip(m.opponent, 0) : m.opponent;
   const opener0: Owner = Math.random() < 0.5 ? 'player' : 'opponent';
@@ -179,12 +211,12 @@ export const playMatch = (m: MatchSetup): MatchResult => {
     idle = isQuietFight(P, O, result) ? idle : 0;
     opener = nextOpener(nP, nO, opener);
     const before = nP.hand.length;
-    nP = drawRound(nP, CARDS_DRAWN_PER_ROUND, true);
+    nP = drawFor(nP, true);
     if (m.extraDraw) nP = drawCards(nP, m.extraDraw, true);
     if (m.sealCantrip) nP = cantrip(nP, before);
     P = nP;
     const beforeO = nO.hand.length;
-    O = drawRound(nO, CARDS_DRAWN_PER_ROUND, false);
+    O = drawFor(nO, false);
     if (m.rivalCantrip) O = cantrip(O, beforeO);
   }
   return { result: 'draw', rounds: maxRounds, livesLeft: P.lives, rivalLivesLeft: O.lives, opener: opener0, played, capped: true, phase2: phase2Done };
