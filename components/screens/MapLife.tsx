@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useSyncExternalStore } from 'react';
 import { motion } from 'framer-motion';
 import { Biome, hash, Pt } from './MapTerrain';
 import { useLowPower } from '@/lib/quality';
@@ -19,7 +19,7 @@ const firefliesFor = (w: number, h: number, road: Pt[], keepOut: Ellipse[]) => {
   const out: { x: number; y: number; dx: number; dy: number; t: number; delay: number; rest: number }[] = [];
   const n = Math.round(h / 60);
   for (let i = 0, tries = 0; out.length < n && tries < n * 12; tries++, i++) {
-    const p = { x: 8 + hash(i, 1, 201) * (w - 16), y: 30 + hash(i, 2, 203) * (h - 60) };
+    const p = { x: Math.round(8 + hash(i, 1, 201) * (w - 16)), y: Math.round(30 + hash(i, 2, 203) * (h - 60)) };
     if (keepOut.some(e => inside(p, e, 6))) continue;
     if (road.some(r => Math.abs(r.y - p.y) < 30 && Math.abs(r.x - p.x) < 26)) continue;
     out.push({ ...p, dx: (hash(i, 3, 205) - 0.5) * 22, dy: -4 - hash(i, 4, 207) * 10,
@@ -79,6 +79,10 @@ const Flock = ({ w, y }: { w: number; y: number }) => (
   </motion.div>
 );
 
+/** Solo en el navegador: son adornos animados y así no hay nada que casar con el HTML del servidor */
+const noSubscribe = () => () => {};
+const useMounted = () => useSyncExternalStore(noSubscribe, () => true, () => false);
+
 export const MapLife = memo(({ width, height, road, keepOut, biomes, flockY }: {
   width: number; height: number; road: Pt[]; keepOut: Ellipse[]; biomes: Biome[];
   /** A qué altura cruzan los pájaros (cerca de donde mira la cámara al empezar) */
@@ -87,7 +91,8 @@ export const MapLife = memo(({ width, height, road, keepOut, biomes, flockY }: {
   const lowPower = useLowPower();
   const flies = useMemo(() => firefliesFor(width, height, road, keepOut), [width, height, road, keepOut]);
   const glints = useMemo(() => biomes.map((b, k) => ({ kind: b.kind, list: glintsFor(b, k) })), [biomes]);
-  if (lowPower) return null;
+  const mounted = useMounted();
+  if (lowPower || !mounted) return null;
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
       {glints.map(({ kind, list }, k) => list.map((g, i) => (kind === 'water' ? <Glint key={`${k}-${i}`} g={g} /> : <Bubble key={`${k}-${i}`} g={g} />)))}

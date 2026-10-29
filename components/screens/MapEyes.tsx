@@ -64,14 +64,14 @@ const Slot = ({ spots, taken, index }: { spots: Pt[]; taken: React.MutableRefObj
   };
   useEffect(() => {
     // Cada hueco arranca a su ritmo para que no salgan todos a la vez
-    next(600 + index * 1400 + rand(0, 1200));
+    next(300 + index * 700 + rand(0, 600));
     return () => { if (timer.current) clearTimeout(timer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!show) return null;
   return (
     <Pair key={show.key} at={spots[show.spot]} seconds={show.seconds}
-      onDone={() => { taken.current.delete(show.spot); setShow(null); next(rand(1200, 4500)); }} />
+      onDone={() => { taken.current.delete(show.spot); setShow(null); next(rand(500, 2200)); }} />
   );
 };
 
