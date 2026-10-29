@@ -74,7 +74,6 @@ const ConfirmExitModal = () => {
 /** Nombre de una carta del recuento: número o figura, carta del Castillo o qué sello */
 const playedName = (t: Translations, key: string) => {
   if (key.startsWith('SEAL:')) return t[`seal_${key.slice(5)}` as keyof Translations] ?? key;
-  if (key === 'SEAL') return t.tab_seals;
   if (key === 'JOKER') return 'Joker';
   const castle = t[`idea_${key.toLowerCase()}` as keyof Translations];
   return castle ?? key;
@@ -89,7 +88,9 @@ const StatsModal = () => {
   // Las victorias antiguas por dificultad cuentan todas juntas
   const totalWins = stats.wins.easy + stats.wins.normal + stats.wins.hard;
   const finished = totalWins + stats.losses + stats.draws;
-  const favorite = Object.entries(stats.rankPlayed).sort((a, b) => b[1] - a[1])[0];
+  // El "SEAL" a secas es el montón de antes (todos los sellos juntos, sin saber cuál): no
+  // es ninguna carta, así que no compite por ser la favorita
+  const favorite = Object.entries(stats.rankPlayed).filter(([k]) => k !== 'SEAL').sort((a, b) => b[1] - a[1])[0];
   const earnedCount = STAMP_IDS.filter(id => stats.stamps[id] !== undefined).length;
 
   const records: [string, string | number][] = [
