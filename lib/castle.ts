@@ -132,13 +132,15 @@ const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: numbe
 
 // --- DESAFÍOS (se abren al conquistar el Castillo una vez) ---
 //  noHeal  · nadie te ofrece curarte
-//  fierce  · los jefes tienen una vida más
-//  sealed  · los jefes llevan un nivel más (más sellos)
-//  short   · empiezas sin tus 4 cartas más flojas
+//  fierce  · los jefes piensan con la IA difícil desde el primer piso
+//  sealed  · los jefes llevan dos niveles más (más sellos)
+//  short   · empiezas sin tus 2 cartas más flojas
 //  fragile · empiezas con 3 vidas (y 3 de tope)
 //  noDeath · sin puntos de guardado: hay que conquistarlo de una tirada, sin caer
 export type ChallengeId = 'noHeal' | 'fierce' | 'sealed' | 'short' | 'fragile' | 'noDeath';
 export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short', 'fragile', 'noDeath'];
+/** Cartas que quita «Mazo corto» (ajustado con la simulación: con 4 era casi imposible) */
+const SHORT_REMOVES = 2;
 /** Desafíos a la vez para el dorso de la Corona (eran todos cuando había cinco) */
 export const CROWN_CHALLENGES = 5;
 const has = (run: CastleRun | undefined | null, c: ChallengeId) => !!run?.challenges?.includes(c);
@@ -245,7 +247,7 @@ export const ensureRun = (challenges: ChallengeId[] = []): CastleRun => {
   if (valid.includes('short')) {
     // Fuera las 4 cartas normales más flojas
     const weakest = deck.map((c, i) => ({ c, i })).filter(({ c }) => c.rank !== 'SEAL')
-      .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, 4).map(w => w.i);
+      .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, SHORT_REMOVES).map(w => w.i);
     deck = deck.filter((_, i) => !weakest.includes(i));
   }
   const run: CastleRun = { stage: 0, lives, maxLives: lives, deck, stats: newStats(), ...(valid.length ? { challenges: valid } : {}) };
@@ -268,9 +270,9 @@ export const resumeCheckpoint = (): CastleRun | null => {
 };
 
 /** Jefe evolucionado: nivel de revancha según lo alto que estés */
-export const castleBossLevel = (stage: number, run?: CastleRun | null) => Math.min(4, (stage < 4 ? 1 : stage < 8 ? 2 : 3) + (has(run, 'sealed') ? 1 : 0));
+export const castleBossLevel = (stage: number, run?: CastleRun | null) => Math.min(4, (stage < 4 ? 1 : stage < 8 ? 2 : 3) + (has(run, 'sealed') ? 2 : 0));
 /** Vidas del jefe: menos que en sus partidas (aquí las tuyas se arrastran), crecen al subir */
-export const castleBossLives = (run: CastleRun) => Math.max(1, 3 + Math.floor(run.stage / 3) - (run.pact ? 1 : 0) + (has(run, 'fierce') ? 1 : 0));
+export const castleBossLives = (run: CastleRun) => Math.max(1, 3 + Math.floor(run.stage / 3) - (run.pact ? 1 : 0));
 
 /** Mazo de la pelea a partir de las plantillas */
 export const buildRunDeck = (run: CastleRun): Card[] => shuffle(run.deck.map(t => {

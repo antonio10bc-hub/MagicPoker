@@ -129,10 +129,14 @@ describe('el Castillo', () => {
     const run = c.ensureRun(['fragile', 'short', 'noHeal', 'fierce', 'sealed']);
     expect(run).toMatchObject({ lives: 3, maxLives: 3 });
     expect(run.deck.some(card => card.rank === '2')).toBe(false);
-    expect(run.deck.filter(card => card.rank !== 'SEAL')).toHaveLength(10);
+    // Mazo corto: sin las 2 más flojas (el Joker, que vale 0, y el 2)
+    expect(run.deck.some(card => card.rank === 'JOKER')).toBe(false);
+    expect(run.deck.filter(card => card.rank !== 'SEAL')).toHaveLength(12);
     const plain = { ...run, challenges: undefined };
-    expect(c.castleBossLives(run)).toBe(c.castleBossLives(plain) + 1);
-    expect(c.castleBossLevel(0, run)).toBe(c.castleBossLevel(0) + 1);
+    // Jefes feroces: la IA difícil desde el primer piso; jefes sellados: dos niveles más
+    expect(c.castleAi(0, run)).toBe('hard');
+    expect(c.castleBossLives(run)).toBe(c.castleBossLives(plain));
+    expect(c.castleBossLevel(0, run)).toBe(c.castleBossLevel(0) + 2);
     // Con vida por perder, sin desafío saldría curarte; con "sin curas", nunca
     for (const n of [0, 0.3, 0.6, 0.99]) expect(c.offerBoons({ ...run, lives: 1 }, fixed(n)).some(b => b.kind === 'heal')).toBe(false);
     expect(c.getCastle().lastChallenges).toHaveLength(5);

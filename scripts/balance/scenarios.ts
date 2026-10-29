@@ -50,7 +50,7 @@ const startingTemplates = (config: DeckConfig, challenges: ChallengeId[]): CardT
   ];
   if (challenges.includes('short')) {
     const weakest = deck.map((c, i) => ({ c, i })).filter(({ c }) => c.rank !== 'SEAL')
-      .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, 4).map(w => w.i);
+      .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, 2).map(w => w.i);
     deck = deck.filter((_, i) => !weakest.includes(i));
   }
   return deck;
