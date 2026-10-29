@@ -12,7 +12,8 @@ import { SCENERY, SceneryId } from '@/components/pixel/scenery';
 //  - Claros: niebla a ras de suelo alrededor de cada parada.
 //  - Agua (estanque, mar) y ciénaga, donde la parada lo pide.
 //  - Bosque: pinos y robles en silueta, más densos hacia los bordes, sin pisar el
-//    camino ni las paradas.
+//    camino ni las paradas. El borde de arriba también cuenta: el bosque se cierra
+//    por encima del Castillo y lo rodea, para que se entienda que el mapa acaba ahí.
 
 export interface Pt { x: number; y: number }
 export interface Biome { kind: 'water' | 'swamp' | 'field'; x: number; y: number; rx: number; ry: number }
@@ -36,6 +37,13 @@ const smooth = (x: number, y: number, cell: number, seed: number) => {
 };
 
 const TREES: SceneryId[] = ['pine_s', 'pine_m', 'pine_l', 'pine_m', 'oak', 'bush', 'rock', 'grass'];
+/**
+ * Alcance del cierre de arriba en px (igual en móvil y PC): bosque espeso hasta la torre
+ * del Castillo (~77 px) y más claro hasta media altura de sus muros, que así lo rodea
+ */
+const TOP_REACH = 480;
+/** Cercanía al borde (0 en el borde): los laterales y, arriba, el cierre del mapa */
+const edgeOf = (x: number, y: number, W: number) => Math.min(Math.min(x, W - 1 - x) / W, y / TOP_REACH);
 
 export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOut }: {
   width: number; height: number;
@@ -81,7 +89,7 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
         // Campo: oscuro con manchas y alguna mota
         let L = 0.2 + smooth(x, y, 26, 3) * 0.14 + smooth(x, y, 7, 5) * 0.06;
         // Bordes del mapa más negros (bosque cerrado)
-        const edge = Math.min(x, W - 1 - x) / W;
+        const edge = edgeOf(x, y, W);
         if (edge < 0.14) L -= (0.14 - edge) * 1.2;
         // Claros de niebla en las paradas
         clearings.forEach(c => {
@@ -137,7 +145,7 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
         const x = Math.round(gx + hash(gx, gy, 21) * STEP);
         const y = Math.round(gy + hash(gx, gy, 22) * STEP);
         if (x >= W || y >= H) continue;
-        const edge = Math.min(x, W - 1 - x) / W;
+        const edge = edgeOf(x, y, W);
         // Más bosque hacia los bordes; en el centro, alguna mata suelta
         const density = edge < 0.16 ? 0.75 : edge < 0.3 ? 0.3 : 0.08;
         if (hash(gx, gy, 23) > density) continue;

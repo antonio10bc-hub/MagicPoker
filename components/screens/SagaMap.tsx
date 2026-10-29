@@ -81,7 +81,8 @@ const geometry = (w: number) => {
   return {
     contentH, nodes, castle, road,
     clearings: [...terrain.map(t => t.clearing), castle],
-    keepOut: [...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 50, rx: 70, ry: 70 }],
+    // Sin árboles solo lo justo alrededor del Castillo: el bosque lo rodea
+    keepOut: [...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
     biomes: terrain.flatMap(t => (t.biome ? [t.biome] : [])),
   };
 };
