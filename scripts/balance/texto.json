@@ -1,0 +1,103 @@
+{
+  "cover_lead": "Seis tipos de jugador simulados (bots) han jugado a Magic Poker con las reglas de verdad: la campaña entera de principio a fin y cada parte por separado (jefes, revanchas, Castillo y Bosque). El objetivo es medir lo difícil que es el juego de verdad y dónde se rompe la curva, más allá de la impresión de quien lo ha diseñado.",
+  "summary": [
+    "<b>Los jefes, bien al principio y con un escalón brusco en el quinto.</b> Los cuatro primeros (con la IA normal) los gana un buen jugador 6–8 de cada 10 veces. En la Ladrona, el quinto (IA difícil y 5 vidas), el Experto cae al 30 % y ya no se recupera: del 5 al 12 todos están entre el 22 % y el 35 %. La curva no sube: es un acantilado y luego una meseta, y el Soberano (el jefe final) es más fácil que los siete anteriores.",
+    "<b>El Espejista es el muro del juego.</b> Es el jefe más difícil (22 % para el Experto, 37 % hasta para el Omnisciente) y donde más jugadores se rinden en la campaña: más de la mitad de los que se atascan lo hacen en la Ladrona, la Matriarca o el Espejista.",
+    "<b>El Castillo es prácticamente imposible.</b> En 2.000 subidas, el Experto no lo conquista ni una vez; el Omnisciente (que hace trampa: ve las cartas del rival) lo consigue el 0,55 %. Seis de cada diez subidas del Experto mueren en el primer piso. Es un problema de estructura: son 12 peleas seguidas que cada una se gana por los pelos (alrededor del 45 %).",
+    "<b>Los sellos del jugador le hacen perder.</b> Es el hallazgo más importante. El mismo Experto gana al Soberano el 68 % con el mazo sin sellos y el 39 % con el mazo por defecto (5 sellos). Pasa igual con los jefes: más sellos en su mazo los hace más fáciles (las revanchas de nivel 4 son las más fáciles; el desafío «Jefes sellados» facilita el Castillo; en el Bosque, Pesadilla es más fácil que Difícil). La causa: una carta de sello ocupa un robo y no llena un hueco, y con 2 robos por ronda, 4 huecos y una vida por hueco vacío, una carta menos cuesta muchísimo.",
+    "<b>Los jugadores reales confirman lo mismo.</b> En PostHog, en el Bosque los humanos ganan el 26 % en Difícil y el 41 % en Pesadilla (los bots, 35 % y 53 %), y el primer piso del Castillo lo ganan el 42 % de las veces (el Experto, el 36 %). Los humanos juegan algo mejor que el Experto, sin llegar al Omnisciente.",
+    "<b>Arreglo propuesto, probado en la simulación:</b> que cada sello se reponga al robarlo (robas otra carta). Con esa regla, los sellos pasan a sumar (el Experto gana al Soberano el 76 % con sellos frente al 68 % sin ellos). Para el Castillo, además, jefes con 1 vida menos, IA normal en los 4 primeros pisos y curar 1 vida por piso: el Experto pasa del 0 % al 4 % de conquistas y el Omnisciente del 0,5 % al 24 %."
+  ],
+  "method": [
+    "Se ha escrito un simulador sin interfaz (<i>scripts/balance</i>) que juega partidas enteras con las mismas funciones que usa el juego (<i>lib/</i>): mazos, robos, combate, sellos, Joker, Fénix, empates por bloqueo e inactividad, la moneda del principio, quién abre cada ronda, las cartas ocultas para el rival hasta la pelea y la fase 2 del Soberano. No se ha tocado el código del juego. El rival es siempre la IA del juego tal como la usa la tienda: la «normal» para los 4 primeros jefes y la «difícil» para el resto, las revanchas, el Castillo y el Bosque desde Difícil.",
+    "El jugador lo llevan seis perfiles de bot. Los que piensan usan el mismo motor de la IA (prueba cada carta en cada hueco y calcula la pelea), mirando desde su lado y sin ver las cartas ocultas del rival (las imagina entre las que le quedan), salvo el Omnisciente. En el Castillo cada perfil elige mejora a su manera: el Novato al azar, el Casual con poco criterio y el resto puntuando cada opción (curarse según las vidas que falten, legendarias, vida máxima, sellos sobre cartas altas...)."
+  ],
+  "method2": [
+    "Se han jugado, con semillas fijas (es reproducible): cada jefe la primera vez con el mazo que tendrías en ese momento (1.000 partidas por jefe y perfil); cada revancha de nivel 1 a 4 (300); cada personaje del Bosque en su nivel (600); 2.000 subidas completas al Castillo por perfil, más 1.000 por desafío; mazos de prueba (1.500 × 2); 300 campañas completas por perfil, y los «¿y si...?» del Castillo (1.500 subidas cada uno). En la campaña, cada bot juega como alguien real: repite cada jefe hasta vencerlo y lo deja si pierde más veces seguidas que su paciencia (de 8 a 40), luego sube al Castillo hasta conquistarlo (con la misma paciencia, en subidas) y juega 20 duelos en el Bosque."
+  ],
+  "calib": [
+    "La prueba de control sale bien: el Experto contra su misma IA, con el mismo mazo y las mismas vidas, gana el 45 % y pierde el 44 % (el resto, empates). El simulador no favorece a ningún lado. Quién abre la primera ronda apenas importa (2 o 3 puntos arriba o abajo según la prueba), aunque el juego da por hecho que abrir es una desventaja. Hay muchos empates: 1 de cada 10 partidas entre iguales."
+  ],
+  "campaign_intro": [
+    "Cada línea es el porcentaje de jugadores de ese tipo que supera cada jefe. Tras el cuarto (el Trilero) llega el acantilado: el Novato pasa del 94 % al 28 % en tres jefes y solo el 5 % ve el final de los jefes; el Casual, el 24 %. El Prudente (94 %) y el Experto (98 %) sí terminan los jefes, pero se estrellan contra el Castillo: solo 4 Expertos de 300 lo conquistan, y 49 Omniscientes de 300 (16 %), haciendo trampa."
+  ],
+  "campaign_notes": [
+    "Los intentos se duplican de golpe en el quinto jefe y llegan al máximo en el Espejista (casi 5 intentos para el Experto). El Soberano necesita menos intentos que los siete jefes anteriores: como final, no cierra la subida. Para un jugador medio, la campaña se acaba de verdad entre la Ladrona y el Espejista."
+  ],
+  "bosses_intro": [
+    "Victorias contra cada jefe la primera vez, con el mazo que tendrías al llegar (los sellos de los jefes ya vencidos). La zona gris marca dónde los jefes pasan a pensar con la IA difícil. El salto del 4.º al 5.º es de 30 puntos para todos los perfiles: el cambio de IA y la quinta vida llegan a la vez."
+  ],
+  "bosses_notes": [
+    "Orden real de dificultad para el Experto, del más fácil al más difícil: Muro, Forastero y Duelista, Trilero, Soberano, Matriarca, Ladrona y Marinero, Bardo, Tóxica, Vidente y Espejista. El orden del mapa no lo sigue: los siete jefes del 5.º al 11.º son más duros que el final. Las partidas duran unas 4 rondas y 1 de cada 16 acaba en empate."
+  ],
+  "rematch_intro": [
+    "Las revanchas (con todos los sellos desbloqueados) tendrían que endurecerse nivel a nivel. No lo hacen: el nivel 1 es el más difícil y el nivel 4, el más fácil para todos los perfiles."
+  ],
+  "rematch_notes": [
+    "Es otra cara del problema de los sellos. Subir de nivel añade sobre todo sellos al mazo del jefe (más copias y más tipos) y eso lo debilita más de lo que lo refuerzan las vidas de más. En el nivel 4 el jefe lleva 9 sellos y, aun con 2 vidas más, el Experto le gana la mitad de las veces. Los jefes del principio sí se endurecen en revancha (pasan a la IA difícil): el Forastero baja del 69 % al 24 %."
+  ],
+  "castle_intro": [
+    "Subidas completas desde el piso 1, con el mazo por defecto y todos los sellos. Las vidas se arrastran de una pelea a otra, hay una mejora tras cada victoria y un cofre cada 3 pisos."
+  ],
+  "castle_notes": [
+    "El riesgo de caer está entre el 50 % y el 65 % en casi cada piso, también en el primero (el Forastero de nivel 1, con 3 vidas y la IA difícil). Ni siquiera llegar con más vidas cambia mucho: se llega a cada piso con unas 4 vidas, porque curarse es la mejora que más se elige (6 de cada 10 veces). Con un 45 % por pelea, encadenar 12 es una probabilidad de 1 entre 15.000. Para que un buen jugador conquiste el Castillo una de cada 10 veces, cada pelea tendría que ganarse en torno al 83 %.",
+    "Las legendarias deciden: las 11 subidas del Omnisciente que conquistan el Castillo llevaban al menos una carta legendaria (de las 81 que la consiguieron). Sin legendaria, en esta simulación nadie lo conquista."
+  ],
+  "castle_chal": [
+    "Todos los desafíos lo hacen más difícil (todavía más) menos uno: «Jefes sellados» lo hace más fácil (de 0,67 a 1,02 pisos para el Experto), por la misma razón que las revanchas. Con los 5 a la vez nadie pasa del quinto piso."
+  ],
+  "whatif_intro": [
+    "Cambios que no están en el juego, probados en la simulación sin tocar el código (1.500 subidas cada uno). La propuesta combinada junta: el sello se repone al robarlo (para todos), jefes con 1 vida menos, la IA normal en los 4 primeros pisos y curar 1 vida al pasar cada piso."
+  ],
+  "whatif_notes": [
+    "Ningún cambio suelto basta. Lo que más ayuda es quitar una vida a los jefes o empezar con 6. Acortar el Castillo a 8 pisos ayuda poco, porque la mayoría cae mucho antes. Bajar un nivel a los jefes lo empeora: les quita sellos y eso los hace más fuertes. La propuesta combinada es la única que lo deja en una zona razonable para un roguelike difícil: 4 % para el Experto, que en humanos sería algo más, y 24 % para el Omnisciente."
+  ],
+  "forest_intro": [
+    "Cada personaje en su nivel (vidas y copias de sellos y cartas según el nivel). La letra entre paréntesis es el nivel: N normal, D difícil, P pesadilla, Ú único, R renegado."
+  ],
+  "forest_notes": [
+    "El Bosque es el modo mejor equilibrado: un buen jugador gana algo menos de la mitad de los duelos, y eso le da sentido a la racha. Pero los niveles no siguen su orden. <b>Pesadilla es más fácil que Difícil y que Normal</b> (53 % frente a 35 % y 48 % para el Experto), porque lleva 3 copias de cada sello en lugar de 2. La Plañidera, de Pesadilla, es el personaje más fácil del Bosque. Los Únicos sí están bien: el Rey (17 %) y la Reina (26 %) son de verdad los más duros, porque cambian figuras por figuras en vez de añadir sellos."
+  ],
+  "decks_intro": [
+    "El mismo Experto con mazos distintos contra el Soberano (que lleva todos los sellos) y contra los personajes difíciles y de pesadilla del Bosque. «2× X» es el mazo estándar más dos copias de un solo sello."
+  ],
+  "decks_notes": [
+    "Cualquier sello resta respecto a no llevar ninguno. Los que menos restan son el espejo, el robo y la vida, y los que más el ancla y el revelar. Quitar el 2, el 3 y el 4 tampoco ayuda: con menos cartas flojas no hay con qué tapar huecos. En el Castillo, el mismo Experto conquista el 5,7 % de las subidas sin sellos y el 0 % con ellos."
+  ],
+  "sealx_intro": [
+    "Para separar la causa se ha jugado el mismo Experto con variantes de su mazo (3.000 partidas cada una):"
+  ],
+  "sealx_notes": [
+    "Los sellos que nunca se juegan hunden al jugador (del 68 % al 24 %): el coste es ocupar un robo. Jugarlos recupera algo (38 %), así que el sello en sí aporta, pero mucho menos que una carta. El mazo aparte del Soberano (robar «1 carta + 1 sello») también resta, porque es robar una carta menos por ronda: el diseño del Soberano lo debilita. Si el sello se repone, o si con el mazo aparte se roban «2 cartas + 1 sello», los sellos pasan a sumar de verdad (76–80 %)."
+  ],
+  "cantrip_notes": [
+    "Aplicando la regla también a los jefes, los cuatro primeros quedan casi igual y del quinto en adelante bajan a un 38–55 % para el Experto. Desaparece el acantilado y la curva queda en una meseta más suave. El Soberano se vuelve el más difícil (28 %), como debe ser un final, porque con su mazo aparte pasa a robar 2 cartas y un sello."
+  ],
+  "real_intro": [
+    "PostHog registra cada partida (evento <i>match_ended</i>). Hay pocos jugadores, pero las muestras del Bosque y del primer piso del Castillo bastan para ver si los bots se parecen a la gente:"
+  ],
+  "real_notes": [
+    "Los humanos están entre el Experto y el Omnisciente: juegan algo mejor que la IA (planifican más allá de la ronda), sin llegar a ver las cartas. Lo importante es que reproducen los mismos patrones raros: el nivel Difícil del Bosque es mucho más duro que Pesadilla (26 % frente a 41 %) y el primer piso del Castillo se pierde más que los siguientes. Las victorias contra los jefes de la segunda mitad no se comparan porque pueden incluir victorias del botón de debug."
+  ],
+  "conclusions": [
+    "<b>1. Arreglar la economía de los sellos (lo más urgente).</b> Hoy un sello es una carta que no llena un hueco, y llevar sellos es peor que no llevarlos. Eso rompe la promesa del juego (desbloquear sellos te hace más fuerte) y hace que todo lo que añade sellos al rival lo debilite (revanchas, desafío «Jefes sellados», niveles del Bosque). Propuesta: que <b>el sello se reponga al robarlo</b> (robas otra carta), para los dos bandos. Alternativa: sellos en un mazo aparte robando 2 cartas + 1 sello por ronda. Las dos dan el mismo efecto en la simulación.",
+    "<b>2. Suavizar el acantilado del quinto jefe.</b> El cambio de IA (normal a difícil) y la quinta vida llegan a la vez en la Ladrona. Mejor separarlos: la IA difícil desde el 5.º y las 5 vidas desde el 7.º, por ejemplo, o una IA intermedia del 5.º al 7.º. Revisar el Espejista: es el jefe más difícil sin ser el último. Con la regla de los sellos el pico se reparte, pero conviene volver a medirlo.",
+    "<b>3. El Soberano tiene que ser el más difícil.</b> Hoy es más fácil que los siete jefes anteriores, en parte porque su mazo aparte le quita una carta por ronda. Con la regla de los sellos pasa a ser el más duro (28 % para el Experto).",
+    "<b>4. Rehacer las revanchas.</b> Que el nivel suba la dificultad con vidas y con la IA, no añadiendo sellos (o con sellos ya arreglados), y comprobar que cada nivel es más difícil que el anterior.",
+    "<b>5. El Castillo necesita ganar cada pelea en torno al 80 %.</b> Con 12 peleas seguidas no hay otra. La propuesta combinada (sello que se repone, jefes −1 vida, IA normal en los 4 primeros pisos y curar 1 por piso) lo lleva al 4 % para el Experto y al 24 % para el Omnisciente; en humanos cabe esperar algo entre medias. Otras palancas: puntos de guardado (empezar desde el piso 4 u 8 tras haberlo alcanzado), más mejoras por piso, o legendarias antes del piso 6 (hoy son casi imprescindibles).",
+    "<b>6. Reordenar el Bosque.</b> Con los sellos arreglados, Pesadilla debería pasar a ser más difícil que Difícil. Si no se arreglan, dar a Pesadilla más vidas o figuras de más en vez de más copias de sellos.",
+    "<b>7. Volver a pasar esta simulación tras cada cambio de balance.</b> Está en <i>scripts/balance</i>, tarda unos 15 minutos y deja este mismo informe."
+  ],
+  "limits": [
+    [
+      "Los bots juegan como la IA del juego (piensan una jugada cada vez, sin planificar rondas). Un humano bueno juega algo mejor, como confirman los datos reales; un humano novato puede jugar peor que el Casual pero mejor que el Novato, que es casi al azar.",
+      "Los perfiles «Agresivo» y «Prudente» son maneras de jugar, no niveles: el Prudente gana a veces más que el Experto, porque guardarse las cartas altas rinde en este juego.",
+      "En la campaña y en el Castillo se usa el mazo por defecto (un sello de cada uno de los cinco primeros). Un jugador que descubra que sin sellos se gana más tendrá una experiencia mucho más fácil.",
+      "Los datos reales son de muy pocos jugadores y pueden incluir partidas de prueba; sirven para ver tendencias, no para medir.",
+      "No se mide la diversión ni la sensación de progreso: solo cuánto se gana."
+    ]
+  ],
+  "repro": [
+    "Todo el código está en <i>scripts/balance</i> (README con los comandos). Cada experimento lleva su semilla, así que se obtienen los mismos números. A escala 1 son cientos de miles de partidas, en unos 15 minutos con 4 núcleos."
+  ]
+}

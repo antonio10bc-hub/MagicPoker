@@ -5,7 +5,7 @@ import { createDeck, createPlayerState } from '@/lib/game-utils';
 import { STARTING_HAND_SIZE } from '@/lib/constants';
 import { playerStart, playMatch, rivalAi, seedRandom } from './engine';
 import { chooserOf, PersonaId, seesAll } from './personas';
-import { castleRun, CastleTweaks } from './scenarios';
+import { bossMatch, castleRun, CastleTweaks } from './scenarios';
 
 const hash = (s: string) => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
 
@@ -17,12 +17,17 @@ const WHATIF: Record<string, CastleTweaks> = {
   menos1vida_y_cura1: { bossLivesDelta: -1, healPerFloor: 1 },
   cura2_por_piso: { healPerFloor: 2 },
   empiezas_6_vidas: { startLives: 6 },
+  sello_se_repone: { sealCantrip: true },
+  repone_y_menos1vida: { sealCantrip: true, bossLivesDelta: -1 },
+  ia_normal_hasta_8: { normalAiUntil: 8 },
+  ocho_pisos: { floors: 8 },
+  propuesta: { sealCantrip: true, bossLivesDelta: -1, normalAiUntil: 4, healPerFloor: 1 },
 };
 
 type Job = { id: string; run: () => unknown };
 const jobs: Job[] = [];
 // Calibración: el bot contra la misma IA, mismo mazo estándar sin sellos y mismas vidas
-for (const [persona, diff] of [['experto', 'hard'], ['casual', 'normal'], ['novato', 'easy'], ['vidente', 'hard']] as [PersonaId, 'hard' | 'normal' | 'easy'][]) {
+if (!process.env.ONLY_NEW) for (const [persona, diff] of [['experto', 'hard'], ['casual', 'normal'], ['novato', 'easy'], ['vidente', 'hard']] as [PersonaId, 'hard' | 'normal' | 'easy'][]) {
   jobs.push({ id: `mirror:${persona}:${diff}`, run: () => {
     let win = 0, draw = 0, openerWin = 0, opener = 0; const n = 3000;
     for (let i = 0; i < n; i++) {
@@ -34,7 +39,16 @@ for (const [persona, diff] of [['experto', 'hard'], ['casual', 'normal'], ['nova
     return { n, win, draw, opener, openerWin };
   } });
 }
+// Jefes con la regla del sello que se repone (para los dos bandos)
+if (!process.env.ONLY_NEW) for (const persona of ['casual', 'experto'] as PersonaId[]) for (let b = 0; b < 12; b++) {
+  jobs.push({ id: `cantrip:${persona}:${b}`, run: () => {
+    let win = 0; const n = 600;
+    for (let i = 0; i < n; i++) if (bossMatch(persona, b, { cantrip: true }).result === 'win') win++;
+    return { n, win };
+  } });
+}
 for (const persona of ['casual', 'experto', 'vidente'] as PersonaId[]) for (const [name, tw] of Object.entries(WHATIF)) {
+  if (process.env.ONLY_NEW && !['ia_normal_hasta_8', 'ocho_pisos', 'propuesta'].includes(name)) continue;
   jobs.push({ id: `whatif:${persona}:${name}`, run: () => {
     const n = 1500; let conq = 0; const floors = Array(13).fill(0);
     for (let i = 0; i < n; i++) { const r = castleRun(persona, { tweaks: tw }); floors[r.floors]++; if (r.conquered) conq++; }

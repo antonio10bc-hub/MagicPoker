@@ -1,0 +1,4 @@
+{"source": "PostHog, evento match_ended, del 23 al 29 de octubre de 2026 (sin localhost)",
+ "forest": {"normal": [194, 139, 9, 4], "hard": [49, 133, 8, 3], "nightmare": [27, 38, 1, 4], "unique": [7, 17, 0, 2], "renegade": [2, 3, 0, 2]},
+ "castle": [["1. Forastero (nivel 1)", 57, 75, 3, 4], ["2. Muro (nivel 1)", 36, 18, 3, 4], ["3. Duelista (nivel 1)", 22, 11, 3, 3], ["4. Trilero (nivel 1)", 13, 9, 0, 3]],
+ "bosses": [["1. Forastero", 14, 7, 1, 11], ["2. Muro", 9, 1, 0, 8], ["3. Duelista", 7, 3, 0, 6], ["5. Ladrona", 5, 10, 0, 4]]}

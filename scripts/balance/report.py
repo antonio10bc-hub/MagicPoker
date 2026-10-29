@@ -27,8 +27,10 @@ R = {}
 for f in sorted(glob.glob(os.path.join(SRC, 'full-*.json'))):
     R.update(json.load(open(f))['results'])
 X = {}
-for f in sorted(glob.glob(os.path.join(SRC, 'extra-*.json'))):
+for f in sorted(glob.glob(os.path.join(SRC, 'extra*.json'))):
     X.update(json.load(open(f)))
+SEALX = json.load(open(os.path.join(SRC, 'seals.json'))) if os.path.exists(os.path.join(SRC, 'seals.json')) else {}
+REAL = json.load(open(os.path.join(SRC, 'real.json'))) if os.path.exists(os.path.join(SRC, 'real.json')) else {}
 def d(key): return R[key]['data'] if key in R else None
 
 PERSONAS = ['novato', 'casual', 'agresivo', 'prudente', 'experto', 'vidente']
@@ -96,8 +98,8 @@ figs = {}
 # 1) Jefes por primera vez: % de victorias
 M = [[wr(d(f'boss:{p}:{b}:0')) for b in range(12)] for p in PERSONAS]
 figs['boss_heat'] = heat([PNAME[p] for p in PERSONAS], [f'{i+1}. {BSHORT[b]}' for i, b in enumerate(BOSSES)], M,
-                         'Victorias contra cada jefe la primera vez (%)', 'boss_heat.png')
-fig, ax = plt.subplots(figsize=(7.2, 2.9))
+                         'Victorias contra cada jefe la primera vez (%)', 'boss_heat.png', h=2.0)
+fig, ax = plt.subplots(figsize=(7.2, 2.25))
 for p in PERSONAS:
     ys = [wr(d(f'boss:{p}:{b}:0')) * 100 for b in range(12)]
     ax.plot(range(1, 13), ys, color=PCOL[p], marker='o', markersize=3.5, label=PNAME[p])
@@ -179,11 +181,11 @@ w = 0.38
 ax.bar([i - w / 2 for i in range(len(decks))], vs_sov, width=w - 0.04, color='#2a78d6', label='contra el Soberano')
 ax.bar([i + w / 2 for i in range(len(decks))], vs_for, width=w - 0.04, color='#eb6834', label='contra el Bosque difícil y pesadilla')
 ax.set_xticks(range(len(decks))); ax.set_xticklabels([dname[k] for k in decks], rotation=30, ha='right')
-ax.set_ylabel('% de victorias (Experto)'); ax.set_title('Qué vale cada mazo: el mismo jugador con mazos distintos', loc='left'); ax.legend(fontsize=7.5, loc='upper left')
+ax.set_ylabel('% de victorias (Experto)'); ax.set_ylim(0, 100); ax.set_title('Qué vale cada mazo: el mismo jugador con mazos distintos', loc='left'); ax.legend(fontsize=7.5, ncol=2, loc='upper left')
 figs['decks'] = save(fig, 'decks.png')
 
 # 6) Campaña: embudo
-fig, ax = plt.subplots(figsize=(7.2, 3.0))
+fig, ax = plt.subplots(figsize=(7.2, 2.4))
 labels = [BSHORT[b] for b in BOSSES] + ['Castillo']
 for p in PERSONAS:
     c = d(f'campaign:{p}')
@@ -198,16 +200,29 @@ figs['funnel'] = save(fig, 'funnel.png')
 
 # 7) ¿Y si...? del Castillo
 WI = [('actual', 'Como ahora'), ('jefes_menos1vida', 'Jefes −1 vida'), ('cura1_por_piso', 'Curar 1 por piso'), ('jefes_menos1nivel', 'Jefes −1 nivel'),
-      ('menos1vida_y_cura1', '−1 vida y curar 1'), ('cura2_por_piso', 'Curar 2 por piso'), ('empiezas_6_vidas', 'Empezar con 6')]
+      ('menos1vida_y_cura1', '−1 vida y curar 1'), ('cura2_por_piso', 'Curar 2 por piso'), ('empiezas_6_vidas', 'Empezar con 6'),
+      ('ocho_pisos', 'Solo 8 pisos'), ('ia_normal_hasta_8', 'IA normal hasta el 8'), ('sello_se_repone', 'El sello se repone'),
+      ('repone_y_menos1vida', 'Se repone y −1 vida'), ('propuesta', 'Propuesta combinada')]
 if X:
-    fig, ax = plt.subplots(figsize=(7.2, 2.6))
+    fig, ax = plt.subplots(figsize=(7.2, 2.9))
     w = 0.27
     for k, p in enumerate(['casual', 'experto', 'vidente']):
         ys = [100 * X[f'whatif:{p}:{k2}']['conq'] / X[f'whatif:{p}:{k2}']['n'] if f'whatif:{p}:{k2}' in X else float('nan') for k2, _ in WI]
         ax.bar([i + (k - 1) * w for i in range(len(WI))], ys, width=w - 0.03, color=PCOL[p], label=PNAME[p])
-    ax.set_xticks(range(len(WI))); ax.set_xticklabels([n for _, n in WI], rotation=20, ha='right')
+    ax.set_xticks(range(len(WI))); ax.set_xticklabels([n for _, n in WI], rotation=30, ha='right')
     ax.set_ylabel('% de subidas que conquistan'); ax.set_title('¿Y si...? Cambios posibles en el Castillo', loc='left'); ax.legend(fontsize=7.5)
     figs['whatif'] = save(fig, 'whatif.png')
+
+# 8) Jefes con la regla del sello que se repone
+if 'cantrip:experto:0' in X:
+    fig, ax = plt.subplots(figsize=(7.2, 2.6))
+    for p in ['casual', 'experto']:
+        ax.plot(range(1, 13), [wr(d(f'boss:{p}:{b}:0')) * 100 for b in range(12)], color=PCOL[p], marker='o', markersize=3, label=f'{PNAME[p]} · ahora')
+        ax.plot(range(1, 13), [100 * X[f'cantrip:{p}:{b}']['win'] / X[f'cantrip:{p}:{b}']['n'] for b in range(12)], color=PCOL[p], marker='s', markersize=3, linestyle='--', label=f'{PNAME[p]} · el sello se repone')
+    ax.set_xticks(range(1, 13)); ax.set_xticklabels([BSHORT[b] for b in BOSSES], rotation=35, ha='right'); ax.set_ylim(0, 100)
+    ax.set_ylabel('% de victorias'); ax.set_title('Jefes: ahora y con «el sello se repone» (para los dos bandos)', loc='left')
+    ax.legend(ncol=2, fontsize=7.5, loc='upper right')
+    figs['cantrip'] = save(fig, 'cantrip.png')
 
 # --- PDF ---
 pdfmetrics.registerFont(TTFont('DV', os.path.join(fpath, 'DejaVuSans.ttf')))
@@ -290,7 +305,7 @@ story.append(Spacer(1, 6))
 story += paras('method2')
 if X:
     story.append(P('Calibración', 'h2'))
-    rows = [['Prueba (mismo mazo estándar, sin sellos, 4 vidas)', 'Partidas', 'Gana el bot', 'Empate', 'Gana quien abre']]
+    rows = [['Prueba (mismo mazo estándar, sin sellos, 4 vidas)', 'Partidas', 'Gana el bot', 'Empate', 'Gana el bot si abre él']]
     for k, lbl in [('mirror:experto:hard', 'Experto contra la IA difícil'), ('mirror:casual:normal', 'Casual contra la IA normal'), ('mirror:novato:easy', 'Novato contra la IA fácil'), ('mirror:vidente:hard', 'Omnisciente contra la IA difícil')]:
         v = X.get(k)
         if not v: continue
@@ -329,7 +344,7 @@ for i, b in enumerate(BOSSES):
         r.append(f'{sum(tries)/len(tries):.1f}' if tries else '—')
     rows.append(r)
 story.append(P('Intentos medios para vencer a cada jefe (de quien lo vence)', 'h2'))
-story.append(table(rows, [30 * mm] + [24 * mm] * 6))
+story.append(table(rows, [30 * mm] + [24 * mm] * 6, ))
 story += paras('campaign_notes')
 story.append(PageBreak())
 
@@ -427,7 +442,52 @@ if all(c for _, c in cdeck):
 story += paras('decks_notes')
 story.append(PageBreak())
 
-story.append(P('8. Conclusiones y recomendaciones', 'h1'))
+if SEALX:
+    story.append(P('8. Por qué los sellos restan', 'h1'))
+    story += paras('sealx_intro')
+    lbl = {'defecto': 'Mazo por defecto (5 sellos, los juega)', 'sellos_sin_jugar': 'Los mismos 5 sellos, sin jugarlos nunca', 'sin_sellos': 'Sin sellos',
+           'mazo_aparte': 'Sellos en un mazo aparte (roba 1 carta + 1 sello)', 'sello_se_repone': '¿Y si...? El sello se repone al robarlo',
+           'aparte_2_cartas': '¿Y si...? Mazo aparte robando 2 cartas + 1 sello'}
+    rows = [['Mazo del Experto', 'contra el Soberano', 'contra el Bosque difícil/pesadilla']]
+    for k, v in SEALX.items():
+        if k in lbl: rows.append([lbl[k], pct(v['sov'], 1), pct(v['forest'], 1)])
+    story.append(table(rows, [86 * mm, 36 * mm, 52 * mm]))
+    if 'espejista_con_sellos' in SEALX:
+        story.append(P(f"El mismo efecto del otro lado: contra el Espejista con sus sellos el Experto gana el {100*SEALX['espejista_con_sellos']['sov']:.1f} %; contra un Espejista igual pero sin sellos, solo el {100*SEALX['espejista_sin_sellos']['sov']:.1f} %.", 'p'))
+    story += paras('sealx_notes')
+    if 'cantrip' in figs:
+        story.append(img(figs['cantrip']))
+        story += paras('cantrip_notes')
+    story.append(PageBreak())
+
+if REAL:
+    story.append(P('9. Comparación con jugadores reales', 'h1'))
+    story += paras('real_intro')
+    rows = [['Bosque, nivel', 'Duelos', 'Jugadores', 'Humanos ganan', 'Experto (bot)', 'Prudente (bot)', 'Omnisciente (bot)']]
+    for tier in ['normal', 'hard', 'nightmare', 'unique', 'renegade']:
+        w_, l_, dr, pl = REAL['forest'][tier]
+        ids = [a for a, _, t in FOREST if t == tier]
+        bot = lambda p: sum(wr(d(f'forest:{p}:{a}')) for a in ids) / len(ids)
+        rows.append([TNAME[tier], f'{w_+l_+dr}', f'{pl}', pct(w_ / (w_ + l_ + dr)), pct(bot('experto')), pct(bot('prudente')), pct(bot('vidente'))])
+    story.append(table(rows, [26 * mm, 18 * mm, 20 * mm, 26 * mm, 26 * mm, 28 * mm, 30 * mm]))
+    story.append(Spacer(1, 6))
+    c = d('castle:experto:none'); cv = d('castle:vidente:none')
+    rows = [['Castillo, piso', 'Peleas', 'Jugadores', 'Humanos ganan', 'Experto (bot)', 'Omnisciente (bot)']]
+    for i, (name, w_, l_, dr, pl) in enumerate(REAL['castle']):
+        rows.append([name, f'{w_+l_+dr}', f'{pl}', pct(w_ / (w_ + l_ + dr)), pct(1 - c['deaths'][i] / c['reach'][i]), pct(1 - cv['deaths'][i] / cv['reach'][i])])
+    story.append(table(rows, [44 * mm, 18 * mm, 20 * mm, 28 * mm, 28 * mm, 32 * mm]))
+    story.append(Spacer(1, 6))
+    rows = [['Jefe (1.ª vez)', 'Partidas', 'Jugadores', 'Humanos ganan', 'Experto (bot)', 'Prudente (bot)']]
+    idx = {'1. Forastero': 0, '2. Muro': 1, '3. Duelista': 2, '5. Ladrona': 4}
+    for name, w_, l_, dr, pl in REAL['bosses']:
+        i = idx[name]
+        rows.append([name, f'{w_+l_+dr}', f'{pl}', pct(w_ / (w_ + l_ + dr)), pct(wr(d(f'boss:experto:{i}:0'))), pct(wr(d(f'boss:prudente:{i}:0')))])
+    story.append(table(rows, [44 * mm, 18 * mm, 20 * mm, 28 * mm, 28 * mm, 32 * mm]))
+    story.append(P('Fuente: ' + REAL['source'] + '. Pocos jugadores (probablemente incluye las partidas de prueba del propio desarrollo): sirve para orientar, no como medida.', 'small'))
+    story += paras('real_notes')
+    story.append(PageBreak())
+
+story.append(P('10. Conclusiones y recomendaciones', 'h1'))
 story += paras('conclusions')
 story.append(P('Límites de este estudio', 'h2'))
 story += paras('limits')

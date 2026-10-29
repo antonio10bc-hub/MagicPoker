@@ -26,7 +26,7 @@ export const deckFor = (defeated: number, config?: DeckConfig): Card[] => {
 };
 
 /** Una partida contra un jefe (la primera vez, o en revancha de nivel `level`) */
-export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?: number; defeated?: number; config?: DeckConfig } = {}): MatchResult => {
+export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?: number; defeated?: number; config?: DeckConfig; cantrip?: boolean } = {}): MatchResult => {
   const boss = BOSSES[bossIndex];
   const level = opts.level ?? 0;
   const rematch = level > 0;
@@ -36,6 +36,7 @@ export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?:
     opponent: createBossState(boss, level, bossLives(boss, level), STARTING_HAND_SIZE),
     bot: chooserOf(persona), botSeesAll: seesAll(persona),
     rival: rivalAi(bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard'),
+    sealCantrip: opts.cantrip, rivalCantrip: opts.cantrip,
   });
 };
 
@@ -69,7 +70,7 @@ export interface CastleRunResult {
 
 /** Una subida entera al Castillo */
 /** Cambios hipotéticos para probar (no están en el juego): vidas y nivel de los jefes, curación por piso */
-export interface CastleTweaks { bossLivesDelta?: number; levelDelta?: number; healPerFloor?: number; startLives?: number }
+export interface CastleTweaks { bossLivesDelta?: number; levelDelta?: number; healPerFloor?: number; startLives?: number; sealCantrip?: boolean; floors?: number; normalAiUntil?: number }
 
 export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]; config?: DeckConfig; tweaks?: CastleTweaks } = {}): CastleRunResult => {
   const tw = opts.tweaks ?? {};
@@ -88,15 +89,16 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
       player: { ...createPlayerState(buildRunDeck(run), STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
       opponent: createBossState(boss, level, bl, STARTING_HAND_SIZE),
       bot: chooserOf(persona), botSeesAll: seesAll(persona),
-      rival: rivalAi('hard'),
+      rival: rivalAi(run.stage < (tw.normalAiUntil ?? 0) ? 'normal' : 'hard'),
       sovereignPhase2: boss.id === 'sovereign',
+      sealCantrip: tw.sealCantrip, rivalCantrip: tw.sealCantrip,
     });
     floorsLog.push({ stage: run.stage, result: m.result, livesIn: run.lives, livesOut: m.livesLeft, rounds: m.rounds, bossLives: bl, level });
     if (m.result !== 'win') {
       return { conquered: false, floors: run.stage, floorsLog, boons, finalDeckSize: run.deck.length, finalLives: 0, finalMax: run.maxLives };
     }
     const stage = run.stage + 1;
-    if (stage >= BOSSES.length) {
+    if (stage >= (tw.floors ?? BOSSES.length)) {
       return { conquered: true, floors: BOSSES.length, floorsLog, boons, finalDeckSize: run.deck.length, finalLives: m.livesLeft, finalMax: run.maxLives };
     }
     run = { ...run, stage, lives: Math.min(run.maxLives, m.livesLeft + (tw.healPerFloor ?? 0)), pact: false };

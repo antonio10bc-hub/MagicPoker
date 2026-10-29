@@ -58,6 +58,12 @@ export interface MatchSetup {
   sovereignPhase2?: boolean;
   /** Tope de rondas (por seguridad; nunca debería alcanzarse) */
   maxRounds?: number;
+  /** ¿Y si...? (no está en el juego): cada sello que roba el jugador se repone con otra carta */
+  sealCantrip?: boolean;
+  /** Lo mismo para el rival (la regla, para todos) */
+  rivalCantrip?: boolean;
+  /** ¿Y si...? Cartas de más que roba el jugador cada ronda */
+  extraDraw?: number;
 }
 
 export interface MatchResult {
@@ -79,9 +85,18 @@ const asSeenByBot = (board: BoardSlot[], seesAll: boolean): BoardSlot[] =>
   seesAll ? board.map(s => (s.card ? { ...s, card: { ...s.card, hidden: false, isFaceUp: true } } : s))
     : board.map(s => (s.card && !s.card.isFaceUp && !s.card.isExposed ? { ...s, card: { ...s.card, hidden: true } } : s));
 
+/** El sello se repone: por cada sello que hay en la mano sin reponer, roba otra carta */
+const cantrip = (s: PlayerState, before: number): PlayerState => {
+  let out = s;
+  for (let i = before; i < out.hand.length && out.deck.length; i++) {
+    if (out.hand[i].rank === 'SEAL') out = drawCards(out, 1, true);
+  }
+  return out;
+};
+
 export const playMatch = (m: MatchSetup): MatchResult => {
-  let P = m.player;
-  let O = m.opponent;
+  let P = m.sealCantrip ? cantrip(m.player, 0) : m.player;
+  let O = m.rivalCantrip ? cantrip(m.opponent, 0) : m.opponent;
   const opener0: Owner = Math.random() < 0.5 ? 'player' : 'opponent';
   let opener = opener0;
   let idle = 0;
@@ -163,9 +178,14 @@ export const playMatch = (m: MatchSetup): MatchResult => {
     }
     idle = isQuietFight(P, O, result) ? idle : 0;
     opener = nextOpener(nP, nO, opener);
+    const before = nP.hand.length;
     nP = drawRound(nP, CARDS_DRAWN_PER_ROUND, true);
+    if (m.extraDraw) nP = drawCards(nP, m.extraDraw, true);
+    if (m.sealCantrip) nP = cantrip(nP, before);
     P = nP;
+    const beforeO = nO.hand.length;
     O = drawRound(nO, CARDS_DRAWN_PER_ROUND, false);
+    if (m.rivalCantrip) O = cantrip(O, beforeO);
   }
   return { result: 'draw', rounds: maxRounds, livesLeft: P.lives, rivalLivesLeft: O.lives, opener: opener0, played, capped: true, phase2: phase2Done };
 };
