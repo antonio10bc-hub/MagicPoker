@@ -9,7 +9,7 @@ import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlock
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
-import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle } from '@/lib/castle';
+import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, debugUnlockCastleBacks, ensureRun, getCastle } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
@@ -463,6 +463,7 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
+        <PxButton size="md" tone="yellow" onClick={() => { playSound('click'); debugUnlockCastleBacks(); useUiStore.getState().openModal('collection'); }}>Dorsos del Castillo (Corona)</PxButton>
         <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-wrap gap-[3px]">

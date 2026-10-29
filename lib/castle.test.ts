@@ -76,8 +76,15 @@ describe('el Castillo', () => {
     expect(c.getCastle()).toMatchObject({ run: null, best: 2 });
     c.ensureRun();
     for (let i = 0; i < c.CASTLE_LENGTH - 1; i++) c.recordCastleWin(4);
-    expect(c.recordCastleWin(4)).toEqual({ kind: 'conquered' });
+    expect(c.recordCastleWin(4)).toEqual({ kind: 'conquered', challenges: [] });
     expect(c.getCastle()).toMatchObject({ run: null, best: c.CASTLE_LENGTH, conquered: 1 });
+  });
+
+  it('al conquistarlo dice con qué desafíos (para darte el logro de cada uno)', async () => {
+    const c = await load();
+    c.ensureRun(['fierce', 'noHeal']);
+    for (let i = 0; i < c.CASTLE_LENGTH - 1; i++) c.recordCastleWin(4);
+    expect(c.recordCastleWin(4)).toEqual({ kind: 'conquered', challenges: ['noHeal', 'fierce'] });
   });
 
   it('rarezas: legendarias solo arriba y con su rareza', async () => {

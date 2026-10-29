@@ -350,9 +350,15 @@ export const openChest = (): Boon | null => {
   return boon;
 };
 
+/** Depuración: los tres dorsos del Castillo (conquistado, legendaria y los cinco desafíos) */
+export const debugUnlockCastleBacks = () => {
+  const state = getCastle();
+  save({ ...state, best: CASTLE_LENGTH, conquered: Math.max(1, state.conquered), legendary: true, bestChallenges: CHALLENGES.length });
+};
+
 // --- RESULTADO DE CADA PELEA ---
 
-export type CastleOutcome = { kind: 'next'; run: CastleRun } | { kind: 'conquered' } | { kind: 'fallen'; stage: number };
+export type CastleOutcome = { kind: 'next'; run: CastleRun } | { kind: 'conquered'; challenges: ChallengeId[] } | { kind: 'fallen'; stage: number };
 
 /** Vences al jefe de turno: subes un piso (o conquistas el Castillo) */
 export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): CastleOutcome => {
@@ -363,7 +369,7 @@ export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): Cast
     const n = state.run.challenges?.length ?? 0;
     save({ ...state, run: null, best: CASTLE_LENGTH, conquered: state.conquered + 1, bestChallenges: Math.max(state.bestChallenges ?? 0, n),
       lastSummary: summarize(state.run, 'conquered', CASTLE_LENGTH, livesLeft) });
-    return { kind: 'conquered' };
+    return { kind: 'conquered', challenges: state.run.challenges ?? [] };
   }
   const run: CastleRun = { ...state.run, stage, lives: livesLeft, pact: false };
   if (isChestFloor(stage)) run.chest = rollChest(run, rng);

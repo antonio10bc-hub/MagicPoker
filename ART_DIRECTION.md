@@ -527,8 +527,12 @@ se mueve rápido y una vibración leve a las masas naranjas.
   enseña las vidas que va animando la escena.
 - **Dorsos del Castillo** (al final de la galería, con el Castillo abierto): Castillo
   (carmesí con la silueta del castillo; al conquistarlo), Mercader (azul con su
-  silueta; al conseguir una legendaria) y Corona (oro con rayos carmesí y el Soberano;
-  al conquistarlo con los 5 desafíos).
+  silueta; al conseguir una legendaria) y Corona (al conquistarlo con los 5 desafíos a
+  la vez): fondo carmesí profundo, rayos de oro que giran despacio, una corona de oro de
+  cinco puntas con una gema carmesí por desafío (contorno negro de 1 px para que no se
+  funda con el halo), un arco de cinco destellos, marco doble y esquinas de oro y un
+  brillo que la recorre. Cada desafío conquistado da además su logro (Sin vendas,
+  Domador de fieras, Rompesellos, Con lo justo, De cristal).
 - **Cartas del Castillo** (Bufón, Torre, Bomba, Espía, Caballero, Sacerdotisa): figuras
   en silueta como J/Q/K, con su nombre en pequeño arriba. La insignia de ataque usa
   "?" (Bufón, copia), "–" (Torre, no ataca) y "±2" (Caballero, salta). El comodín de

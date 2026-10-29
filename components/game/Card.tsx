@@ -195,16 +195,59 @@ const GOLD = 'radial-gradient(ellipse 70% 60% at 50% 45%, #FFE9A8 0%, #E8B64A 50
  * emblema lleva la silueta de ese jefe y su sello en una esquina; el del jefe
  * secreto, además, es dorado.
  */
+/**
+ * La Corona (dorso de los cinco desafíos a la vez): corona de cinco puntas, una gema por
+ * desafío. Capas: oro (k), brillo (w), gemas (r) y base (o); 22 de ancho, centrada en la carta.
+ */
+const CROWN_ROWS = [
+  '..........rr..........',
+  '.........rwwr.........',
+  '..r.......rr.......r..',
+  '.rwr......kk......rwr.',
+  '..r......kkkk......r..',
+  '..k...r..kwwk..r...k..',
+  '..kk.rwr.kwwk.rwr.kk..',
+  '..kwk.k.kkwwkk.k.kwk..',
+  '..kwkkk.kkkkkk.kkkwk..',
+  '..kkwkkkkkkkkkkkkwkk..',
+  '..kkkkkkkkkkkkkkkkkk..',
+  '.wwwwwwwwwwwwwwwwwwww.',
+  '.kkkrrkkkrrrrkkkrrkkk.',
+  '.kkkrrkkkrrrrkkkrrkkk.',
+  '.kkkkkkkkkkkkkkkkkkkk.',
+  '.oooooooooooooooooooo.',
+];
+const crownLayer = (keep: string) => ({ rows: CROWN_ROWS.map(r => r.replace(new RegExp(`[^${keep}]`, 'g'), '.').replace(new RegExp(keep, 'g'), 'o')) });
+const CROWN = { gold: crownLayer('k'), shine: crownLayer('w'), gems: crownLayer('r'), base: crownLayer('o') };
+/** Contorno negro de 1 px alrededor de toda la corona (para que no se funda con el halo) */
+const CROWN_OUTLINE = {
+  rows: Array.from({ length: CROWN_ROWS.length + 2 }, (_, y) => Array.from({ length: CROWN_ROWS[0].length + 2 }, (_, x) => {
+    const on = (cx: number, cy: number) => CROWN_ROWS[cy]?.[cx] !== undefined && CROWN_ROWS[cy][cx] !== '.';
+    return [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => on(x - 1 + dx, y - 1 + dy))) ? 'o' : '.';
+  }).join('')),
+};
+/** Destello (4×4): el arco de cinco sobre la corona */
+const SPARK = { rows: ['.oo.', 'oooo', 'oooo', '.oo.'] };
+const SPARK_CORE = { rows: ['....', '.oo.', '.oo.', '....'] };
+/** Arco de destellos: x (izquierda) e y (arriba) de cada uno */
+const SPARKS = [[6, 17], [12, 13], [18, 11], [24, 13], [30, 17]];
+
 /** Dorsos del Castillo: castillo (carmesí), mercader (azul) y corona (oro y carmesí) */
 const SpecialBack = ({ id }: { id: CastleBack }) => {
   const look = {
     castle: { bg: 'radial-gradient(ellipse 70% 60% at 50% 45%, #FF6A86 0%, var(--ink-crimson) 45%, #6E0E22 100%)', glow: 'bloom-crimson', line: 'rgba(11,13,12,0.55)' },
     merchant: { bg: 'radial-gradient(ellipse 70% 60% at 50% 45%, #A6D8FF 0%, var(--ink-azure) 50%, #0E3E86 100%)', glow: 'bloom-azure', line: 'rgba(11,13,12,0.5)' },
-    crown: { bg: 'radial-gradient(ellipse 70% 60% at 50% 45%, #FFE9A8 0%, #E8B64A 40%, #8A1430 100%)', glow: 'bloom-gold', line: 'rgba(11,13,12,0.6)' },
+    crown: { bg: 'radial-gradient(ellipse 75% 65% at 50% 52%, #FF6A86 0%, #B0122F 42%, #3A0612 100%)', glow: 'bloom-gold', line: 'rgba(255,214,120,0.85)' },
   }[id];
   return (
     <div className={clsx('px-round-2 absolute inset-0 overflow-hidden', look.glow)} style={{ background: look.bg }}>
-      {id === 'crown' && <div className="absolute inset-0" style={{ background: 'repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,31,75,0.35) 0deg 7deg, transparent 7deg 20deg)' }} />}
+      {/* Corona: rayos de oro que giran despacio detrás (se paran en bajo consumo) */}
+      {id === 'crown' && (
+        <div className="absolute pointer-events-none" style={{ left: -8, top: 2, width: 56, height: 56,
+          maskImage: 'radial-gradient(circle, #000 20%, transparent 66%)', WebkitMaskImage: 'radial-gradient(circle, #000 20%, transparent 66%)' }}>
+          <div className="absolute inset-0 anim-spin" style={{ background: 'repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,214,120,0.55) 0deg 6deg, transparent 6deg 18deg)' }} />
+        </div>
+      )}
       <BackMotif kind={id === 'castle' ? 'chevrons' : id === 'merchant' ? 'circles' : 'frame'} color={look.line} />
       {id === 'castle' && <PixelSprite sprite={CASTLE_SPRITE} tint={INK.black} style={{ position: 'absolute', left: 12, top: 16, width: 16, height: 20.5 }} />}
       {id === 'merchant' && (
@@ -215,10 +258,30 @@ const SpecialBack = ({ id }: { id: CastleBack }) => {
       )}
       {id === 'crown' && (
         <>
-          <div className="absolute" style={{ left: 2, top: 10, width: 36, height: 36, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,246,214,0.9) 0%, rgba(255,233,168,0.45) 45%, transparent 72%)' }} />
-          <PixelSprite sprite={BOSS_SPRITES.sovereign.body} tint={INK.black} style={{ position: 'absolute', left: 12, top: 15.5, width: 16, height: 25 }} />
-          <div className="absolute" style={{ left: 16.5, top: 4 }}><PixelSprite sprite={STAR} tint={INK.crimson} /></div>
-          <div className="absolute" style={{ left: 16.5, bottom: 4 }}><PixelSprite sprite={STAR} tint={INK.crimson} /></div>
+          {/* Halo detrás de la corona */}
+          <div className="absolute" style={{ left: 0, top: 10, width: 40, height: 40, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,246,214,0.5) 0%, rgba(255,214,120,0.25) 38%, transparent 70%)' }} />
+          {/* Cinco destellos en arco: uno por desafío */}
+          {SPARKS.map(([x, y]) => (
+            <div key={x} className="absolute" style={{ left: x, top: y }}>
+              <PixelSprite sprite={SPARK} tint={INK.gold} />
+              <PixelSprite sprite={SPARK_CORE} tint={INK.cream} style={{ position: 'absolute', inset: 0 }} />
+            </div>
+          ))}
+          <PixelSprite sprite={CROWN_OUTLINE} tint={INK.black} style={{ position: 'absolute', left: 8, top: 21 }} />
+          <div className="absolute bloom-gold-shape" style={{ left: 9, top: 22 }}>
+            <PixelSprite sprite={CROWN.base} tint={INK.black} style={{ position: 'absolute', inset: 0 }} />
+            <PixelSprite sprite={CROWN.gold} tint={INK.gold} />
+            <PixelSprite sprite={CROWN.shine} tint={INK.cream} style={{ position: 'absolute', inset: 0 }} />
+            <PixelSprite sprite={CROWN.gems} tint={INK.crimson} className="bloom-crimson-shape" style={{ position: 'absolute', inset: 0 }} />
+          </div>
+          {/* Remate bajo la corona: dos trazos de oro que se abren */}
+          <svg className="absolute" style={{ left: 0, top: 0 }} width={40} height={56} viewBox="0 0 40 56" fill="none" stroke="rgba(255,214,120,0.8)" strokeWidth={1} aria-hidden>
+            <path d="M8 44 L20 48 L32 44" />
+            <path d="M12 47.5 L20 50.5 L28 47.5" strokeOpacity={0.55} />
+            {[[7.5, 7.5], [32.5, 7.5], [7.5, 48.5], [32.5, 48.5]].map(([x, y]) => <path key={`${x}-${y}`} d={`M${x} ${y - 2} L${x + 2} ${y} L${x} ${y + 2} L${x - 2} ${y} Z`} fill="rgba(255,214,120,0.9)" stroke="none" />)}
+          </svg>
+          {/* Destello de luz que la recorre */}
+          <span className="absolute inset-y-0 left-0 w-[45%] pointer-events-none anim-shine" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,246,214,0.45), transparent)' }} />
         </>
       )}
     </div>

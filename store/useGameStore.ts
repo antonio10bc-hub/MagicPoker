@@ -204,7 +204,8 @@ export const useGameStore = create<GameState>((set, get) => {
       } else if (castle) {
         // Castillo: subes un piso (y eliges mejora) o se acaba la subida
         const outcome = gameResult === 'win' ? recordCastleWin(nextPlayer.lives) : recordCastleLoss();
-        if (outcome.kind === 'conquered') award(['castle']);
+        // Conquistado: su logro y uno por cada desafío que llevabas
+        if (outcome.kind === 'conquered') award(['castle', ...outcome.challenges.map(c => `ch_${c}` as const)]);
         set({ castleOutcome: outcome });
       } else if (gameResult === 'win') {
         if (rematch) recordRematchWin(bossIndex).forEach(u => useUiStore.getState().pushUnlock(u));

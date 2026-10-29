@@ -717,7 +717,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                 {castle.run
                   ? <CastleMap stage={castle.run.stage} chestPending={!!castle.run.chest} />
                   : <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>
-                    {castle.conquered > 0 ? t.ch_record.replace('{n}', String(castle.bestChallenges ?? 0)) : t.castle_tagline}
+                    {t.castle_tagline}
                   </span>}
               </motion.div>
             </div>
