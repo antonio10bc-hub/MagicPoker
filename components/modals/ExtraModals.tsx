@@ -10,7 +10,7 @@ import { BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlocke
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { Card, CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
-import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle, Rarity } from '@/lib/castle';
+import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle, Rarity, CardTemplate, RunSummary } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
@@ -24,6 +24,7 @@ import {
 } from '@/lib/deck';
 import { updateSettings } from '@/lib/settings';
 import { isDebug, lockAll, unlockAll } from '@/lib/debug';
+import { track } from '@/lib/analytics';
 import { useSettings } from '@/hooks/useSettings';
 import { Card as CardType, Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
@@ -579,11 +580,63 @@ const minutes = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
+/** Nombre corto de una carta del mazo final, para el texto que se comparte */
+const cardLabel = (t: Translations, c: CardTemplate) => {
+  const name = c.rank === 'SEAL' ? (c.wild ? t.idea_wild_seal : c.seal ? t[`seal_tag_${c.seal}` as keyof Translations] : 'SEAL')
+    : RANKS[c.rank].castle ? t[`idea_${c.rank.toLowerCase()}` as keyof Translations]
+      : c.rank === 'JOKER' ? 'Joker' : c.rank;
+  const bonus = c.bonus ? `+${c.bonus}` : '';
+  const seal = c.rank !== 'SEAL' && c.seal ? `(${t[`seal_tag_${c.seal}` as keyof Translations]})` : '';
+  return `${name}${bonus}${seal}`;
+};
+
+/** El resumen como texto, para pegarlo donde quieras */
+const summaryText = (t: Translations, sum: RunSummary) => {
+  const { stats } = sum;
+  const won = sum.outcome === 'conquered';
+  const lines = [
+    `MAGIC POKER · ${t.castle_title}`,
+    won ? `🏰 ${t.sum_conquered}` : `💀 ${t.sum_fallen.replace('{n}', String(sum.floors + 1))}`,
+    ...(sum.challenges?.length ? [`⚔ ${t.ch_title}: ${sum.challenges.map(c => t[`ch_${c}` as keyof Translations]).join(', ')}`] : []),
+    '',
+    `${t.sum_floors}: ${sum.floors}/12 · ${t.sum_rounds}: ${stats.rounds} · ${t.sum_time}: ${minutes(sum.endedAt - stats.startedAt)}`,
+    `${t.sum_dealt}: ${stats.damageDealt} · ${t.sum_lost}: ${stats.livesLost}`,
+    `${t.sum_destroyed}: ${stats.cardsDestroyed} · ${t.sum_cards_lost}: ${stats.cardsLost}`,
+    `${t.sum_best}: ${t.sum_best_v.replace('{n}', String(stats.bestHit))}`,
+    `${t.sum_boons}: ${(['common', 'rare', 'legendary'] as const).map(r => `${stats.boons[r]} ${t[RARITY_UI[r].label]}`).join(' · ')} · ${t.sum_chests}: ${stats.chests}`,
+    `${t.sum_lives}: ${'♥'.repeat(sum.lives)}${'♡'.repeat(Math.max(0, sum.maxLives - sum.lives))}`,
+    `${t.sum_deck.replace('{n}', String(sum.deck.length))}: ${sortDeck(sum.deck).map(c => cardLabel(t, c)).join(' ')}`,
+    '',
+    typeof window !== 'undefined' ? window.location.origin : '',
+  ];
+  return lines.join('\n').trim();
+};
+
+/** Mazo final en orden: cartas normales, del Castillo y sellos (cada grupo por valor) */
+const sortDeck = (deck: CardTemplate[]) => [...deck].sort((a, b) => {
+  const ka = a.rank === 'SEAL' ? 2 : RANKS[a.rank].castle ? 1 : 0;
+  const kb = b.rank === 'SEAL' ? 2 : RANKS[b.rank].castle ? 1 : 0;
+  return ka - kb || RANKS[a.rank].value - RANKS[b.rank].value;
+});
+
 export const RunSummaryModal = () => {
   const t = useTranslations();
   const portrait = useStage().mode === 'portrait';
   const sum = getCastle().lastSummary;
+  // Compartir: copia el resumen como texto al portapapeles
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
   if (!sum) return null;
+  const share = () => {
+    playSfx('select', 0.7);
+    const text = summaryText(t, sum);
+    try { void navigator.clipboard?.writeText(text).catch(() => {}); } catch { /* sin portapapeles */ }
+    track('castle_summary_shared', { outcome: sum.outcome, floors: sum.floors });
+    setCopied(true);
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(false), 1800);
+  };
   const { stats } = sum;
   const won = sum.outcome === 'conquered';
   const rows: [string, ReactNode][] = [
@@ -605,7 +658,9 @@ export const RunSummaryModal = () => {
     [t.sum_chests, stats.chests],
   ];
   return (
-    <Dialog title={t.sum_title} tone="castle">
+    <Dialog title={t.sum_title} tone="castle" footer={
+      <PxButton size="md" tone={copied ? 'green' : 'yellow'} aria-label="share summary" onClick={share}>{copied ? t.sum_copied : t.sum_share}</PxButton>
+    }>
       <DialogBody className="t-micro gap-[6px]">
         {/* Cómo acabó */}
         <div className="flex flex-col items-center gap-[4px]">
@@ -643,11 +698,7 @@ export const RunSummaryModal = () => {
             </span>
           </div>
           <span className="flex flex-wrap gap-[3px]">
-            {[...sum.deck].sort((a, b) => {
-              const ka = a.rank === 'SEAL' ? 2 : RANKS[a.rank].castle ? 1 : 0;
-              const kb = b.rank === 'SEAL' ? 2 : RANKS[b.rank].castle ? 1 : 0;
-              return ka - kb || RANKS[a.rank].value - RANKS[b.rank].value;
-            }).map((c, i) => <MiniCard key={i} c={c} />)}
+            {sortDeck(sum.deck).map((c, i) => <MiniCard key={i} c={c} />)}
           </span>
         </Section>
       </DialogBody>

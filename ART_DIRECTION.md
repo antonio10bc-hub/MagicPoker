@@ -499,6 +499,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
   quitadas y perdidas, cartas tumbadas y perdidas, mejor pelea, mejoras por rareza en
   sus colores y cofres; una columna en vertical, dos en horizontal) y el mazo final
   en miniaturas con las vidas con las que acabaste.
+  Al pie, COMPARTIR: copia el resumen como texto al portapapeles (cómo acabó, desafíos,
+  estadísticas, vidas, el mazo con sus nombres y el enlace al juego) y dice ¡COPIADO!
+  un momento.
 - **Vidas y mazo en el mercader:** bajo el mapa, una fila con tus corazones (los de
   más que dio el mercader, en azul) y el botón "MAZO · n" (contorno azul). Al tocarlo se
   despliega tu mazo en miniaturas de 16×21 ordenadas (normales por valor, del Castillo,
