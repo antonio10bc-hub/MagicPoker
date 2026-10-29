@@ -815,7 +815,7 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
     principal abajo, con degradados a negro para que se fundan. En horizontal, igual:
     el mapa llena la pantalla, el logo pequeño arriba a la izquierda, los iconos
     (colección y mazo | reglas, estadísticas, ajustes) arriba a la derecha y la acción
-    principal centrada abajo (el Bosque, encima). La cámara encuadra el pueblo actual
+    principal centrada abajo (el Bosque, debajo y más estrecho, al 72 %; en el Castillo su botón va al mismo ancho que el del Bosque). La cámara encuadra el pueblo actual
     en el hueco que dejan cabecera y botones, nunca debajo de ellos.
   - Una sola acción principal ancha con el verbo grande y el contexto en pequeño
     ("¡DESAFIAR! · El Trilero", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si

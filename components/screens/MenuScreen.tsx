@@ -219,8 +219,9 @@ export const MenuScreen = () => {
           <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
         )}
         <PxButton tone="yellow" onClick={() => handleStartGame(canRematch)} disabled={locked || revealing}
-          className={clsx('w-full flex-col gap-[1px] overflow-hidden', locked && 'opacity-50')}
-          style={{ height: ctaBox.h, ...(castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : {}) }}>
+          // En el Castillo, del ancho del Bosque (los dos modos de juego, a la par)
+          className={clsx('flex-col gap-[1px] overflow-hidden', castleSel ? 'self-center' : 'w-full', locked && 'opacity-50')}
+          style={{ height: ctaBox.h, ...(castleSel ? { width: '72%' } : {}), ...(castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : {}) }}>
           <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{cta.title}</span>
           {cta.sub && <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>}
         </PxButton>
