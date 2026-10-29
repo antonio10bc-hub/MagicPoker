@@ -71,6 +71,15 @@ const ConfirmExitModal = () => {
 
 // --- ESTADÍSTICAS ---
 
+/** Nombre de una carta del recuento: número o figura, carta del Castillo o qué sello */
+const playedName = (t: Translations, key: string) => {
+  if (key.startsWith('SEAL:')) return t[`seal_${key.slice(5)}` as keyof Translations] ?? key;
+  if (key === 'SEAL') return t.tab_seals;
+  if (key === 'JOKER') return 'Joker';
+  const castle = t[`idea_${key.toLowerCase()}` as keyof Translations];
+  return castle ?? key;
+};
+
 const StatsModal = () => {
   const t = useTranslations();
   // Se leen una sola vez al abrir
@@ -80,7 +89,7 @@ const StatsModal = () => {
   // Las victorias antiguas por dificultad cuentan todas juntas
   const totalWins = stats.wins.easy + stats.wins.normal + stats.wins.hard;
   const finished = totalWins + stats.losses + stats.draws;
-  const favorite = (Object.entries(stats.rankPlayed) as [Rank, number][]).sort((a, b) => b[1] - a[1])[0];
+  const favorite = Object.entries(stats.rankPlayed).sort((a, b) => b[1] - a[1])[0];
   const earnedCount = STAMP_IDS.filter(id => stats.stamps[id] !== undefined).length;
 
   const records: [string, string | number][] = [
@@ -96,7 +105,7 @@ const StatsModal = () => {
     [t.cards_destroyed, stats.cardsDestroyed],
     [t.lives_taken, stats.livesTaken],
     [t.lives_lost, stats.livesLost],
-    [t.favorite_card, favorite ? `${favorite[0] === 'JOKER' ? 'Joker' : favorite[0]} ×${favorite[1]}` : '—'],
+    [t.favorite_card, favorite ? `${playedName(t, favorite[0])} ×${favorite[1]}` : '—'],
   ];
   const rows = (items: [string, string | number][]) => items.map(([label, value]) => (
     <div key={label} className="flex justify-between"><span>{label}</span><span className="font-display" style={{ fontSize: 11 }}>{value}</span></div>

@@ -401,7 +401,8 @@ export const useGameStore = create<GameState>((set, get) => {
         mode: get().castle ? 'castle' : get().rematch ? 'rematch' : 'boss', boss: BOSSES[get().bossIndex]?.id,
         round: get().roundNumber, slot: slotIndex,
       });
-      recordCardPlayed(played.rank);
+      // Cada sello cuenta aparte (el comodín, como el sello que se ha elegido)
+      recordCardPlayed(played.rank, sealPut);
       track.ranksPlayed.push(played.rank);
       if (played.rank === 'SEAL') track.sealsPlayed++;
     }

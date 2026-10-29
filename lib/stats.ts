@@ -1,5 +1,5 @@
 // --- GESTIÓN DE ESTADÍSTICAS (Local Storage) ---
-import { Difficulty, GameResult, Rank } from '@/types';
+import { Difficulty, GameResult, Rank, SealId } from '@/types';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { StampId } from '@/lib/stamps';
 
@@ -22,8 +22,9 @@ export interface GameStats {
   fastestWin: number | null;
   /** Victorias sin perder ninguna vida */
   perfectWins: number;
-  /** Cuántas veces has jugado cada carta */
-  rankPlayed: Partial<Record<Rank, number>>;
+  /** Cuántas veces has jugado cada carta. Los sellos, cada uno aparte ("SEAL:shield"); el
+   *  "SEAL" a secas es de antes, cuando se contaban todos juntos */
+  rankPlayed: Record<string, number>;
   /** Últimas partidas, la más reciente al final */
   history: HistoryEntry[];
   /** Sellos conseguidos (id → fecha en ms) */
@@ -86,8 +87,13 @@ const updateStats = (update: (current: GameStats) => GameStats) => {
 export const incrementStat = (key: CounterStat, amount = 1) =>
   updateStats(s => ({ ...s, [key]: s[key] + amount }));
 
-export const recordCardPlayed = (rank: Rank) =>
-  updateStats(s => ({ ...s, cardsPlayed: s.cardsPlayed + 1, rankPlayed: { ...s.rankPlayed, [rank]: (s.rankPlayed[rank] ?? 0) + 1 } }));
+/** Clave de una carta en el recuento: su rango o, si es un sello, cuál */
+export const playedKey = (rank: Rank, seal?: SealId) => (rank === 'SEAL' && seal ? `SEAL:${seal}` : rank);
+
+export const recordCardPlayed = (rank: Rank, seal?: SealId) => {
+  const key = playedKey(rank, seal);
+  updateStats(s => ({ ...s, cardsPlayed: s.cardsPlayed + 1, rankPlayed: { ...s.rankPlayed, [key]: (s.rankPlayed[key] ?? 0) + 1 } }));
+};
 
 /** Al terminar cada pelea */
 export const recordRound = (destroyed: number, livesTaken: number, livesLost: number) =>
