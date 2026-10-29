@@ -270,14 +270,25 @@ export const createPlayerState = (deck: Card[] = [], handSize = 0, handFaceUp = 
 };
 
 /**
- * El robo de cada ronda: `amount` cartas del mazo, o, con un mazo de sellos aparte (el
- * Soberano), una carta de póker y un sello: así siempre tiene algo que poner en la mesa.
+ * El robo de cada ronda: `amount` cartas del mazo y, con mazo de sellos aparte, además un
+ * sello (si quedan). El sello no quita sitio a las cartas: no te deja un hueco sin llenar.
  */
 export const drawRound = (state: PlayerState, amount: number, faceUp: boolean): PlayerState => {
-  if (!state.sealDeck) return drawCards(state, amount, faceUp);
-  const withCard = drawCards(state, 1, faceUp);
+  const withCards = drawCards(state, amount, faceUp);
+  if (!state.sealDeck) return withCards;
   const [seal, ...rest] = state.sealDeck;
-  return seal ? { ...withCard, hand: [...withCard.hand, { ...seal, isFaceUp: faceUp }], sealDeck: rest } : withCard;
+  return seal ? { ...withCards, hand: [...withCards.hand, { ...seal, isFaceUp: faceUp }], sealDeck: rest } : withCards;
+};
+
+/**
+ * Doble mazo (lo usan todos: tú, los jefes y los del Bosque): los sellos del mazo van a un
+ * mazo aparte. Se empieza con `handSize` cartas y 1 sello, y cada ronda se roban las cartas
+ * de siempre y 1 sello (ver drawRound). Sin sellos, un solo mazo.
+ */
+export const createDualState = (deck: Card[], handSize: number, handFaceUp: boolean, lives = STARTING_LIVES): PlayerState => {
+  const seals = deck.filter(isSealCard);
+  const state = createPlayerState(deck.filter(c => !isSealCard(c)), handSize, handFaceUp, lives);
+  return seals.length ? withSealDeck(state, seals, handFaceUp) : state;
 };
 
 /** Le da un mazo de sellos aparte (y el primer sello a la mano inicial) */

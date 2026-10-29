@@ -248,7 +248,7 @@ interface RulesSection {
 
 const RULES: RulesSection[] = [
   { title: 'obj_title', items: ['obj_desc'], band: 'var(--ink-slate)' },
-  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2'], band: 'var(--ink-teal)' },
+  { title: 'turn_title', items: ['turn_desc_1', 'turn_desc_2', 'turn_desc_3'], band: 'var(--ink-teal)' },
   { title: 'fight_title', items: ['fight_li_1', 'fight_li_2'], band: 'var(--c-mult)' },
   { title: 'special_title', items: ['special_ace', 'special_king', 'special_queen', 'special_jack', 'special_joker'], band: 'var(--c-orange)' },
 ];

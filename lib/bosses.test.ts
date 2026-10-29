@@ -93,8 +93,8 @@ describe('progresión de bosses', () => {
   });
 });
 
-describe('el Soberano: mazo de póker y mazo de sellos aparte', () => {
-  it('empieza con 3 cartas de póker y 1 sello, y cada ronda roba una de cada', async () => {
+describe('doble mazo: cartas y sellos aparte (todos)', () => {
+  it('el Soberano empieza con 3 cartas y 1 sello, y cada ronda roba 2 cartas y 1 sello', async () => {
     const { BOSSES, createBossState } = await import('@/lib/bosses');
     const { drawRound } = await import('@/lib/game-utils');
     const sovereign = BOSSES.find(b => b.secret)!;
@@ -106,16 +106,30 @@ describe('el Soberano: mazo de póker y mazo de sellos aparte', () => {
     for (let round = 0; round < 3; round++) {
       const before = { poker: s.deck.length, seals: s.sealDeck!.length, hand: s.hand.length };
       s = drawRound(s, 2, false);
-      expect(s.deck.length).toBe(before.poker - 1);
+      expect(s.deck.length).toBe(before.poker - 2);
       expect(s.sealDeck!.length).toBe(before.seals - 1);
-      expect(s.hand.length).toBe(before.hand + 2);
+      expect(s.hand.length).toBe(before.hand + 3);
     }
   });
 
-  it('los demás jefes siguen con un solo mazo', async () => {
+  it('los jefes con sellos también llevan doble mazo; el que no tiene, uno solo', async () => {
     const { BOSSES, createBossState } = await import('@/lib/bosses');
-    const s = createBossState(BOSSES[1], 0, 4, 3);
-    expect(s.sealDeck).toBeUndefined();
-    expect(s.hand).toHaveLength(3);
+    const wall = createBossState(BOSSES[1], 0, 4, 3);
+    expect(wall.sealDeck).toHaveLength(1);
+    expect(wall.hand.filter(c => c.rank === 'SEAL')).toHaveLength(1);
+    expect(wall.deck.some(c => c.rank === 'SEAL')).toBe(false);
+    const drifter = createBossState(BOSSES[0], 0, 4, 3);
+    expect(drifter.sealDeck).toBeUndefined();
+    expect(drifter.hand).toHaveLength(3);
+  });
+
+  it('sin sellos que robar, se siguen robando las 2 cartas', async () => {
+    const { createDualState, createDeck, createSealCard, drawRound } = await import('@/lib/game-utils');
+    let s = createDualState([...createDeck('player'), createSealCard('player', 'shield')], 3, true);
+    expect(s.sealDeck).toHaveLength(0);
+    const hand = s.hand.length, deck = s.deck.length;
+    s = drawRound(s, 2, true);
+    expect(s.hand.length).toBe(hand + 2);
+    expect(s.deck.length).toBe(deck - 2);
   });
 });

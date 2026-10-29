@@ -9,7 +9,7 @@
 // El jugador lo lleva un bot (ver personas.ts); el rival, la IA del juego.
 import { BoardSlot, Card, Difficulty, GameResult, Owner, PlayerState, SealId } from '@/types';
 import {
-  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, countRankOnBoard, createPlayerState, drawCards, drawRound,
+  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, countRankOnBoard, createDualState, createPlayerState, drawCards, drawRound,
   getGameResult, hideFromRival, isIdleDraw, isQuietFight, isStalemate, lifeGains, markCombatResult, nextOpener, playCardToSlot,
   revealBoard, risenPhoenixes, unhideBoard, withSealDeck,
 } from '@/lib/game-utils';
@@ -224,4 +224,4 @@ export const playMatch = (m: MatchSetup): MatchResult => {
 
 /** Estado inicial del jugador: su mazo, 3 cartas en mano y sus vidas */
 export const playerStart = (deck: Card[], lives = STARTING_LIVES, maxLives = lives): PlayerState =>
-  ({ ...createPlayerState(deck, STARTING_HAND_SIZE, true, lives), maxLives });
+  ({ ...createDualState(deck, STARTING_HAND_SIZE, true, lives), maxLives });

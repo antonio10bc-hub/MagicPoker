@@ -7,7 +7,9 @@ import {
   applyBoon, buildRunDeck, CardTemplate, castleBossLevel, castleBossLives, CastleRun, ChallengeId, CHALLENGES, isChestFloor, offerBoons, rollChest, boonRarity,
 } from '@/lib/castle';
 import { ARCHETYPES, archetype, buildForestDeck, FOREST_LIVES, forestAi, rollEncounter, Tier } from '@/lib/forest';
-import { createPlayerState, DECK_RANKS, RANKS } from '@/lib/game-utils';
+import { createDualState, DECK_RANKS, LEGENDARY_RANKS, RANKS } from '@/lib/game-utils';
+
+const LEGENDS = LEGENDARY_RANKS;
 import { STARTING_HAND_SIZE, STARTING_LIVES } from '@/lib/constants';
 import { MatchResult, playerStart, playMatch, rivalAi } from './engine';
 import { chooserOf, PersonaId, pickBoon, seesAll } from './personas';
@@ -26,16 +28,16 @@ export const deckFor = (defeated: number, config?: DeckConfig): Card[] => {
 };
 
 /** Una partida contra un jefe (la primera vez, o en revancha de nivel `level`) */
-export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?: number; defeated?: number; config?: DeckConfig; cantrip?: boolean } = {}): MatchResult => {
+export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?: number; defeated?: number; config?: DeckConfig; cantrip?: boolean; ai?: 'normal' | 'hard'; lives?: number } = {}): MatchResult => {
   const boss = BOSSES[bossIndex];
   const level = opts.level ?? 0;
   const rematch = level > 0;
   const defeated = opts.defeated ?? (rematch ? BOSSES.length : bossIndex);
   return playMatch({
     player: playerStart(deckFor(defeated, opts.config)),
-    opponent: createBossState(boss, level, bossLives(boss, level), STARTING_HAND_SIZE),
+    opponent: createBossState(boss, level, opts.lives ?? bossLives(boss, level), STARTING_HAND_SIZE),
     bot: chooserOf(persona), botSeesAll: seesAll(persona),
-    rival: rivalAi(bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard'),
+    rival: rivalAi(opts.ai ?? (bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard')),
     sealCantrip: opts.cantrip, rivalCantrip: opts.cantrip,
   });
 };
@@ -66,19 +68,22 @@ export interface CastleRunResult {
   finalDeckSize: number;
   finalLives: number;
   finalMax: number;
+  /** Punto de guardado alcanzado (para retomar desde ahí): la subida al llegar a ese piso */
+  saved?: CastleRun;
 }
 
 /** Una subida entera al Castillo */
 /** Cambios hipotéticos para probar (no están en el juego): vidas y nivel de los jefes, curación por piso */
-export interface CastleTweaks { bossLivesDelta?: number; levelDelta?: number; healPerFloor?: number; startLives?: number; sealCantrip?: boolean; floors?: number; normalAiUntil?: number }
+export interface CastleTweaks { bossLivesDelta?: number; levelDelta?: number; healPerFloor?: number; startLives?: number; sealCantrip?: boolean; floors?: number; normalAiUntil?: number; legendaryFrom?: number }
 
-export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]; config?: DeckConfig; tweaks?: CastleTweaks } = {}): CastleRunResult => {
+export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]; config?: DeckConfig; tweaks?: CastleTweaks; from?: CastleRun; checkpoints?: number[] } = {}): CastleRunResult => {
   const tw = opts.tweaks ?? {};
   const challenges = CHALLENGES.filter(c => opts.challenges?.includes(c));
   const all = sealsAfter(BOSSES.length);
   const config = sanitizeDeckConfig(opts.config ?? defaultDeckConfig(all), all);
   const lives = (tw.startLives ?? STARTING_LIVES) - (challenges.includes('fragile') ? 1 : 0);
-  let run: CastleRun = { stage: 0, lives, maxLives: lives, deck: startingTemplates(config, challenges), ...(challenges.length ? { challenges } : {}) };
+  let run: CastleRun = opts.from ? { ...opts.from, lives: opts.from.maxLives } : { stage: 0, lives, maxLives: lives, deck: startingTemplates(config, challenges), ...(challenges.length ? { challenges } : {}) };
+  let saved: CastleRun | undefined = opts.from;
   const floorsLog: FloorLog[] = [];
   const boons: CastleRunResult['boons'] = [];
   for (;;) {
@@ -86,7 +91,7 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
     const level = Math.max(0, Math.min(4, castleBossLevel(run.stage, run) + (tw.levelDelta ?? 0)));
     const bl = Math.max(1, castleBossLives(run) + (tw.bossLivesDelta ?? 0));
     const m = playMatch({
-      player: { ...createPlayerState(buildRunDeck(run), STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
+      player: { ...createDualState(buildRunDeck(run), STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
       opponent: createBossState(boss, level, bl, STARTING_HAND_SIZE),
       bot: chooserOf(persona), botSeesAll: seesAll(persona),
       rival: rivalAi(run.stage < (tw.normalAiUntil ?? 0) ? 'normal' : 'hard'),
@@ -95,7 +100,7 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
     });
     floorsLog.push({ stage: run.stage, result: m.result, livesIn: run.lives, livesOut: m.livesLeft, rounds: m.rounds, bossLives: bl, level });
     if (m.result !== 'win') {
-      return { conquered: false, floors: run.stage, floorsLog, boons, finalDeckSize: run.deck.length, finalLives: 0, finalMax: run.maxLives };
+      return { conquered: false, floors: run.stage, floorsLog, boons, finalDeckSize: run.deck.length, finalLives: 0, finalMax: run.maxLives, saved };
     }
     const stage = run.stage + 1;
     if (stage >= (tw.floors ?? BOSSES.length)) {
@@ -104,6 +109,8 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
     run = { ...run, stage, lives: Math.min(run.maxLives, m.livesLeft + (tw.healPerFloor ?? 0)), pact: false };
     // Cofre cada 3 pisos (se abre antes de elegir la mejora) y la oferta del mercader
     const offer = offerBoons(run);
+    // ¿Y si...? Legendarias antes: desde este piso, a veces, una en la oferta
+    if (tw.legendaryFrom !== undefined && stage >= tw.legendaryFrom && stage < 6 && Math.random() < 0.3) offer[offer.length - 1] = { kind: 'card', rank: LEGENDS[Math.floor(Math.random() * LEGENDS.length)] };
     if (isChestFloor(stage)) {
       const chest = rollChest(run);
       boons.push({ kind: `cofre:${chest.kind}`, rarity: boonRarity(chest) });
@@ -114,6 +121,7 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
       boons.push({ kind: offer[i].kind === 'card' ? `carta:${(offer[i] as { rank: string }).rank}` : offer[i].kind, rarity: boonRarity(offer[i]) });
       run = applyBoon(run, offer[i]);
     }
+    if (opts.checkpoints?.includes(run.stage)) saved = { ...run };
   }
 };
 
@@ -124,7 +132,7 @@ export const forestMatch = (persona: PersonaId, id: string, tier?: Tier, config?
   const t = tier ?? a.tier;
   return playMatch({
     player: playerStart(deckFor(BOSSES.length, config)),
-    opponent: createPlayerState(buildForestDeck(a, t), STARTING_HAND_SIZE, false, FOREST_LIVES[t]),
+    opponent: createDualState(buildForestDeck(a, t), STARTING_HAND_SIZE, false, FOREST_LIVES[t]),
     bot: chooserOf(persona), botSeesAll: seesAll(persona),
     rival: rivalAi(forestAi(t)),
   });

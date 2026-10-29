@@ -6,7 +6,7 @@
 // Revancha: un jefe ya vencido vuelve más fuerte, y cada revancha ganada sube su nivel
 // (ver bossSeals y bossLives). Con 5 victorias contra un jefe se gana su dorso de carta.
 import { Card, PlayerState, SealId } from '@/types';
-import { createDeck, createPlayerState, createSealCard, shuffle, withSealDeck } from '@/lib/game-utils';
+import { createDeck, createDualState, createSealCard, shuffle } from '@/lib/game-utils';
 
 export interface Boss {
   id: string;
@@ -170,16 +170,10 @@ export const buildPlayerDeck = (seals: SealId[] = unlockedSeals()): Card[] =>
 export const buildBossDeck = (boss: Boss, level = 0): Card[] =>
   shuffle([...createDeck('opponent'), ...bossSeals(boss, level).map(s => createSealCard('opponent', s))]);
 
-/** El jefe secreto lleva sus sellos en un mazo aparte (los demás, todo junto) */
-export const hasSealDeck = (boss: Boss) => !!boss.secret;
-
 /**
- * Estado del boss al empezar: su mano y su mazo. El jefe secreto (el Soberano, con todos
- * los sellos) tiene dos mazos: el de póker y el de sellos; empieza con 3 cartas y 1 sello
- * y cada ronda roba una de cada (ver drawRound). Así nunca se queda sin cartas que poner.
+ * Estado del boss al empezar: su mano y sus dos mazos (el de póker y el de sellos, como
+ * todos: ver createDualState). Empieza con 3 cartas y 1 sello y cada ronda roba sus 2
+ * cartas y 1 sello.
  */
-export const createBossState = (boss: Boss, level: number, lives: number, handSize: number): PlayerState => {
-  if (!hasSealDeck(boss)) return createPlayerState(buildBossDeck(boss, level), handSize, false, lives);
-  const poker = createPlayerState(shuffle(createDeck('opponent')), handSize, false, lives);
-  return withSealDeck(poker, shuffle(bossSeals(boss, level).map(s => createSealCard('opponent', s))), false);
-};
+export const createBossState = (boss: Boss, level: number, lives: number, handSize: number): PlayerState =>
+  createDualState(buildBossDeck(boss, level), handSize, false, lives);

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Card, CombatResult, Difficulty, GamePhase, GameResult, Owner, PlayerState, Screen, SealId } from '@/types';
 import {
-  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isIdleDraw, isQuietFight, isStalemate, nextIdleTurns, risenPhoenixes, countRankOnBoard, createPlayerState,
+  applyPreCombatSeals, applyReveal, calculateCombat, clearDefeatedCards, isIdleDraw, isQuietFight, isStalemate, nextIdleTurns, risenPhoenixes, countRankOnBoard, createDualState, createPlayerState,
   drawCards, drawRound, getGameResult, hideFromRival, nextOpener, lifeGains, markCombatResult, playCardToSlot, RANKS, revealBoard, SealEvent, unhideBoard,
 } from '@/lib/game-utils';
 import {
@@ -252,7 +252,7 @@ export const useGameStore = create<GameState>((set, get) => {
       rematchLevel: level,
       castle: { stage: run.stage },
       intro: Date.now(),
-      player: { ...createPlayerState(playerDeck, STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
+      player: { ...createDualState(playerDeck, STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
       opponent: createBossState(boss, level, castleBossLives(run), STARTING_HAND_SIZE),
     });
   },
@@ -285,7 +285,7 @@ export const useGameStore = create<GameState>((set, get) => {
       rematch,
       rematchLevel: level,
       intro: Date.now(),
-      player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
+      player: createDualState(playerDeck, STARTING_HAND_SIZE, true),
       opponent: createBossState(boss, level, bossLives(boss, level), STARTING_HAND_SIZE),
     });
   },
@@ -313,8 +313,8 @@ export const useGameStore = create<GameState>((set, get) => {
       // Cuánto aprieta: el rival normal o el difícil
       difficulty: forestAi(e.tier),
       forest: e,
-      player: createPlayerState(playerDeck, STARTING_HAND_SIZE, true),
-      opponent: createPlayerState(buildForestDeck(a, e.tier), STARTING_HAND_SIZE, false, FOREST_LIVES[e.tier]),
+      player: createDualState(playerDeck, STARTING_HAND_SIZE, true),
+      opponent: createDualState(buildForestDeck(a, e.tier), STARTING_HAND_SIZE, false, FOREST_LIVES[e.tier]),
     });
   },
 
@@ -330,7 +330,7 @@ export const useGameStore = create<GameState>((set, get) => {
     if (!saved) return false;
     cancelScheduled();
     track = newMatchTrack();
-    deckSeals = countSeals([...saved.player.hand, ...saved.player.deck]);
+    deckSeals = countSeals([...saved.player.hand, ...saved.player.deck, ...(saved.player.sealDeck ?? [])]);
     playSound('shuffle', 0.5);
     set({
       ...initialMatchState(),
