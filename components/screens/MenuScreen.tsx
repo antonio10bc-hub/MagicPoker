@@ -188,7 +188,7 @@ export const MenuScreen = () => {
             de su color y va separado de lo del juego (reglas, estadísticas, ajustes) */}
         {collection && (
           <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
-            <PixelSprite sprite={ICONS.book} tint={INK.volt} />
+            <PixelSprite sprite={ICONS.book} tint={INK.orange} />
           </PxButton>
         )}
         {editor && (

@@ -414,7 +414,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **En partida:** la silueta del boss (negra sobre la banda naranja) en el panel del
   rival, con tantos corazones como vidas tenga (algunos tienen 5).
 - **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes
-  que los logros. El primero desbloquea la colección (botón verde en el menú).
+  que los logros. El primero desbloquea el Grimorio (el libro naranja del menú).
 - **Orden de los avisos:** sello de carta > logros > panel de final de partida. Cada
   uno espera a que se cierre el anterior, y ninguno sale mientras se ve la pelea
   (ni durante el repaso del resultado).
@@ -433,7 +433,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   victorias contra él y te lo pones en la colección (pestaña Dorsos). El del jefe
   secreto es especial: oro con rayos, un aura crema grande, la silueta más grande en
   el centro exacto y una estrella arriba y otra abajo.
-- **El Grimorio** (catálogo de cartas; botón verde de la colección en el menú y en el
+- **El Grimorio** (catálogo de cartas; el libro naranja del menú y del
   Bosque): todo lo que puede salir en una mesa, en un solo libro. Ventana de 260 px,
   letra pequeña y cuatro pestañas con icono (no caben con texto en el móvil; el
   nombre queda de etiqueta): Cartas (Rey), Sellos (escudo), Castillo (Torre) y Dorsos
@@ -802,8 +802,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
     su pastilla y su nombre. Sin anillo bajo los pies.
   Al terminar se elige lo nuevo y vuelve el control. Lo ya contado se anota
   (`magic_poker_map_seen`, `lib/mapReveal.ts`), así no se repite.
-- **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (colección en verde,
-  mazo en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
+- **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (Grimorio, un libro, y
+  mazo, tus dorsos, los dos en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
   ajustes).
 - **Icono de la app:** nocturno y misterioso: fondo negro con un rojo muy profundo,
   una luna-brasa naranja detrás de la cabeza, el Rey en silueta negra sin cetro con un

@@ -219,7 +219,7 @@ export const ForestScreen = () => {
         <span className="flex gap-[3px]">
           {isCollectionUnlocked() && (
             <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('collection'); }}>
-              <PixelSprite sprite={ICONS.book} tint={INK.volt} />
+              <PixelSprite sprite={ICONS.book} tint={INK.orange} />
             </PxButton>
           )}
           {isEditorUnlocked() && (
