@@ -127,8 +127,8 @@ export const isCastleUnlocked = (p: Progress = getProgress()) => p.defeated >= B
 
 /** El jefe secreto (el último) solo se ve cuando ya has vencido a los demás */
 export const isBossVisible = (index: number, p: Progress = getProgress()) => !BOSSES[index].secret || p.defeated >= index;
-/** El editor de mazo se desbloquea a la vez que el Grimorio (al vencer al primer jefe) */
-export const isEditorUnlocked = (p: Progress = getProgress()) => p.defeated >= 1;
+/** El editor de mazo se desbloquea con el primer sello (al vencer al segundo jefe, el Muro) */
+export const isEditorUnlocked = (p: Progress = getProgress()) => p.defeated >= 2;
 
 /** Registra la victoria contra un boss. Devuelve lo que se desbloquea (si es nuevo). */
 export const recordBossDefeat = (index: number): Unlock[] => {
@@ -136,9 +136,11 @@ export const recordBossDefeat = (index: number): Unlock[] => {
   if (index !== p.defeated || index >= BOSSES.length) return [];
   const boss = BOSSES[index];
   save({ ...p, defeated: p.defeated + 1, wins: { ...p.wins, [boss.id]: 1 } });
-  // El primero abre a la vez el Grimorio y el editor de mazo (un solo aviso)
+  // El primero abre el Grimorio
   if (index === 0) return [{ kind: 'collection' }];
   const out: Unlock[] = boss.seal ? [{ kind: 'seal', seal: boss.seal }] : [];
+  // Con el primer sello llega el editor de mazo
+  if (index === 1) out.push({ kind: 'editor' });
   // Tras el último normal aparece el jefe secreto; tras el secreto, el Castillo
   if (BOSSES[index + 1]?.secret) out.push({ kind: 'secret' });
   if (boss.secret) out.push({ kind: 'castle' });

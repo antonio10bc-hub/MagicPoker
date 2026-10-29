@@ -414,8 +414,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **En partida:** la silueta del boss (negra sobre la banda naranja) en el panel del
   rival, con tantos corazones como vidas tenga (algunos tienen 5).
 - **Desbloqueo:** al vencer a un boss, su sello se estampa en verde en el centro antes
-  que los logros. El primero desbloquea a la vez el Grimorio y el editor de mazo: un
-  solo aviso naranja (como sus botones del menú) con el libro y el mazo.
+  que los logros. El primero desbloquea el Grimorio y el segundo (el Muro), con el
+  primer sello, el editor de mazo: los dos avisos en naranja, como sus botones del menú
+  (el libro y el mazo).
 - **Orden de los avisos:** sello de carta > logros > panel de final de partida. Cada
   uno espera a que se cierre el anterior, y ninguno sale mientras se ve la pelea
   (ni durante el repaso del resultado).

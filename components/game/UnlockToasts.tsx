@@ -50,8 +50,8 @@ export const UnlockToasts = () => {
     : backBoss ? t.unlock_back_desc.replace('{boss}', t[`boss_${backBoss}` as keyof Translations])
       : { seal: '', back: '', collection: t.unlock_collection_desc, secret: t.unlock_secret_desc, editor: t.unlock_editor_desc, castle: t.unlock_castle_desc }[kind];
   // El Castillo se anuncia en rojo eléctrico; lo demás, en verde
-  // El Grimorio (con el editor de mazo) va en naranja, como sus botones del menú
-  const grim = kind === 'collection';
+  // El Grimorio y el editor de mazo van en naranja, como sus botones del menú
+  const grim = kind === 'collection' || kind === 'editor';
   const rgb = castle ? '255,31,75' : grim ? '255,74,28' : '125,255,43';
   return (
     <AnimatePresence>
@@ -77,10 +77,9 @@ export const UnlockToasts = () => {
               {backBoss ? <CardBack owner="player" back={backBoss} />
                 : kind === 'secret' || castle
                 ? <BossFigure id="sovereign" height={44} dark glow={false} />
-                : kind === 'collection'
-                  // El Grimorio y, a su lado, el mazo (se abren los dos a la vez)
-                  ? <span className="flex items-center gap-[3px]"><PixelSprite sprite={ICONS.book} tint={INK.black} scale={3} /><PixelSprite sprite={ICONS.deck} tint={INK.black} scale={2} /></span>
-                  : <PixelSprite sprite={kind === 'editor' ? ICONS.gear : SEAL_ICONS[seal ?? 'shield']} tint={INK.black} scale={kind === 'editor' ? 4 : 3} />}
+                : kind === 'collection' ? <PixelSprite sprite={ICONS.book} tint={INK.black} scale={3} />
+                  : kind === 'editor' ? <PixelSprite sprite={ICONS.deck} tint={INK.black} scale={3} />
+                  : <PixelSprite sprite={SEAL_ICONS[seal ?? 'shield']} tint={INK.black} scale={3} />}
             </motion.div>
           </div>
           <motion.div className="px-panel px-round px-[8px] py-[6px] flex flex-col items-center gap-[3px] w-full" data-popover
