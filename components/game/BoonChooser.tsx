@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Rank } from '@/types';
@@ -7,7 +7,7 @@ import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
 import { INK } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { CHARACTERS, CHECK, HEART, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { useGameStore } from '@/store/useGameStore';
 import { track } from '@/lib/analytics';
 
@@ -58,6 +58,8 @@ export const BoonIcon = ({ boon }: { boon: Boon }) => {
 
 /** Lo que tarda cada mejora en entrar */
 const ENTER_S = 0.35;
+/** Lo que dura la elección en pantalla (salta, destella y se marca) antes de seguir */
+const CHOSEN_MS = 700;
 
 /** Las 3 mejoras de la subida en curso. `onChosen` se llama tras elegir (por defecto, sube
  *  al siguiente jefe). `compact`: letra y filas más pequeñas (escena del mercader). */
@@ -72,9 +74,13 @@ export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: ()
     const id = setTimeout(() => setReady(true), (delay + Math.max(0, count - 1) * 0.08 + ENTER_S) * 1000);
     return () => clearTimeout(id);
   }, [delay, count]);
+  // La elegida: se marca un instante y luego se aplica (no se puede elegir otra)
+  const [chosen, setChosen] = useState<number | null>(null);
+  const chosenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (chosenTimer.current) clearTimeout(chosenTimer.current); }, []);
   if (!run?.offer) return null;
   const pick = (i: number) => {
-    if (!ready) return;
+    if (!ready || chosen !== null) return;
     // Analíticas: qué se elige de lo que ofrece el mercader
     const boon = run.offer![i];
     track('merchant_choice', {
@@ -84,9 +90,13 @@ export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: ()
     });
     playSound('click');
     playSfx('sparkle');
-    if (!chooseBoon(i)) return;
-    if (onChosen) onChosen();
-    else useGameStore.getState().startCastle();
+    playSfx('select', 0.8, 1.2);
+    setChosen(i);
+    chosenTimer.current = setTimeout(() => {
+      if (!chooseBoon(i)) return;
+      if (onChosen) onChosen();
+      else useGameStore.getState().startCastle();
+    }, CHOSEN_MS);
   };
   return (
     <div className={clsx('flex flex-col w-full', compact ? 'gap-[3px]' : 'gap-[4px]')}>
@@ -100,15 +110,33 @@ export const BoonChooser = ({ onChosen, delay = 0.15, compact }: { onChosen?: ()
           <motion.button key={i} aria-label={`boon ${boon.kind}`} data-rarity={rarity}
             className={clsx('relative overflow-hidden px-inset px-round flex items-center text-left cursor-pointer', compact ? 'gap-[4px] p-[3px]' : 'gap-[6px] p-[4px]')}
             style={{ boxShadow: compact ? ui.ringCompact : ui.ring, background: compact ? 'rgba(11,13,12,0.7)' : undefined }}
-            initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: delay + i * 0.08, duration: ENTER_S }}
-            whileHover={{ scale: 1.03 }} onClick={() => pick(i)}>
+            initial={{ x: 20, opacity: 0 }}
+            // Elegida: salta y se queda un poco más grande; las otras se apagan
+            animate={chosen === null ? { x: 0, opacity: 1, scale: 1 } : chosen === i ? { x: 0, opacity: 1, scale: [1, 1.12, 1.05] } : { x: 0, opacity: 0.25, scale: 0.94 }}
+            transition={chosen === null ? { delay: delay + i * 0.08, duration: ENTER_S } : { duration: 0.35, ease: 'easeOut' }}
+            whileHover={chosen === null ? { scale: 1.03 } : undefined} onClick={() => pick(i)}>
+            {chosen === i && (
+              <>
+                {/* Destello crema y el marco que brilla en el color de su rareza */}
+                <motion.span className="absolute inset-0 pointer-events-none" style={{ background: 'var(--ink-cream)' }}
+                  initial={{ opacity: 0.85 }} animate={{ opacity: 0 }} transition={{ duration: 0.45, ease: 'easeOut' }} />
+                <motion.span className="absolute inset-0 pointer-events-none px-round"
+                  style={{ boxShadow: `inset 0 0 0 2px ${ui.color}, 0 0 12px 3px ${ui.color}` }}
+                  initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.75] }} transition={{ duration: 0.5 }} />
+                {/* Marca de elegida (en el sitio de la rareza) */}
+                <motion.span className="absolute right-[3px] top-[3px] pointer-events-none" initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 14, delay: 0.1 }}>
+                  <PixelSprite sprite={CHECK} tint={INK.cream} className="bloom-cream" />
+                </motion.span>
+              </>
+            )}
             <span className={clsx('shrink-0 flex justify-center', compact ? 'w-[16px]' : 'w-[22px]')}><BoonIcon boon={boon} /></span>
             {/* Legendaria: un brillo dorado que cruza la fila */}
             {rarity === 'legendary' && <span className="absolute inset-y-0 left-0 w-[30%] pointer-events-none anim-shine" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,233,168,0.35), transparent)' }} />}
             <span className={clsx('flex flex-col min-w-0 flex-1', compact ? 'leading-[9px]' : 'leading-[10px]')} style={{ fontSize: compact ? 8 : 9 }}>
               <span className="flex items-center justify-between gap-[4px]">
                 <span style={{ color: rarity === 'legendary' ? 'var(--ink-gold)' : 'var(--ink-cream)' }}>{title}</span>
-                <span className="font-display shrink-0" style={{ color: ui.color, fontSize: 7, letterSpacing: 1 }}>{t[ui.label]}</span>
+                <span className="font-display shrink-0" style={{ color: ui.color, fontSize: 7, letterSpacing: 1, opacity: chosen === i ? 0 : 1 }}>{t[ui.label]}</span>
               </span>
               <span style={{ color: 'var(--ink-mint)' }}>{desc}</span>
             </span>

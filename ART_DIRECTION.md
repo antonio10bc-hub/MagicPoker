@@ -509,6 +509,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
   título: COMÚN (menta), RARA (azul, contorno más vivo) y LEGENDARIA (oro: contorno y
   título dorados, icono en oro y un brillo que cruza la fila). Las legendarias salen a
   partir del piso 6.
+  Al elegir una, durante 0,7 s antes de seguir: salta y se queda algo más grande, un
+  destello crema la cruza, su marco brilla en el color de su rareza y una marca de
+  visto bueno ocupa el sitio de la rareza; las otras dos se apagan y encogen.
 - **Cartas legendarias** (Dragón, Hidra, Fénix): cuerpo azul del mercader con un filo de
   oro doble, halo dorado y una estrella de oro en la esquina superior derecha.
 - **Cofre (pisos 3, 6 y 9):** entre el jefe derrotado y el mercader. Cofre de madera
