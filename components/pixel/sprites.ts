@@ -75,6 +75,42 @@ export const ICONS = {
     '.nnnnnnn.',
     '...n.n...',
   ),
+  /** Grimorio: el libro de todas las cartas (lomo, cruz en la tapa, canto de las páginas) */
+  book: s(
+    '.nnnnnnn.',
+    'n.n.....n',
+    'n.n..n..n',
+    'n.n.nnn.n',
+    'n.n..n..n',
+    'n.n..n..n',
+    'n.nnnnnnn',
+    'n.n.....n',
+    '.nnnnnnnn',
+  ),
+  /** Carta con una pica (pestaña Cartas del Grimorio) */
+  card: s(
+    '.nnnnnnn.',
+    'n.......n',
+    'n...n...n',
+    'n..nnn..n',
+    'n.nnnnn.n',
+    'n...n...n',
+    'n..nnn..n',
+    'n.......n',
+    '.nnnnnnn.',
+  ),
+  /** Castillo almenado (pestaña Castillo del Grimorio) */
+  castle: s(
+    'n.n...n.n',
+    'nnn.n.nnn',
+    'nnnnnnnnn',
+    '.nnnnnnn.',
+    '.nn.n.nn.',
+    '.nnnnnnn.',
+    '.nnn.nnn.',
+    '.nn...nn.',
+    'nnn...nnn',
+  ),
   /** Mazo: cartas apiladas */
   deck: s(
     '..nnnnnn.',

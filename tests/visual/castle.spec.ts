@@ -24,7 +24,7 @@ test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y s
   await seed(page, { magic_poker_progress: { defeated: 12 } });
   await expect(page.getByText('EL CASTILLO').first()).toBeVisible();
   await shot(page, info, 'menu-castillo');
-  await page.getByText('ENTRAR').click({ force: true });
+  await page.getByText('CASTILLO', { exact: true }).click({ force: true });
   await page.waitForTimeout(900);
   await shot(page, info, 'presentacion');
   await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 0);

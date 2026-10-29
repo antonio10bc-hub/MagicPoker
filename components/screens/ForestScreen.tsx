@@ -11,7 +11,7 @@ import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { ICONS, MASK, SEAL_ICONS } from '@/components/pixel/sprites';
+import { ICONS, MASK } from '@/components/pixel/sprites';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
 import { AmbientDust } from '@/components/fx/Ambient';
 
@@ -218,7 +218,7 @@ export const ForestScreen = () => {
         <span className="flex gap-[3px]">
           {isCollectionUnlocked() && (
             <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('collection'); }}>
-              <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} />
+              <PixelSprite sprite={ICONS.book} tint={INK.volt} />
             </PxButton>
           )}
           {isEditorUnlocked() && (

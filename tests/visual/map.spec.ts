@@ -38,7 +38,7 @@ test('mapa: todo descubierto, con el Castillo arriba', async ({ page }, info) =>
   const noErrors = watchErrors(page);
   await seed(page, { magic_poker_progress: { defeated: 12 } });
   await expect(page.locator('[aria-label="map castle"]')).toBeVisible();
-  await expect(page.getByText('ENTRAR')).toBeVisible();
+  await expect(page.getByText('CASTILLO', { exact: true })).toBeVisible();
   await shot(page, info, 'mapa-castillo');
   noErrors();
 });
@@ -92,7 +92,7 @@ test('revelación: tras el Soberano, el Castillo se alza', async ({ page }, info
   await page.waitForTimeout(3000);
   await shot(page, info, 'castillo-3-listo');
   await expect(page.locator('[aria-label="map reveal"]')).toHaveCount(0, { timeout: 6000 });
-  await expect(page.getByText('ENTRAR')).toBeVisible();
+  await expect(page.getByText('CASTILLO', { exact: true })).toBeVisible();
   noErrors();
 });
 

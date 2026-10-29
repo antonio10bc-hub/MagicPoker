@@ -28,7 +28,7 @@ import { Card as CardType, Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
 import { useStage } from '@/components/pixel/Stage';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, HEART, HEART_LOST, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { HEART, HEART_LOST, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
 import { CARD_SIZE, INK } from '@/theme/tokens';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 
@@ -280,7 +280,7 @@ const GrimoireCastle = () => {
   );
 };
 
-const GRIMOIRE_ICONS: Record<GrimoireTab, Sprite> = { cards: CHARACTERS.K!, seals: SEAL_ICONS.shield, castle: CHARACTERS.TOWER!, backs: ICONS.deck };
+const GRIMOIRE_ICONS: Record<GrimoireTab, Sprite> = { cards: ICONS.card, seals: SEAL_ICONS.shield, castle: ICONS.castle, backs: ICONS.deck };
 
 export const GrimoireModal = () => {
   const t = useTranslations();

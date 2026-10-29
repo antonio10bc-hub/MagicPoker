@@ -87,8 +87,8 @@ test('rarezas: una legendaria en la oferta del mercader (al volver del menú)', 
 test('desafíos: tras conquistarlo, se eligen al entrar y cambian la subida', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await seed(page, { magic_poker_progress: { defeated: 12 }, magic_poker_castle: { run: null, best: 12, conquered: 1, bestChallenges: 1 }, magic_poker_forest_seen: 1 });
-  await expect(page.getByText('Récord: conquistado con 1/5 desafíos')).toBeVisible();
-  await page.getByText('ENTRAR').first().click({ force: true });
+  await expect(page.getByText('Récord: conquistado', { exact: false })).toHaveCount(0);
+  await page.getByText('CASTILLO', { exact: true }).click({ force: true });
   await expect(page.getByText('DESAFÍOS', { exact: true })).toBeVisible();
   await page.locator('[aria-label="challenge fragile"]').click();
   await page.locator('[aria-label="challenge fierce"]').click();

@@ -16,7 +16,7 @@ import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { CHARACTERS, ICONS } from '@/components/pixel/sprites';
 import { CASTLE_INDEX, SagaMap } from './SagaMap';
 import { BOSSES, currentBossIndex, getProgress, getServerProgress, isCastleUnlocked, isCollectionUnlocked, isEditorUnlocked, rematchLevel, subscribeProgress } from '@/lib/bosses';
 import { getCastle, getServerCastle, subscribeCastle } from '@/lib/castle';
@@ -187,7 +187,7 @@ export const MenuScreen = () => {
             de su color y va separado de lo del juego (reglas, estadísticas, ajustes) */}
         {collection && (
           <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
-            <PixelSprite sprite={SEAL_ICONS.shield} tint={INK.volt} />
+            <PixelSprite sprite={ICONS.book} tint={INK.volt} />
           </PxButton>
         )}
         {editor && (
@@ -211,17 +211,6 @@ export const MenuScreen = () => {
       <motion.div className="absolute z-30 flex flex-col items-stretch gap-[4px]" style={{ left: ctaBox.x, bottom: ctaBox.bottom, width: ctaBox.w }}
         initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: revealing ? 0.9 : 1, opacity: revealing ? 0 : 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 16, delay: revealing ? 0 : 0.5 }}>
-        {/* El Bosque: duelos contra quien salga de entre los árboles (encima de la acción principal) */}
-        {showForest && (
-          <motion.div initial={awaken ? { y: 30, opacity: 0, scale: 0.6 } : false} animate={{ y: 0, opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 14, delay: awaken ? 0.2 : 0 }}>
-            <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full flex-col gap-[1px] overflow-hidden" style={{ height: ctaBox.h }}
-              onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>
-              <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{t.forest_button}</span>
-              <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{t.forest_button_sub}</span>
-            </PxButton>
-          </motion.div>
-        )}
         {/* Qué cambia en la revancha */}
         {canRematch && !revealing && (
           <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>{t[`rematch_hint_${level}` as keyof Translations]}</span>
@@ -232,6 +221,17 @@ export const MenuScreen = () => {
           <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{cta.title}</span>
           {cta.sub && <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>}
         </PxButton>
+        {/* El Bosque: duelos contra quien salga de entre los árboles (debajo de la acción principal, más estrecho: es lo secundario) */}
+        {showForest && (
+          <motion.div className="self-center" style={{ width: '72%' }} initial={awaken ? { y: 30, opacity: 0, scale: 0.6 } : false} animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 14, delay: awaken ? 0.2 : 0 }}>
+            <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full flex-col gap-[1px] overflow-hidden" style={{ height: ctaBox.h }}
+              onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>
+              <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{t.forest_button}</span>
+              <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{t.forest_button_sub}</span>
+            </PxButton>
+          </motion.div>
+        )}
         {hasSave && (
           <PxButton size="md" onClick={() => { playSound('click'); resumeGame(); }}>{t.continue_game}</PxButton>
         )}
