@@ -1,5 +1,5 @@
 import { CSSProperties, memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence, animate, useAnimationControls, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence, animate, useAnimationControls, useMotionValue, usePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
@@ -358,6 +358,8 @@ const dragPoint = (el: HTMLElement | null, e: PointerEvent) => {
 const DRAW_FLIP_S = 0.28;
 
 const LONG_PRESS_MS = 420;
+/** Carta que no se puede jugar: lo que se queda su ficha al tocarla */
+const DENIED_INFO_MS = 1600;
 /** Ratón quieto encima de una carta: la ficha sale algo tarde para no estorbar al agarrarla */
 const HOVER_INFO_MS = 1000;
 
@@ -387,11 +389,36 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
   };
   useEffect(() => () => { if (infoTimer.current) clearTimeout(infoTimer.current); }, []);
 
+  // Al jugarse sale de la mano al instante (la carta que vuela a la mesa toma el relevo).
+  // Se quita a mano: con el exit de AnimatePresence, una carta jugada arrastrándola se
+  // quedaba en el DOM invisible y se comía los clics de las cartas que caían debajo
+  const [isPresent, safeToRemove] = usePresence();
+  useEffect(() => { if (!isPresent) safeToRemove?.(); }, [isPresent, safeToRemove]);
+
+  // No se puede jugar (no es tu turno, o un sello sin carta tuya donde ponerlo): no se
+  // selecciona; tiembla un instante y, si es un sello, enseña su ficha (dice cómo se pone)
+  const [denied, setDenied] = useState(0);
+  const deniedInfo = useRef(false);
+  useEffect(() => {
+    if (!denied) return;
+    const t = setTimeout(() => {
+      setDenied(0);
+      if (deniedInfo.current) { deniedInfo.current = false; handlers.onInfo(null); }
+    }, DENIED_INFO_MS);
+    return () => clearTimeout(t);
+  }, [denied, handlers]);
+
   const handleClick = useCallback(() => {
     // Tras una pulsación larga no seleccionamos: solo se quería leer la ficha
     if (infoShown.current && infoByPress.current) { infoShown.current = false; infoByPress.current = false; return; }
+    if (!canPlay) {
+      playSfx('deselect', 0.6);
+      setDenied(Date.now());
+      if (card.rank === 'SEAL') { deniedInfo.current = true; handlers.onInfo(card.id); }
+      return;
+    }
     handlers.onSelect(card.id);
-  }, [handlers, card.id]);
+  }, [handlers, card.id, card.rank, canPlay]);
   const [entered, setEntered] = useState(false);
   // Inclinación 3D que sigue al puntero
   const rx = useMotionValue(0);
@@ -432,14 +459,18 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
       style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hinted ? 58 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
       // Robar: llega desde el mazo girando y se coloca en el abanico con un rebote
       initial={{ left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
-      animate={{ left: x, y: dragY ?? arcY, rotate, scale: dragging ? 1 : isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1 }}
-      // Al jugarse desaparece al instante: la carta que vuela a la mesa toma el relevo
-      exit={{ opacity: 0, transition: { duration: 0 } }}
-      transition={{ ...SPRING, delay: entered ? 0 : initialDelay }}
+      animate={{ left: x, y: dragY ?? arcY, rotate, scale: dragging ? 1 : isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1,
+        x: denied ? [0, -3, 3, -2, 2, 0] : 0 }}
+      transition={{ ...SPRING, delay: entered ? 0 : initialDelay, x: { duration: 0.3 } }}
       onAnimationComplete={() => setEntered(true)}
       onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS, false); }}
-      // Con ratón, pulsar quita la ficha (vas a jugarla); con el dedo, mantener la enseña
-      onPointerDown={e => { if (e.pointerType !== 'mouse') startInfo(LONG_PRESS_MS, true); else stopInfo(); }}
+      // Con ratón, pulsar quita la ficha (vas a jugarla); con el dedo, mantener la enseña.
+      // Cada pulsación empieza limpia: una pulsación larga que acabó sin clic (el dedo se
+      // movió) no debe comerse el toque siguiente
+      onPointerDown={e => {
+        infoByPress.current = false;
+        if (e.pointerType !== 'mouse') { infoShown.current = false; startInfo(LONG_PRESS_MS, true); } else stopInfo();
+      }}
       onPointerUp={() => { if (infoTimer.current) clearTimeout(infoTimer.current); if (infoShown.current) handlers.onInfo(null); }}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
