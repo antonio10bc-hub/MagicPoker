@@ -171,8 +171,8 @@ const MapProp = ({ prop, at, side, lit, z, mapW }: { prop: StationProp; at: Pt; 
       transition={anim ? { duration: prop.anim === 'smoke' ? 2.6 : 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}>
       {/* Fuegos y ventanas encendidas: un charco de luz cálida en el suelo que respira */}
       {lit && prop.anim === 'flicker' && (
-        <span className="absolute pointer-events-none anim-lamp" style={{ left: -w * 0.15, bottom: -6, width: w * 1.3, height: 12, borderRadius: '50%',
-          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(242,101,42,0.22) 0%, transparent 70%)', animationDelay: `${-(at.x % 7) * 0.4}s` }} />
+        <span className="absolute pointer-events-none anim-lamp" style={{ left: -w * 0.3, bottom: -9, width: w * 1.6, height: 18, borderRadius: '50%',
+          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(242,101,42,0.45) 0%, rgba(242,101,42,0.15) 45%, transparent 72%)', animationDelay: `${-(at.x % 7) * 0.4}s` }} />
       )}
       {/* Lo que aún no conoces: sus sitios a oscuras; el humo y las notas, solo si hay alguien */}
       {(lit || (prop.anim !== 'smoke' && prop.anim !== 'float')) && (
@@ -567,7 +567,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
             : phase === 'emerge' ? { x: [0, -2, 2, -2, 2, -1, 1, -2, 2, 0], y: [0, 1, 0, 1, 0] } : { x: 0, y: 0 }}
           transition={phase === 'emerge' ? { duration: 3.2, ease: 'linear' } : { duration: 0.6 }}>
           {/* El campo: camino de tierra, claros, agua y bosque */}
-          <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} />
+          <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} sway={!lowPower} />
           <MapLife width={rect.w} height={contentH} road={road} keepOut={keepOut} biomes={biomes} flockY={nodes[current].y - 130} />
           {eyes && castleVisible && !revealing && <MapEyes castle={castlePt} width={rect.w} />}
           {/* Los sitios de cada jefe (detrás y delante de él) */}

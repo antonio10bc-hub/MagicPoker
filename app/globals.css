@@ -318,18 +318,27 @@ html, body {
 .anim-banner { animation: banner-wave 2.4s ease-in-out infinite; transform-origin: 0 0; }
 .anim-lamp { animation: lamp-glow 2.8s ease-in-out infinite; }
 /* Sendero encendido: un brillo que lo recorre de abajo arriba (el retraso, por altura) */
-@keyframes trail-glint { 0%, 86%, 100% { opacity: 0.9; transform: scale(1); } 92% { opacity: 1; transform: scale(1.8); } }
+@keyframes trail-glint { 0%, 84%, 100% { opacity: 0.9; transform: scale(1); } 91% { opacity: 1; transform: scale(2.4); } }
 .anim-glint { animation: trail-glint 7s ease-in-out infinite; }
+/* Árbol suelto del mapa: quieto casi todo el rato y, cuando pasa la racha, se mece y vuelve */
+@keyframes tree-sway {
+  0%, 62%, 100% { transform: scaleX(var(--flip, 1)) skewX(0deg); }
+  70% { transform: scaleX(var(--flip, 1)) skewX(-6deg); }
+  78% { transform: scaleX(var(--flip, 1)) skewX(3deg); }
+  86% { transform: scaleX(var(--flip, 1)) skewX(-1.5deg); }
+  93% { transform: scaleX(var(--flip, 1)) skewX(0.5deg); }
+}
+.anim-tree { transform: scaleX(var(--flip, 1)); transform-origin: 50% 100%; animation: tree-sway 9s ease-in-out infinite; }
 .anim-shine { animation: shine-sweep 3.2s ease-in-out infinite; }
 .anim-ember { animation: ember-jitter 0.5s steps(4) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-glint, .anim-shine, .anim-ember,
+  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-glint, .anim-tree, .anim-shine, .anim-ember,
   .anim-sway, .anim-float, .anim-pulse, .anim-pulse-soft, .anim-throb, .anim-heartbeat, .anim-wave, .anim-dot, .anim-ring, .anim-spin { animation: none; }
   .grain { animation: none !important; }
 }
 /* Bajo consumo (lib/quality): fuera los bucles que solo decoran; se quedan los que
    dicen algo (carta jugable, hueco donde soltar, vida al límite, jefe actual) */
 .low-power .anim-wave, .low-power .anim-flicker, .low-power .anim-pulse-soft, .low-power .anim-spin,
-.low-power .anim-lamp, .low-power .anim-glint, .low-power .anim-banner, .low-power .anim-ember, .low-power .anim-shine,
+.low-power .anim-lamp, .low-power .anim-glint, .low-power .anim-tree, .low-power .anim-banner, .low-power .anim-ember, .low-power .anim-shine,
 .low-power .anim-sway, .low-power .anim-float, .low-power .anim-bob { animation: none; }
