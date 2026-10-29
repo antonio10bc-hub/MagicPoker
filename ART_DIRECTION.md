@@ -788,14 +788,17 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   cuadrada igual (masa carmesí, la i en silueta) abre el resumen de la última subida. Entre el Soberano y
   el Castillo hay más camino que entre pueblos (los dos son grandes y llevan texto). El
   Soberano (con resplandor de oro) y el Castillo **no se ven** hasta alcanzarlos: lo
-  desconocido queda bajo un **banco de nubes opaco** (`MapClouds.tsx`): cúmulos sueltos (no
-  filas, que parecían olas) de tamaños distintos y apilados a suertes, con el mismo
-  tramado que el terreno: los de atrás (arriba) más pequeños y oscuros, los de delante
-  con un filo de luz abajo; una fila de cúmulos grandes hace el borde. Tapa del todo
-  hasta el Soberano; al descubrirlo se recoge hasta encima de él con un pequeño rebote
-  y del borde se desprenden jirones que se van flotando y se deshacen. Con el Castillo
-  el banco se parte por el medio con un corte irregular y cada mitad se va a su lado
-  subiendo, girando un poco y apagándose, entre muchos jirones (2,6 s al alzarse). Se mece de lado muy despacio (quieta en bajo consumo).
+  desconocido queda bajo un **banco de nubes opaco** (`MapClouds.tsx`): cúmulos (una bola
+  grande con hombros a los lados y cabezas encima) repartidos a suertes y solapados, sin
+  huecos (un halo de tono medio bajo cada uno rellena lo que queda entre vecinos), con el
+  mismo tramado que el terreno: los del fondo, arriba, más pequeños y oscuros; los de
+  delante con un filo de luz abajo; una fila de cúmulos grandes hace el borde. Tapa del
+  todo hasta el Soberano; al descubrirlo se recoge hasta encima de él con un pequeño
+  rebote y del borde se desprenden jirones (cúmulos pequeños en píxel) que se van
+  flotando y se deshacen. Con el Castillo el banco se abre por el medio siguiendo el
+  contorno de las nubes (cada mitad lleva sus cúmulos, no hay corte recto): un tirón
+  corto y cada mitad se va a su lado subiendo, girando un poco y apagándose, entre
+  muchos jirones (2,6 s al alzarse). Se mece de lado muy despacio (quieta en bajo consumo).
   - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
     principal abajo, con degradados a negro para que se fundan. En horizontal, igual:
     el mapa llena la pantalla, el logo pequeño arriba a la izquierda, los iconos

@@ -5,66 +5,92 @@ import { useLowPower } from '@/lib/quality';
 
 // --- NUBES SOBRE LO DESCONOCIDO (mapa de jefes) ---
 // Un banco de nubes opaco tapa lo que aún no conoces (el Soberano y el Castillo). Son
-// cúmulos sueltos (no filas: en filas parecían olas), de tamaños distintos y colocados a
-// suertes, unos sobre otros: los de atrás más oscuros, los de delante con un filo de luz
-// abajo (la del camino les da por debajo). Los más grandes, abajo, hacen el borde.
-// Se pintan una sola vez en un lienzo con el mismo tramado que el terreno.
+// cúmulos (una bola grande con hombros y cabezas encima) repartidos a suertes, unos
+// delante de otros: los del fondo más pequeños y oscuros, los de delante con un filo de
+// luz abajo (la del camino les da por debajo). Una fila de cúmulos grandes hace el borde.
+// Se pintan una sola vez, con el mismo tramado que el terreno, en dos lienzos: cada uno
+// con la mitad de los cúmulos (los de la izquierda y los de la derecha, sin corte recto).
 //  - Al descubrir algo, el banco sube con un pequeño rebote y del borde se desprenden
-//    jirones que se van flotando y se deshacen.
-//  - Al irse del todo (el Castillo se alza), el banco se parte por el medio con un corte
-//    irregular: cada mitad se va a su lado subiendo y apagándose, entre muchos jirones.
+//    jirones (cúmulos pequeños) que se van flotando y se deshacen.
+//  - Al irse del todo (el Castillo se alza), el banco se abre por el medio siguiendo el
+//    contorno de las nubes: un tirón corto y cada mitad se va a su lado subiendo y
+//    apagándose, entre muchos jirones.
 
 /** Lo que cuelgan los cúmulos de abajo por debajo de la línea de las nubes */
 const EDGE = 28;
 /** Margen a los lados (para mecerse y partirse sin que se vea el corte del lienzo) */
 const SIDE = 12;
 
-interface Puff { x: number; y: number; r: number; depth: number }
+interface Puff { x: number; y: number; r: number }
+/** Un cúmulo: una bola grande con dos hombros a los lados y cabezas encima */
+interface Cloud { x: number; y: number; R: number; depth: number; puffs: Puff[] }
 
-/** Cúmulos: los del borde, grandes y seguidos; por encima, sueltos y cada vez más al fondo */
-const puffsFor = (W: number, bottom: number): Puff[] => {
-  const out: Puff[] = [];
-  // El borde: una fila apretada de cúmulos grandes (unos más bajos que otros)
+const cloudAt = (x: number, y: number, R: number, depth: number, k: number): Cloud => {
+  const j = (n: number) => hash(k, n, 111) - 0.5;
+  const puffs: Puff[] = [
+    { x, y, r: R },
+    { x: x - R * (0.85 + j(1) * 0.3), y: y + R * 0.25, r: R * (0.62 + j(2) * 0.2) },
+    { x: x + R * (0.85 + j(3) * 0.3), y: y + R * 0.25, r: R * (0.62 + j(4) * 0.2) },
+    { x: x - R * (0.35 + j(5) * 0.2), y: y - R * (0.45 + j(6) * 0.2), r: R * (0.55 + j(7) * 0.2) },
+    { x: x + R * (0.3 + j(8) * 0.2), y: y - R * (0.55 + j(9) * 0.2), r: R * (0.5 + j(10) * 0.2) },
+  ];
+  return { x, y, R, depth, puffs };
+};
+
+/** Cúmulos a suertes por toda la masa (unos tapan a otros), y una fila de grandes en el borde */
+const cloudsFor = (W: number, bottom: number): Cloud[] => {
+  const out: Cloud[] = [];
+  // La masa: rejilla con mucho azar; arriba, más pequeños y más al fondo
+  const cell = 46;
+  let k = 0;
+  for (let gy = 0; gy * cell * 0.6 < bottom + 20; gy++) {
+    for (let gx = -1; gx * cell < W + cell; gx++, k++) {
+      const y = bottom - 30 - gy * cell * 0.6 + (hash(gx, gy, 95) - 0.5) * cell * 0.5;
+      const up = Math.max(0, Math.min(1, 1 - y / Math.max(1, bottom)));
+      const R = (14 + hash(gx, gy, 97) * 16) * (1 - up * 0.3);
+      out.push(cloudAt(gx * cell + (gy % 2) * cell * 0.5 + (hash(gx, gy, 99) - 0.5) * cell * 0.6, y, R, 0.85 - up * 0.6, k));
+    }
+  }
+  // El borde: cúmulos grandes y seguidos, delante de todo
   let x = -10;
-  for (let i = 0; x < W + 20; i++) {
-    const r = 20 + hash(i, 1, 81) * 16;
-    out.push({ x, y: bottom - r * 0.35 + hash(i, 2, 83) * 10, r, depth: 1 });
-    x += r * (1.05 + hash(i, 3, 85) * 0.5);
+  for (let i = 0; x < W + 30; i++, k++) {
+    const R = 20 + hash(i, 1, 81) * 12;
+    out.push(cloudAt(x, bottom - R * 0.55 + hash(i, 2, 83) * 8, R, 1, k));
+    x += R * (1.25 + hash(i, 3, 85) * 0.4);
   }
-  // Arriba: cúmulos sueltos por toda la masa, más pequeños y oscuros cuanto más arriba
-  const n = Math.round((W * bottom) / 900);
-  for (let i = 0; i < n; i++) {
-    const y = bottom - 30 - hash(i, 5, 87) * (bottom - 20);
-    const up = 1 - y / Math.max(1, bottom);
-    out.push({ x: hash(i, 7, 89) * W, y, r: 10 + hash(i, 9, 91) * 22 * (1 - up * 0.4), depth: 0.85 - up * 0.45 });
-  }
-  // Se pintan de atrás adelante: los de arriba (fondo) primero
+  // Se pintan de atrás adelante: los del fondo primero y, a igual fondo, los de arriba
   return out.sort((a, b) => a.depth - b.depth || a.y - b.y);
 };
 
-/** Pinta el banco en un lienzo */
-const paintClouds = (ctx: CanvasRenderingContext2D, W: number, H: number, bottom: number) => {
+/** Cada mitad del banco: los cúmulos de su lado (la raya del medio, a suertes) */
+const halfOf = (clouds: Cloud[], W: number, side: 'left' | 'right') =>
+  clouds.filter((c, k) => (c.x + (hash(k, 7, 113) - 0.5) * 44 < W / 2) === (side === 'left'));
+
+/** Pinta unos cúmulos en un lienzo. Debajo de cada uno, un halo de tono medio rellena
+ * los huecos con los vecinos (así no asoma nada entre nubes ni hay bordes rectos) */
+const paintClouds = (ctx: CanvasRenderingContext2D, W: number, H: number, clouds: Cloud[], halo = 7) => {
   const L = new Float32Array(W * H).fill(-1);
-  // Fondo de la masa (entre cúmulos): muy oscuro, con algún remolino
-  for (let y = 0; y < Math.min(H, bottom); y++) {
-    for (let x = 0; x < W; x++) L[y * W + x] = 0.06 + (y / Math.max(1, bottom)) * 0.08 + smooth(x, y, 24, 41) * 0.06;
-  }
-  puffsFor(W, bottom).forEach((p, idx) => {
-    const r2 = p.r * p.r;
-    for (let y = Math.max(0, Math.floor(p.y - p.r)); y < Math.min(H, Math.ceil(p.y + p.r)); y++) {
-      for (let x = Math.max(0, Math.floor(p.x - p.r)); x < Math.min(W, Math.ceil(p.x + p.r)); x++) {
-        const dx = x - p.x, dy = y - p.y;
-        const q = dx * dx + dy * dy;
-        if (q > r2) continue;
-        const dist = Math.sqrt(q);
-        // Cuerpo: más claro abajo (le da la luz de abajo), más oscuro arriba
-        let l = 0.1 + p.depth * 0.14 + (dy / p.r) * 0.05 * p.depth + smooth(x + idx * 7, y, 9, 43) * 0.05;
-        // Filo de luz en la mitad de abajo del contorno
-        const rim = p.r - dist;
-        if (dy > -p.r * 0.2 && rim < 4) l += ((4 - rim) / 4) * (0.12 + p.depth * 0.3);
-        // Sombra fina en la mitad de arriba del contorno (separa unos de otros)
-        else if (dy < 0 && rim < 1.5) l -= 0.08;
-        L[y * W + x] = l;
+  clouds.forEach((c, idx) => {
+    const top = c.y - c.R * 1.3 - halo, low = c.y + c.R + halo;
+    for (let y = Math.max(0, Math.floor(top)); y < Math.min(H, Math.ceil(low)); y++) {
+      for (let x = Math.max(0, Math.floor(c.x - c.R * 2 - halo)); x < Math.min(W, Math.ceil(c.x + c.R * 2 + halo)); x++) {
+        // Hondura dentro del cúmulo (lo que falta para el borde de la bola más cercana a salir)
+        let inside = -halo - 1;
+        for (const p of c.puffs) inside = Math.max(inside, p.r - Math.hypot(x - p.x, y - p.y));
+        const i = y * W + x;
+        if (inside <= 0) {
+          // Halo: solo donde no hay ya nada
+          if (inside > -halo && L[i] < 0) L[i] = 0.26 + smooth(x, y, 24, 41) * 0.06;
+          continue;
+        }
+        // Luz de abajo (el camino): más claro abajo, más oscuro arriba; grumos suaves
+        const ny = (y - c.y) / (c.R * 1.2);
+        let l = 0.3 + c.depth * 0.2 + ny * 0.14 * (0.5 + c.depth) + smooth(x + idx * 13, y, 6, 43) * 0.08;
+        // Filo de luz por abajo, más ancho en los de delante; arriba, una sombra fina que lo despega
+        const rw = 2 + c.depth * 2.5;
+        if (ny > -0.15 && inside < rw) l += ((rw - inside) / rw) * (0.1 + c.depth * 0.25);
+        else if (ny < -0.3 && inside < 2) l -= 0.12;
+        L[i] = l;
       }
     }
   });
@@ -72,35 +98,35 @@ const paintClouds = (ctx: CanvasRenderingContext2D, W: number, H: number, bottom
   for (let i = 0; i < W * H; i++) {
     if (L[i] < 0) continue;
     const x = i % W, y = (i / W) | 0;
-    const v = Math.max(0, Math.min(3, Math.floor(L[i] * 4 + (hash(x, y, 47) - 0.5) * 0.6)));
+    const v = Math.max(0, Math.min(3, Math.floor(L[i] * 4 + (hash(x, y, 47) - 0.5) * 0.7)));
     const c = RAMP[v];
     img.data[i * 4] = c[0]; img.data[i * 4 + 1] = c[1]; img.data[i * 4 + 2] = c[2]; img.data[i * 4 + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
 };
 
-/** Corte irregular de arriba abajo (para partir el banco en dos) */
-const zigzag = (W: number, H: number, side: 'left' | 'right') => {
-  const cx = W / 2;
-  const pts: string[] = [];
-  const steps = 14;
-  for (let i = 0; i <= steps; i++) {
-    const y = (H * i) / steps;
-    pts.push(`${cx + (hash(i, 11, 93) - 0.5) * 36}px ${y}px`);
-  }
-  return side === 'left'
-    ? `polygon(0 0, ${pts.join(', ')}, 0 ${H}px)`
-    : `polygon(${W}px 0, ${pts.join(', ')}, ${W}px ${H}px)`;
-};
+/** Jirones: tres cúmulos pequeños pintados igual que el banco (imágenes que se reutilizan) */
+const WISP_R = [5, 7, 9];
+const paintWisps = () => WISP_R.map((R, k) => {
+  const w = Math.ceil(R * 4.4), h = Math.ceil(R * 2.6);
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  paintClouds(cv.getContext('2d')!, w, h, [cloudAt(w / 2, h - R - 1, R, 0.9, 300 + k)], 0);
+  return { src: cv.toDataURL(), w, h };
+});
+
+let wispCache: ReturnType<typeof paintWisps> | null = null;
+const wispSprites = () => (wispCache ??= paintWisps());
 
 /** Jirón: un cúmulo pequeño que se desprende del borde, se va flotando y se deshace */
-const Wisp = ({ x, y, r, dx, dy, delay, seconds }: { x: number; y: number; r: number; dx: number; dy: number; delay: number; seconds: number }) => (
-  <motion.span className="absolute pointer-events-none rounded-full"
-    style={{ left: x - r, top: y - r, width: r * 2, height: r * 2,
-      background: 'radial-gradient(circle at 50% 62%, #5E7A76 0 34%, #1E2A28 35% 68%, transparent 69%)' }}
-    initial={{ x: 0, y: 0, scale: 0.7, opacity: 0 }}
-    animate={{ x: dx, y: dy, scale: [0.7, 1.15, 1.5], opacity: [0, 1, 0] }}
-    transition={{ duration: seconds, delay, ease: 'easeOut', times: [0, 0.25, 1] }} />
+const Wisp = ({ x, y, dx, dy, delay, seconds, sprite }: {
+  x: number; y: number; dx: number; dy: number; delay: number; seconds: number; sprite: { src: string; w: number; h: number };
+}) => (
+  <motion.img src={sprite.src} alt="" className="absolute pointer-events-none"
+    style={{ left: x - sprite.w / 2, top: y - sprite.h / 2, width: sprite.w, height: sprite.h, imageRendering: 'pixelated' }}
+    initial={{ x: 0, y: 0, scale: 0.6, opacity: 0 }}
+    animate={{ x: dx, y: dy, scale: [0.6, 1.1, 1.35], opacity: [0, 1, 0] }}
+    transition={{ duration: seconds, delay, ease: 'easeOut', times: [0, 0.2, 1] }} />
 );
 
 export const MapClouds = memo(({ width, bottom, top, seconds = 0.9 }: {
@@ -120,11 +146,12 @@ export const MapClouds = memo(({ width, bottom, top, seconds = 0.9 }: {
   const gone = top < 0;
 
   useEffect(() => {
+    const clouds = cloudsFor(W, bottom);
     const a = left.current?.getContext('2d');
     const b = right.current?.getContext('2d');
     if (!a || !b) return;
-    paintClouds(a, W, H, bottom);
-    b.drawImage(left.current!, 0, 0);
+    paintClouds(a, W, H, halfOf(clouds, W, 'left'));
+    paintClouds(b, W, H, halfOf(clouds, W, 'right'));
   }, [W, H, bottom]);
 
   // Al recogerse, jirones donde estaba el borde (se lanzan cada vez que sube)
@@ -142,34 +169,43 @@ export const MapClouds = memo(({ width, bottom, top, seconds = 0.9 }: {
   }, [top, seconds]);
   const wisps = useMemo(() => {
     if (!burst) return [];
-    const n = burst.full ? 26 : 14;
+    const sprites = wispSprites();
+    const n = (burst.full ? 30 : 14) / (lowPower ? 2 : 1);
     return Array.from({ length: n }, (_, i) => {
       const x = SIDE + (width * (i + 0.5)) / n + (hash(i, 13, 95) - 0.5) * 18;
       const out = x < W / 2 ? -1 : 1;
+      // Al irse del todo salen de toda la masa (más hacia el medio, por donde se abre)
+      const y = burst.full ? hash(i, 15, 97) * burst.at : burst.at;
       return {
-        x, y: (burst.full ? hash(i, 15, 97) * burst.at : burst.at) + EDGE * 0.3, r: 7 + hash(i, 17, 99) * 9,
-        dx: out * (20 + hash(i, 19, 101) * 50), dy: -(16 + hash(i, 21, 103) * (burst.full ? 80 : 40)),
-        delay: hash(i, 23, 105) * 0.5,
+        x, y: y + EDGE * 0.3, sprite: sprites[Math.floor(hash(i, 17, 99) * sprites.length)],
+        dx: out * (burst.full ? 40 + hash(i, 19, 101) * 90 : 14 + hash(i, 19, 101) * 40),
+        dy: -(16 + hash(i, 21, 103) * (burst.full ? 90 : 36)),
+        delay: (burst.full ? 0.15 : 0) + hash(i, 23, 105) * 0.5,
       };
     });
-  }, [burst, width, W]);
+  }, [burst, width, W, lowPower]);
 
-  const halfMove = (side: 'left' | 'right') => (gone
-    ? { x: (side === 'left' ? -1 : 1) * W * 0.7, y: top - bottom - 40, opacity: 0, rotate: side === 'left' ? -4 : 4 }
-    : { x: 0, y: top - bottom, opacity: 1, rotate: 0 });
-  // Subir con un pequeño rebote; al irse, con calma
-  const lift = gone ? { duration: seconds, ease: 'easeIn' as const } : { type: 'spring' as const, stiffness: 60, damping: 11, mass: Math.max(1, seconds) };
+  // Irse: un tirón corto (se abre la raya) y cada mitad a su lado, subiendo y apagándose
+  const from = (burst?.full ? burst.at : 0) - bottom;
+  const halfMove = (side: 'left' | 'right') => {
+    const dir = side === 'left' ? -1 : 1;
+    return gone
+      ? { x: [0, dir * 7, dir * W * 0.8], y: [from, from + 3, from - bottom * 0.35], rotate: [0, 0, dir * 6], opacity: [1, 1, 0] }
+      : { x: 0, y: top - bottom, rotate: 0, opacity: 1 };
+  };
+  // Subir con un pequeño rebote; al irse, con calma (la derecha un pelo después)
+  const lift = (side: 'left' | 'right') => gone
+    ? { duration: seconds, ease: 'easeIn' as const, times: [0, 0.16, 1], delay: side === 'right' ? 0.06 : 0 }
+    : { type: 'spring' as const, stiffness: 60, damping: 11, mass: Math.max(1, seconds) };
 
   return (
     <div className="absolute pointer-events-none" style={{ left: -SIDE, top: 0, width: W, height: H }}>
       <motion.div className="absolute inset-0" animate={lowPower || gone ? undefined : { x: [-4, 4] }}
         transition={{ duration: 9, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}>
         {(['left', 'right'] as const).map(side => (
-          <motion.div key={side} className="absolute inset-0" style={{ clipPath: zigzag(W, H, side), transformOrigin: side === 'left' ? '0% 100%' : '100% 100%' }}
-            initial={false} animate={halfMove(side)} transition={lift}>
-            <canvas ref={side === 'left' ? left : right} width={W} height={H} className="absolute left-0 top-0"
-              style={{ width: W, height: H, imageRendering: 'pixelated' }} />
-          </motion.div>
+          <motion.canvas key={side} ref={side === 'left' ? left : right} width={W} height={H} className="absolute left-0 top-0"
+            style={{ width: W, height: H, imageRendering: 'pixelated', transformOrigin: side === 'left' ? '0% 100%' : '100% 100%' }}
+            initial={false} animate={halfMove(side)} transition={lift(side)} />
         ))}
       </motion.div>
       <AnimatePresence>
