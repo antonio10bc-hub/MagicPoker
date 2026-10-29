@@ -73,15 +73,23 @@ test('editor de mazo (con el primer sello)', async ({ page }, info) => {
   noErrors();
 });
 
-test('catálogo de cartas desde ajustes', async ({ page }, info) => {
+test('el Grimorio: cartas, sellos, Castillo y dorsos en un solo catálogo', async ({ page }, info) => {
   const noErrors = watchErrors(page);
-  await openMenu(page, { defeated: 2 });
-  await page.locator('[aria-label=ajustes]').click({ force: true });
-  await page.getByText('Catálogo de cartas').click({ force: true });
-  await page.waitForTimeout(500);
-  await expect(page.getByText('Bufón')).toBeAttached();
-  await expect(page.getByText('Sello de espejo')).toBeAttached();
-  await shot(page, info, 'catalogo');
+  await openMenu(page, { defeated: 12 }, { magic_poker_map_seen: '12' });
+  await page.locator('[aria-label="colección"]').click({ force: true });
+  await expect(page.getByText('GRIMORIO')).toBeVisible();
+  await expect(page.getByText('Joker', { exact: true }).first()).toBeAttached();
+  await shot(page, info, 'grimorio-1-cartas');
+  await page.locator('[aria-label="tab Sellos"]').click({ force: true });
+  await expect(page.getByText('Sello de espejo').first()).toBeAttached();
+  await shot(page, info, 'grimorio-2-sellos');
+  await page.locator('[aria-label="tab Castillo"]').click({ force: true });
+  await expect(page.getByText('Bufón').first()).toBeAttached();
+  await expect(page.getByText('Fénix').first()).toBeAttached();
+  await shot(page, info, 'grimorio-3-castillo');
+  await page.locator('[aria-label="tab Dorsos"]').click({ force: true });
+  await expect(page.locator('[aria-label="back default"], [aria-label^="back "]').first()).toBeAttached();
+  await shot(page, info, 'grimorio-4-dorsos');
   noErrors();
 });
 

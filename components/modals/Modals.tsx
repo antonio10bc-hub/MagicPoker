@@ -15,10 +15,10 @@ import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { INK } from '@/theme/tokens';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
-import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
-import { BOSSES, resetProgress, unlockedSeals } from '@/lib/bosses';
+import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
+import { resetProgress } from '@/lib/bosses';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
-import { BackGallery, BoonsModal, ChallengesModal, RunSummaryModal, DebugModal, BestiaryModal, CardCatalogModal, DeckEditorModal, PauseModal } from './ExtraModals';
+import { BoonsModal, ChallengesModal, RunSummaryModal, DebugModal, BestiaryModal, GrimoireModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
@@ -35,9 +35,8 @@ export const Modals = () => {
       {modal === 'stats' && <StatsModal key="stats" />}
       {modal === 'rules' && <RulesModal key="rules" />}
       {modal === 'settings' && <SettingsModal key="settings" />}
-      {modal === 'collection' && <CollectionModal key="collection" />}
+      {modal === 'collection' && <GrimoireModal key="collection" />}
       {modal === 'deck' && <DeckEditorModal key="deck" />}
-      {modal === 'cards' && <CardCatalogModal key="cards" />}
       {modal === 'pause' && <PauseModal key="pause" />}
       {modal === 'boons' && <BoonsModal key="boons" />}
       {modal === 'challenges' && <ChallengesModal key="challenges" />}
@@ -161,45 +160,6 @@ const StatsModal = () => {
   );
 };
 
-// --- COLECCIÓN DE SELLOS ---
-const CollectionModal = () => {
-  const t = useTranslations();
-  const [seals] = useState(() => unlockedSeals());
-  const [tab, setTab] = useState<'seals' | 'backs'>('seals');
-  return (
-    <Dialog title={t.collection_title} width={250}>
-      {/* Pestañas: sellos y dorsos */}
-      <Tabs className="px-[6px] pt-[6px]" value={tab} options={[['seals', t.tab_seals], ['backs', t.tab_backs]]} onChange={setTab} />
-      {tab === 'backs' ? <BackGallery /> : (
-      <DialogBody className="t-micro gap-[4px]">
-        {seals.length === 0 && <p className="t-note">{t.collection_empty}</p>}
-        {BOSSES.filter(b => b.seal).map(boss => {
-          const seal = boss.seal!;
-          const owned = seals.includes(seal);
-          return (
-            <div key={seal} className="flex gap-[5px] items-center px-inset px-[5px] py-[4px]"
-              style={{ boxShadow: owned ? 'inset 0 0 0 1px rgba(125,255,43,0.35)' : undefined }}>
-              <div className={owned ? 'shrink-0 flex items-center justify-center rounded-full bloom-volt' : 'shrink-0 flex items-center justify-center rounded-full'}
-                style={{ width: 16, height: 16, background: owned ? 'var(--ink-volt)' : 'var(--ink-slate)' }}>
-                <PixelSprite sprite={SEAL_ICONS[seal]} tint={owned ? INK.black : INK.teal} />
-              </div>
-              <div className="flex flex-col gap-[1px] min-w-0">
-                <span className={owned ? 'glow-volt' : undefined} style={{ color: owned ? 'var(--ink-volt)' : 'var(--ink-teal)', fontSize: 9, lineHeight: '10px' }}>
-                  {owned ? t[`seal_${seal}` as keyof Translations] : '???'}
-                </span>
-                <span style={{ color: owned ? 'var(--ink-cream)' : 'var(--ink-teal)' }}>
-                  {owned ? t[`seal_${seal}_desc` as keyof Translations] : t.collection_locked.replace('{n}', String(BOSSES.indexOf(boss) + 1))}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </DialogBody>
-      )}
-    </Dialog>
-  );
-};
-
 // --- AJUSTES ---
 const Choice = <T extends string | boolean | number>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) => (
   <>
@@ -280,7 +240,6 @@ const SettingsModal = () => {
           <p className="t-note">{t.quality_hint}</p>
         </Section>
         <Section title={t.sec_more} className="flex flex-col gap-[4px]">
-          <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().openModal('cards'); }}>{t.cards_button}</PxButton>
           <PxButton size="md" onClick={() => {
             playSound('click');
             useUiStore.getState().closeModal();

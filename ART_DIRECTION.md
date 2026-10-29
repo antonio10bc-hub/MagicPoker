@@ -433,9 +433,16 @@ se mueve rápido y una vibración leve a las masas naranjas.
   victorias contra él y te lo pones en la colección (pestaña Dorsos). El del jefe
   secreto es especial: oro con rayos, un aura crema grande, la silueta más grande en
   el centro exacto y una estrella arriba y otra abajo.
-- **Colección:** ventana más estrecha (250 px) y todo en letra pequeña: sellos con
-  icono de 16 px; dorsos en rejilla de 5 a escala reducida, sin nombre (el puesto
-  lleva contorno crema; los que aún no son tuyos, 5 puntitos con las victorias).
+- **El Grimorio** (catálogo de cartas; botón verde de la colección en el menú y en el
+  Bosque): todo lo que puede salir en una mesa, en un solo libro. Ventana de 260 px,
+  letra pequeña y cuatro pestañas con icono (no caben con texto en el móvil; el
+  nombre queda de etiqueta): Cartas (Rey), Sellos (escudo), Castillo (Torre) y Dorsos
+  (mazo). Cada entrada enseña la carta de verdad a media escala, con su nombre y lo
+  que hace. Sellos: los tuyos en verde y los que faltan en sombra con el jefe que los
+  da. Castillo: sus 6 cartas, el comodín y las 3 legendarias con su rareza (común,
+  rara, legendaria, con el marco de su color), ocultas como "???" hasta abrir el
+  Castillo. Dorsos: rejilla de 5 a escala reducida, sin nombre (el puesto lleva
+  contorno crema; los que aún no son tuyos, 5 puntitos con las victorias).
 - **Música y sonido:** cada jefe tiene su variación del tema de partida (tono, tempo,
   timbre y trémolo); en el Castillo, más grave, más rápida y siempre tensa. Cada sello
   suena a lo suyo al ponerlo y al actuar (cristal el espejo, campana que se repite el

@@ -4,12 +4,12 @@ import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
-import { isBoardEmpty, RANKS } from '@/lib/game-utils';
-import { ALL_SEALS, BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
+import { createCard, createSealCard, createWildSealCard, isBoardEmpty, LEGENDARY_RANKS, RANKS } from '@/lib/game-utils';
+import { BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
-import { CardBack } from '@/components/game/Card';
+import { Card, CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
-import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, debugUnlockCastleBacks, ensureRun, getCastle } from '@/lib/castle';
+import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, debugUnlockCastleBacks, ensureRun, getCastle, Rarity } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
@@ -24,12 +24,12 @@ import {
 import { updateSettings } from '@/lib/settings';
 import { lockAll, unlockAll } from '@/lib/debug';
 import { useSettings } from '@/hooks/useSettings';
-import { Rank, SealId } from '@/types';
+import { Card as CardType, Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
 import { useStage } from '@/components/pixel/Stage';
-import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { CHARACTERS, HEART, HEART_LOST, SEAL_ICONS } from '@/components/pixel/sprites';
-import { INK } from '@/theme/tokens';
+import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
+import { CHARACTERS, HEART, HEART_LOST, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { CARD_SIZE, INK } from '@/theme/tokens';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 
 const sealName = (t: Translations, s: SealId) => t[`seal_${s}` as keyof Translations];
@@ -176,14 +176,18 @@ export const DeckEditorModal = () => {
   );
 };
 
-// --- CATÁLOGO DE CARTAS ---
-// Lista completa: las del juego (cartas y sellos) y las ideas aún sin hacer, para
-// valorar cuáles meter en el futuro.
-const IDEAS = ['jester', 'tower', 'wild_seal', 'bomb', 'spy', 'knight', 'priestess', 'dragon', 'hydra', 'phoenix'] as const;
-const IDEA_RANK: Partial<Record<typeof IDEAS[number], Rank>> = {
-  jester: 'JESTER', tower: 'TOWER', bomb: 'BOMB', spy: 'SPY', knight: 'KNIGHT', priestess: 'PRIESTESS',
-  dragon: 'DRAGON', hydra: 'HYDRA', phoenix: 'PHOENIX',
+// --- EL GRIMORIO (catálogo de cartas) ---
+// Todo lo que puede salir en una mesa, en un solo libro: las cartas de siempre, los
+// sellos (los que tienes y quién te da los que faltan), las cartas del Castillo con su
+// rareza (ocultas hasta abrirlo) y los dorsos. Cada entrada enseña la carta de verdad.
+export type GrimoireTab = 'cards' | 'seals' | 'castle' | 'backs';
+let nextTab: GrimoireTab = 'cards';
+/** Abre el Grimorio por una pestaña */
+export const openGrimoire = (tab: GrimoireTab = 'cards') => {
+  nextTab = tab;
+  useUiStore.getState().openModal('collection');
 };
+
 const BASE: { rank: Rank; text: keyof Translations }[] = [
   { rank: 'J', text: 'special_jack' },
   { rank: 'Q', text: 'special_queen' },
@@ -191,54 +195,102 @@ const BASE: { rank: Rank; text: keyof Translations }[] = [
   { rank: 'A', text: 'special_ace' },
   { rank: 'JOKER', text: 'special_joker' },
 ];
+/** Cartas del Castillo, de común a legendaria (el comodín es raro) */
+const CASTLE_ENTRIES: { id: string; card: () => CardType; rarity: Rarity }[] = [
+  ...(['JESTER', 'TOWER', 'BOMB', 'SPY'] as Rank[]).map(rank => ({ id: rank.toLowerCase(), card: () => createCard('player', rank), rarity: 'common' as Rarity })),
+  ...(['KNIGHT', 'PRIESTESS'] as Rank[]).map(rank => ({ id: rank.toLowerCase(), card: () => createCard('player', rank), rarity: 'rare' as Rarity })),
+  { id: 'wild_seal', card: () => createWildSealCard('player'), rarity: 'rare' },
+  ...LEGENDARY_RANKS.map(rank => ({ id: rank.toLowerCase(), card: () => createCard('player', rank), rarity: 'legendary' as Rarity })),
+];
 
-/** Etiqueta: en el juego (naranja) o solo en el Castillo (rojo eléctrico) */
-const Tag = ({ idea }: { idea?: boolean }) => {
-  const t = useTranslations();
-  return (
-    <span className="shrink-0 px-[3px] rounded-[2px] font-display" style={{
-      fontSize: 8, lineHeight: '10px', paddingTop: 1,
-      background: idea ? 'var(--ink-crimson)' : 'var(--ink-orange)', color: 'var(--ink-black)',
-    }}>{idea ? t.cards_castle : t.cards_in_game}</span>
-  );
-};
-
-const Entry = ({ icon, name, desc, idea }: { icon: ReactNode; name: string; desc: string; idea?: boolean }) => (
-  <div className="flex gap-[5px] items-start px-inset p-[4px]">
-    <div className="shrink-0 w-[20px] flex justify-center">{icon}</div>
-    <div className="flex flex-col gap-[2px] min-w-0 flex-1">
-      <div className="flex items-center justify-between gap-[4px]">
-        <span style={{ color: idea ? 'var(--ink-cream)' : 'var(--ink-orange)' }}>{name}</span>
-        <Tag idea={idea} />
-      </div>
-      <span style={{ color: 'var(--ink-mint)' }}>{desc}</span>
+/** La carta de verdad, a media escala (o su dorso, si aún no la conoces) */
+const MiniFace = ({ card }: { card: CardType | null }) => (
+  <div className="relative shrink-0" style={{ width: CARD_SIZE.width / 2, height: CARD_SIZE.height / 2 }}>
+    <div className="absolute left-0 top-0" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, transform: 'scale(0.5)', transformOrigin: '0 0' }}>
+      {card ? <Card card={{ ...card, isFaceUp: true }} /> : <div className="relative" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, opacity: 0.4 }}><CardBack owner="player" /></div>}
     </div>
   </div>
 );
 
-export const CardCatalogModal = () => {
+const Entry = ({ card, name, desc, tag, color = 'var(--ink-cream)', glow }: {
+  card: CardType | null; name: string; desc: string; tag?: { label: string; color: string }; color?: string; glow?: string;
+}) => (
+  <div className="flex gap-[6px] items-center px-inset p-[4px]" style={glow ? { boxShadow: glow } : undefined}>
+    <MiniFace card={card} />
+    <div className="flex flex-col gap-[2px] min-w-0 flex-1">
+      <div className="flex items-center justify-between gap-[4px]">
+        <span style={{ color }}>{name}</span>
+        {tag && <span className="shrink-0 font-display" style={{ fontSize: 8, lineHeight: '10px', color: tag.color }}>{tag.label}</span>}
+      </div>
+      <span style={{ color: card ? 'var(--ink-mint)' : 'var(--ink-teal)' }}>{desc}</span>
+    </div>
+  </div>
+);
+
+const GrimoireCards = () => {
   const t = useTranslations();
   return (
-    <Dialog title={t.cards_title}>
-      <DialogBody className="t-list">
-        <p className="t-note">{t.cards_intro}</p>
-        <Section title={t.cards_section_base} className="flex flex-col gap-[3px]">
-          <Entry icon={<span className="font-display" style={{ fontSize: 14 }}>7</span>} name={t.card_numbers} desc={t.card_number_desc} />
-          {BASE.map(({ rank, text }) => (
-            <Entry key={rank} icon={<PixelSprite sprite={CHARACTERS[rank]!} tint={INK.cream} />} name={rank === 'JOKER' ? 'Joker' : rank} desc={t[text]} />
-          ))}
-        </Section>
-        <Section title={t.cards_section_seals} className="flex flex-col gap-[3px]">
-          {ALL_SEALS.map(seal => <Entry key={seal} icon={<SealDot seal={seal} />} name={sealName(t, seal)} desc={sealDesc(t, seal)} />)}
-        </Section>
-        <Section title={t.cards_section_ideas} className="flex flex-col gap-[3px]">
-          {IDEAS.map(id => (
-            <Entry key={id} idea icon={IDEA_RANK[id] ? <PixelSprite sprite={CHARACTERS[IDEA_RANK[id]!]!} tint={INK.crimson} className="bloom-crimson-shape" />
-              : <span className="font-display" style={{ fontSize: 14, color: 'var(--ink-volt)' }}>?</span>}
-              name={t[`idea_${id}` as keyof Translations]} desc={t[`idea_${id}_desc` as keyof Translations]} />
-          ))}
-        </Section>
-      </DialogBody>
+    <DialogBody className="t-micro gap-[3px]">
+      <p className="t-note">{t.grim_cards_intro}</p>
+      <Entry card={createCard('player', '7')} name={t.card_numbers} desc={t.card_number_desc} color="var(--ink-orange)" />
+      {BASE.map(({ rank, text }) => (
+        <Entry key={rank} card={createCard('player', rank)} name={rank === 'JOKER' ? 'Joker' : rank} desc={t[text]} color="var(--ink-orange)" />
+      ))}
+    </DialogBody>
+  );
+};
+
+const GrimoireSeals = () => {
+  const t = useTranslations();
+  const [owned] = useState(() => unlockedSeals());
+  return (
+    <DialogBody className="t-micro gap-[3px]">
+      <p className="t-note">{owned.length === 0 ? t.collection_empty : t.grim_seals_intro}</p>
+      {BOSSES.filter(b => b.seal).map(boss => {
+        const seal = boss.seal!;
+        const has = owned.includes(seal);
+        return (
+          <Entry key={seal} card={has ? createSealCard('player', seal) : null} color={has ? 'var(--ink-volt)' : 'var(--ink-teal)'}
+            name={has ? sealName(t, seal) : '???'}
+            desc={has ? sealDesc(t, seal) : t.collection_locked.replace('{n}', String(BOSSES.indexOf(boss) + 1))}
+            glow={has ? 'inset 0 0 0 1px rgba(125,255,43,0.35)' : undefined} />
+        );
+      })}
+    </DialogBody>
+  );
+};
+
+const GrimoireCastle = () => {
+  const t = useTranslations();
+  const open = isCastleUnlocked();
+  return (
+    <DialogBody className="t-micro gap-[3px]">
+      <p className="t-note">{open ? t.grim_castle_intro : t.grim_castle_locked}</p>
+      {CASTLE_ENTRIES.map(({ id, card, rarity }) => {
+        const ui = RARITY_UI[rarity];
+        return (
+          <Entry key={id} card={open ? card() : null} color={open ? (rarity === 'legendary' ? 'var(--ink-gold)' : 'var(--ink-cream)') : 'var(--ink-teal)'}
+            name={open ? t[`idea_${id}` as keyof Translations] : '???'}
+            desc={open ? t[`idea_${id}_desc` as keyof Translations] : t.grim_unknown}
+            tag={open ? { label: t[ui.label], color: ui.color } : undefined}
+            glow={open ? ui.ringCompact : undefined} />
+        );
+      })}
+    </DialogBody>
+  );
+};
+
+const GRIMOIRE_ICONS: Record<GrimoireTab, Sprite> = { cards: CHARACTERS.K!, seals: SEAL_ICONS.shield, castle: CHARACTERS.TOWER!, backs: ICONS.deck };
+
+export const GrimoireModal = () => {
+  const t = useTranslations();
+  const [tab, setTab] = useState<GrimoireTab>(() => { const first = nextTab; nextTab = 'cards'; return first; });
+  return (
+    <Dialog title={t.grim_title} width={260}>
+      {/* Cuatro pestañas no caben con texto en el móvil: van con icono */}
+      <Tabs className="px-[6px] pt-[6px]" value={tab} onChange={setTab} icons={GRIMOIRE_ICONS}
+        options={[['cards', t.grim_tab_cards], ['seals', t.tab_seals], ['castle', t.grim_tab_castle], ['backs', t.tab_backs]]} />
+      {tab === 'cards' ? <GrimoireCards /> : tab === 'seals' ? <GrimoireSeals /> : tab === 'castle' ? <GrimoireCastle /> : <BackGallery />}
     </Dialog>
   );
 };
@@ -463,7 +515,7 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
-        <PxButton size="md" tone="yellow" onClick={() => { playSound('click'); debugUnlockCastleBacks(); useUiStore.getState().openModal('collection'); }}>Dorsos del Castillo (Corona)</PxButton>
+        <PxButton size="md" tone="yellow" onClick={() => { playSound('click'); debugUnlockCastleBacks(); openGrimoire('backs'); }}>Dorsos del Castillo (Corona)</PxButton>
         <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-wrap gap-[3px]">

@@ -7,6 +7,8 @@ import { IconButton, Panel, PxButton } from '@/components/pixel/ui';
 import { ICONS } from '@/components/pixel/sprites';
 import { useStage } from '@/components/pixel/Stage';
 import { useTranslations } from '@/lib/i18n';
+import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
+import { INK } from '@/theme/tokens';
 
 // --- VENTANAS: UN SOLO SISTEMA ---
 // Todas las ventanas comparten estructura: cabecera (banda con título y cerrar),
@@ -118,14 +120,17 @@ export const Section = ({ title, children, className }: { title: ReactNode; chil
 );
 
 /** Pestañas (control segmentado): la activa en naranja, el resto en pizarra */
-export const Tabs = <T extends string | number>({ value, options, onChange, className }: {
+export const Tabs = <T extends string | number>({ value, options, onChange, className, icons }: {
   value: T; options: [T, string][]; onChange: (v: T) => void; className?: string;
+  /** Iconos en vez de texto (cuando no caben: el Grimorio); el texto queda de etiqueta */
+  icons?: Partial<Record<T, Sprite>>;
 }) => (
   <div className={clsx('flex gap-[3px] shrink-0', className)}>
     {options.map(([v, label]) => (
-      <PxButton key={String(v)} size="sm" tone={v === value ? 'roof' : 'white'} data-pressed={v === value} aria-label={`tab ${label}`}
-        className="flex-1" onClick={() => { if (v !== value) { playSfx('select', 0.6); onChange(v); } }}>
-        <span className={v === value ? 'text-outline' : undefined}>{label}</span>
+      <PxButton key={String(v)} size="sm" tone={v === value ? 'roof' : 'white'} data-pressed={v === value} aria-label={`tab ${label}`} title={label}
+        className="flex-1 min-w-0" onClick={() => { if (v !== value) { playSfx('select', 0.6); onChange(v); } }}>
+        {icons?.[v] ? <PixelSprite sprite={icons[v]!} tint={v === value ? INK.black : INK.cream} />
+          : <span className={clsx('truncate', v === value && 'text-outline')}>{label}</span>}
       </PxButton>
     ))}
   </div>
