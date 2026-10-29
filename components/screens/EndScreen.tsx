@@ -12,6 +12,7 @@ import { GameResult } from '@/types';
 import { PALETTE } from '@/theme/tokens';
 import { useMenuLayout, useStage } from '@/components/pixel/Stage';
 import { Panel, PxButton } from '@/components/pixel/ui';
+import { BackFan } from '@/components/game/Backs';
 import { Mascot, MenuBackground } from './MenuScreen';
 
 const RESULT_UI: Record<GameResult, { title: keyof Translations; sub: keyof Translations; band: string }> = {
@@ -142,6 +143,8 @@ export const EndScreen = () => {
       {isLoss && <div className="absolute inset-0 z-[4]" style={{ background: 'rgba(11, 13, 12, 0.55)' }} />}
       {isWin && !waiting && <Rays x={cx} y={panelY + 48} />}
       {isWin && !waiting && <Confetti />}
+      {/* Tu mazo en abanico, boca abajo con tu dorso, asomando tras el panel */}
+      {!waiting && <div className="absolute z-[6]" style={{ left: cx - 13, top: panelY - 34 }}><BackFan win={isWin} /></div>}
       <Mascot rank={gameResult === 'loss' ? 'K' : 'J'} owner={gameResult === 'loss' ? 'opponent' : 'player'} x={cx - 16} y={board.diorama.y + 6} />
 
       {!waiting && <motion.div

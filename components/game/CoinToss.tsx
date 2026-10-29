@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { DeckShuffle } from './Backs';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
@@ -161,6 +162,8 @@ export const CoinToss = () => {
               <span className="t-note">{t.coin_rule}</span>
             )}
           </div>
+          {/* Mientras, se baraja tu mazo (con tu dorso) */}
+          <DeckShuffle />
         </motion.button>
       )}
     </AnimatePresence>

@@ -10,10 +10,10 @@ import { CARD_SIZE, INK } from '@/theme/tokens';
 import { Card as CardType, Owner } from '@/types';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { Panel } from '@/components/pixel/ui';
-import { CARD_BACK_TILE, patternUri } from '@/components/pixel/patterns';
 import { HEART, HEART_LOST } from '@/components/pixel/sprites';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { Rect } from '@/theme/layout';
+import { ScaledBack } from './Backs';
 import { Card } from './Card';
 import { deckSummary, forecastFight } from './forecast';
 import { ForestFigure } from './ForestFigure';
@@ -98,15 +98,9 @@ const Lives = ({ lives, owner, max = STARTING_LIVES }: { lives: number; owner: O
   );
 };
 
-/** Dorso en miniatura (8×11) para mazo y mano rival */
+/** Dorso en miniatura (8×11) para mazo y mano rival: el de verdad (el tuyo o el del jefe) */
 const MiniBack = ({ owner, style }: { owner: Owner; style?: CSSProperties }) => (
-  <div className="px-round" style={{
-    width: 8, height: 11, ...style,
-    // Rival: brasa granulada; tú: silueta pizarra con un filo de niebla
-    ...(owner === 'opponent'
-      ? { backgroundImage: patternUri('card-back', CARD_BACK_TILE, owner), backgroundSize: '16px', boxShadow: '0 0 3px rgba(255,74,28,0.6)' }
-      : { background: 'var(--ink-slate)', boxShadow: '0 0 0 1px rgba(185,207,200,0.35)' }),
-  }} />
+  <ScaledBack owner={owner} w={8} style={{ boxShadow: owner === 'opponent' ? '0 0 3px rgba(255,74,28,0.6)' : '0 0 0 1px rgba(185,207,200,0.35)', ...style }} />
 );
 
 const DeckCount = ({ owner, count }: { owner: Owner; count: number }) => (
@@ -360,6 +354,9 @@ const dragPoint = (el: HTMLElement | null, e: PointerEvent) => {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 };
 
+/** Cuánto vuela boca abajo una carta robada antes de darse la vuelta */
+const DRAW_FLIP_S = 0.28;
+
 const LONG_PRESS_MS = 420;
 /** Ratón quieto encima de una carta: la ficha sale algo tarde para no estorbar al agarrarla */
 const HOVER_INFO_MS = 1000;
@@ -402,9 +399,12 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
 
   // El retraso solo importa al llegar a la mano (luego la carta puede cambiar de posición)
   const [initialDelay] = useState(enterDelay);
+  // Llega del mazo boca abajo (con tu dorso) y se da la vuelta al llegar a la mano
+  const [revealed, setRevealed] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => playSfx('draw', 0.7), initialDelay * 1000);
-    return () => clearTimeout(t);
+    const flip = setTimeout(() => { setRevealed(true); playSfx('flip', 0.3); }, (initialDelay + DRAW_FLIP_S) * 1000);
+    return () => { clearTimeout(t); clearTimeout(flip); };
   }, [initialDelay]);
 
   // La carta señalada por el tutorial se levanta y pasa al frente del abanico
@@ -490,7 +490,7 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
         {/* Sombra proyectada abajo-derecha: se aleja cuando la carta se levanta */}
         <motion.div className="absolute" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, background: 'var(--c-shadow)' }}
           animate={{ x: lifted ? 5 : 2, y: lifted ? 9 : 3, opacity: lifted ? 0.7 : 1 }} transition={SPRING} />
-        <Card card={card} onClick={handleClick} isSelected={isSelected} isDisabled={!canPlay} />
+        <Card card={revealed ? card : { ...card, isFaceUp: false }} onClick={handleClick} isSelected={isSelected} isDisabled={!canPlay && revealed} />
         {hinted && <div className="absolute inset-0 rounded-[3px] pointer-events-none anim-pulse"
           style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, boxShadow: '0 0 0 1px var(--ink-cream), 0 0 10px 3px rgba(255,74,28,0.7)' }} />}
       </div>

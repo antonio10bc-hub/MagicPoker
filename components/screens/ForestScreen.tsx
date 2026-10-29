@@ -11,6 +11,7 @@ import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { ScaledBack } from '@/components/game/Backs';
 import { ICONS, MASK } from '@/components/pixel/sprites';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
 import { AmbientDust } from '@/components/fx/Ambient';
@@ -223,7 +224,11 @@ export const ForestScreen = () => {
           )}
           {isEditorUnlocked() && (
             <PxButton aria-label={t.aria_deck} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('deck'); }}>
-              <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
+              {/* Tu mazo: dos cartas con tu dorso */}
+              <span className="relative block" style={{ width: 11, height: 13 }}>
+                <ScaledBack owner="player" w={8} style={{ position: 'absolute', left: 3, top: 0, boxShadow: '0 0 0 1px rgba(255,74,28,0.8)' }} />
+                <ScaledBack owner="player" w={8} style={{ position: 'absolute', left: 0, top: 2, boxShadow: '0 0 0 1px rgba(255,74,28,0.8)' }} />
+              </span>
             </PxButton>
           )}
           <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />

@@ -532,6 +532,20 @@ se mueve rápido y una vibración leve a las masas naranjas.
   4. "EL SOBERANO DESPIERTA" y su frase. Se cierra tocando (solo al final).
   Pasa una vez por pelea (se guarda en la partida). La lógica ya le ha curado: el panel
   enseña las vidas que va animando la escena.
+- **Dónde se ven los dorsos en partida** (`components/game/Backs.tsx`; solo pintan, la
+  partida no cambia). El tuyo es el que eliges en el Grimorio; el del rival, el de su
+  jefe (en el tutorial y el Bosque, el genérico):
+  - Mazo y mano del rival en los paneles: el dorso de verdad en miniatura (8×11).
+  - Robar: la carta sale del mazo boca abajo y se da la vuelta al llegar a la mano.
+  - Cara o cruz: debajo de la moneda se baraja tu mazo (el montón se parte y las cartas
+    se intercalan, en bucle).
+  - Cartas que caen en un choque: se dan la vuelta en 2D (se estrechan hasta una línea
+    y se abren boca abajo, con el dorso de su dueño) y salen despedidas. En 2D porque el
+    tablero va en perspectiva y los giros 3D dentro se pintan mal en Safari de iOS.
+  - Cartas robadas: en la esquina, el dorso de su dueño en miniatura (sabes cuál era tuya).
+  - Pantalla final: tu mazo en abanico, boca abajo, asomando tras el panel (abierto al
+    ganar, desparramado al perder).
+  - Menú y Bosque: el botón del mazo son dos cartas con tu dorso.
 - **Dorsos del Castillo** (al final de la galería, con el Castillo abierto): Castillo
   (carmesí con la silueta del castillo; al conquistarlo), Mercader (azul con su
   silueta; al conseguir una legendaria) y Corona (al conquistarlo con los 5 desafíos a

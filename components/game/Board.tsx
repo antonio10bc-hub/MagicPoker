@@ -17,7 +17,8 @@ import { JOKER_DRAW_BONUS } from '@/lib/constants';
 import { WavyText } from '@/components/pixel/ui';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { fx } from '@/components/fx/fxStore';
-import { ARROW_HOLD_S, Card, DOUBLE_LUNGE_S, SealBadge } from './Card';
+import { ARROW_HOLD_S, Card, CardBack, DOUBLE_LUNGE_S, SealBadge, useCardBack } from './Card';
+import { ScaledBack } from './Backs';
 import { CombatDirector } from './CombatDirector';
 import { BoardHints } from './BoardHints';
 import { AttackArrows, useArrowsVisible } from './AttackArrows';
@@ -99,12 +100,28 @@ interface PlacedCardProps {
 type Shift = { dx: number; dy: number; cross: boolean };
 
 /** Al salir de un hueco: si la carta solo se ha movido a otro, desaparece sin animación */
+// Al caer en un choque se da la vuelta (en 2D: se estrecha hasta una línea y se abre ya
+// boca abajo, con el dorso de su dueño) y sale despedida
+const FALL_S = 0.7;
+const FALL_TIMES = [0, 0.25, 0.5, 1];
 const exitVariants = {
   gone: ({ moved, voided, owner }: { moved: boolean; voided: boolean; owner: Owner }) =>
     moved ? { opacity: 0, transition: { duration: 0 } }
       : voided ? { scale: 0, rotateZ: 360, opacity: 0, transition: { duration: 0.45, ease: 'backIn' as const } }
-        : { y: 18, scale: 0.6, rotateZ: owner === 'player' ? -25 : 25, opacity: 0, transition: { duration: 0.35, ease: 'easeIn' as const } },
+        : {
+          scaleX: [1, 0, 1, 0.6], scaleY: [1, 1.04, 1, 0.6], y: [0, -3, 0, 18], rotateZ: [0, 0, 0, owner === 'player' ? -25 : 25], opacity: [1, 1, 1, 0],
+          transition: { duration: FALL_S, times: FALL_TIMES, ease: 'easeIn' as const },
+        },
 };
+/** El dorso que aparece a mitad del volteo (solo al caer en un choque) */
+const backVariants = {
+  gone: ({ moved, voided }: { moved: boolean; voided: boolean }) =>
+    moved || voided ? { opacity: 0, transition: { duration: 0 } }
+      : { opacity: [0, 0, 1, 1], transition: { duration: FALL_S, times: [0, 0.24, 0.26, 1] } },
+};
+/** De quién era la carta (su id lo dice): una robada lleva el dorso de su dueño */
+const originOf = (card: CardType, side: Owner): Owner =>
+  card.id.startsWith('player-') ? 'player' : card.id.startsWith('opponent-') ? 'opponent' : side;
 
 /**
  * Carta en mesa: aparece sobre su propio hueco, cae un poco, se "aplasta" al aterrizar
@@ -119,6 +136,8 @@ const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows, from: 
   const landed = useRef(!!from);
   // El sello de ataque golpea dos veces: doble embestida
   const double = card.seal === 'double';
+  const origin = originOf(card, owner);
+  const originBack = useCardBack(origin);
 
   return (
     <motion.div
@@ -200,6 +219,16 @@ const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows, from: 
             )}
           </AnimatePresence>
         </div>
+      </motion.div>
+      {/* Robada: en la esquina, el dorso de su dueño (para saber que era tuya, o suya) */}
+      {origin !== owner && (
+        <div className="absolute pointer-events-none z-[2]" style={{ right: -3, top: -4, transform: 'rotate(8deg)' }} aria-label={`stolen from ${origin}`}>
+          <ScaledBack owner={origin} w={8} style={{ boxShadow: `0 0 0 1px ${origin === 'player' ? 'rgba(237,235,224,0.9)' : 'rgba(255,74,28,0.95)'}, 0 0 4px rgba(11,13,12,0.8)` }} />
+        </div>
+      )}
+      {/* Volteo al caer: el dorso de su dueño aparece cuando la carta está de canto */}
+      <motion.div className="absolute inset-0 pointer-events-none" initial={{ opacity: 0 }} animate={{ opacity: 0 }} variants={backVariants} exit="gone">
+        <CardBack owner={origin} back={originBack} />
       </motion.div>
     </motion.div>
   );

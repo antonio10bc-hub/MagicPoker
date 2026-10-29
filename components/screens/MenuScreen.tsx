@@ -16,6 +16,7 @@ import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
 import { IconButton, PxButton } from '@/components/pixel/ui';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
+import { ScaledBack } from '@/components/game/Backs';
 import { CHARACTERS, ICONS } from '@/components/pixel/sprites';
 import { CASTLE_INDEX, SagaMap } from './SagaMap';
 import { BOSSES, currentBossIndex, getProgress, getServerProgress, isCastleUnlocked, isCollectionUnlocked, isEditorUnlocked, rematchLevel, subscribeProgress } from '@/lib/bosses';
@@ -192,7 +193,11 @@ export const MenuScreen = () => {
         )}
         {editor && (
           <PxButton aria-label={t.aria_deck} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
-            <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
+            {/* Tu mazo: dos cartas con tu dorso */}
+              <span className="relative block" style={{ width: 11, height: 13 }}>
+                <ScaledBack owner="player" w={8} style={{ position: 'absolute', left: 3, top: 0, boxShadow: '0 0 0 1px rgba(255,74,28,0.8)' }} />
+                <ScaledBack owner="player" w={8} style={{ position: 'absolute', left: 0, top: 2, boxShadow: '0 0 0 1px rgba(255,74,28,0.8)' }} />
+              </span>
           </PxButton>
         )}
         {(collection || editor) && <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />}
