@@ -6,7 +6,7 @@ import { Translations, useTranslations } from '@/lib/i18n';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { INK } from '@/theme/tokens';
 import { PixelSprite, spriteSize } from '@/components/pixel/PixelSprite';
-import { MERCHANT_SPRITE } from '@/components/pixel/bosses';
+import { ANGEL_SPRITE, MERCHANT_SPRITE } from '@/components/pixel/bosses';
 import { useStage } from '@/components/pixel/Stage';
 import { pausableTimeout } from '@/lib/clock';
 import { PxButton } from '@/components/pixel/ui';
@@ -23,7 +23,8 @@ import { BossFigure } from './BossFigure';
 //  2. En la penumbra se enciende un farol y aparece el mercader (azul eléctrico). Dice
 //     algo en voz baja y ofrece sus 3 mejoras; al elegir sube el siguiente jefe, que
 //     evoluciona en su presentación. Se puede volver al menú: te esperará.
-// Cada 3 pisos, entre los dos tiempos, un cofre por abrir. Tocar durante el primer
+// Cada 3 pisos, entre los dos tiempos, un cofre por abrir. En los pisos 4 y 8 (puntos de
+// guardado), antes que nada baja el Ángel: si caes, volverás ahí. Tocar durante el primer
 // tiempo lo salta.
 
 const FALL_MS = 2200;
@@ -42,6 +43,59 @@ export const MerchantFigure = ({ height }: { height: number }) => {
       <PixelSprite sprite={MERCHANT_SPRITE.body} tint={INK.azure} className="bloom-azure-shape" style={{ position: 'absolute', inset: 0, ...size }} />
       <PixelSprite sprite={MERCHANT_SPRITE.seal} tint={INK.cream} className="bloom-cream" style={{ position: 'absolute', inset: 0, ...size }} />
     </div>
+  );
+};
+
+/** El Ángel: túnica crema que brilla y halo de oro que flota encima */
+export const AngelFigure = ({ height }: { height: number }) => {
+  const { width: w, height: h } = spriteSize(ANGEL_SPRITE.body);
+  const size = { width: (w * height) / h, height };
+  return (
+    <div className="relative shrink-0 anim-float" style={size}>
+      {/* Luz que le rodea */}
+      <div className="absolute rounded-full anim-pulse-soft pointer-events-none" style={{
+        left: -size.width * 0.35, top: -height * 0.15, width: size.width * 1.7, height: height * 1.2,
+        background: 'radial-gradient(ellipse 50% 50% at 50% 45%, rgba(237,235,224,0.28) 0%, rgba(232,182,74,0.12) 40%, transparent 70%)',
+      }} />
+      <PixelSprite sprite={ANGEL_SPRITE.body} tint={INK.cream} className="bloom-cream" style={{ position: 'absolute', inset: 0, ...size }} />
+      <PixelSprite sprite={ANGEL_SPRITE.seal} tint={INK.gold} className="bloom-gold-shape anim-pulse-soft" style={{ position: 'absolute', inset: 0, ...size }} />
+    </div>
+  );
+};
+
+/** Punto de guardado: baja el Ángel entre la luz y dice que, si caes, vuelves aquí */
+const AngelScene = ({ floor, figureH, panelW, onDone }: { floor: number; figureH: number; panelW: number; onDone: () => void }) => {
+  const t = useTranslations();
+  useEffect(() => {
+    const chime = setTimeout(() => { playSfx('sparkle', 0.7, 1.2); haptic('win'); }, 700);
+    return () => clearTimeout(chime);
+  }, []);
+  return (
+    <motion.div key="angel" className="absolute inset-0 flex flex-col items-center justify-center gap-[6px]"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.7 } }} transition={{ duration: 0.8 }}>
+      {/* Un haz de luz desde arriba por el que baja */}
+      <motion.div className="absolute pointer-events-none" style={{ left: '50%', top: 0, width: 120, height: '62%', x: '-50%',
+        background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.2) 30%, rgba(237,235,224,0.2) 70%, transparent)',
+        maskImage: 'linear-gradient(to bottom, black, rgba(0,0,0,0.4) 75%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black, rgba(0,0,0,0.4) 75%, transparent)' }}
+        initial={{ opacity: 0, scaleX: 0.2 }} animate={{ opacity: 1, scaleX: 1 }} transition={{ duration: 1 }} />
+      <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 1.4, ease: 'easeOut' }}>
+        <AngelFigure height={figureH} />
+      </motion.div>
+      <motion.span className="font-display glow-cream" style={{ fontSize: 11, letterSpacing: 2, color: 'var(--ink-cream)' }}
+        initial={{ opacity: 0, letterSpacing: '6px' }} animate={{ opacity: 1, letterSpacing: '2px' }} transition={{ delay: 1.1, duration: 1 }}>
+        {t.cp_angel_name}
+      </motion.span>
+      <motion.span className="t-micro" style={{ color: 'var(--ink-gold)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3, duration: 0.8 }}>
+        {t.cp_angel_sub.replace('{n}', String(floor + 1))}
+      </motion.span>
+      <motion.span className="t-micro text-center" style={{ color: 'var(--ink-mint)', maxWidth: panelW }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6, duration: 1 }}>
+        «{t.cp_angel_line}»
+      </motion.span>
+      <motion.div className="mt-[4px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.1, duration: 0.5 }}>
+        <PxButton size="sm" tone="roof" onClick={e => { e.stopPropagation(); playSound('click'); onDone(); }}>{t.chest_continue}</PxButton>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -102,16 +156,8 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
       style={{ pointerEvents: leaving ? 'none' : undefined }}
       initial={{ opacity: 0 }} animate={{ opacity: leaving ? 0 : 1 }} transition={{ duration: 1 }}>
       {/* Mapa de la subida: el piso recién vencido se rellena */}
-      <motion.div className="mb-[8px] flex flex-col items-center gap-[4px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
+      <motion.div className="mb-[8px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
         <CastleMap stage={floor} justCleared saved={checkpoint ? floor : getCastle().checkpoint?.stage} noCheckpoints={noDeath} />
-        {/* Piso de guardado: lo cuenta (la bandera se enciende) */}
-        {checkpoint && (
-          <motion.span className="t-micro text-center px-[6px] py-[2px] rounded-[2px]" style={{ color: 'var(--ink-black)', background: 'var(--ink-cream)', boxShadow: '0 0 8px rgba(237,235,224,0.5)', maxWidth: panelW }}
-            initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9, type: 'spring', stiffness: 380, damping: 14 }}>
-            {t.cp_reached}
-          </motion.span>
-        )}
-        {!checkpoint && !noDeath && <span className="t-micro" style={{ color: 'var(--ink-teal)' }}>{t.cp_map_hint}</span>}
       </motion.div>
       {/* Tus vidas y tu mazo, para decidir con datos */}
       {run && (
@@ -143,21 +189,31 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
   );
 };
 
-type Step = 'fall' | 'chest' | 'shop';
+type Step = 'fall' | 'angel' | 'chest' | 'shop';
+
+/** Lo que viene tras el jefe: el Ángel (punto de guardado), el cofre o el mercader */
+const nextAfterFall = (floor: number): Step => {
+  const run = getCastle().run;
+  if (isCheckpointFloor(floor) && !run?.challenges?.includes('noDeath')) return 'angel';
+  return run?.chest ? 'chest' : 'shop';
+};
 
 export const MerchantScene = ({ floor }: { floor: number }) => {
   const { width, height } = useStage();
   const [step, setStep] = useState<Step>('fall');
   const shop = step === 'shop';
   const bossId = BOSSES[Math.max(0, floor - 1)].id;
-  // Tras el jefe: el cofre (si es piso de cofre y aún está cerrado) y luego el mercader
-  const afterFall = () => setStep(s => (s !== 'fall' ? s : getCastle().run?.chest ? 'chest' : 'shop'));
+  // Tras el jefe: el Ángel (en un punto de guardado), el cofre (si es piso de cofre y aún
+  // está cerrado) y luego el mercader
+  const afterChest = () => setStep('shop');
+  const afterAngel = () => setStep(getCastle().run?.chest ? 'chest' : 'shop');
+  const afterFall = () => setStep(s => (s !== 'fall' ? s : nextAfterFall(floor)));
 
   useEffect(() => {
     const crack = setTimeout(() => { playSfx('crush', 0.7, 0.8); haptic('stamp'); }, 900);
-    const open = setTimeout(afterFall, FALL_MS);
+    const open = setTimeout(() => setStep(s => (s !== 'fall' ? s : nextAfterFall(floor))), FALL_MS);
     return () => { clearTimeout(crack); clearTimeout(open); };
-  }, []);
+  }, [floor]);
   useEffect(() => {
     if (!shop) return;
     const bell = setTimeout(() => playSfx('sparkle', 0.5, 0.7), 500);
@@ -176,13 +232,16 @@ export const MerchantScene = ({ floor }: { floor: number }) => {
         animate={{ background: shop
           ? 'radial-gradient(ellipse 45% 30% at 50% 30%, rgba(18,60,110,0.5) 0%, rgba(11,13,12,0) 70%)'
           : step === 'chest' ? 'radial-gradient(ellipse 45% 30% at 50% 45%, rgba(90,60,14,0.4) 0%, rgba(11,13,12,0) 70%)'
+          : step === 'angel' ? 'radial-gradient(ellipse 45% 35% at 50% 35%, rgba(120,110,80,0.35) 0%, rgba(11,13,12,0) 70%)'
             : 'radial-gradient(ellipse 45% 30% at 50% 40%, rgba(110,14,34,0.45) 0%, rgba(11,13,12,0) 70%)' }}
         transition={{ duration: 1.3 }} />
       <AnimatePresence mode="wait">
         {shop
           ? <Shop key="shop" floor={floor} figureH={Math.min(80, Math.round(height * 0.16))} panelW={Math.min(190, width - 32)} />
+          : step === 'angel'
+            ? <AngelScene key="angel" floor={floor} figureH={Math.min(96, Math.round(height * 0.2))} panelW={Math.min(190, width - 32)} onDone={afterAngel} />
           : step === 'chest'
-            ? <ChestReveal key="chest" width={Math.min(190, width - 32)} onDone={() => setStep('shop')} />
+            ? <ChestReveal key="chest" width={Math.min(190, width - 32)} onDone={afterChest} />
             : <BossFall key="fall" bossId={bossId} floor={floor} figureH={Math.min(110, Math.round(height * 0.22))} />}
       </AnimatePresence>
     </motion.div>

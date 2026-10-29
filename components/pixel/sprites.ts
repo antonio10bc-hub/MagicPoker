@@ -304,14 +304,11 @@ export const STAR = s(
   '.oo.oo.',
 );
 
-/** Bandera del punto de guardado del Castillo (mástil y banderín), para teñir */
-export const FLAG = s(
-  'xxxx.',
-  'xxxxx',
-  'xxxx.',
-  'x....',
-  'x....',
-  'x....',
+/** Halo del Ángel (puntos de guardado del Castillo), para teñir */
+export const HALO = s(
+  '.xxx.',
+  'x...x',
+  '.xxx.',
 );
 
 // --- SELLOS (9×9): se pintan en verde eléctrico ---

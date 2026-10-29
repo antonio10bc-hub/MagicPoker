@@ -31,7 +31,7 @@ const closeIntro = async (page: Page) => {
   await passCoin(page);
 };
 
-test('cofre tras el piso 3: se abre, da su premio y luego llega el mercader con el mapa', async ({ page }, info) => {
+test('piso 4: primero el Ángel (punto de guardado), luego el cofre y el mercader con el mapa', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await seed(page, { magic_poker_progress: { defeated: 12 }, magic_poker_castle: { run: { stage: 2, lives: 4, maxLives: 4, deck: DECK }, best: 2, conquered: 0 } });
   await shot(page, info, 'menu-mapa');
@@ -39,6 +39,16 @@ test('cofre tras el piso 3: se abre, da su premio y luego llega el mercader con 
   await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 2);
   await closeIntro(page);
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
+  // El piso 4 es un punto de guardado: baja el Ángel y lo cuenta
+  const angel = page.getByText('EL ÁNGEL');
+  for (let i = 0; i < 12 && !(await angel.isVisible()); i++) {
+    await page.mouse.click(page.viewportSize()!.width / 2, page.viewportSize()!.height * 0.3);
+    await page.waitForTimeout(600);
+  }
+  await expect(page.getByText('Punto de guardado · piso 4')).toBeVisible();
+  await page.waitForTimeout(2300);
+  await shot(page, info, 'angel');
+  await page.getByRole('button', { name: 'SEGUIR' }).click();
   const chest = page.getByText('Toca para abrirlo');
   for (let i = 0; i < 12 && !(await chest.isVisible()); i++) {
     await page.mouse.click(page.viewportSize()!.width / 2, page.viewportSize()!.height * 0.3);
@@ -174,5 +184,21 @@ test('resumen al conquistar el Castillo: estadísticas y mazo final (y desde el 
   await page.waitForTimeout(1500);
   await page.waitForTimeout(700);
   await expect(page.locator('[aria-label="last summary"]')).toBeVisible();
+  noErrors();
+});
+
+test('punto de guardado: tras caer, desde el menú se retoma en el piso 4 con las vidas llenas', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await seed(page, { magic_poker_progress: { defeated: 12 }, magic_poker_castle: { run: null, best: 6, conquered: 0, checkpoint: { stage: 3, lives: 1, maxLives: 4, deck: DECK } } });
+  await expect(page.getByText('retomar en el piso 4').first()).toBeVisible();
+  await expect(page.locator('[aria-label="checkpoint saved"]').first()).toBeVisible();
+  await shot(page, info, 'menu-guardado');
+  await page.getByText('CASTILLO', { exact: true }).last().click({ force: true });
+  await expect(page.getByText('PUNTO DE GUARDADO', { exact: true })).toBeVisible();
+  await page.waitForTimeout(400);
+  await shot(page, info, 'ventana-guardado');
+  await page.getByText('RETOMAR · PISO 4').click({ force: true });
+  await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 3);
+  expect(await page.evaluate(() => (window as unknown as { __game: { getState: () => { player: { lives: number } } } }).__game.getState().player.lives)).toBe(4);
   noErrors();
 });

@@ -7,7 +7,7 @@ import { haptic, playSfx } from '@/lib/sounds';
 import { StampId } from '@/lib/stamps';
 import { INK } from '@/theme/tokens';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { ALERT, BURST, CHARACTERS, CROSS, FLAG, FLAME, HEART, MASK, HEART_LOST, ICONS, PIP, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { ALERT, BURST, CHARACTERS, CROSS, FLAME, HALO, HEART, MASK, HEART_LOST, ICONS, PIP, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { useStage } from '@/components/pixel/Stage';
 
 // --- SELLOS ---
@@ -41,7 +41,7 @@ const ICON: Record<StampId, Sprite> = {
   ch_sealed: SEAL_ICONS.echo,
   ch_short: PIP,
   ch_fragile: HEART,
-  ch_noDeath: FLAG,
+  ch_noDeath: HALO,
   nightmare: SEAL_ICONS.reveal,
   bestiary: MASK,
 };

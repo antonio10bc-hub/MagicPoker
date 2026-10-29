@@ -531,18 +531,20 @@ se mueve rápido y una vibración leve a las masas naranjas.
   el actual con anillo que late, los que faltan apagados; un cofrecito de oro entre
   los pisos 3-4, 6-7 y 9-10 (apagado si ya se abrió) y una estrella para el Soberano.
   Sale arriba en la escena del mercader (el piso recién vencido se rellena) y en la
-  página del Castillo del menú con una subida a medias. Encima de los pisos 4 y 8, una
-  banderita (`FLAG`, mástil y banderín de 5×6): el punto de guardado; apagada en teal
-  mientras no es tuyo, encendida en crema con brillo la del que tienes guardado (sin
-  banderas con «Sin caer»).
-- **Puntos de guardado:** al llegar al piso 4 u 8, en la escena del mercader, bajo el
-  mapa sale una pastilla crema ("¡Punto de guardado! Si caes, volverás a este piso...")
-  que entra con un muelle; en los demás pisos, una línea en teal: "Pisos 4 y 8: puntos
-  de guardado". Al caer con uno guardado, el panel final lo dice y su botón principal es
-  RETOMAR · PISO N. Con un guardado y sin subida, la página del Castillo enseña el mapa
-  hasta él y "retomar en el piso N" (también en el botón del menú), y al entrar sale la
-  ventana PUNTO DE GUARDADO (banda carmesí): el mapa, la explicación, RETOMAR · PISO N y
-  EMPEZAR DE CERO (que lo pierde; si ya lo conquistaste, pasa por los desafíos).
+  página del Castillo del menú con una subida a medias. Antes de los pisos 4 y 8, un
+  hueco más: el halo del Ángel (`HALO`, 5×3), apagado en teal mientras no es tuyo y
+  encendido en oro con brillo el del punto que tienes guardado; va antes del cofre, en el
+  orden de las escenas (sin halos con «Sin caer»).
+- **El Ángel (puntos de guardado):** personaje propio en crema con halo de oro y alas
+  alzadas (`ANGEL_SPRITE`, `AngelFigure`), que flota con una luz suave. Al llegar al piso
+  4 u 8, tras caer el jefe y antes del cofre o el mercader, baja por un haz de luz con
+  fondo cálido: "EL ÁNGEL", "Punto de guardado · piso N" en oro y su frase («Si caes más
+  arriba, te traeré de vuelta a este piso...») y SEGUIR. Al caer con un guardado, el
+  panel final lo dice y su botón principal es RETOMAR · PISO N. Con un guardado y sin
+  subida, la página del Castillo enseña el mapa hasta él y "retomar en el piso N"
+  (también en el botón del menú), y al entrar sale la ventana PUNTO DE GUARDADO (banda
+  carmesí): el mapa, la explicación, RETOMAR · PISO N y EMPEZAR DE CERO (que lo pierde;
+  si ya lo conquistaste, pasa por los desafíos).
 - **Desafíos:** al conquistarlo por primera vez, ENTRAR abre la ventana DESAFÍOS (banda
   carmesí): seis interruptores con casilla carmesí (Sin curas, Jefes feroces, Jefes
   sellados, Mazo corto, Frágil, Sin caer) y ENTRAR · n desafíos. El dorso de la Corona
