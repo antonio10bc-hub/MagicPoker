@@ -350,12 +350,6 @@ export const openChest = (): Boon | null => {
   return boon;
 };
 
-/** Depuración: los tres dorsos del Castillo (conquistado, legendaria y los cinco desafíos) */
-export const debugUnlockCastleBacks = () => {
-  const state = getCastle();
-  save({ ...state, best: CASTLE_LENGTH, conquered: Math.max(1, state.conquered), legendary: true, bestChallenges: CHALLENGES.length });
-};
-
 // --- RESULTADO DE CADA PELEA ---
 
 export type CastleOutcome = { kind: 'next'; run: CastleRun } | { kind: 'conquered'; challenges: ChallengeId[] } | { kind: 'fallen'; stage: number };

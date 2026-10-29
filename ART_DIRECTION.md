@@ -589,7 +589,11 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **Depuración (solo quien la activa):** abrir la web con `?debug=1` (se apaga con
   `?debug=0`) añade un botón "DB" al final de la barra del menú. Su ventana repite las
   animaciones del mapa (jefe vencido → siguiente, llegada del Soberano, el Castillo se
-  alza) sin tocar el progreso (`lib/debug.ts`).
+  alza, el Bosque despierta) sin tocar el progreso, desbloquea o bloquea todo
+  (desbloquear incluye los tres dorsos del Castillo) y elige a quién sacar en el Bosque
+  (`lib/debug.ts`). En partida, la pausa añade "DEBUG · Ganar esta partida": la gana al
+  momento para pasar al siguiente paso (el siguiente jefe del camino, o el mercader y el
+  piso de arriba en el Castillo).
 - **Estadísticas ampliadas:** victorias por dificultad, derrotas, empates, porcentaje,
   últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
   victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta

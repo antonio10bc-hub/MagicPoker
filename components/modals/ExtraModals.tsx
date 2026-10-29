@@ -10,7 +10,7 @@ import { BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlocke
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { Card, CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
-import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, debugUnlockCastleBacks, ensureRun, getCastle, Rarity } from '@/lib/castle';
+import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle, Rarity } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
@@ -23,7 +23,7 @@ import {
   copyDeck, readCopiedDeck, sanitizeDeckConfig, saveDeckConfig, totalSeals,
 } from '@/lib/deck';
 import { updateSettings } from '@/lib/settings';
-import { lockAll, unlockAll } from '@/lib/debug';
+import { isDebug, lockAll, unlockAll } from '@/lib/debug';
 import { useSettings } from '@/hooks/useSettings';
 import { Card as CardType, Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
@@ -77,6 +77,13 @@ export const PauseModal = () => {
             </PxButton>
           ))}
         </OptionRow>
+        {/* Depuración: ganar la partida de ahora para pasar al siguiente paso (el
+            siguiente jefe del camino, el mercader y el piso de arriba del Castillo...) */}
+        {isDebug() && (
+          <PxButton size="md" tone="green" className="mt-[4px]" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useGameStore.getState().debugWin(); }}>
+            DEBUG · Ganar esta partida
+          </PxButton>
+        )}
       </DialogBody>
     </Dialog>
   );
@@ -547,7 +554,6 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
-        <PxButton size="md" tone="yellow" onClick={() => { playSound('click'); debugUnlockCastleBacks(); useUiStore.getState().openModal('deck'); }}>Dorsos del Castillo (Corona)</PxButton>
         <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-wrap gap-[3px]">
