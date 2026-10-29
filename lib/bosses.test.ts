@@ -60,17 +60,15 @@ describe('progresión de bosses', () => {
 
   beforeEach(() => store.clear());
 
-  it('el primero no tiene sello y desbloquea la colección; el resto, su sello', async () => {
+  it('el primero no tiene sello y abre a la vez el Grimorio y el editor de mazo; el resto, su sello', async () => {
     const b = await load();
     expect(b.currentBossIndex()).toBe(0);
     expect(b.isCollectionUnlocked()).toBe(false);
     expect(b.recordBossDefeat(0)).toEqual([{ kind: 'collection' }]);
     expect(b.isCollectionUnlocked()).toBe(true);
     expect(b.unlockedSeals()).toEqual([]);
-    expect(b.isEditorUnlocked()).toBe(false);
-    // Con el primer sello llega el editor de mazo
-    expect(b.recordBossDefeat(1)).toEqual([{ kind: 'seal', seal: 'shield' }, { kind: 'editor' }]);
     expect(b.isEditorUnlocked()).toBe(true);
+    expect(b.recordBossDefeat(1)).toEqual([{ kind: 'seal', seal: 'shield' }]);
     expect(b.unlockedSeals()).toEqual(['shield']);
     expect(b.currentBossIndex()).toBe(2);
   });

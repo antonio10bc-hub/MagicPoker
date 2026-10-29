@@ -1,5 +1,5 @@
 // --- EDITOR DE MAZO ---
-// Se desbloquea con el primer sello. Puedes quitar hasta 3 cartas cualesquiera del
+// Se desbloquea con el Grimorio (al vencer al primer jefe). Puedes quitar hasta 3 cartas del
 // mazo y elegir qué sellos llevas: hasta 2 copias de cada uno y 5 en total. Sin
 // editar, llevas una copia de cada sello desbloqueado (hasta llenar los 5).
 // Cada sello nuevo entra solo en el mazo si aún cabe.

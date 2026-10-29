@@ -50,7 +50,9 @@ export const UnlockToasts = () => {
     : backBoss ? t.unlock_back_desc.replace('{boss}', t[`boss_${backBoss}` as keyof Translations])
       : { seal: '', back: '', collection: t.unlock_collection_desc, secret: t.unlock_secret_desc, editor: t.unlock_editor_desc, castle: t.unlock_castle_desc }[kind];
   // El Castillo se anuncia en rojo eléctrico; lo demás, en verde
-  const rgb = castle ? '255,31,75' : '125,255,43';
+  // El Grimorio (con el editor de mazo) va en naranja, como sus botones del menú
+  const grim = kind === 'collection';
+  const rgb = castle ? '255,31,75' : grim ? '255,74,28' : '125,255,43';
   return (
     <AnimatePresence>
       {show && !onMap && (
@@ -64,9 +66,10 @@ export const UnlockToasts = () => {
           <div className="relative">
             <motion.div className="absolute rounded-full" style={{ inset: -10, boxShadow: `0 0 0 2px rgba(${rgb},0.8), 0 0 22px 6px rgba(${rgb},0.4)` }}
               initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: [0.5, 1.6], opacity: [0, 1, 0] }} transition={{ duration: 0.8, delay: 0.15 }} />
-            <motion.div className={backBoss ? 'relative' : clsx('flex items-center justify-center rounded-full', castle ? 'bloom-crimson' : 'bloom-volt')}
+            <motion.div className={backBoss ? 'relative' : clsx('flex items-center justify-center rounded-full', castle ? 'bloom-crimson' : grim ? 'bloom' : 'bloom-volt')}
               style={backBoss ? { width: CARD_SIZE.width, height: CARD_SIZE.height } : { width: 54, height: 54, background: castle
                 ? 'radial-gradient(circle at 45% 40%, #FF9AAE 0%, var(--ink-crimson) 60%, #8A0A24 100%)'
+                : grim ? 'radial-gradient(circle at 45% 40%, var(--ink-ember) 0%, var(--ink-orange) 60%, #A82A0C 100%)'
                 : 'radial-gradient(circle at 45% 40%, #D8FF9A 0%, var(--ink-volt) 55%, #4FC414 100%)' }}
               initial={{ scale: 3, rotate: -30, opacity: 0, filter: 'blur(4px)' }}
               animate={{ scale: 1, rotate: 0, opacity: 1, filter: 'blur(0px)' }}
@@ -74,13 +77,16 @@ export const UnlockToasts = () => {
               {backBoss ? <CardBack owner="player" back={backBoss} />
                 : kind === 'secret' || castle
                 ? <BossFigure id="sovereign" height={44} dark glow={false} />
-                : <PixelSprite sprite={kind === 'editor' ? ICONS.gear : SEAL_ICONS[seal ?? 'shield']} tint={INK.black} scale={kind === 'editor' ? 4 : 3} />}
+                : kind === 'collection'
+                  // El Grimorio y, a su lado, el mazo (se abren los dos a la vez)
+                  ? <span className="flex items-center gap-[3px]"><PixelSprite sprite={ICONS.book} tint={INK.black} scale={3} /><PixelSprite sprite={ICONS.deck} tint={INK.black} scale={2} /></span>
+                  : <PixelSprite sprite={kind === 'editor' ? ICONS.gear : SEAL_ICONS[seal ?? 'shield']} tint={INK.black} scale={kind === 'editor' ? 4 : 3} />}
             </motion.div>
           </div>
           <motion.div className="px-panel px-round px-[8px] py-[6px] flex flex-col items-center gap-[3px] w-full" data-popover
             style={{ boxShadow: `0 0 0 1px rgba(${rgb},0.55), 0 0 14px 2px rgba(${rgb},0.25)` }}
             initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
-            <span className={clsx('font-display', castle ? 'glow-crimson' : 'glow-volt')} style={{ color: castle ? 'var(--ink-crimson)' : 'var(--ink-volt)', fontSize: 12 }}>
+            <span className={clsx('font-display', castle ? 'glow-crimson' : grim ? 'glow-text' : 'glow-volt')} style={{ color: castle ? 'var(--ink-crimson)' : grim ? 'var(--ink-orange)' : 'var(--ink-volt)', fontSize: 12 }}>
               {title}
             </span>
             {seal && <span className="text-title text-outline">{t[`seal_${seal}` as keyof Translations]}</span>}
