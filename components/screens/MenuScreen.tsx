@@ -176,7 +176,7 @@ export const MenuScreen = () => {
       <AmbientDust />
       {/* El camino de jefes, de abajo arriba; al final, el Castillo */}
       <SagaMap key={mapReplay ?? 'live'} rect={map} safeTop={mapSafeTop} safeBottom={mapSafeBottom + (showForest ? ctaBox.h + 4 : 0)} onRevealing={setRevealing}
-        replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} />
+        replay={mapReplay} onReplayDone={() => useUiStore.getState().setMapReplay(null)} eyes={showForest} />
       {/* El mapa llena la pantalla; cabecera y pie flotan encima y se funden con él */}
       <div className="absolute inset-x-0 top-0 z-20 pointer-events-none" style={{ height: mapSafeTop + 12, background: 'linear-gradient(to bottom, rgba(11,13,12,0.95) 55%, transparent)' }} />
       <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none" style={{ height: mapSafeBottom + 20 + (showForest ? ctaBox.h + 4 : 0), background: 'linear-gradient(to top, rgba(11,13,12,0.97) 60%, transparent)' }} />

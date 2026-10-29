@@ -18,6 +18,7 @@ import { HEART, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { Sprite } from '@/components/pixel/PixelSprite';
 import { SCENERY } from '@/components/pixel/scenery';
 import { MapTerrain, Pt } from './MapTerrain';
+import { MapEyes } from './MapEyes';
 import { StationProp, STATIONS } from './mapStations';
 import { BossFigure } from '@/components/game/BossFigure';
 import { CastleMap } from '@/components/game/CastleMap';
@@ -386,7 +387,7 @@ const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gol
   );
 };
 
-export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay = null, onReplayDone }: {
+export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay = null, onReplayDone, eyes }: {
   /** Zona del escenario que ocupa el mapa */
   rect: Rect;
   /** Lo que tapan arriba y abajo la cabecera y la acción principal (para centrar bien) */
@@ -397,6 +398,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   /** Depuración: repetir la revelación de haber vencido a tantos jefes (sin tocar el progreso) */
   replay?: number | null;
   onReplayDone?: () => void;
+  /** Con el Bosque abierto (y ya anunciado): ojos entre los árboles alrededor del Castillo */
+  eyes?: boolean;
 }) => {
   const t = useTranslations();
   const realProgress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress);
@@ -554,6 +557,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
           transition={phase === 'emerge' ? { duration: 3.2, ease: 'linear' } : { duration: 0.6 }}>
           {/* El campo: camino de tierra, claros, agua y bosque */}
           <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} />
+          {eyes && castleVisible && !revealing && <MapEyes castle={castlePt} width={rect.w} />}
           {/* Los sitios de cada jefe (detrás y delante de él) */}
           {BOSSES.map((boss, i) => {
             if (!visible(i)) return null;

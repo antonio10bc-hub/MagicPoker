@@ -718,7 +718,10 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
 - **Pantalla principal: mapa de jefes** (`components/screens/SagaMap.tsx`). Un camino
   de tierra que sube por el campo de abajo arriba, entre bosques de pinos y robles en
   silueta, más cerrados hacia los bordes; arriba el bosque se cierra sobre el Castillo y
-  lo rodea, para que se lea que el mapa acaba ahí (`MapTerrain.tsx`: se pinta una vez en un
+  lo rodea, para que se lea que el mapa acaba ahí. Con el Bosque abierto, en ese bosque
+  se encienden pares de ojos ámbar en pequeñito (2×1 px, los del Bosque): se abren,
+  parpadean, miran a un lado y a otro y se apagan para salir en otro sitio; tres a la
+  vez, dos en bajo consumo, nunca sobre el Castillo ni el camino (`MapEyes.tsx`) (`MapTerrain.tsx`: se pinta una vez en un
   lienzo con el mismo tramado estocástico que la niebla: campo oscuro con manchas,
   camino de tierra clara con rodadas y arcén negro, agua con olas, ciénaga, surcos).
   Cada jefe es una **parada del camino** en un claro de niebla, en un sitio que cuenta
