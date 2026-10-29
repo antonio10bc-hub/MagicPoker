@@ -419,6 +419,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
   const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w), [rect.w]);
+  const lifeKeepOut = useMemo(() => [...keepOut, { x: castlePt.x, y: castlePt.y - 50, rx: rect.w, ry: 170 }], [keepOut, castlePt, rect.w]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
   // (se decide al montar en el navegador: en el servidor no hay progreso)
@@ -568,7 +569,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
           transition={phase === 'emerge' ? { duration: 3.2, ease: 'linear' } : { duration: 0.6 }}>
           {/* El campo: camino de tierra, claros, agua y bosque */}
           <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} sway={!lowPower} />
-          <MapLife width={rect.w} height={contentH} road={road} keepOut={keepOut} biomes={biomes} flockY={nodes[current].y - 130} />
+          {/* Las luciérnagas, lejos del Castillo: ese bosque es de los ojos */}
+          <MapLife width={rect.w} height={contentH} road={road} keepOut={lifeKeepOut} biomes={biomes} flockY={nodes[current].y - 130} />
           {eyes && castleVisible && !revealing && <MapEyes castle={castlePt} width={rect.w} />}
           {/* Los sitios de cada jefe (detrás y delante de él) */}
           {BOSSES.map((boss, i) => {

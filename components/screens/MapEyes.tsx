@@ -4,13 +4,13 @@ import { Pt } from './MapTerrain';
 import { useLowPower } from '@/lib/quality';
 
 // --- OJOS EN EL BOSQUE DEL MAPA (con el Bosque abierto) ---
-// En el bosque que rodea al Castillo, unos ojos ámbar en pequeñito (los del Bosque) se
+// En el bosque que rodea al Castillo, unos ojos ámbar pequeños (los del Bosque) se
 // abren entre los árboles, parpadean, miran a un lado y a otro y se apagan, y al rato
 // salen en otro sitio. Nunca encima del Castillo ni del camino.
 
 /** Cuántos pares a la vez (en bajo consumo, menos) */
-const SLOTS = 3;
-const SLOTS_LOW = 2;
+const SLOTS = 5;
+const SLOTS_LOW = 3;
 
 /** Sitios posibles: un anillo alrededor del Castillo, entre los árboles */
 const spotsAround = (castle: Pt, w: number): Pt[] => {
@@ -35,9 +35,9 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 /** Un par de ojos: se abre, parpadea, mira y se cierra (una sola animación) */
 const Pair = memo(({ at, seconds, onDone }: { at: Pt; seconds: number; onDone: () => void }) => {
-  const eye = { width: 2, height: 1, background: 'var(--ink-amber)', boxShadow: '0 0 2px rgba(255,194,51,0.95), 0 0 5px 1px rgba(255,194,51,0.45)' };
+  const eye = { width: 3, height: 2, background: 'var(--ink-amber)', boxShadow: '0 0 3px 1px rgba(255,194,51,0.95), 0 0 8px 2px rgba(255,194,51,0.5)' };
   return (
-    <motion.div className="absolute flex gap-[2px] pointer-events-none" style={{ left: at.x, top: at.y }}
+    <motion.div className="absolute flex gap-[3px] pointer-events-none" style={{ left: at.x, top: at.y }}
       initial={{ opacity: 0, scaleY: 0.1, x: 0 }}
       animate={{ opacity: [0, 1, 1, 1, 1, 1, 1, 0], scaleY: [0.1, 1, 1, 0.1, 1, 1, 1, 0.1], x: [0, 0, 0, 0, 1, -1, 0, 0] }}
       transition={{ duration: seconds, times: [0, 0.1, 0.4, 0.45, 0.55, 0.75, 0.9, 1], ease: 'easeInOut' }}
