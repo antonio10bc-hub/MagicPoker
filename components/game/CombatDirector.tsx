@@ -222,7 +222,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         playSfx('zap', 0.9, h.owner === 'player' ? 0.85 : 1.1);
         fx.emit({ kind: 'particles', x, y, colors: [PALETTE.yellow, PALETTE.white, PALETTE.roof], count: 16, speed: 38, gravity: 30, life: 650 });
         fx.emit({ kind: 'ring', x, y, color: PALETTE.yellow, radius: 22, life: 400 });
-        fx.emit({ kind: 'text', x, y, text: `-${h.amount}`, bg: h.owner === 'player' ? 'var(--c-mult)' : 'var(--c-gold)', size: 20, life: 1200 });
+        fx.emit({ kind: 'text', x, y, text: `-${h.amount}`, heart: true, size: 16, life: 1300 });
       }));
 
       // Sello de defensa: la burbuja encaja el golpe (chispas que rebotan) y luego se rompe

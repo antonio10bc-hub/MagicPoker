@@ -15,6 +15,7 @@ import { isTutorialDone } from '@/lib/tutorial';
 import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
 import { IconButton, PxButton } from '@/components/pixel/ui';
+import { NewDot } from '@/components/pixel/NewDot';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { CHARACTERS, ICONS } from '@/components/pixel/sprites';
 import { CASTLE_INDEX, SagaMap } from './SagaMap';
@@ -188,11 +189,13 @@ export const MenuScreen = () => {
         {collection && (
           <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('collection'); }}>
             <PixelSprite sprite={ICONS.book} tint={INK.orange} />
+            <NewDot what="collection" />
           </PxButton>
         )}
         {editor && (
           <PxButton aria-label={t.aria_deck} className="w-[18px] h-[18px]" onClick={() => { playSound('click'); useUiStore.getState().openModal('deck'); }}>
             <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
+            <NewDot what="deck" />
           </PxButton>
         )}
         {(collection || editor) && <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />}

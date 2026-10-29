@@ -297,7 +297,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **Partículas, textos flotantes y ondas de choque** (`components/fx/FxLayer.tsx`), en
   la capa del tablero o de la interfaz. Las partículas son polvo granulado (motas
   redondas y blandas), las ondas son halos difusos y los números de golpe, masas
-  naranjas con la cifra en silueta.
+  naranjas con la cifra en silueta. La vida perdida (golpe a un hueco vacío) sale en
+  un **corazón roto** carmesí en píxel, con el "-N" crema encima: una grieta en zigzag
+  lo parte y las dos mitades se abren al subir.
 - **Cámara de pelea** (`fx.focus`, capa propia en `Stage`): mientras se ven las
   flechas se acerca (×1,08–1,14) a donde va a pasar algo —cartas que caen, golpes
   directos o el As— y se suelta tras el impacto.
@@ -827,7 +829,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   (`magic_poker_map_seen`, `lib/mapReveal.ts`), así no se repite.
 - **Barra de iconos del menú:** todos con el mismo marco. Lo tuyo (Grimorio, un libro, y
   mazo, tus dorsos, los dos en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
-  ajustes).
+  ajustes). Recién desbloqueados, el Grimorio y el mazo llevan un **punto naranja** que
+  late en la esquina (aviso de nuevo, `NewDot`); se quita la primera vez que se abren.
 - **Icono de la app:** nocturno y misterioso: fondo negro con un rojo muy profundo,
   una luna-brasa naranja detrás de la cabeza, el Rey en silueta negra sin cetro con un
   filo de contraluz naranja, los ojos encendidos (crema con resplandor), niebla baja,

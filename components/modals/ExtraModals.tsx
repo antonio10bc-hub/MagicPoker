@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { markSeen } from '@/components/pixel/NewDot';
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
@@ -94,6 +95,7 @@ export const PauseModal = () => {
 export const DeckEditorModal = () => {
   const t = useTranslations();
   const [owned] = useState(() => unlockedSeals());
+  useEffect(() => markSeen('deck'), []);
   const load = () => sanitizeDeckConfig(getDeckConfig() ?? defaultDeckConfig(owned), owned);
   const [config, setConfig] = useState<DeckConfig>(load);
   const [slot, setSlot] = useState(getActiveSlot);
@@ -298,6 +300,7 @@ const GRIMOIRE_ICONS: Record<GrimoireTab, Sprite> = { cards: ICONS.card, seals: 
 export const GrimoireModal = () => {
   const t = useTranslations();
   const [tab, setTab] = useState<GrimoireTab>(() => { const first = nextTab; nextTab = 'cards'; return first; });
+  useEffect(() => markSeen('collection'), []);
   return (
     <Dialog title={t.grim_title} width={260}>
       {/* Pestañas con icono (con texto no caben bien en el móvil) */}

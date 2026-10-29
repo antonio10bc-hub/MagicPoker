@@ -42,7 +42,7 @@ const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
       animate={{ y: [6, -8, -10, -26], scale: [0.2, 1.5, 1, 0.9], rotate: [tilt * 2, -tilt, tilt * 0.5, 0], opacity: [0, 1, 1, 0] }}
       transition={{ duration: e.life / 1000, times: [0, 0.2, 0.6, 1], ease: 'easeOut' }}
     >
-      <motion.div
+      {e.heart ? <BrokenHeart e={e} /> : <motion.div
         // Golpe: masa naranja que brilla con la cifra en silueta oscura
         className={e.bg ? 'text-ink font-display bloom px-[4px] pt-[3px]' : 'text-outline font-display'}
         style={{
@@ -53,8 +53,43 @@ const FloatingText = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
         transition={{ duration: 0.25, repeat: 2 }}
       >
         {e.text}
-      </motion.div>
+      </motion.div>}
     </motion.div>
+  );
+};
+
+/** Corazón roto (15×13, a 2 px): una grieta en zigzag lo parte en dos mitades */
+const HEART_ROWS = [
+  '..xxx.....xxx..', '.xxxxx...xxxxx.', 'xxxxxxx.xxxxxxx', 'xxxxxxxxxxxxxxx', 'xxxxxxxxxxxxxxx',
+  'xxxxxxxxxxxxxxx', '.xxxxxxxxxxxxx.', '..xxxxxxxxxxx..', '...xxxxxxxxx...', '....xxxxxxx....',
+  '.....xxxxx.....', '......xxx......', '.......x.......',
+];
+const CRACK = [7, 7, 7, 6, 8, 6, 8, 7, 6, 8, 7, 7, 7];
+const HEART_PX = 2;
+const heartHalf = (side: 'left' | 'right') => HEART_ROWS.flatMap((row, y) => [...row].map((c, x) =>
+  c === 'x' && (side === 'left' ? x < CRACK[y] : x > CRACK[y])
+    ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={x === 2 + (side === 'right' ? 9 : 0) && y === 2 ? 'var(--ink-cream)' : 'var(--ink-crimson)'} />
+    : null));
+const HALVES = { left: heartHalf('left'), right: heartHalf('right') };
+
+/** Vida perdida: corazón rojo que se parte (las mitades se abren) con la cifra encima */
+const BrokenHeart = ({ e }: { e: Extract<Effect, { kind: 'text' }> }) => {
+  const W = 15 * HEART_PX, H = 13 * HEART_PX;
+  return (
+    <div className="relative bloom-crimson-shape" style={{ width: W, height: H }}>
+      {(['left', 'right'] as const).map(side => (
+        <motion.svg key={side} className="absolute inset-0" width={W} height={H} viewBox="0 0 15 13" shapeRendering="crispEdges"
+          style={{ transformOrigin: '50% 100%' }}
+          animate={{ x: [0, 0, side === 'left' ? -3 : 3], rotate: [0, 0, side === 'left' ? -14 : 14] }}
+          transition={{ duration: e.life / 1000, times: [0, 0.22, 0.45], ease: 'easeOut' }}>
+          {HALVES[side]}
+        </motion.svg>
+      ))}
+      <span className="absolute inset-0 flex items-center justify-center text-outline font-display"
+        style={{ color: 'var(--ink-cream)', fontSize: e.size, lineHeight: `${e.size}px`, paddingTop: 1, marginTop: -3 }}>
+        {e.text}
+      </span>
+    </div>
   );
 };
 

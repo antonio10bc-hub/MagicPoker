@@ -10,6 +10,7 @@ import { isCollectionUnlocked, isEditorUnlocked } from '@/lib/bosses';
 import { INK } from '@/theme/tokens';
 import { useStage } from '@/components/pixel/Stage';
 import { IconButton, PxButton } from '@/components/pixel/ui';
+import { NewDot } from '@/components/pixel/NewDot';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { ICONS, MASK } from '@/components/pixel/sprites';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
@@ -219,11 +220,13 @@ export const ForestScreen = () => {
           {isCollectionUnlocked() && (
             <PxButton aria-label={t.aria_collection} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('collection'); }}>
               <PixelSprite sprite={ICONS.book} tint={INK.orange} />
+              <NewDot what="collection" />
             </PxButton>
           )}
           {isEditorUnlocked() && (
             <PxButton aria-label={t.aria_deck} className="w-[18px] h-[18px]" onClick={() => { if (busy) return; playSound('click'); useUiStore.getState().openModal('deck'); }}>
               <PixelSprite sprite={ICONS.deck} tint={INK.orange} />
+              <NewDot what="deck" />
             </PxButton>
           )}
           <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />
