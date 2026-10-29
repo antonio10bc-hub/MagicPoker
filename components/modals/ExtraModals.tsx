@@ -1,4 +1,5 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
@@ -171,6 +172,10 @@ export const DeckEditorModal = () => {
             })}
           </div>
         </Section>
+        {/* Cada mazo lleva su dorso */}
+        <Section title={t.deck_back}>
+          <BackPicker />
+        </Section>
       </DialogBody>
     </Dialog>
   );
@@ -178,9 +183,9 @@ export const DeckEditorModal = () => {
 
 // --- EL GRIMORIO (catálogo de cartas) ---
 // Todo lo que puede salir en una mesa, en un solo libro: las cartas de siempre, los
-// sellos (los que tienes y quién te da los que faltan), las cartas del Castillo con su
-// rareza (ocultas hasta abrirlo) y los dorsos. Cada entrada enseña la carta de verdad.
-export type GrimoireTab = 'cards' | 'seals' | 'castle' | 'backs';
+// sellos (los que tienes y quién te da los que faltan) y las cartas del Castillo con su
+// rareza (ocultas hasta abrirlo). Los dorsos van en el editor de mazo. Cada entrada enseña la carta de verdad.
+export type GrimoireTab = 'cards' | 'seals' | 'castle';
 let nextTab: GrimoireTab = 'cards';
 /** Abre el Grimorio por una pestaña */
 export const openGrimoire = (tab: GrimoireTab = 'cards') => {
@@ -280,57 +285,73 @@ const GrimoireCastle = () => {
   );
 };
 
-const GRIMOIRE_ICONS: Record<GrimoireTab, Sprite> = { cards: ICONS.card, seals: SEAL_ICONS.shield, castle: ICONS.castle, backs: ICONS.deck };
+const GRIMOIRE_ICONS: Record<GrimoireTab, Sprite> = { cards: ICONS.card, seals: SEAL_ICONS.shield, castle: ICONS.castle };
 
 export const GrimoireModal = () => {
   const t = useTranslations();
   const [tab, setTab] = useState<GrimoireTab>(() => { const first = nextTab; nextTab = 'cards'; return first; });
   return (
     <Dialog title={t.grim_title} width={260}>
-      {/* Cuatro pestañas no caben con texto en el móvil: van con icono */}
+      {/* Pestañas con icono (con texto no caben bien en el móvil) */}
       <Tabs className="px-[6px] pt-[6px]" value={tab} onChange={setTab} icons={GRIMOIRE_ICONS}
-        options={[['cards', t.grim_tab_cards], ['seals', t.tab_seals], ['castle', t.grim_tab_castle], ['backs', t.tab_backs]]} />
-      {tab === 'cards' ? <GrimoireCards /> : tab === 'seals' ? <GrimoireSeals /> : tab === 'castle' ? <GrimoireCastle /> : <BackGallery />}
+        options={[['cards', t.grim_tab_cards], ['seals', t.tab_seals], ['castle', t.grim_tab_castle]]} />
+      {tab === 'cards' ? <GrimoireCards /> : tab === 'seals' ? <GrimoireSeals /> : <GrimoireCastle />}
     </Dialog>
   );
 };
 
-// --- DORSOS ---
-// El clásico y uno por jefe: se gana al vencerle 5 veces. El del jefe secreto es dorado.
-export const BackGallery = () => {
+// --- DORSOS (en el editor de mazo: cada mazo lleva el suyo) ---
+// El clásico, uno por jefe (se gana al vencerle 5 veces; el del jefe secreto es dorado)
+// y los tres del Castillo. Tocar uno tuyo te lo pone en el mazo activo; tocar uno que
+// falta dice, en un aviso que se va solo, qué hace falta para ganarlo.
+const castleBackHint = (t: Translations, id: string) =>
+  id === 'castle' ? t.back_need_castle : id === 'merchant' ? t.back_need_merchant : t.back_need_crown;
+
+export const BackPicker = () => {
   const t = useTranslations();
   const progress = getProgress();
   const castleOpen = isCastleUnlocked(progress);
   const owned = new Set<string>([...unlockedBacks(progress), ...castleBacks()]);
   const current = usePlayerBack();
+  const [hint, setHint] = useState<{ id: string; text: string } | null>(null);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (hintTimer.current) clearTimeout(hintTimer.current); }, []);
+  const showHint = (id: string, text: string) => {
+    playSfx('deselect', 0.6);
+    setHint({ id, text });
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 2400);
+  };
   const pick = (id: string) => { playSfx('select', 0.7); setBack(id); };
   // Los del Castillo van al final (index -2), solo con el Castillo abierto
   const items = [{ id: DEFAULT_BACK, index: -1 }, ...BOSSES.map((b, index) => ({ id: b.id, index })),
     ...(castleOpen ? CASTLE_BACKS.map(id => ({ id: id as string, index: -2 })) : [])];
   return (
-    <DialogBody className="t-micro gap-[5px]">
-      <p className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.backs_hint}</p>
+    <div className="relative">
       <div className="grid grid-cols-5 gap-x-[3px] gap-y-[4px] justify-items-center">
         {items.map(({ id, index }) => {
           const has = id === DEFAULT_BACK || owned.has(id);
-          const visible = index === -1 || (index === -2 ? has : isBossVisible(index, progress));
+          const visible = index < 0 || isBossVisible(index, progress);
           const wins = index < 0 ? 0 : bossWins(index, progress);
           const on = current === id;
+          const need = index === -2 ? castleBackHint(t, id)
+            : !visible ? t.back_need_unknown
+              : t.back_need_boss.replace('{boss}', t[`boss_${id}` as keyof Translations]).replace('{n}', String(Math.min(wins, WINS_FOR_BACK)));
           return (
-            <button key={id} aria-label={`back ${id}`} title={index === -1 ? t.back_default : index === -2 ? t.castle_title : t[`boss_${id}` as keyof Translations]} disabled={!has} onClick={() => pick(id)}
-              className={has ? 'flex flex-col items-center gap-[2px] cursor-pointer' : 'flex flex-col items-center gap-[2px]'}>
-              {/* Dorso a escala reducida (la carta mide 40×56) */}
+            <button key={id} aria-label={`back ${id}`} aria-disabled={!has} title={index === -1 ? t.back_default : has ? (index === -2 ? t.castle_title : t[`boss_${id}` as keyof Translations]) : need}
+              onClick={() => (has ? pick(id) : showHint(id, need))}
+              className="flex flex-col items-center gap-[2px] cursor-pointer">
+              {/* Dorso a escala reducida (la carta mide 40×56); los que faltan, apagados */}
               <div className="relative" style={{ width: 32, height: 45, opacity: has ? 1 : 0.35, filter: has ? undefined : 'grayscale(1)',
-                outline: on ? '1px solid var(--ink-cream)' : undefined, outlineOffset: 2, borderRadius: 3 }}>
+                outline: on ? '1px solid var(--ink-cream)' : hint?.id === id ? '1px solid var(--ink-orange)' : undefined, outlineOffset: 2, borderRadius: 3 }}>
                 <div className="absolute left-0 top-0" style={{ width: 40, height: 56, transform: 'scale(0.8)', transformOrigin: '0 0' }}>
-                  <CardBack owner="player" back={visible ? id : DEFAULT_BACK} />
+                  <CardBack owner="player" back={visible && (has || index !== -2) ? id : DEFAULT_BACK} />
                 </div>
               </div>
-              {/* Solo el dorso: el puesto lleva el contorno crema; los que faltan, sus
-                  victorias en puntos (como las estrellas del menú). El hueco se guarda
-                  siempre para que las filas queden iguales. */}
-              <span className="flex gap-[1px] h-[4px] items-center" aria-label={has ? undefined : `${Math.min(wins, WINS_FOR_BACK)}/${WINS_FOR_BACK}`}>
-                {!has && visible && Array.from({ length: WINS_FOR_BACK }, (_, i) => (
+              {/* Los que faltan de un jefe: sus victorias en puntos. El hueco se guarda
+                  siempre para que las filas queden iguales */}
+              <span className="flex gap-[1px] h-[4px] items-center">
+                {!has && visible && index >= 0 && Array.from({ length: WINS_FOR_BACK }, (_, i) => (
                   <span key={i} style={{ width: 3, height: 3, background: i < wins ? 'var(--ink-orange)' : 'var(--ink-slate)' }} />
                 ))}
               </span>
@@ -338,7 +359,18 @@ export const BackGallery = () => {
           );
         })}
       </div>
-    </DialogBody>
+      {/* Qué hace falta para el que has tocado (se va solo) */}
+      <AnimatePresence>
+        {hint && (
+          <motion.div key={hint.id} role="status" className="absolute inset-x-[6px] bottom-[4px] z-10 px-[6px] py-[4px] rounded-[2px] text-center pointer-events-none"
+            style={{ background: 'var(--ink-cream)', color: 'var(--ink-black)', boxShadow: '0 0 0 1px var(--ink-orange), 0 0 10px rgba(255,74,28,0.45)' }}
+            initial={{ opacity: 0, y: 6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}>
+            {hint.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
@@ -515,7 +547,7 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
-        <PxButton size="md" tone="yellow" onClick={() => { playSound('click'); debugUnlockCastleBacks(); openGrimoire('backs'); }}>Dorsos del Castillo (Corona)</PxButton>
+        <PxButton size="md" tone="yellow" onClick={() => { playSound('click'); debugUnlockCastleBacks(); useUiStore.getState().openModal('deck'); }}>Dorsos del Castillo (Corona)</PxButton>
         <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-wrap gap-[3px]">

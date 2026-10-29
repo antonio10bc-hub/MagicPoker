@@ -57,17 +57,26 @@ test('el Castillo: entrar, vencer al primer jefe, el mercader ofrece mejoras y s
   noErrors();
 });
 
-test('dorsos: la galería y ponerse uno ganado', async ({ page }, info) => {
+test('dorsos: en el editor de mazo, uno por mazo, y el aviso de los que faltan', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await seed(page, { magic_poker_progress: { defeated: 12, wins: { wall: 5, sovereign: 5, duelist: 3 } } });
-  await page.locator('[aria-label="colección"]').click({ force: true });
-  await page.locator('[aria-label="tab Dorsos"]').click({ force: true });
+  await page.locator('[aria-label="mazo"]').click({ force: true });
+  await page.locator('[aria-label="back sovereign"]').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   await shot(page, info, 'galeria');
+  // Mazo 1: el del Soberano
   await page.locator('[aria-label="back sovereign"]').click({ force: true });
-  expect(await page.evaluate(() => localStorage.getItem('magic_poker_back'))).toBe('sovereign');
-  // Uno sin ganar no se puede poner
-  await expect(page.locator('[aria-label="back duelist"]')).toBeDisabled();
+  const backs = () => page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_decks') ?? '{}').backs);
+  expect((await backs())[0]).toBe('sovereign');
+  // Uno sin ganar no se pone: dice qué falta
+  await page.locator('[aria-label="back duelist"]').click({ force: true });
+  await expect(page.getByRole('status')).toContainText('3/5');
+  await shot(page, info, 'galeria-aviso');
+  expect((await backs())[0]).toBe('sovereign');
+  // Mazo 2: el suyo propio
+  await page.getByText('Mazo 2', { exact: true }).click({ force: true });
+  await page.locator('[aria-label="back wall"]').click({ force: true });
+  expect(await backs()).toEqual(['sovereign', 'wall', null]);
   noErrors();
 });
 

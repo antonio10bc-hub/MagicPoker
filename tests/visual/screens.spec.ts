@@ -73,7 +73,7 @@ test('editor de mazo (con el primer sello)', async ({ page }, info) => {
   noErrors();
 });
 
-test('el Grimorio: cartas, sellos, Castillo y dorsos en un solo catálogo', async ({ page }, info) => {
+test('el Grimorio: cartas, sellos y Castillo en un solo catálogo', async ({ page }, info) => {
   const noErrors = watchErrors(page);
   await openMenu(page, { defeated: 12 }, { magic_poker_map_seen: '12' });
   await page.locator('[aria-label="colección"]').click({ force: true });
@@ -87,9 +87,6 @@ test('el Grimorio: cartas, sellos, Castillo y dorsos en un solo catálogo', asyn
   await expect(page.getByText('Bufón').first()).toBeAttached();
   await expect(page.getByText('Fénix').first()).toBeAttached();
   await shot(page, info, 'grimorio-3-castillo');
-  await page.locator('[aria-label="tab Dorsos"]').click({ force: true });
-  await expect(page.locator('[aria-label="back default"], [aria-label^="back "]').first()).toBeAttached();
-  await shot(page, info, 'grimorio-4-dorsos');
   noErrors();
 });
 

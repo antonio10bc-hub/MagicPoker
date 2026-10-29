@@ -30,10 +30,12 @@ export const defaultDeckConfig = (seals: SealId[] = unlockedSeals()): DeckConfig
 
 // --- MAZOS GUARDADOS ---
 // Tres ranuras (Mazo 1, 2 y 3): el editor cambia la activa y la partida usa esa.
+// Cada ranura lleva además su dorso (aparte de la configuración: restablecer el mazo
+// no lo quita).
 export const DECK_SLOTS = 3;
 const SLOTS_KEY = 'magic_poker_decks';
 
-interface DeckSlots { active: number; slots: (DeckConfig | null)[] }
+interface DeckSlots { active: number; slots: (DeckConfig | null)[]; backs?: (string | null)[] }
 
 const readSlots = (): DeckSlots => {
   const empty: DeckSlots = { active: 0, slots: Array(DECK_SLOTS).fill(null) };
@@ -42,7 +44,11 @@ const readSlots = (): DeckSlots => {
     const raw = localStorage.getItem(SLOTS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as DeckSlots;
-      return { active: Math.min(DECK_SLOTS - 1, Math.max(0, parsed.active | 0)), slots: Array.from({ length: DECK_SLOTS }, (_, i) => parsed.slots?.[i] ?? null) };
+      return {
+        active: Math.min(DECK_SLOTS - 1, Math.max(0, parsed.active | 0)),
+        slots: Array.from({ length: DECK_SLOTS }, (_, i) => parsed.slots?.[i] ?? null),
+        backs: Array.from({ length: DECK_SLOTS }, (_, i) => parsed.backs?.[i] ?? null),
+      };
     }
     // Antes había un solo mazo: pasa a la ranura 1
     const old = localStorage.getItem(KEY);
@@ -51,8 +57,22 @@ const readSlots = (): DeckSlots => {
   return empty;
 };
 
+const slotListeners = new Set<() => void>();
+/** Avisa al cambiar de mazo activo o de dorso (el dorso que llevas depende de los dos) */
+export const subscribeSlots = (l: () => void) => { slotListeners.add(l); return () => { slotListeners.delete(l); }; };
+
 const writeSlots = (slots: DeckSlots) => {
   try { localStorage.setItem(SLOTS_KEY, JSON.stringify(slots)); } catch { /* sin almacenamiento */ }
+  slotListeners.forEach(l => l());
+};
+
+/** Dorso de una ranura (por defecto, la activa); null si no tiene uno propio */
+export const getSlotBack = (i = readSlots().active): string | null => readSlots().backs?.[i] ?? null;
+/** Pone el dorso de la ranura activa */
+export const setSlotBack = (id: string) => {
+  const state = readSlots();
+  const backs = Array.from({ length: DECK_SLOTS }, (_, i) => (i === state.active ? id : state.backs?.[i] ?? null));
+  writeSlots({ ...state, backs });
 };
 
 export const getActiveSlot = () => readSlots().active;
