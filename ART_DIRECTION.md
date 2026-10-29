@@ -798,7 +798,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   flotando y se deshacen. Con el Castillo el banco se abre por el medio siguiendo el
   contorno de las nubes (cada mitad lleva sus cúmulos, no hay corte recto): un tirón
   corto y cada mitad se va a su lado subiendo, girando un poco y apagándose, entre
-  muchos jirones (2,6 s al alzarse). Se mece de lado muy despacio (quieta en bajo consumo).
+  muchos jirones (2,6 s al alzarse). En reposo se mece de lado muy despacio, cada mitad flota a su ritmo (un píxel arriba o abajo) y
+  de vez en cuando un jirón pasa despacio por el borde y se deshace (quieta en bajo consumo).
   - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
     principal abajo, con degradados a negro para que se fundan. En horizontal, igual:
     el mapa llena la pantalla, el logo pequeño arriba a la izquierda, los iconos

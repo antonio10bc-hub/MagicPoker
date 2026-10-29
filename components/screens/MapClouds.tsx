@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { hash, RAMP, smooth } from './MapTerrain';
 import { useLowPower } from '@/lib/quality';
@@ -117,6 +117,15 @@ const paintWisps = () => WISP_R.map((R, k) => {
 
 let wispCache: ReturnType<typeof paintWisps> | null = null;
 const wispSprites = () => (wispCache ??= paintWisps());
+const noSubscribe = () => () => {};
+
+/** Jirones de reposo: dónde salen (fracción del ancho, px bajo el borde), cuánto se mueven y su ritmo */
+const IDLE_WISPS = [
+  { x: 0.18, y: 4, dx: 26, s: 0, t: 7, delay: 0.5, rest: 4 },
+  { x: 0.62, y: 9, dx: -22, s: 1, t: 8.5, delay: 3, rest: 5 },
+  { x: 0.4, y: 2, dx: 18, s: 0, t: 6.5, delay: 6, rest: 6 },
+  { x: 0.85, y: 6, dx: -24, s: 2, t: 9, delay: 8, rest: 3.5 },
+];
 
 /** Jirón: un cúmulo pequeño que se desprende del borde, se va flotando y se deshace */
 const Wisp = ({ x, y, dx, dy, delay, seconds, sprite }: {
@@ -187,6 +196,11 @@ export const MapClouds = memo(({ width, bottom, top, seconds = 0.9 }: {
 
   // Irse: un tirón corto (se abre la raya) y cada mitad a su lado, subiendo y apagándose
   const from = (burst?.full ? burst.at : 0) - bottom;
+  // Reposo (no en bajo consumo ni mientras se van)
+  const idle = !lowPower && !gone;
+  // Los jirones se pintan en el navegador (en el servidor no hay lienzo)
+  const idleSprites = useSyncExternalStore(noSubscribe, wispSprites, () => null);
+
   const halfMove = (side: 'left' | 'right') => {
     const dir = side === 'left' ? -1 : 1;
     return gone
@@ -200,13 +214,29 @@ export const MapClouds = memo(({ width, bottom, top, seconds = 0.9 }: {
 
   return (
     <div className="absolute pointer-events-none" style={{ left: -SIDE, top: 0, width: W, height: H }}>
-      <motion.div className="absolute inset-0" animate={lowPower || gone ? undefined : { x: [-4, 4] }}
+      <motion.div className="absolute inset-0" animate={idle ? { x: [-4, 4] } : undefined}
         transition={{ duration: 9, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}>
         {(['left', 'right'] as const).map(side => (
-          <motion.canvas key={side} ref={side === 'left' ? left : right} width={W} height={H} className="absolute left-0 top-0"
-            style={{ width: W, height: H, imageRendering: 'pixelated', transformOrigin: side === 'left' ? '0% 100%' : '100% 100%' }}
-            initial={false} animate={halfMove(side)} transition={lift(side)} />
+          // Reposo: cada mitad flota a su ritmo (casi lo mismo, para que no se abra la raya)
+          <motion.div key={side} className="absolute inset-0"
+            animate={idle ? (side === 'left' ? { x: [-1, 1.5], y: [0, 1.5] } : { x: [1, -1], y: [1, -0.5] }) : undefined}
+            transition={{ duration: side === 'left' ? 6.5 : 8, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}>
+            <motion.canvas ref={side === 'left' ? left : right} width={W} height={H} className="absolute left-0 top-0"
+              style={{ width: W, height: H, imageRendering: 'pixelated', transformOrigin: side === 'left' ? '0% 100%' : '100% 100%' }}
+              initial={false} animate={halfMove(side)} transition={lift(side)} />
+          </motion.div>
         ))}
+        {/* Reposo: jirones sueltos que pasan despacio por el borde y se deshacen */}
+        {idle && idleSprites && (
+          <motion.div className="absolute inset-0" initial={false} animate={{ y: top - bottom }} transition={lift('left')}>
+            {IDLE_WISPS.map((w, i) => (
+              <motion.img key={i} src={idleSprites[w.s].src} alt="" className="absolute pointer-events-none"
+                style={{ left: SIDE + w.x * width - idleSprites[w.s].w / 2, top: bottom + w.y, width: idleSprites[w.s].w, height: idleSprites[w.s].h, imageRendering: 'pixelated' }}
+                initial={{ x: 0, opacity: 0 }} animate={{ x: [0, w.dx], y: [0, -3], opacity: [0, 0.85, 0.85, 0], scale: [0.8, 1, 1.15] }}
+                transition={{ duration: w.t, delay: w.delay, repeat: Infinity, repeatDelay: w.rest, ease: 'easeInOut', times: [0, 0.25, 0.7, 1] }} />
+            ))}
+          </motion.div>
+        )}
       </motion.div>
       <AnimatePresence>
         {burst && (
