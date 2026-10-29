@@ -14,7 +14,7 @@ import { BoonChooser } from './BoonChooser';
 import { ChestReveal } from './ChestReveal';
 import { CastleMap } from './CastleMap';
 import { RunStatus } from './RunStatus';
-import { getCastle } from '@/lib/castle';
+import { getCastle, isCheckpointFloor } from '@/lib/castle';
 import { BossFigure } from './BossFigure';
 
 // --- ENTRE PISOS DEL CASTILLO: JEFE DERROTADO Y EL MERCADER ---
@@ -90,6 +90,9 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
   const [leaving, setLeaving] = useState(false);
   // La subida tal y como está ahora (ya con el premio del cofre, si lo hubo)
   const [run] = useState(() => getCastle().run);
+  // ¿Este piso es de guardado? (con «Sin caer» no los hay)
+  const noDeath = !!run?.challenges?.includes('noDeath');
+  const checkpoint = isCheckpointFloor(floor) && !noDeath;
   const onChosen = () => {
     setLeaving(true);
     pausableTimeout(() => useGameStore.getState().startCastle(), 1050);
@@ -99,8 +102,16 @@ const Shop = ({ floor, figureH, panelW }: { floor: number; figureH: number; pane
       style={{ pointerEvents: leaving ? 'none' : undefined }}
       initial={{ opacity: 0 }} animate={{ opacity: leaving ? 0 : 1 }} transition={{ duration: 1 }}>
       {/* Mapa de la subida: el piso recién vencido se rellena */}
-      <motion.div className="mb-[8px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
-        <CastleMap stage={floor} justCleared />
+      <motion.div className="mb-[8px] flex flex-col items-center gap-[4px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
+        <CastleMap stage={floor} justCleared saved={checkpoint ? floor : getCastle().checkpoint?.stage} noCheckpoints={noDeath} />
+        {/* Piso de guardado: lo cuenta (la bandera se enciende) */}
+        {checkpoint && (
+          <motion.span className="t-micro text-center px-[6px] py-[2px] rounded-[2px]" style={{ color: 'var(--ink-black)', background: 'var(--ink-cream)', boxShadow: '0 0 8px rgba(237,235,224,0.5)', maxWidth: panelW }}
+            initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9, type: 'spring', stiffness: 380, damping: 14 }}>
+            {t.cp_reached}
+          </motion.span>
+        )}
+        {!checkpoint && !noDeath && <span className="t-micro" style={{ color: 'var(--ink-teal)' }}>{t.cp_map_hint}</span>}
       </motion.div>
       {/* Tus vidas y tu mazo, para decidir con datos */}
       {run && (

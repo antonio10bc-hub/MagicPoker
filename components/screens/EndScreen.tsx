@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { currentBossIndex, getProgress } from '@/lib/bosses';
+import { resumeCheckpoint } from '@/lib/castle';
 import { peekMapSeen, setMapSeen } from '@/lib/mapReveal';
 import { MerchantScene } from '@/components/game/MerchantScene';
 import { useTranslations, Translations } from '@/lib/i18n';
@@ -164,14 +165,22 @@ export const EndScreen = () => {
         <div className="p-[6px]">
           <p className="text-center leading-[12px]">
             {castleOutcome
-              ? (castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1)))
+              ? (castleOutcome.kind === 'conquered' ? t.castle_conquered_sub : t.castle_fallen.replace('{n}', String(castleOutcome.stage + 1))
+                + (castleOutcome.checkpoint !== undefined ? `. ${t.cp_fallen.replace('{n}', String(castleOutcome.checkpoint + 1))}` : ''))
               : wasTutorial ? t.tut_done : t[ui.sub]}
           </p>
         </div>
         <div className="p-[6px] flex flex-col gap-[4px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(185,207,200,0.1)' }}>
           {castleOutcome ? (
             <>
-              <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
+              {/* Con punto de guardado, se retoma desde él; si no, otra subida */}
+              {castleOutcome.kind === 'fallen' && castleOutcome.checkpoint !== undefined ? (
+                <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); resumeCheckpoint(); startCastle(); }}>
+                  {t.cp_resume.replace('{n}', String(castleOutcome.checkpoint + 1))}
+                </PxButton>
+              ) : (
+                <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); startCastle(); }}>{t.castle_again}</PxButton>
+              )}
               {/* Resumen de toda la subida: estadísticas y mazo final */}
               <PxButton size="md" tone="roof" aria-label={t.aria_run_summary} onClick={() => { playSound('click'); useUiStore.getState().openModal('summary'); }}>{t.sum_button}</PxButton>
             </>

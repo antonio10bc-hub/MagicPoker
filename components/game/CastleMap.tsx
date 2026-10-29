@@ -1,15 +1,18 @@
 import { Fragment } from 'react';
 import { motion } from 'framer-motion';
-import { CASTLE_LENGTH, isChestFloor } from '@/lib/castle';
+import { clsx } from 'clsx';
+import { CASTLE_LENGTH, isCheckpointFloor, isChestFloor } from '@/lib/castle';
 import { INK } from '@/theme/tokens';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
-import { STAR } from '@/components/pixel/sprites';
+import { FLAG, STAR } from '@/components/pixel/sprites';
 
 // --- MAPA DE LA SUBIDA ---
 // Los 12 pisos en fila, de abajo (izquierda) a arriba (derecha): los vencidos, rellenos
 // de carmesí; el siguiente, un anillo que late; los que faltan, apagados. Entre los
 // pisos 3-4, 6-7 y 9-10 va un cofre (oro; apagado si ya lo abriste). El último piso es
 // el Soberano: una estrella. `justCleared` anima el piso recién vencido.
+// Encima de los pisos 4 y 8, una banderita: el punto de guardado. Apagada mientras no
+// llegas; encendida en crema (con brillo) la del punto que tienes guardado.
 
 const Chest = ({ opened }: { opened: boolean }) => (
   <span className="relative shrink-0" style={{ width: 6, height: 5, opacity: opened ? 0.35 : 1 }}>
@@ -18,14 +21,25 @@ const Chest = ({ opened }: { opened: boolean }) => (
   </span>
 );
 
-export const CastleMap = ({ stage, justCleared, chestPending }: {
+/** Banderita del punto de guardado (encendida si es el que tienes guardado) */
+const Flag = ({ saved }: { saved: boolean }) => (
+  <span className="absolute pointer-events-none" style={{ left: 0, top: -8, opacity: saved ? 1 : 0.5 }}>
+    <PixelSprite sprite={FLAG} tint={saved ? INK.cream : INK.teal} className={saved ? 'bloom-cream' : undefined} />
+  </span>
+);
+
+export const CastleMap = ({ stage, justCleared, chestPending, saved, noCheckpoints }: {
   /** Piso al que te enfrentas ahora (índice): los anteriores están vencidos */
   stage: number;
   justCleared?: boolean;
   /** El cofre de este piso aún está por abrir */
   chestPending?: boolean;
+  /** Punto de guardado que tienes (índice del piso), si lo hay */
+  saved?: number;
+  /** Desafío «Sin caer»: no hay puntos de guardado */
+  noCheckpoints?: boolean;
 }) => (
-  <div className="flex items-center gap-[2px]" aria-label={`map ${stage}/${CASTLE_LENGTH}`}>
+  <div className="flex items-center gap-[2px] pt-[8px]" aria-label={`map ${stage}/${CASTLE_LENGTH}`}>
     {Array.from({ length: CASTLE_LENGTH }, (_, i) => {
       const cleared = i < stage;
       const current = i === stage;
@@ -39,14 +53,17 @@ export const CastleMap = ({ stage, justCleared, chestPending }: {
               <PixelSprite sprite={STAR} tint={current ? INK.gold : cleared ? INK.crimson : INK.slate} className={current ? 'bloom-gold-shape' : undefined} />
             </span>
           ) : (
-            <motion.span className={current ? 'anim-throb' : undefined}
-              style={{
-                width: 6, height: 6, borderRadius: 1,
-                background: cleared ? 'var(--ink-crimson)' : 'transparent',
-                boxShadow: cleared ? '0 0 3px rgba(255,31,75,0.7)' : current ? 'inset 0 0 0 1px var(--ink-crimson), 0 0 4px rgba(255,31,75,0.8)' : 'inset 0 0 0 1px var(--ink-slate)',
-              }}
-              initial={fresh ? { scale: 2.4, opacity: 0 } : false} animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.6, type: 'spring', stiffness: 420, damping: 14 }} />
+            <span className="relative">
+              {isCheckpointFloor(i) && !noCheckpoints && <Flag saved={saved === i} />}
+              <motion.span className={clsx('block', current && 'anim-throb')}
+                style={{
+                  width: 6, height: 6, borderRadius: 1,
+                  background: cleared ? 'var(--ink-crimson)' : 'transparent',
+                  boxShadow: cleared ? '0 0 3px rgba(255,31,75,0.7)' : current ? 'inset 0 0 0 1px var(--ink-crimson), 0 0 4px rgba(255,31,75,0.8)' : 'inset 0 0 0 1px var(--ink-slate)',
+                }}
+                initial={fresh ? { scale: 2.4, opacity: 0 } : false} animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.6, type: 'spring', stiffness: 420, damping: 14 }} />
+            </span>
           )}
         </Fragment>
       );

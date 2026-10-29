@@ -17,7 +17,7 @@ import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
-import { BoonsModal, ChallengesModal, RunSummaryModal, DebugModal, BestiaryModal, GrimoireModal, DeckEditorModal, PauseModal } from './ExtraModals';
+import { BoonsModal, ChallengesModal, CheckpointModal, RunSummaryModal, DebugModal, BestiaryModal, GrimoireModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
@@ -39,6 +39,7 @@ export const Modals = () => {
       {modal === 'pause' && <PauseModal key="pause" />}
       {modal === 'boons' && <BoonsModal key="boons" />}
       {modal === 'challenges' && <ChallengesModal key="challenges" />}
+      {modal === 'checkpoint' && <CheckpointModal key="checkpoint" />}
       {modal === 'summary' && <RunSummaryModal key="summary" />}
       {modal === 'debug' && <DebugModal key="debug" />}
       {modal === 'bestiary' && <BestiaryModal key="bestiary" />}

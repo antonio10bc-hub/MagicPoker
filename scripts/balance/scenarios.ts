@@ -4,7 +4,7 @@ import { Card, SealId } from '@/types';
 import { BOSSES, bossLives, createBossState } from '@/lib/bosses';
 import { buildDeckFrom, DeckConfig, defaultDeckConfig, MAX_SEALS, sanitizeDeckConfig } from '@/lib/deck';
 import {
-  applyBoon, buildRunDeck, CardTemplate, castleBossLevel, castleBossLives, CastleRun, ChallengeId, CHALLENGES, isChestFloor, offerBoons, rollChest, boonRarity,
+  applyBoon, buildRunDeck, CardTemplate, castleAi, castleBossLevel, CHECKPOINT_STAGES, castleBossLives, CastleRun, ChallengeId, CHALLENGES, isChestFloor, offerBoons, rollChest, boonRarity,
 } from '@/lib/castle';
 import { ARCHETYPES, archetype, buildForestDeck, FOREST_LIVES, forestAi, rollEncounter, Tier } from '@/lib/forest';
 import { createDualState, DECK_RANKS, LEGENDARY_RANKS, RANKS } from '@/lib/game-utils';
@@ -74,7 +74,7 @@ export interface CastleRunResult {
 /** Cambios hipotéticos para probar (no están en el juego): vidas y nivel de los jefes, curación por piso */
 export interface CastleTweaks { bossLivesDelta?: number; levelDelta?: number; healPerFloor?: number; startLives?: number; sealCantrip?: boolean; floors?: number; normalAiUntil?: number; legendaryFrom?: number }
 
-export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]; config?: DeckConfig; tweaks?: CastleTweaks; from?: CastleRun; checkpoints?: number[] } = {}): CastleRunResult => {
+export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]; config?: DeckConfig; tweaks?: CastleTweaks; from?: CastleRun; checkpoints?: number[]; useCheckpoints?: boolean } = {}): CastleRunResult => {
   const tw = opts.tweaks ?? {};
   const challenges = CHALLENGES.filter(c => opts.challenges?.includes(c));
   const all = sealsAfter(BOSSES.length);
@@ -92,7 +92,7 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
       player: { ...createDualState(buildRunDeck(run), STARTING_HAND_SIZE, true, run.lives), maxLives: run.maxLives },
       opponent: createBossState(boss, level, bl, STARTING_HAND_SIZE),
       bot: chooserOf(persona), botSeesAll: seesAll(persona),
-      rival: rivalAi(run.stage < (tw.normalAiUntil ?? 0) ? 'normal' : 'hard'),
+      rival: rivalAi(tw.normalAiUntil !== undefined ? (run.stage < tw.normalAiUntil ? 'normal' : 'hard') : castleAi(run.stage, run)),
       sovereignPhase2: boss.id === 'sovereign',
       sealCantrip: tw.sealCantrip, rivalCantrip: tw.sealCantrip,
     });
@@ -119,7 +119,7 @@ export const castleRun = (persona: PersonaId, opts: { challenges?: ChallengeId[]
       boons.push({ kind: offer[i].kind === 'card' ? `carta:${(offer[i] as { rank: string }).rank}` : offer[i].kind, rarity: boonRarity(offer[i]) });
       run = applyBoon(run, offer[i]);
     }
-    if (opts.checkpoints?.includes(run.stage)) saved = { ...run };
+    if ((opts.checkpoints ?? (opts.from !== undefined || opts.useCheckpoints ? CHECKPOINT_STAGES : [])).includes(run.stage) && !run.challenges?.includes('noDeath')) saved = { ...run };
   }
 };
 

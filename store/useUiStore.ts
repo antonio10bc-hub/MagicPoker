@@ -6,7 +6,7 @@ import type { Tier } from '@/lib/forest';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
-export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'pause' | 'boons' | 'challenges' | 'summary' | 'debug' | 'bestiary';
+export type ModalName = 'rules' | 'stats' | 'exit' | 'settings' | 'collection' | 'deck' | 'pause' | 'boons' | 'challenges' | 'checkpoint' | 'summary' | 'debug' | 'bestiary';
 
 interface UiState {
   modal: ModalName | null;

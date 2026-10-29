@@ -9,7 +9,7 @@ export const STAMP_IDS = [
   // Ligados a los sellos
   'bulwark', 'heist', 'purist', 'reflex', 'venom', 'rematch', 'collector',
   // El Castillo (y uno por cada desafío con el que lo conquistas)
-  'castle', 'ch_noHeal', 'ch_fierce', 'ch_sealed', 'ch_short', 'ch_fragile',
+  'castle', 'ch_noHeal', 'ch_fierce', 'ch_sealed', 'ch_short', 'ch_fragile', 'ch_noDeath',
   // El Bosque
   'nightmare', 'bestiary',
 ] as const;

@@ -170,3 +170,60 @@ describe('el Castillo', () => {
     expect(sum.stats.rounds).toBe(2);
   });
 });
+
+describe('el Castillo: puntos de guardado (pisos 4 y 8) e IA de cada piso', () => {
+  beforeEach(() => store.clear());
+
+  /** Sube hasta el piso `to` (índice) eligiendo siempre la primera mejora y abriendo cofres */
+  const climb = (c: Awaited<ReturnType<typeof load>>, to: number) => {
+    while (c.getCastle().run!.stage < to) {
+      c.recordCastleWin(3, fixed(0.5));
+      if (c.getCastle().run!.chest) c.openChest();
+      c.chooseBoon(0);
+    }
+  };
+
+  it('al llegar al piso 4 queda guardado; si caes, lo retomas con las vidas llenas', async () => {
+    const c = await load();
+    c.ensureRun();
+    climb(c, 2);
+    expect(c.getCastle().checkpoint).toBeUndefined();
+    climb(c, 3);
+    expect(c.getCastle().checkpoint).toMatchObject({ stage: 3 });
+    climb(c, 5);
+    const out = c.recordCastleLoss();
+    expect(out).toMatchObject({ kind: 'fallen', stage: 5, checkpoint: 3 });
+    expect(c.getCastle().run).toBeNull();
+    const run = c.resumeCheckpoint()!;
+    expect(run).toMatchObject({ stage: 3, lives: run.maxLives });
+    expect(run.offer).toBeUndefined();
+    // Sigue guardado: si vuelves a caer, vuelves al mismo sitio
+    c.recordCastleLoss();
+    expect(c.getCastle().checkpoint).toMatchObject({ stage: 3 });
+  });
+
+  it('el siguiente punto sustituye al anterior; empezar de cero o conquistarlo lo borra', async () => {
+    const c = await load();
+    c.ensureRun();
+    climb(c, 7);
+    expect(c.getCastle().checkpoint).toMatchObject({ stage: 7 });
+    c.recordCastleLoss();
+    c.ensureRun();
+    expect(c.getCastle().checkpoint).toBeUndefined();
+  });
+
+  it('con «Sin caer» no hay puntos de guardado', async () => {
+    const c = await load();
+    c.ensureRun(['noDeath']);
+    climb(c, 4);
+    expect(c.getCastle().checkpoint).toBeUndefined();
+    expect(c.recordCastleLoss()).toEqual({ kind: 'fallen', stage: 4 });
+  });
+
+  it('los 6 primeros pisos, la IA normal; luego la difícil; con «Jefes feroces», siempre la difícil', async () => {
+    const c = await load();
+    expect([0, 5, 6, 11].map(s => c.castleAi(s))).toEqual(['normal', 'normal', 'hard', 'hard']);
+    const fierce = c.ensureRun(['fierce']);
+    expect(c.castleAi(0, fierce)).toBe('hard');
+  });
+});

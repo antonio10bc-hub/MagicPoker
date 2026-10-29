@@ -125,6 +125,8 @@ export const MenuScreen = () => {
       // Subida nueva tras haberlo conquistado: antes, los desafíos
       const castle = getCastle();
       if (castle.run?.offer || castle.run?.chest) useUiStore.getState().openModal('boons');
+      // Caíste tras un punto de guardado: retomar desde él o empezar de cero
+      else if (!castle.run && castle.checkpoint) useUiStore.getState().openModal('checkpoint');
       else if (!castle.run && castle.conquered > 0) useUiStore.getState().openModal('challenges');
       else useGameStore.getState().startCastle();
     } else startGame(selected, rematch);
@@ -163,7 +165,9 @@ export const MenuScreen = () => {
   const cta = castleSel
     ? castleRun
       ? { title: t.castle_continue_title, sub: t.castle_floor_sub.replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
-      : { title: t.castle_enter, sub: t.castle_sub_new }
+      : castleState.checkpoint
+        ? { title: t.castle_enter, sub: t.cp_sub.replace('{n}', String(castleState.checkpoint.stage + 1)) }
+        : { title: t.castle_enter, sub: t.castle_sub_new }
     : locked
       ? { title: t.challenge, sub: t.play_locked_sub }
       // Un jefe vencido solo se juega en revancha (cada vez más fuerte)

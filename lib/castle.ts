@@ -136,8 +136,11 @@ const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: numbe
 //  sealed  · los jefes llevan un nivel más (más sellos)
 //  short   · empiezas sin tus 4 cartas más flojas
 //  fragile · empiezas con 3 vidas (y 3 de tope)
-export type ChallengeId = 'noHeal' | 'fierce' | 'sealed' | 'short' | 'fragile';
-export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short', 'fragile'];
+//  noDeath · sin puntos de guardado: hay que conquistarlo de una tirada, sin caer
+export type ChallengeId = 'noHeal' | 'fierce' | 'sealed' | 'short' | 'fragile' | 'noDeath';
+export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short', 'fragile', 'noDeath'];
+/** Desafíos a la vez para el dorso de la Corona (eran todos cuando había cinco) */
+export const CROWN_CHALLENGES = 5;
 const has = (run: CastleRun | undefined | null, c: ChallengeId) => !!run?.challenges?.includes(c);
 
 export interface CastleState {
@@ -154,16 +157,35 @@ export interface CastleState {
   legendary?: boolean;
   /** Resumen de la última subida terminada */
   lastSummary?: RunSummary;
+  /** Punto de guardado: la subida tal como estaba al llegar a un piso de guardado. Si caes,
+   *  puedes retomarla desde ahí (con las vidas llenas). Empezar de cero lo borra */
+  checkpoint?: CastleRun;
 }
+
+// --- PUNTOS DE GUARDADO Y PISOS FÁCILES ---
+// Al llegar a los pisos 4 y 8 (ya elegida la mejora) la subida queda guardada: si caes
+// más arriba, vuelves a ese piso con el mazo de entonces y las vidas llenas. El desafío
+// «Sin caer» los quita. Los jefes de los 6 primeros pisos piensan con la IA normal (salvo
+// con «Jefes feroces»); del 7.º en adelante, con la difícil.
+/** Pisos de guardado (índices: el 3 es el piso 4) */
+export const CHECKPOINT_STAGES = [3, 7];
+export const NORMAL_AI_FLOORS = 6;
+export const isCheckpointFloor = (stage: number) => CHECKPOINT_STAGES.includes(stage);
+/** Cómo piensa el jefe de este piso */
+export const castleAi = (stage: number, run?: CastleRun | null): 'normal' | 'hard' =>
+  stage < NORMAL_AI_FLOORS && !has(run, 'fierce') ? 'normal' : 'hard';
+/** Si la subida queda lista en un piso de guardado (sin cofre ni mejora pendientes), se guarda */
+const withCheckpoint = (state: CastleState, run: CastleRun): CastleState =>
+  isCheckpointFloor(run.stage) && !run.offer && !run.chest && !has(run, 'noDeath') ? { ...state, checkpoint: { ...run } } : state;
 
 // --- DORSOS DEL CASTILLO ---
 //  castle   · conquistar el Castillo
 //  merchant · conseguir una carta legendaria (del mercader o de un cofre)
-//  crown    · conquistarlo con los 5 desafíos a la vez
+//  crown    · conquistarlo con 5 desafíos a la vez
 export const CASTLE_BACKS = ['castle', 'merchant', 'crown'] as const;
 export type CastleBack = typeof CASTLE_BACKS[number];
 export const castleBacks = (s: CastleState = getCastle()): CastleBack[] => CASTLE_BACKS.filter(b =>
-  b === 'castle' ? s.conquered > 0 : b === 'merchant' ? !!s.legendary : (s.bestChallenges ?? 0) >= CHALLENGES.length);
+  b === 'castle' ? s.conquered > 0 : b === 'merchant' ? !!s.legendary : (s.bestChallenges ?? 0) >= CROWN_CHALLENGES);
 
 export const CASTLE_LENGTH = BOSSES.length;
 const KEY = 'magic_poker_castle';
@@ -181,6 +203,7 @@ export const getCastle = (): CastleState => {
       cached = raw ? { ...EMPTY, ...(JSON.parse(raw) as Partial<CastleState>) } : EMPTY;
       // Una subida rota o de otra versión se descarta
       if (cached.run && !isRun(cached.run)) cached = { ...cached, run: null };
+      if (cached.checkpoint && !isRun(cached.checkpoint)) cached = { ...cached, checkpoint: undefined };
     } catch {
       cached = EMPTY;
     }
@@ -226,12 +249,23 @@ export const ensureRun = (challenges: ChallengeId[] = []): CastleRun => {
     deck = deck.filter((_, i) => !weakest.includes(i));
   }
   const run: CastleRun = { stage: 0, lives, maxLives: lives, deck, stats: newStats(), ...(valid.length ? { challenges: valid } : {}) };
-  save({ ...state, run, lastChallenges: valid });
+  save({ ...state, run, lastChallenges: valid, checkpoint: undefined });
   track('castle_run_started', { challenges: valid, challenges_count: valid.length, deck_size: deck.length, attempt: state.conquered > 0 ? 'after_conquest' : 'normal' });
   return run;
 };
 
 export const abandonRun = () => save({ ...getCastle(), run: null });
+
+/** Retoma la subida desde el punto de guardado (con las vidas llenas). Devuelve la subida */
+export const resumeCheckpoint = (): CastleRun | null => {
+  const state = getCastle();
+  if (state.run) return state.run;
+  if (!state.checkpoint) return null;
+  const run: CastleRun = { ...state.checkpoint, lives: state.checkpoint.maxLives, offer: undefined, chest: undefined };
+  save({ ...state, run });
+  track('castle_checkpoint_resumed', { floor: run.stage + 1 });
+  return run;
+};
 
 /** Jefe evolucionado: nivel de revancha según lo alto que estés */
 export const castleBossLevel = (stage: number, run?: CastleRun | null) => Math.min(4, (stage < 4 ? 1 : stage < 8 ? 2 : 3) + (has(run, 'sealed') ? 1 : 0));
@@ -318,7 +352,7 @@ export const chooseBoon = (index: number): CastleRun | null => {
   const boon = state.run?.offer?.[index];
   if (!state.run || !boon) return null;
   const run = { ...applyBoon(state.run, boon), stats: countBoon(state.run, boon) };
-  save({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' });
+  save(withCheckpoint({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' }, run));
   return run;
 };
 
@@ -346,13 +380,15 @@ export const openChest = (): Boon | null => {
   if (!state.run || !boon) return null;
   // La oferta del mercader que ya estaba decidida se conserva
   const run = { ...applyBoon(state.run, boon), offer: state.run.offer, chest: undefined, stats: countBoon(state.run, boon, true) };
-  save({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' });
+  save(withCheckpoint({ ...state, run, legendary: state.legendary || boonRarity(boon) === 'legendary' }, run));
   return boon;
 };
 
 // --- RESULTADO DE CADA PELEA ---
 
-export type CastleOutcome = { kind: 'next'; run: CastleRun } | { kind: 'conquered'; challenges: ChallengeId[] } | { kind: 'fallen'; stage: number };
+export type CastleOutcome = { kind: 'next'; run: CastleRun } | { kind: 'conquered'; challenges: ChallengeId[] }
+  /** `checkpoint`: el piso (índice) desde el que puedes retomarla, si lo hay */
+  | { kind: 'fallen'; stage: number; checkpoint?: number };
 
 /** Vences al jefe de turno: subes un piso (o conquistas el Castillo) */
 export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): CastleOutcome => {
@@ -361,7 +397,7 @@ export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): Cast
   const stage = state.run.stage + 1;
   if (stage >= CASTLE_LENGTH) {
     const n = state.run.challenges?.length ?? 0;
-    save({ ...state, run: null, best: CASTLE_LENGTH, conquered: state.conquered + 1, bestChallenges: Math.max(state.bestChallenges ?? 0, n),
+    save({ ...state, run: null, checkpoint: undefined, best: CASTLE_LENGTH, conquered: state.conquered + 1, bestChallenges: Math.max(state.bestChallenges ?? 0, n),
       lastSummary: summarize(state.run, 'conquered', CASTLE_LENGTH, livesLeft) });
     return { kind: 'conquered', challenges: state.run.challenges ?? [] };
   }
@@ -372,10 +408,10 @@ export const recordCastleWin = (livesLeft: number, rng: Rng = Math.random): Cast
   return { kind: 'next', run };
 };
 
-/** Caes (o empatas): la subida se acaba */
+/** Caes (o empatas): la subida se acaba (pero si llegaste a un punto de guardado, se puede retomar) */
 export const recordCastleLoss = (): CastleOutcome => {
   const state = getCastle();
   const stage = state.run?.stage ?? 0;
   save({ ...state, run: null, best: Math.max(state.best, stage), lastSummary: state.run ? summarize(state.run, 'fallen', stage, 0) : state.lastSummary });
-  return { kind: 'fallen', stage };
+  return { kind: 'fallen', stage, ...(state.checkpoint ? { checkpoint: state.checkpoint.stage } : {}) };
 };

@@ -11,7 +11,7 @@ import { BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, resetPr
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { Card, CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
-import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle, Rarity, CardTemplate, RunSummary } from '@/lib/castle';
+import { CASTLE_BACKS, castleBacks, CHALLENGES, ChallengeId, ensureRun, getCastle, resumeCheckpoint, Rarity, CardTemplate, RunSummary } from '@/lib/castle';
 import { MerchantFigure } from '@/components/game/MerchantScene';
 import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
@@ -410,6 +410,41 @@ export const BoonsModal = () => {
         </div>
         {run && <div className="relative z-20"><RunStatus run={run} /></div>}
         <BoonChooser onChosen={() => { useUiStore.getState().closeModal(); useGameStore.getState().startCastle(); }} />
+      </DialogBody>
+    </Dialog>
+  );
+};
+
+// --- PUNTO DE GUARDADO DEL CASTILLO ---
+// Caíste después de un punto de guardado: retomas desde él (con el mazo de entonces y las
+// vidas llenas) o empiezas de cero (y lo pierdes; si ya lo conquistaste, eliges desafíos).
+export const CheckpointModal = () => {
+  const t = useTranslations();
+  const [cp] = useState(() => getCastle().checkpoint);
+  if (!cp) return null;
+  const floor = String(cp.stage + 1);
+  const resume = () => {
+    playSound('click');
+    resumeCheckpoint();
+    useUiStore.getState().closeModal();
+    useGameStore.getState().startCastle();
+  };
+  const restart = () => {
+    playSound('click');
+    if (getCastle().conquered > 0) { useUiStore.getState().openModal('challenges'); return; }
+    ensureRun([]);
+    useUiStore.getState().closeModal();
+    useGameStore.getState().startCastle();
+  };
+  return (
+    <Dialog title={t.cp_title} size="sm" tone="castle" width={230}
+      footer={<>
+        <PxButton size="lg" tone="yellow" onClick={resume}>{t.cp_resume.replace('{n}', floor)}</PxButton>
+        <PxButton size="md" onClick={restart}>{t.cp_restart}</PxButton>
+      </>}>
+      <DialogBody scroll={false} className="items-center gap-[6px]">
+        <CastleMap stage={cp.stage} saved={cp.stage} />
+        <p className="t-note text-center">{t.cp_desc.replace('{n}', floor)}</p>
       </DialogBody>
     </Dialog>
   );

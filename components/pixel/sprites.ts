@@ -304,6 +304,16 @@ export const STAR = s(
   '.oo.oo.',
 );
 
+/** Bandera del punto de guardado del Castillo (mástil y banderín), para teñir */
+export const FLAG = s(
+  'xxxx.',
+  'xxxxx',
+  'xxxx.',
+  'x....',
+  'x....',
+  'x....',
+);
+
 // --- SELLOS (9×9): se pintan en verde eléctrico ---
 export const SEAL_ICONS: Record<SealId, Sprite> = {
   /** Defensa: escudo */

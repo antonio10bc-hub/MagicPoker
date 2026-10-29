@@ -10,7 +10,7 @@ import {
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
 import { archetype, buildForestDeck, Encounter, FOREST_LIVES, forestAi, bestiaryComplete, getForest, recordForestDuel } from '@/lib/forest';
-import { buildRunDeck, CastleOutcome, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin, trackCastleFight } from '@/lib/castle';
+import { buildRunDeck, CastleOutcome, castleAi, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin, trackCastleFight } from '@/lib/castle';
 import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSfx, playSound } from '@/lib/sounds';
 import { SEAL_SFX } from '@/lib/synth';
@@ -245,7 +245,8 @@ export const useGameStore = create<GameState>((set, get) => {
       ...initialMatchState(),
       screen: 'game',
       ...tossCoin(),
-      difficulty: 'hard',
+      // Los 6 primeros pisos, la IA normal; del 7.º en adelante, la difícil
+      difficulty: castleAi(run.stage, run),
       bossIndex: run.stage,
       rematchLevel: level,
       castle: { stage: run.stage },

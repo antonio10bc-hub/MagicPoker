@@ -733,11 +733,18 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
                 initial={false} animate={{ opacity: phase === 'emerge' || phase === 'rise' ? 0 : 1 }} transition={{ delay: phase === 'lit' ? 1.2 : 0, duration: phase === 'rise' ? 0 : 0.8 }}>
                 <span className="font-display glow-crimson" style={{ fontSize: 13, lineHeight: '13px', letterSpacing: 2, color: 'var(--ink-crimson)' }}>{t.castle_title}</span>
                 {/* Con una subida a medias, su mapa; si no, la frase del Castillo */}
+                {/* (con un punto de guardado, el mapa hasta él y desde dónde se retoma) */}
                 {castle.run
-                  ? <CastleMap stage={castle.run.stage} chestPending={!!castle.run.chest} />
-                  : <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>
-                    {t.castle_tagline}
-                  </span>}
+                  ? <CastleMap stage={castle.run.stage} chestPending={!!castle.run.chest} saved={castle.checkpoint?.stage}
+                    noCheckpoints={castle.run.challenges?.includes('noDeath')} />
+                  : castle.checkpoint
+                    ? <>
+                      <CastleMap stage={castle.checkpoint.stage} saved={castle.checkpoint.stage} />
+                      <span className="t-micro text-center" style={{ color: 'var(--ink-cream)' }}>{t.cp_sub.replace('{n}', String(castle.checkpoint.stage + 1))}</span>
+                    </>
+                    : <span className="t-micro text-center" style={{ color: 'var(--ink-mint)' }}>
+                      {t.castle_tagline}
+                    </span>}
               </motion.div>
             </div>
           )}
