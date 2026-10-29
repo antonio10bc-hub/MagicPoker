@@ -786,12 +786,14 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   cuadrada igual (masa carmesí, la i en silueta) abre el resumen de la última subida. Entre el Soberano y
   el Castillo hay más camino que entre pueblos (los dos son grandes y llevan texto). El
   Soberano (con resplandor de oro) y el Castillo **no se ven** hasta alcanzarlos: lo
-  desconocido queda bajo un **banco de nubes opaco** (`MapClouds.tsx`): capas de nubes
-  apiladas en festones redondos, con el mismo tramado que el terreno, cada una con un
-  filo de luz abajo y más oscura hacia arriba; la de abajo, la más clara y abultada, se
-  deshilacha un poco en su borde. Tapa del todo hasta el Soberano; al descubrirlo se
-  recoge hasta encima de él, y con el Castillo se va del todo hacia arriba (2,6 s al
-  alzarse). Se mece de lado muy despacio (quieta en bajo consumo).
+  desconocido queda bajo un **banco de nubes opaco** (`MapClouds.tsx`): cúmulos sueltos (no
+  filas, que parecían olas) de tamaños distintos y apilados a suertes, con el mismo
+  tramado que el terreno: los de atrás (arriba) más pequeños y oscuros, los de delante
+  con un filo de luz abajo; una fila de cúmulos grandes hace el borde. Tapa del todo
+  hasta el Soberano; al descubrirlo se recoge hasta encima de él con un pequeño rebote
+  y del borde se desprenden jirones que se van flotando y se deshacen. Con el Castillo
+  el banco se parte por el medio con un corte irregular y cada mitad se va a su lado
+  subiendo, girando un poco y apagándose, entre muchos jirones (2,6 s al alzarse). Se mece de lado muy despacio (quieta en bajo consumo).
   - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
     principal abajo, con degradados a negro para que se fundan. En horizontal, igual:
     el mapa llena la pantalla, el logo pequeño arriba a la izquierda, los iconos
