@@ -46,7 +46,11 @@ describe('el Bosque', () => {
     const seals = deck.filter(c => c.rank === 'SEAL').reduce<Record<string, number>>((m, c) => ({ ...m, [c.seal!]: (m[c.seal!] ?? 0) + 1 }), {});
     expect(seals).toEqual({ swap: 1, life: 2, mirror: 1, echo: 1 });
     expect(forestDeckConfig(a)).toEqual({ seals: { swap: 1, life: 2, mirror: 1, echo: 1 }, removed: [] });
-    expect(FOREST_LIVES.renegade).toBe(FOREST_LIVES.nightmare);
+    // Las vidas suben con el nivel; los únicos, los que más
+    expect(FOREST_LIVES.normal).toBeLessThan(FOREST_LIVES.hard);
+    expect(FOREST_LIVES.hard).toBeLessThan(FOREST_LIVES.nightmare);
+    expect(FOREST_LIVES.nightmare).toBeLessThanOrEqual(FOREST_LIVES.renegade);
+    expect(FOREST_LIVES.unique).toBeGreaterThan(FOREST_LIVES.renegade);
     expect(forestAi('renegade')).toBe('hard');
     expect(TIER_WEIGHTS.renegade).toBe(TIER_WEIGHTS.unique);
   });
@@ -59,11 +63,11 @@ describe('el Bosque', () => {
     expect(king.filter(c => c.rank === 'K')).toHaveLength(3);
   });
 
-  it('el nivel endurece el mazo: más sellos y cartas del Castillo', () => {
+  it('el mazo según el nivel: copias de sellos ajustadas y más cartas del Castillo', () => {
     const witch = ARCHETYPES.find(a => a.id === 'witch')!;
     const seals = (t: 'normal' | 'hard' | 'nightmare') => buildForestDeck(witch, t).filter(c => c.rank === 'SEAL').length;
     const spies = (t: 'normal' | 'hard' | 'nightmare') => buildForestDeck(witch, t).filter(c => c.rank === 'SPY').length;
-    expect([seals('normal'), seals('hard'), seals('nightmare')]).toEqual([2, 4, 6]);
+    expect([seals('normal'), seals('hard'), seals('nightmare')]).toEqual([6, 2, 2]);
     expect([spies('normal'), spies('hard'), spies('nightmare')]).toEqual([0, 1, 2]);
     expect(buildForestDeck(witch, 'hard').every(c => c.owner === 'opponent')).toBe(true);
     expect(forestAi('normal')).toBe('normal');

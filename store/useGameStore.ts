@@ -127,8 +127,6 @@ const revealFor = (played: Card | undefined, slot: number, enemy: PlayerState, e
   return { enemy: { ...enemy, board: r.board }, fx: { id: Date.now(), events: [{ kind: 'reveal' as const, owner: enemyOwner, index: r.index }] } };
 };
 
-/** Jefes del principio contra la IA normal (los demás, la difícil) */
-const EASY_BOSSES = 4;
 
 /** Cara (empiezas tú) o cruz (empieza el rival): la partida espera en 'start' a la moneda */
 const tossCoin = () => ({ phase: 'start' as GamePhase, coin: { id: Date.now(), opener: (Math.random() < 0.5 ? 'player' : 'opponent') as Owner } });
@@ -278,9 +276,9 @@ export const useGameStore = create<GameState>((set, get) => {
       ...initialMatchState(),
       screen: 'game',
       ...tossCoin(),
-      // Los primeros jefes piensan pero aprietan menos (la IA normal); del 5.º en
-      // adelante, y en las revanchas, la difícil
-      difficulty: bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard',
+      // La primera vez, todos los jefes piensan con la IA normal (la dificultad la ponen sus
+      // vidas y sus sellos); en las revanchas, con la difícil
+      difficulty: rematch ? 'hard' : 'normal',
       bossIndex,
       rematch,
       rematchLevel: level,

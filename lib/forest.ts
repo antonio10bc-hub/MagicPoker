@@ -77,12 +77,13 @@ export const rollEncounter = (rng: () => number = Math.random): Encounter => {
 };
 
 /** Vidas del rival por nivel */
-export const FOREST_LIVES: Record<Tier, number> = { normal: 4, hard: 5, nightmare: 6, unique: 7, renegade: 6 };
+export const FOREST_LIVES: Record<Tier, number> = { normal: 4, hard: 5, nightmare: 6, unique: 8, renegade: 7 };
 /** Cómo piensa: en normal, la IA normal; desde difícil, la difícil */
 export const forestAi = (tier: Tier): Difficulty => (tier === 'normal' ? 'normal' : 'hard');
 
-/** Copias de sus sellos y de sus cartas del Castillo según el nivel */
-const SEAL_COPIES: Record<Tier, number> = { normal: 1, hard: 2, nightmare: 3, unique: 2, renegade: 1 };
+/** Copias de sus sellos y de sus cartas del Castillo según el nivel (ajustadas con la
+ * simulación de balanceo: cada nivel es más difícil que el anterior) */
+const SEAL_COPIES: Record<Tier, number> = { normal: 3, hard: 1, nightmare: 1, unique: 3, renegade: 1 };
 const CARD_COPIES: Record<Tier, number> = { normal: 0, hard: 1, nightmare: 2, unique: 0, renegade: 0 };
 
 /**

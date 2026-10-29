@@ -14,8 +14,6 @@ import { STARTING_HAND_SIZE, STARTING_LIVES } from '@/lib/constants';
 import { MatchResult, playerStart, playMatch, rivalAi } from './engine';
 import { chooserOf, PersonaId, pickBoon, seesAll } from './personas';
 
-/** Jefes del principio contra la IA normal (los demás, la difícil): como la tienda */
-const EASY_BOSSES = 4;
 
 /** Sellos desbloqueados tras vencer a `defeated` jefes */
 export const sealsAfter = (defeated: number): SealId[] => BOSSES.slice(0, defeated).flatMap(b => (b.seal ? [b.seal] : []));
@@ -37,7 +35,7 @@ export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?:
     player: playerStart(deckFor(defeated, opts.config)),
     opponent: createBossState(boss, level, opts.lives ?? bossLives(boss, level), STARTING_HAND_SIZE),
     bot: chooserOf(persona), botSeesAll: seesAll(persona),
-    rival: rivalAi(opts.ai ?? (bossIndex < EASY_BOSSES && !rematch ? 'normal' : 'hard')),
+    rival: rivalAi(opts.ai ?? (rematch ? 'hard' : 'normal')),
     sealCantrip: opts.cantrip, rivalCantrip: opts.cantrip,
   });
 };

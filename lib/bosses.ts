@@ -18,16 +18,18 @@ export interface Boss {
 }
 
 export const BOSSES: Boss[] = [
-  { id: 'drifter', seal: null, lives: 4 },
-  { id: 'wall', seal: 'shield', lives: 4 },
+  // Vidas ajustadas con la simulación de balanceo (scripts/balance): la primera vez todos
+  // piensan con la IA normal y la dificultad sube poco a poco, sin escalones
+  { id: 'drifter', seal: null, lives: 3 },
+  { id: 'wall', seal: 'shield', lives: 3 },
   { id: 'duelist', seal: 'double', lives: 4 },
   { id: 'trickster', seal: 'shift', lives: 5 },
   { id: 'thief', seal: 'swap', lives: 5 },
   { id: 'matriarch', seal: 'life', lives: 5 },
   { id: 'mirrorist', seal: 'mirror', lives: 5 },
   { id: 'poisoner', seal: 'poison', lives: 5 },
-  { id: 'bard', seal: 'echo', lives: 5 },
-  { id: 'sailor', seal: 'anchor', lives: 5 },
+  { id: 'bard', seal: 'echo', lives: 6 },
+  { id: 'sailor', seal: 'anchor', lives: 6 },
   { id: 'seer', seal: 'reveal', lives: 6 },
   { id: 'sovereign', seal: null, lives: 7, secret: true },
 ];
