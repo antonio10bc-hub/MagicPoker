@@ -19,6 +19,7 @@ import { Sprite } from '@/components/pixel/PixelSprite';
 import { SCENERY } from '@/components/pixel/scenery';
 import { MapTerrain, Pt } from './MapTerrain';
 import { MapEyes } from './MapEyes';
+import { MapClouds } from './MapClouds';
 import { StationProp, STATIONS } from './mapStations';
 import { BossFigure } from '@/components/game/BossFigure';
 import { CastleMap } from '@/components/game/CastleMap';
@@ -537,6 +538,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const castleRising = target === CASTLE_INDEX && ['rise', 'emerge', 'lit'].includes(phase);
   const topKnown = castleVisible || castleRising ? castlePt.y - CASTLE_H - 40
     : nodes[[...BOSSES.keys()].reverse().find(i => visible(i)) ?? 0].y - 70;
+  // Hasta dónde llegan las nubes con todo por descubrir (encima del último jefe normal)
+  const fogBottom = nodes[BOSSES.length - 2].y - 70;
 
   const pick = (i: number) => {
     if (revealing) return;
@@ -728,16 +731,11 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
             </div>
           )}
 
-          {/* Niebla sobre lo desconocido: tapa la parte de arriba del camino */}
-          <motion.div className="absolute inset-x-0 top-0 pointer-events-none" initial={false}
-            animate={{ height: Math.max(0, topKnown) }} transition={{ duration: phase === 'emerge' || phase === 'rise' ? 2.6 : 0.9, ease: 'easeOut' }}
-            style={{ background: 'linear-gradient(to bottom, rgba(11,13,12,1) 0%, rgba(30,42,40,0.92) 45%, rgba(94,122,118,0.28) 82%, transparent 100%)' }}>
-            {[0.3, 0.6, 0.85].map((f, i) => (
-              <motion.div key={i} className="absolute" style={{ top: `${f * 100}%`, left: '-30%', width: '160%', height: 60, marginTop: -30,
-                background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(185,207,200,0.16) 0%, transparent 70%)' }}
-                animate={lowPower ? undefined : { x: [i % 2 ? -24 : 24, i % 2 ? 24 : -24] }} transition={{ duration: 7 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
-            ))}
-          </motion.div>
+          {/* Nubes sobre lo desconocido: tapan del todo lo que está por encima de lo último
+              que conoces (el Soberano y el Castillo) y se recogen al desbloquearlo */}
+          {/* Con el Castillo a la vista se van del todo (hacia arriba, fuera del mapa) */}
+          <MapClouds width={rect.w} bottom={fogBottom} top={castleVisible || castleRising ? -40 : topKnown}
+            seconds={phase === 'emerge' || phase === 'rise' ? 2.6 : 0.9} />
         </motion.div>
       </div>
 

@@ -18,16 +18,16 @@ import { SCENERY, SceneryId } from '@/components/pixel/scenery';
 export interface Pt { x: number; y: number }
 export interface Biome { kind: 'water' | 'swamp' | 'field'; x: number; y: number; rx: number; ry: number }
 
-const RAMP: [number, number, number][] = ['#0B0D0C', '#1E2A28', '#5E7A76', '#B9CFC8', '#EDEBE0']
+export const RAMP: [number, number, number][] = ['#0B0D0C', '#1E2A28', '#5E7A76', '#B9CFC8', '#EDEBE0']
   .map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
 
 /** Ruido determinista por coordenada */
-const hash = (x: number, y: number, seed: number) => {
+export const hash = (x: number, y: number, seed: number) => {
   const n = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
   return n - Math.floor(n);
 };
 /** Ruido de valor suave (celdas de `cell` px) */
-const smooth = (x: number, y: number, cell: number, seed: number) => {
+export const smooth = (x: number, y: number, cell: number, seed: number) => {
   const gx = x / cell, gy = y / cell;
   const x0 = Math.floor(gx), y0 = Math.floor(gy);
   const fx = gx - x0, fy = gy - y0;
