@@ -1,5 +1,4 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Pt } from './MapTerrain';
 import { useLowPower } from '@/lib/quality';
 
@@ -33,17 +32,13 @@ const spotsAround = (castle: Pt, w: number): Pt[] => {
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
-/** Un par de ojos: se abre, parpadea, mira y se cierra (una sola animación) */
-const Pair = memo(({ at, seconds, onDone }: { at: Pt; seconds: number; onDone: () => void }) => {
+/** Un par de ojos: se abre, parpadea, mira y se cierra (una animación CSS, `eyes-blink`) */
+const Pair = memo(({ at, seconds }: { at: Pt; seconds: number }) => {
   const eye = { width: 3, height: 2, background: 'var(--ink-amber)', boxShadow: '0 0 3px 1px rgba(255,194,51,0.95), 0 0 8px 2px rgba(255,194,51,0.5)' };
   return (
-    <motion.div className="absolute flex gap-[3px] pointer-events-none" style={{ left: at.x, top: at.y }}
-      initial={{ opacity: 0, scaleY: 0.1, x: 0 }}
-      animate={{ opacity: [0, 1, 1, 1, 1, 1, 1, 0], scaleY: [0.1, 1, 1, 0.1, 1, 1, 1, 0.1], x: [0, 0, 0, 0, 1, -1, 0, 0] }}
-      transition={{ duration: seconds, times: [0, 0.1, 0.4, 0.45, 0.55, 0.75, 0.9, 1], ease: 'easeInOut' }}
-      onAnimationComplete={onDone}>
+    <div className="absolute flex gap-[3px] pointer-events-none anim-eyes" style={{ left: at.x, top: at.y, animationDuration: `${seconds}s` }}>
       <span style={eye} /><span style={eye} />
-    </motion.div>
+    </div>
   );
 });
 Pair.displayName = 'Pair';
@@ -59,7 +54,11 @@ const Slot = ({ spots, taken, index }: { spots: Pt[]; taken: React.MutableRefObj
       if (!free.length) return next(1500);
       const spot = free[Math.floor(Math.random() * free.length)];
       taken.current.add(spot);
-      setShow({ spot, seconds: rand(3.2, 5.5), key: ++counter.current });
+      const seconds = rand(3.2, 5.5);
+      setShow({ spot, seconds, key: ++counter.current });
+      // Al acabar, se libera el sitio y a esperar al siguiente (con un reloj propio: no
+      // depende de que la animación avise al terminar)
+      timer.current = setTimeout(() => { taken.current.delete(spot); setShow(null); next(rand(500, 2200)); }, seconds * 1000);
     }, delay);
   };
   useEffect(() => {
@@ -70,8 +69,7 @@ const Slot = ({ spots, taken, index }: { spots: Pt[]; taken: React.MutableRefObj
   }, []);
   if (!show) return null;
   return (
-    <Pair key={show.key} at={spots[show.spot]} seconds={show.seconds}
-      onDone={() => { taken.current.delete(show.spot); setShow(null); next(rand(500, 2200)); }} />
+    <Pair key={show.key} at={spots[show.spot]} seconds={show.seconds} />
   );
 };
 

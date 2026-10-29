@@ -751,7 +751,7 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   de tierra que sube por el campo de abajo arriba, entre bosques de pinos y robles en
   silueta, más cerrados hacia los bordes; arriba el bosque se cierra sobre el Castillo y
   lo rodea, para que se lea que el mapa acaba ahí. Con el Bosque abierto, en ese bosque
-  se encienden pares de ojos ámbar pequeños (3×2 px, hasta cinco a la vez, los del Bosque; las luciérnagas no se acercan al Castillo para no quitarles protagonismo): se abren,
+  se encienden pares de ojos ámbar pequeños (3×2 px, hasta cinco a la vez, animación CSS `anim-eyes`, los del Bosque; las luciérnagas no se acercan al Castillo para no quitarles protagonismo): se abren,
   parpadean, miran a un lado y a otro y se apagan para salir en otro sitio; tres a la
   vez, dos en bajo consumo, nunca sobre el Castillo ni el camino (`MapEyes.tsx`) (`MapTerrain.tsx`: se pinta una vez en un
   lienzo con el mismo tramado estocástico que la niebla: campo oscuro con manchas,

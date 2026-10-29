@@ -16,7 +16,6 @@ import { INK } from '@/theme/tokens';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
-import { resetProgress } from '@/lib/bosses';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 import { BoonsModal, ChallengesModal, RunSummaryModal, DebugModal, BestiaryModal, GrimoireModal, DeckEditorModal, PauseModal } from './ExtraModals';
 
@@ -192,27 +191,6 @@ const Slider = ({ value, onChange, label }: { value: number; onChange: (v: numbe
   </>
 );
 
-/** Borra la progresión de bosses y sellos; pide un segundo toque para confirmar */
-const ResetProgress = () => {
-  const t = useTranslations();
-  const [step, setStep] = useState<'idle' | 'confirm' | 'done'>('idle');
-  return (
-    <PxButton size="md" className={step === 'done' ? undefined : 'px-btn-danger'} disabled={step === 'done'}
-      style={step === 'confirm' ? { boxShadow: 'inset 0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : undefined}
-      onClick={() => {
-        if (step === 'idle') { playSfx('select', 0.6); setStep('confirm'); return; }
-        playSound('click');
-        resetProgress();
-        useUiStore.getState().setMenuBoss(0);
-        setStep('done');
-      }}>
-      <span style={{ color: step === 'confirm' ? 'var(--ink-orange)' : step === 'done' ? 'var(--ink-teal)' : undefined }}>
-        {step === 'confirm' ? t.reset_confirm : step === 'done' ? t.reset_done : t.reset_progress}
-      </span>
-    </PxButton>
-  );
-};
-
 const SettingsModal = () => {
   const t = useTranslations();
   const settings = useSettings();
@@ -255,7 +233,6 @@ const SettingsModal = () => {
             useUiStore.getState().closeModal();
             useGameStore.getState().startTutorial();
           }}>{t.replay_tutorial}</PxButton>
-          <ResetProgress />
         </Section>
       </DialogBody>
     </Dialog>

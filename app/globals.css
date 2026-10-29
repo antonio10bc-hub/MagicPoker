@@ -320,6 +320,17 @@ html, body {
 /* Sendero encendido: un brillo que lo recorre de abajo arriba (el retraso, por altura) */
 @keyframes trail-glint { 0%, 84%, 100% { opacity: 0.9; transform: scale(1); } 91% { opacity: 1; transform: scale(2.4); } }
 .anim-glint { animation: trail-glint 7s ease-in-out infinite; }
+/* Ojos del bosque del mapa: se abren, parpadean, miran a un lado y a otro y se cierran */
+@keyframes eyes-blink {
+  0% { opacity: 0; transform: scaleY(0.1); }
+  10%, 40% { opacity: 1; transform: scaleY(1); }
+  45% { opacity: 1; transform: scaleY(0.1); }
+  55% { opacity: 1; transform: translateX(1px) scaleY(1); }
+  75% { opacity: 1; transform: translateX(-1px) scaleY(1); }
+  90% { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(0.1); }
+}
+.anim-eyes { opacity: 0; animation: eyes-blink 4s ease-in-out both; }
 /* Árbol suelto del mapa: quieto casi todo el rato y, cuando pasa la racha, se mece y vuelve */
 @keyframes tree-sway {
   0%, 62%, 100% { transform: scaleX(var(--flip, 1)) skewX(0deg); }

@@ -7,7 +7,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
 import { createCard, createSealCard, createWildSealCard, isBoardEmpty, LEGENDARY_RANKS, RANKS } from '@/lib/game-utils';
-import { BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
+import { BOSSES, bossWins, getProgress, isBossVisible, isCastleUnlocked, resetProgress, unlockedBacks, unlockedSeals, WINS_FOR_BACK } from '@/lib/bosses';
 import { DEFAULT_BACK, setBack, usePlayerBack } from '@/lib/cosmetics';
 import { Card, CardBack } from '@/components/game/Card';
 import { BoonChooser } from '@/components/game/BoonChooser';
@@ -534,6 +534,27 @@ export const BestiaryModal = () => {
 
 // --- DEPURACIÓN (solo con ?debug=1) ---
 // Repite en el mapa las revelaciones como si acabaras de ganar, sin tocar tu progreso.
+/** Borra la progresión de bosses y sellos; pide un segundo toque para confirmar */
+const ResetProgress = () => {
+  const t = useTranslations();
+  const [step, setStep] = useState<'idle' | 'confirm' | 'done'>('idle');
+  return (
+    <PxButton size="md" className={step === 'done' ? undefined : 'px-btn-danger'} disabled={step === 'done'}
+      style={step === 'confirm' ? { boxShadow: 'inset 0 0 0 1px var(--ink-orange), 0 0 6px rgba(255,74,28,0.6)' } : undefined}
+      onClick={() => {
+        if (step === 'idle') { playSfx('select', 0.6); setStep('confirm'); return; }
+        playSound('click');
+        resetProgress();
+        useUiStore.getState().setMenuBoss(0);
+        setStep('done');
+      }}>
+      <span style={{ color: step === 'confirm' ? 'var(--ink-orange)' : step === 'done' ? 'var(--ink-teal)' : undefined }}>
+        {step === 'confirm' ? t.reset_confirm : step === 'done' ? t.reset_done : t.reset_progress}
+      </span>
+    </PxButton>
+  );
+};
+
 export const DebugModal = () => {
   const t = useTranslations();
   const replay = (defeated: number) => {
@@ -558,6 +579,7 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
+        <ResetProgress />
         <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-wrap gap-[3px]">
