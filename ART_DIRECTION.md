@@ -800,6 +800,13 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   corto y cada mitad se va a su lado subiendo, girando un poco y apagándose, entre
   muchos jirones (2,6 s al alzarse). En reposo se mece de lado muy despacio, cada mitad flota a su ritmo (un píxel arriba o abajo) y
   de vez en cuando un jirón pasa despacio por el borde y se deshace (quieta en bajo consumo).
+  - **Vida del mapa en reposo** (`MapLife.tsx`, nada en bajo consumo), todo muy sutil:
+    luciérnagas menta en el bosque (lejos del camino y de los pueblos) que se encienden,
+    dan una vuelta corta y se apagan; destellos crema en el agua y burbujas en la
+    ciénaga; de vez en cuando una bandada de cinco pájaros menta cruza alta. En los
+    pueblos, bajo fuegos y ventanas encendidas, un charco de luz cálida respira en el
+    suelo; la bandera blanca de los vencidos ondea; y por el sendero encendido sube un
+    brillo que lo recorre de abajo arriba (`anim-glint`).
   - En vertical el mapa llena la pantalla: logo pequeño e iconos arriba, la acción
     principal abajo, con degradados a negro para que se fundan. En horizontal, igual:
     el mapa llena la pantalla, el logo pequeño arriba a la izquierda, los iconos

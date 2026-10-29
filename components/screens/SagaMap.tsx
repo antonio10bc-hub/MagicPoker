@@ -18,6 +18,7 @@ import { HEART, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
 import { Sprite } from '@/components/pixel/PixelSprite';
 import { SCENERY } from '@/components/pixel/scenery';
 import { MapTerrain, Pt } from './MapTerrain';
+import { MapLife } from './MapLife';
 import { MapEyes } from './MapEyes';
 import { MapClouds } from './MapClouds';
 import { StationProp, STATIONS } from './mapStations';
@@ -117,8 +118,9 @@ const Trail = ({ a, b, lit, drawing, endPad }: { a: { x: number; y: number }; b:
   return (
     <>
       {pts.map((p, i) => (
-        <motion.span key={i} className="absolute pointer-events-none" style={{ left: p.x - 1, top: p.y - 1, width: 2, height: 2,
-          background: lit ? 'var(--ink-cream)' : 'var(--ink-slate)', boxShadow: lit ? '0 0 3px rgba(237,235,224,0.6)' : undefined }}
+        <motion.span key={i} className={clsx('absolute pointer-events-none', lit && !drawing && 'anim-glint')}
+          style={{ left: p.x - 1, top: p.y - 1, width: 2, height: 2, animationDelay: `${-p.y / 120}s`,
+            background: lit ? 'var(--ink-cream)' : 'var(--ink-slate)', boxShadow: lit ? '0 0 3px rgba(237,235,224,0.6)' : undefined }}
           initial={drawing ? { opacity: 0, scale: 2.5 } : false} animate={{ opacity: lit ? 0.9 : 0.6, scale: 1 }}
           transition={drawing ? { delay: (i / pts.length) * 1.6, duration: 0.25 } : undefined} />
       ))}
@@ -167,6 +169,11 @@ const MapProp = ({ prop, at, side, lit, z, mapW }: { prop: StationProp; at: Pt; 
       style={{ left: Math.round(Math.max(2, Math.min(mapW - w - 2, at.x + side * prop.dx - w / 2))), top: at.y + prop.dy - h, width: w, height: h, zIndex: z, scaleX: mirror ? -1 : 1 }}
       animate={lit || prop.anim === 'float' ? anim : undefined}
       transition={anim ? { duration: prop.anim === 'smoke' ? 2.6 : 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}>
+      {/* Fuegos y ventanas encendidas: un charco de luz cálida en el suelo que respira */}
+      {lit && prop.anim === 'flicker' && (
+        <span className="absolute pointer-events-none anim-lamp" style={{ left: -w * 0.15, bottom: -6, width: w * 1.3, height: 12, borderRadius: '50%',
+          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(242,101,42,0.22) 0%, transparent 70%)', animationDelay: `${-(at.x % 7) * 0.4}s` }} />
+      )}
       {/* Lo que aún no conoces: sus sitios a oscuras; el humo y las notas, solo si hay alguien */}
       {(lit || (prop.anim !== 'smoke' && prop.anim !== 'float')) && (
         <PixelSprite sprite={lit ? sprite : unlit} style={{ position: 'absolute', inset: 0, width: w, height: h, opacity: lit ? 1 : 0.8 }} />
@@ -234,7 +241,8 @@ const WhiteFlag = ({ fresh }: { fresh: boolean }) => {
     <motion.div className="absolute pointer-events-none" style={{ left: -3, bottom: 0, width: w * PROP_SCALE, height: h * PROP_SCALE, transformOrigin: '10% 100%' }}
       initial={fresh ? { scaleY: 0, opacity: 0 } : false} animate={{ scaleY: 1, opacity: 1 }}
       transition={{ delay: fresh ? 1.6 : 0, duration: 0.8, ease: 'easeOut' }}>
-      <PixelSprite sprite={SCENERY.white_flag} className="bloom-cream" style={{ width: w * PROP_SCALE, height: h * PROP_SCALE }} />
+      {/* La tela ondea despacio (el mástil, a la izquierda, queda quieto) */}
+      <PixelSprite sprite={SCENERY.white_flag} className="bloom-cream anim-banner" style={{ width: w * PROP_SCALE, height: h * PROP_SCALE, animationDuration: '3.4s' }} />
     </motion.div>
   );
 };
@@ -560,6 +568,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
           transition={phase === 'emerge' ? { duration: 3.2, ease: 'linear' } : { duration: 0.6 }}>
           {/* El campo: camino de tierra, claros, agua y bosque */}
           <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} />
+          <MapLife width={rect.w} height={contentH} road={road} keepOut={keepOut} biomes={biomes} flockY={nodes[current].y - 130} />
           {eyes && castleVisible && !revealing && <MapEyes castle={castlePt} width={rect.w} />}
           {/* Los sitios de cada jefe (detrás y delante de él) */}
           {BOSSES.map((boss, i) => {

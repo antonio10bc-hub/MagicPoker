@@ -317,16 +317,19 @@ html, body {
 .anim-slot-glow { animation: slot-glow 1s ease-in-out infinite; }
 .anim-banner { animation: banner-wave 2.4s ease-in-out infinite; transform-origin: 0 0; }
 .anim-lamp { animation: lamp-glow 2.8s ease-in-out infinite; }
+/* Sendero encendido: un brillo que lo recorre de abajo arriba (el retraso, por altura) */
+@keyframes trail-glint { 0%, 86%, 100% { opacity: 0.9; transform: scale(1); } 92% { opacity: 1; transform: scale(1.8); } }
+.anim-glint { animation: trail-glint 7s ease-in-out infinite; }
 .anim-shine { animation: shine-sweep 3.2s ease-in-out infinite; }
 .anim-ember { animation: ember-jitter 0.5s steps(4) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-shine, .anim-ember,
+  .anim-blink, .anim-bob, .anim-breathe, .card-glow, .anim-slot-glow, .anim-banner, .anim-lamp, .anim-glint, .anim-shine, .anim-ember,
   .anim-sway, .anim-float, .anim-pulse, .anim-pulse-soft, .anim-throb, .anim-heartbeat, .anim-wave, .anim-dot, .anim-ring, .anim-spin { animation: none; }
   .grain { animation: none !important; }
 }
 /* Bajo consumo (lib/quality): fuera los bucles que solo decoran; se quedan los que
    dicen algo (carta jugable, hueco donde soltar, vida al límite, jefe actual) */
 .low-power .anim-wave, .low-power .anim-flicker, .low-power .anim-pulse-soft, .low-power .anim-spin,
-.low-power .anim-lamp, .low-power .anim-banner, .low-power .anim-ember, .low-power .anim-shine,
+.low-power .anim-lamp, .low-power .anim-glint, .low-power .anim-banner, .low-power .anim-ember, .low-power .anim-shine,
 .low-power .anim-sway, .low-power .anim-float, .low-power .anim-bob { animation: none; }
