@@ -15,11 +15,16 @@ import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { ICONS, MASK } from '@/components/pixel/sprites';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
 import { AmbientDust } from '@/components/fx/Ambient';
+import { smooth } from './MapTerrain';
+import { ForestLife, ForestWatchers } from './ForestLife';
 
 // --- EL BOSQUE ---
-// En primera persona, de noche: troncos negros a los lados (los cercanos, enormes; los
-// lejanos, grises de niebla), una banda de niebla en el fondo y, en ella, unos ojos que
-// te miran y parpadean. Todo con el mismo tramado estocástico que el resto del juego.
+// En primera persona, de noche: troncos negros a los lados (los cercanos, enormes y con
+// raíces; los lejanos, grises de niebla), la linde de pinos del fondo, un sendero que se
+// pierde hacia la niebla y, en ella, unos ojos que te miran y parpadean. Matorrales a los
+// lados, helechos abajo y copas que cuelgan arriba. Todo con el mismo tramado estocástico
+// que el resto del juego. Encima, la vida (ForestLife): niebla que cruza, rayos de luna,
+// luciérnagas, hojas que caen y otros ojos que asoman en la oscuridad de los lados.
 //
 // Buscar duelo (con el input bloqueado, por fases):
 //  1. stir   · los ojos parpadean nerviosos y se avivan.
@@ -61,18 +66,61 @@ const trunksFor = (W: number): Trunk[] => {
   return out.sort((a, b) => a.d - b.d);
 };
 
-/** Pinta una capa del bosque (troncos con profundidad entre dMin y dMax) en un lienzo */
-const paintLayer = (ctx: CanvasRenderingContext2D, W: number, H: number, horizon: number, trunks: Trunk[], withSky: boolean) => {
+type LayerKind = 'far' | 'mid' | 'near';
+
+/** Pinta una capa del bosque (troncos con profundidad entre dMin y dMax) en un lienzo.
+ *  Lejos: cielo, niebla, la linde de pinos del fondo y el sendero. En medio: matorrales
+ *  a los lados. Cerca: helechos abajo, copas que cuelgan arriba y raíces en los troncos. */
+const paintLayer = (ctx: CanvasRenderingContext2D, W: number, H: number, horizon: number, trunks: Trunk[], kind: LayerKind) => {
   const img = ctx.createImageData(W, H);
   const L = new Float32Array(W * H).fill(-1);
-  if (withSky) {
+  const set = (x: number, y: number, v: number) => { if (x >= 0 && x < W && y >= 0 && y < H) L[y * W + x] = v; };
+  if (kind === 'far') {
     for (let y = 0; y < H; y++) {
       // Niebla en el horizonte: banda clara que se apaga arriba y abajo
       const band = Math.exp(-(((y - horizon) / (H * 0.13)) ** 2));
       const ground = y > horizon ? 0.08 + 0.05 * Math.exp(-(((y - H) / (H * 0.12)) ** 2)) : 0;
+      // El sendero: tierra algo más clara que se estrecha hacia los ojos
+      const k = (y - horizon) / (H - horizon);
+      const half = 3 + k * W * 0.2;
       for (let x = 0; x < W; x++) {
         const center = Math.exp(-(((x - W / 2) / (W * 0.45)) ** 2));
-        L[y * W + x] = 0.05 + band * (0.34 + 0.22 * center) + ground + hash(x, y, 4) * 0.03;
+        // Arriba, el resplandor de la luna entre las copas (para que se lean en silueta)
+        const moon = y < horizon ? 0.09 * Math.exp(-((y / (H * 0.28)) ** 2)) * Math.exp(-(((x - W * 0.62) / (W * 0.35)) ** 2)) : 0;
+        let l = 0.05 + moon + band * (0.34 + 0.22 * center) + ground + hash(x, y, 4) * 0.03;
+        const dx = Math.abs(x - W / 2 - Math.sin(k * 5) * k * W * 0.04);
+        if (y > horizon && dx < half * (0.9 + smooth(x, y, 6, 8) * 0.3)) l += 0.07 * (1 - dx / half) + (k > 0.2 && hash(x, y, 9) > 0.97 ? 0.05 : 0);
+        L[y * W + x] = l;
+      }
+    }
+    // La linde del fondo: pinos lejanos en silueta, por pisos, que se funden con la niebla
+    const line = horizon - H * 0.015;
+    for (let tx = -4, n = 0; tx < W + 6; n++) {
+      const w = 5 + hash(n, 1, 21) * 7, th = H * (0.035 + hash(n, 2, 23) * 0.06);
+      const top = line - th;
+      for (let y = Math.max(0, Math.floor(top)); y < horizon + H * 0.05; y++) {
+        const k = Math.min(1, (y - top) / th);
+        // Pisos dentados: cada pocos píxeles la copa se ensancha y vuelve a cerrarse
+        const half = (w / 2) * k * (0.7 + 0.3 * (((y - top) % 4) / 4));
+        for (let x = Math.floor(tx - half); x <= Math.ceil(tx + half); x++) {
+          if (x < 0 || x >= W || L[y * W + x] < 0) continue;
+          const ramp = Math.max(0, Math.min(1, (y - (horizon - H * 0.01)) / (H * 0.06)));
+          L[y * W + x] = Math.min(L[y * W + x], 0.17 + (L[y * W + x] - 0.17) * ramp);
+        }
+      }
+      tx += 4 + hash(n, 3, 25) * 7;
+    }
+  }
+  if (kind === 'mid') {
+    // Matorrales a los dos lados del sendero, a media distancia
+    const y0 = horizon + (H - horizon) * 0.22;
+    for (let i = 0; i < 14; i++) {
+      const side = i % 2 ? 1 : -1;
+      const cx = W / 2 + side * (W * 0.13 + hash(i, 2, 31) * W * 0.4);
+      const r = 5 + hash(i, 3, 33) * 9, cy = y0 + hash(i, 4, 35) * (H - horizon) * 0.2;
+      for (let y = Math.floor(cy - r); y < cy + r * 0.4; y++) for (let x = Math.floor(cx - r * 1.6); x < cx + r * 1.6; x++) {
+        const q = ((x - cx) / (r * 1.6)) ** 2 + ((y - cy) / r) ** 2 + (smooth(x, y, 3, i) - 0.5) * 0.5;
+        if (q < 1) set(x, y, q > 0.8 && y < cy ? 0.2 : 0.1);
       }
     }
   }
@@ -82,12 +130,16 @@ const paintLayer = (ctx: CanvasRenderingContext2D, W: number, H: number, horizon
     const base = horizon + t.d * (H - horizon) * 0.95;
     for (let y = 0; y < Math.min(H, base); y++) {
       const cx = t.x + (base - y) * t.lean;
-      const half = t.w / 2 * (1 + (base - y) / H * 0.1);
+      // Raíces: el tronco se abre al llegar al suelo
+      const root = t.d > 0.4 ? Math.max(0, 1 - (base - y) / (t.w * 0.9)) : 0;
+      const half = t.w / 2 * (1 + (base - y) / H * 0.1) * (1 + root * root * 0.9);
       for (let x = Math.floor(cx - half); x <= Math.ceil(cx + half); x++) {
         if (x < 0 || x >= W) continue;
         // Un filo de luz de niebla del lado del centro en los cercanos
         const rim = t.d > 0.5 && Math.abs(x - (cx + Math.sign(W / 2 - cx) * half)) < 1 && hash(x, y, i) > 0.5 ? 0.18 : 0;
-        L[y * W + x] = lum + rim;
+        // Corteza: vetas verticales algo más claras en los de en medio
+        const bark = t.d > 0.3 && t.d < 0.8 && hash(x, Math.floor(y / 4), i + 50) > 0.86 ? 0.06 : 0;
+        L[y * W + x] = lum + rim + bark;
       }
       // Ramas: alguna rama fina hacia los lados
       if (t.d > 0.3 && y < base * 0.7 && hash(i, Math.floor(y / 9), 3) > 0.93) {
@@ -99,6 +151,18 @@ const paintLayer = (ctx: CanvasRenderingContext2D, W: number, H: number, horizon
       }
     }
   });
+  if (kind === 'near') {
+    for (let x = 0; x < W; x++) {
+      // Copas: hojas negras que cuelgan del borde de arriba, con algún goterón
+      const c = H * (0.04 + smooth(x, 0, 14, 41) * 0.07) + (hash(x, 1, 43) > 0.9 ? hash(x, 2, 45) * H * 0.05 : 0);
+      for (let y = 0; y < c; y++) set(x, y, y > c - 1.5 && hash(x, y, 47) > 0.6 ? 0.12 : 0);
+      // Helechos abajo: más altos en los lados, bajos en el sendero
+      const side = Math.min(1, Math.abs(x - W / 2) / (W * 0.25));
+      const frond = hash(Math.floor(x / 3), 5, 49) > 0.55 ? H * 0.025 * hash(x, 6, 51) : 0;
+      const h = H * (0.015 + side * (0.05 + smooth(x, 0, 11, 53) * 0.06)) + frond * side;
+      for (let y = Math.floor(H - h); y < H; y++) set(x, y, y < H - h + 1.5 && hash(x, y, 55) > 0.5 ? 0.14 : 0);
+    }
+  }
   for (let i = 0; i < W * H; i++) {
     if (L[i] < 0) continue;
     const x = i % W, y = Math.floor(i / W);
@@ -109,12 +173,12 @@ const paintLayer = (ctx: CanvasRenderingContext2D, W: number, H: number, horizon
   ctx.putImageData(img, 0, 0);
 };
 
-const ForestLayer = ({ W, H, horizon, trunks, sky, sway, zoom }: { W: number; H: number; horizon: number; trunks: Trunk[]; sky?: boolean; sway: number; zoom: number }) => {
+const ForestLayer = ({ W, H, horizon, trunks, kind, sway, zoom }: { W: number; H: number; horizon: number; trunks: Trunk[]; kind: LayerKind; sway: number; zoom: number }) => {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const ctx = ref.current?.getContext('2d');
-    if (ctx) paintLayer(ctx, W, H, horizon, trunks, !!sky);
-  }, [W, H, horizon, trunks, sky]);
+    if (ctx) paintLayer(ctx, W, H, horizon, trunks, kind);
+  }, [W, H, horizon, trunks, kind]);
   return (
     <motion.canvas ref={ref} width={W} height={H} className="absolute left-0 top-0 pointer-events-none"
       style={{ width: W, height: H, imageRendering: 'pixelated', transformOrigin: `50% ${(horizon / H) * 100}%` }}
@@ -185,7 +249,10 @@ export const ForestScreen = () => {
     <div className="absolute inset-0 overflow-hidden" style={{ background: 'var(--ink-black)' }}>
       {/* El bosque en tres capas que se mecen distinto (y se acercan al abalanzarse) */}
       <motion.div className="absolute inset-0" animate={phase === 'lunge' ? { x: [0, -4, 4, -3, 3, 0], y: [0, 2, -2, 1, 0] } : { x: 0, y: 0 }} transition={{ duration: 0.6 }}>
-        <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[0]} sky sway={0} zoom={phase === 'lunge' ? 1.08 : 1} />
+        <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[0]} kind="far" sway={0} zoom={phase === 'lunge' ? 1.08 : 1} />
+        {/* Niebla que cruza, rayos de luna y otros ojos que asoman a los lados */}
+        <ForestLife W={W} H={H} horizon={horizon} layer="back" busy={busy} />
+        {!busy && <ForestWatchers W={W} H={H} horizon={horizon} />}
         {/* Los ojos y quien sale, en la niebla del fondo */}
         <div className="absolute" style={{ left: W / 2, top: horizon - 4 }}>
           <AnimatePresence>
@@ -204,8 +271,10 @@ export const ForestScreen = () => {
             animate={{ opacity: busy ? [0.4, 1, 0.8] : [0.15, 0.3, 0.15], scale: phase === 'lunge' ? 4 : 1 }}
             transition={busy ? { duration: 1.2 } : { duration: 4, repeat: Infinity }} />
         </div>
-        <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[1]} sway={1} zoom={phase === 'lunge' ? 1.18 : 1} />
-        <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[2]} sway={2} zoom={zoom} />
+        <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[1]} kind="mid" sway={1} zoom={phase === 'lunge' ? 1.18 : 1} />
+        {/* Luciérnagas entre los árboles cercanos y hojas que caen */}
+        <ForestLife W={W} H={H} horizon={horizon} layer="front" busy={busy} />
+        <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[2]} kind="near" sway={2} zoom={zoom} />
       </motion.div>
       <AmbientDust />
       {/* Viñeta */}

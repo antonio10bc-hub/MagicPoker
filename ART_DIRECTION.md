@@ -648,8 +648,15 @@ de antes en la arena de tests, `lib/ai-arena.test.ts`).
   principal (`components/screens/ForestAwaken.tsx`).
 - **Su pantalla** (`ForestScreen.tsx`): en primera persona y de noche. Tres capas de
   troncos pintadas con el tramado de la niebla (lejanos finos y grises, medios, y cuatro
-  enormes negros en los bordes con un filo de luz), que se mecen distinto; una banda de
-  niebla en el fondo y, en ella, unos ojos ámbar que parpadean y miran a los lados.
+  enormes negros en los bordes con un filo de luz, raíces y corteza con vetas), que se
+  mecen distinto; una banda de niebla en el fondo con la linde de pinos lejanos en
+  silueta (por pisos, fundidos con la niebla) y, en ella, unos ojos ámbar que parpadean y
+  miran a los lados. Un sendero algo más claro se pierde hacia los ojos; matorrales a los
+  lados, helechos abajo, copas que cuelgan arriba y, en el cielo, un leve resplandor de
+  luna para que se lean en silueta. Vida (`ForestLife.tsx`, nada en bajo consumo): dos
+  rayos de luna que respiran, jirones de niebla que cruzan el horizonte, luciérnagas
+  menta, alguna hoja que cae y otros ojos ámbar pequeños que asoman en la oscuridad de
+  los lados (se apagan al buscar duelo, para que todo mire al centro).
   Arriba, volver, el título en ámbar y, como en el menú, tus sellos (verde) y tu mazo
   (naranja), una rayita y el bestiario; abajo, "BUSCAR DUELO" con tu racha.
 - **Buscar duelo (gacha, por fases, input bloqueado):** primero se sortea el nivel
