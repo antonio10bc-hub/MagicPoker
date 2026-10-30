@@ -8,7 +8,7 @@ import {
   BOSSES, bossLives, bossSeals, bossWins, getProgress, getServerProgress, subscribeProgress, WINS_FOR_BACK,
 } from '@/lib/bosses';
 import { getMapSeen, revealSteps, RevealStep, setMapSeen } from '@/lib/mapReveal';
-import { finishPrologue, getPrologue, Prologue } from '@/lib/prologue';
+import { finishPrologue, getPrologue, onProloguePoke, Prologue } from '@/lib/prologue';
 import { haptic, playSfx } from '@/lib/sounds';
 import { useLowPower } from '@/lib/quality';
 import { INK } from '@/theme/tokens';
@@ -417,9 +417,9 @@ const MoonClearing = ({ at, still }: { at: Pt; still: boolean }) => (
 /** El ente: flota sobre el claro, encapuchado, con los ojos encendidos */
 const Wisp = ({ leaving }: { leaving: boolean }) => (
   <motion.div className="absolute" style={{ left: 0, bottom: 4, x: '-50%' }}
-    initial={{ opacity: 0, y: 8, filter: 'blur(3px) brightness(2)' }}
-    animate={leaving ? { opacity: 0, y: -18, filter: 'blur(3px) brightness(2.2)' } : { opacity: 1, y: 0, filter: 'blur(0px) brightness(1)' }}
-    transition={{ duration: leaving ? 1.1 : 1.4, ease: 'easeOut' }}>
+    initial={{ opacity: 0, y: 6, scale: 0.92, filter: 'blur(6px) brightness(2)' }}
+    animate={leaving ? { opacity: 0, y: -18, scale: 1, filter: 'blur(3px) brightness(2.2)' } : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px) brightness(1)' }}
+    transition={leaving ? { duration: 1.1, ease: 'easeOut' } : { duration: 2.2, ease: 'easeOut', opacity: { duration: 1.6 } }}>
     <div className="anim-float relative" style={{ filter: 'drop-shadow(0 0 5px rgba(185,207,200,0.55))' }}>
       <PixelSprite sprite={WISP.cloak} tint={INK.mint} scale={2} style={{ opacity: 0.9 }} />
       <PixelSprite sprite={WISP.face} tint={INK.black} scale={2} style={{ position: 'absolute', left: 0, top: 0 }} />
@@ -427,6 +427,27 @@ const Wisp = ({ leaving }: { leaving: boolean }) => (
         style={{ position: 'absolute', left: 0, top: 0, filter: 'drop-shadow(0 0 3px rgba(237,235,224,0.95))' }} />
     </div>
   </motion.div>
+);
+
+/** Humillo donde va a aparecer el ente: jirones que se arremolinan y suben; al aparecer
+ *  él, se abren y se disipan */
+const WispSmoke = ({ parting, still }: { parting: boolean; still: boolean }) => (
+  <div className="absolute pointer-events-none" style={{ left: 0, top: 0 }}>
+    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => {
+      const a = (i / 10) * Math.PI * 2;
+      const r = 5 + (i % 3) * 4;
+      return (
+        <motion.span key={i} className="absolute rounded-full" style={{ left: -15 + Math.cos(a) * r, top: -26 + Math.sin(a) * r * 0.6, width: 30, height: 22,
+          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(205,222,216,0.75) 0%, rgba(185,207,200,0.32) 45%, transparent 72%)', filter: 'blur(1.5px)' }}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={parting
+            ? { opacity: 0, scale: 2.2, x: Math.cos(a) * 26, y: Math.sin(a) * 16 - 14 }
+            : still ? { opacity: 0.7, scale: 1 }
+              : { opacity: [0.5, 0.95, 0.5], scale: [0.9, 1.2, 0.9], x: [0, Math.cos(a + 1.5) * 7, 0], y: [3, -10, 3] }}
+          transition={parting ? { duration: 1.6, ease: 'easeOut' } : { duration: 3 + (i % 3) * 0.7, delay: i * 0.25, repeat: Infinity, ease: 'easeInOut' }} />
+      );
+    })}
+  </div>
 );
 
 /** Bocadillo del ente: el texto sale letra a letra (avisa al terminar) */
@@ -574,9 +595,10 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     if (!proKind) return;
     onRevealing?.(true);
     if (proKind === 'farewell') useUiStore.getState().setCinematic(true);
-    const timers = [
-      setTimeout(() => { setPro(p => p && { ...p, phase: 'appear' }); playSfx('reveal', 0.5, 0.7); }, proKind === 'intro' ? 700 : 500),
-      setTimeout(() => { setPro(p => p && { ...p, phase: 'speak' }); playSfx('pop', 0.5, 0.7); }, proKind === 'intro' ? 2000 : 1500),
+    // En la entrada, el humo espera a que toques (ver summon); en la despedida, vuelve solo
+    const timers = proKind === 'intro' ? [] : [
+      setTimeout(() => { setPro(p => p && { ...p, phase: 'appear' }); playSfx('reveal', 0.5, 0.7); }, 500),
+      setTimeout(() => { setPro(p => p && { ...p, phase: 'speak' }); playSfx('pop', 0.5, 0.7); }, 2300),
     ];
     return () => {
       timers.forEach(clearTimeout);
@@ -585,6 +607,21 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proKind]);
+  // Tocar el humo (o cualquier sitio): el humo se abre y aparece el ente; luego habla
+  const summon = () => {
+    if (pro?.kind !== 'intro' || pro.phase !== 'wait') return;
+    setPro(p => p && { ...p, phase: 'appear' });
+    playSfx('reveal', 0.6, 0.6);
+    playSfx('whoosh', 0.4, 0.6);
+    setTimeout(() => { setPro(p => p && { ...p, phase: 'speak' }); playSfx('pop', 0.5, 0.7); }, 2400);
+  };
+  // (el toque llega desde la capa del menú que bloquea el input durante las escenas)
+  const summonRef = useRef(summon);
+  useEffect(() => { summonRef.current = summon; });
+  useEffect(() => {
+    onProloguePoke(() => summonRef.current());
+    return () => onProloguePoke(null);
+  }, []);
   // Al terminar de hablar: en la entrada, espera a ESCUCHAR; en la despedida, se abre el camino
   const spoken = () => {
     if (pro?.kind === 'intro') { setPro(p => p && { ...p, phase: 'ready' }); onRevealing?.(false); return; }
@@ -686,6 +723,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const total = String(BOSSES.length);
   const figureH = 42;
   const lowPower = useLowPower();
+  // Para el aviso del prólogo: "toca" en pantallas táctiles, "haz clic" con ratón
+  const coarse = useSyncExternalStore(() => () => {}, () => window.matchMedia('(pointer: coarse)').matches, () => false);
 
   return (
     <div className="absolute z-10" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}>
@@ -719,9 +758,20 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
           {/* El claro de luna, el ente y el sendero que nace en él */}
           <MoonClearing at={origin} still={lowPower} />
           <Trail a={origin} b={nodes[0]} lit={!pro || pro.phase === 'path' || pro.phase === 'arrive'} drawing={pro?.phase === 'path'} />
-          {pro && pro.phase !== 'wait' && pro.phase !== 'path' && pro.phase !== 'arrive' && (
+          {pro && pro.phase !== 'path' && pro.phase !== 'arrive' && (
             <div className="absolute" style={{ left: origin.x + 30, top: origin.y - 2, width: 0, height: 0, zIndex: 6 }}>
-              <Wisp leaving={pro.phase === 'leave'} />
+              {/* El humillo: en la entrada espera a que toques; luego se abre */}
+              {(pro.phase === 'wait' || pro.phase === 'appear') && <WispSmoke parting={pro.phase === 'appear'} still={lowPower} />}
+              {pro.phase !== 'wait' && <Wisp leaving={pro.phase === 'leave'} />}
+              <AnimatePresence>
+                {pro.kind === 'intro' && pro.phase === 'wait' && (
+                  <motion.span key="tap" className="absolute font-display whitespace-nowrap glow-text" style={{ left: 0, top: 14, x: '-50%', fontSize: 10, letterSpacing: 2, color: 'var(--ink-cream)' }}
+                    initial={{ opacity: 0 }} animate={{ opacity: [0.55, 1, 0.55] }} exit={{ opacity: 0, transition: { duration: 0.3 } }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}>
+                    {coarse ? t.tap_touch : t.tap_click}
+                  </motion.span>
+                )}
+              </AnimatePresence>
               <AnimatePresence>
                 {(pro.phase === 'speak' || pro.phase === 'ready') && (
                   <WispBubble key={pro.kind} text={pro.kind === 'intro' ? t.wisp_intro : t.wisp_farewell} onDone={spoken} />

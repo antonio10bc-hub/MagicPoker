@@ -13,6 +13,13 @@ test('prólogo: el ente habla, ESCUCHAR abre el tutorial y al volver se despide 
     localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', quality: 'high', music: 0, sfx: 0 }));
   });
   await page.goto('/');
+  // Primero solo hay humo y el aviso de tocar; al tocar, aparece el ente
+  await expect(page.getByText(/^(TOCA|HAZ CLIC)$/)).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(1500);
+  await shot(page, info, 'humo');
+  await page.getByLabel('map reveal').click();
+  await page.waitForTimeout(1000);
+  await shot(page, info, 'aparece');
   // Habla el ente y, al terminar, la acción es ESCUCHAR
   // (el bocadillo se escribe letra a letra: se espera a la frase entera)
   await expect(page.getByText(/te enseñaré a sobrevivir\.$/).last()).toBeVisible({ timeout: 15_000 });

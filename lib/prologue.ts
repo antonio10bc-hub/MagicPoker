@@ -37,3 +37,9 @@ export const getPrologue = (): Prologue | null => {
 
 /** El ente ya se despidió y el camino está abierto */
 export const finishPrologue = () => { write('done'); listeners.forEach(l => l()); };
+
+// Tocar la pantalla mientras el humo espera: el menú tiene encima su capa que bloquea el
+// input durante las escenas, así que el toque llega por aquí hasta el mapa
+let poke: (() => void) | null = null;
+export const onProloguePoke = (fn: (() => void) | null) => { poke = fn; };
+export const pokePrologue = () => poke?.();

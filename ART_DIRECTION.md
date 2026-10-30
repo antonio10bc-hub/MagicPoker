@@ -638,7 +638,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
   árboles pegados (`thickets` de `MapTerrain`) y una oscuridad que aprieta alrededor; por
   el centro baja un haz de luna ancho e inclinado (con otro fino que lo cruza) que
   respira, con motas de polvo cayendo, y la luz crema en el suelo. El sendero aún está
-  apagado. Aparece un ente encapuchado que flota (capa
+  apagado. Al principio solo hay un humillo menta que se arremolina y sube donde va a
+  salir el ente, y debajo "TOCA" (o "HAZ CLIC" con ratón) que late. Al tocar, el humo se
+  abre y se disipa y el ente aparece despacio desde el desenfoque (2 s). Es un ente
+  encapuchado que flota (capa
   menta con brillo, cara en sombra, ojos crema que laten) y habla en un bocadillo crema
   que se escribe letra a letra. Al terminar, la acción principal es **ESCUCHAR** (al ente
   del claro) y abre el tutorial. A la vuelta (o si se salta) se despide en otro

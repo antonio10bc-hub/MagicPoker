@@ -7,7 +7,7 @@ import { playSound } from '@/lib/sounds';
 import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
-import { getPrologue, subscribePrologue } from '@/lib/prologue';
+import { getPrologue, pokePrologue, subscribePrologue } from '@/lib/prologue';
 import { loadGame } from '@/lib/savegame';
 import { isDebug } from '@/lib/debug';
 import { isForestUnlocked } from '@/lib/forest';
@@ -261,7 +261,8 @@ export const MenuScreen = () => {
       {/* El Bosque despierta: se anuncia por fases la primera vez (o desde depuración) */}
       {awakening && <ForestAwaken replay={!!forestReplay} onDone={() => { setAwaken(true); useUiStore.getState().setForestReplay(false); }} />}
       {/* Mientras se cuenta lo nuevo, nada responde */}
-      {revealing && <div aria-label="map reveal" className="absolute inset-0 z-[500]" onClickCapture={e => e.stopPropagation()} />}
+      {/* (en el prólogo, tocar aquí invoca al ente que espera en el humo) */}
+      {revealing && <div aria-label="map reveal" className="absolute inset-0 z-[500]" onClickCapture={e => { e.stopPropagation(); pokePrologue(); }} />}
     </div>
   );
 };
