@@ -429,7 +429,7 @@ const Wisp = ({ leaving }: { leaving: boolean }) => (
   </motion.div>
 );
 
-/** Humillo donde va a aparecer el ente: jirones que se arremolinan y suben; al aparecer
+/** Humillo de brasa (naranja) donde va a aparecer el ente: jirones que se arremolinan y suben; al aparecer
  *  él, se abren y se disipan */
 const WispSmoke = ({ parting, still }: { parting: boolean; still: boolean }) => (
   <div className="absolute pointer-events-none" style={{ left: 0, top: 0 }}>
@@ -438,7 +438,7 @@ const WispSmoke = ({ parting, still }: { parting: boolean; still: boolean }) => 
       const r = 5 + (i % 3) * 4;
       return (
         <motion.span key={i} className="absolute rounded-full" style={{ left: -15 + Math.cos(a) * r, top: -26 + Math.sin(a) * r * 0.6, width: 30, height: 22,
-          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(205,222,216,0.75) 0%, rgba(185,207,200,0.32) 45%, transparent 72%)', filter: 'blur(1.5px)' }}
+          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,120,60,0.85) 0%, rgba(255,74,28,0.4) 45%, transparent 72%)', filter: 'blur(1.5px)', mixBlendMode: 'screen' }}
           initial={{ opacity: 0, scale: 0.6 }}
           animate={parting
             ? { opacity: 0, scale: 2.2, x: Math.cos(a) * 26, y: Math.sin(a) * 16 - 14 }
@@ -765,7 +765,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
               {pro.phase !== 'wait' && <Wisp leaving={pro.phase === 'leave'} />}
               <AnimatePresence>
                 {pro.kind === 'intro' && pro.phase === 'wait' && (
-                  <motion.span key="tap" className="absolute font-display whitespace-nowrap glow-text" style={{ left: 0, top: 14, x: '-50%', fontSize: 10, letterSpacing: 2, color: 'var(--ink-cream)' }}
+                  <motion.span key="tap" className="absolute font-display whitespace-nowrap glow-text" style={{ left: 0, top: 14, x: '-50%', fontSize: 11, letterSpacing: 2, color: 'var(--ink-orange)' }}
                     initial={{ opacity: 0 }} animate={{ opacity: [0.55, 1, 0.55] }} exit={{ opacity: 0, transition: { duration: 0.3 } }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}>
                     {coarse ? t.tap_touch : t.tap_click}
