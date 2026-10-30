@@ -18,6 +18,8 @@ import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 import { BoonsModal, ChallengesModal, CheckpointModal, RunSummaryModal, DebugModal, BestiaryModal, GrimoireModal, DeckEditorModal, PauseModal } from './ExtraModals';
+import { desktop, IS_DESKTOP } from '@/lib/platform';
+import { useFullscreen } from '@/hooks/useFullscreen';
 
 /** Renderiza el modal abierto (solo puede haber uno a la vez) */
 export const Modals = () => {
@@ -196,6 +198,7 @@ const SettingsModal = () => {
   const t = useTranslations();
   const settings = useSettings();
   const isMuted = useMuted();
+  const [fullscreen, setFullscreen] = useFullscreen();
   return (
     <Dialog title={t.settings_title} size="md">
       <DialogBody>
@@ -205,10 +208,13 @@ const SettingsModal = () => {
           </OptionRow>
           <OptionRow label={t.set_music}><Slider label={t.set_music} value={settings.music} onChange={music => updateSettings({ music })} /></OptionRow>
           <OptionRow label={t.set_sfx}><Slider label={t.set_sfx} value={settings.sfx} onChange={sfx => updateSettings({ sfx })} /></OptionRow>
-          <OptionRow label={t.set_vibration}>
-            <Choice value={settings.vibration} options={[[true, t.on], [false, t.off]]}
-              onChange={vibration => { updateSettings({ vibration }); if (vibration) haptic('select'); }} />
-          </OptionRow>
+          {/* En escritorio no hay vibración */}
+          {!IS_DESKTOP && (
+            <OptionRow label={t.set_vibration}>
+              <Choice value={settings.vibration} options={[[true, t.on], [false, t.off]]}
+                onChange={vibration => { updateSettings({ vibration }); if (vibration) haptic('select'); }} />
+            </OptionRow>
+          )}
         </Section>
         <Section title={t.sec_game} className="flex flex-col gap-[3px]">
           <OptionRow label={t.set_confirm_stand}>
@@ -219,6 +225,11 @@ const SettingsModal = () => {
           </OptionRow>
         </Section>
         <Section title={t.sec_display} className="flex flex-col gap-[3px]">
+          {IS_DESKTOP && (
+            <OptionRow label={t.set_fullscreen}>
+              <Choice value={fullscreen} options={[[true, t.on], [false, t.off]]} onChange={setFullscreen} />
+            </OptionRow>
+          )}
           <span>{t.set_grain}</span>
           <Tabs<GrainLevel> value={settings.grain} options={[['full', t.grain_full], ['soft', t.grain_soft], ['off', t.grain_off]]}
             onChange={grain => updateSettings({ grain })} />
@@ -234,6 +245,9 @@ const SettingsModal = () => {
             useUiStore.getState().closeModal();
             useGameStore.getState().startTutorial();
           }}>{t.replay_tutorial}</PxButton>
+          {IS_DESKTOP && (
+            <PxButton size="md" onClick={() => { playSound('click'); desktop()?.quit(); }}>{t.quit_game}</PxButton>
+          )}
         </Section>
       </DialogBody>
     </Dialog>

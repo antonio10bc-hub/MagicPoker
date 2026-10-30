@@ -882,3 +882,11 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   una luna-brasa naranja detrás de la cabeza, el Rey en silueta negra sin cetro con un
   filo de contraluz naranja, los ojos encendidos (crema con resplandor), niebla baja,
   viñeta y grano de impresión (`app/icon.png`, `app/apple-icon.png`, `public/icons/*`).
+
+## Escritorio (Steam, Windows)
+
+- Mismo juego y misma dirección visual, en una ventana de Electron que arranca a pantalla
+  completa (fondo negro de la paleta mientras carga, sin barra de menús).
+- En Ajustes, Pantalla → **Pantalla completa** (SÍ/NO, como el resto de opciones; F11 y
+  Alt+Enter hacen lo mismo y la opción se entera) y, en Más, **Salir del juego** debajo de
+  Repetir tutorial. La opción de vibración no sale.

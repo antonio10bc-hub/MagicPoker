@@ -1,0 +1,23 @@
+# Empaquetado para Windows (x64). "dir" es la carpeta que se sube a Steam; "zip", para probarla.
+appId: com.magicpoker.game
+productName: Magic Poker
+copyright: Copyright © 2026 Magic Poker
+directories:
+  output: dist
+  buildResources: build
+files:
+  - main.js
+  - preload.js
+  - web/**/*
+  - build/icon.png
+asar: true
+# Solo los idiomas del juego (el resto de traducciones de Chromium sobran)
+electronLanguages: [en-US, es, es-419]
+win:
+  target:
+    - target: dir
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+  icon: build/icon.png
+  executableName: MagicPoker

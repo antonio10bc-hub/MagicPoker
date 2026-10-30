@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:visual": "playwright test"
+    "test:visual": "playwright test",
+    "build:desktop": "node scripts/build-desktop.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -20,6 +20,7 @@ import { archetype } from '@/lib/forest';
 import { Modals } from '@/components/modals/Modals';
 import { StampToasts } from '@/components/game/Stamps';
 import { UnlockToasts } from '@/components/game/UnlockToasts';
+import { IS_DESKTOP } from '@/lib/platform';
 
 const SCREENS = { menu: MenuScreen, forest: ForestScreen, game: GameScreen, end: EndScreen };
 
@@ -63,7 +64,8 @@ export default function Home() {
     document.fonts.ready.then(() => {
       setTimeout(() => document.documentElement.classList.add('ready'), Math.max(0, 700 - (performance.now() - started)));
     });
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+    // (en escritorio no hace falta: el juego ya va dentro de la app)
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production' && !IS_DESKTOP) {
       navigator.serviceWorker.register('/sw.js').catch(() => { /* sin soporte o en privado */ });
     }
   }, []);

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // La app de escritorio (Electron, CommonJS) va aparte
+    "desktop/**",
   ]),
 ]);
 

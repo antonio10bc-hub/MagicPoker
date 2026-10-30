@@ -1,5 +1,8 @@
 import type { MetadataRoute } from 'next';
 
+// Estático: el manifiesto no cambia (y así sirve también para la build de escritorio)
+export const dynamic = 'force-static';
+
 // Manifiesto de la app instalable (PWA): pantalla completa, icono y colores de la paleta
 export default function manifest(): MetadataRoute.Manifest {
   return {

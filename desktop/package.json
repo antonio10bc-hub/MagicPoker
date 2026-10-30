@@ -1,0 +1,17 @@
+{
+  "name": "magic-poker-desktop",
+  "productName": "Magic Poker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Magic Poker",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win dir zip --x64"
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.18.0"
+  },
+  "author": "Magic Poker"
+}
