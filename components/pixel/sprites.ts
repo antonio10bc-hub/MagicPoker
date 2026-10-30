@@ -304,6 +304,43 @@ export const STAR = s(
   '.oo.oo.',
 );
 
+/** Calaveras de los desafíos del Castillo: 1 (lisa), 2 (agrietada), 3 (con cuernos) */
+export const SKULLS = [
+  s(
+    '.xxxxx.',
+    'xxxxxxx',
+    'x..x..x',
+    'xxx.xxx',
+    '.xxxxx.',
+    '.x.x.x.',
+  ),
+  s(
+    '.xx.xx.',
+    'xxx.xxx',
+    'x..x..x',
+    'xxx.xxx',
+    '.xxxxx.',
+    '.x.x.x.',
+  ),
+  s(
+    'x.......x',
+    'xx.xxx.xx',
+    '.xxxxxxx.',
+    '.x..x..x.',
+    '.xxx.xxx.',
+    '..xxxxx..',
+    '..x.x.x..',
+  ),
+];
+
+/** Corona en pequeño (progreso hacia el dorso de la Corona) */
+export const CROWN_ICON = s(
+  'x..x..x',
+  'xx.x.xx',
+  'xxxxxxx',
+  'xxxxxxx',
+);
+
 /** Halo del Ángel (puntos de guardado del Castillo), para teñir */
 export const HALO = s(
   '.xxx.',

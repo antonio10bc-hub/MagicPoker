@@ -146,7 +146,7 @@ describe('el Castillo', () => {
     const c = await load();
     expect(c.castleBacks({ run: null, best: 0, conquered: 0 })).toEqual([]);
     expect(c.castleBacks({ run: null, best: 12, conquered: 1, bestChallenges: 2 })).toEqual(['castle']);
-    expect(c.castleBacks({ run: null, best: 12, conquered: 1, bestChallenges: 5, legendary: true })).toEqual(['castle', 'merchant', 'crown']);
+    expect(c.castleBacks({ run: null, best: 12, conquered: 1, bestChallenges: 6, legendary: true })).toEqual(['castle', 'merchant', 'crown']);
     // Elegir una legendaria la marca
     const run = c.ensureRun();
     localStorage.setItem('magic_poker_castle', JSON.stringify({ ...c.getCastle(), run: { ...run, offer: [{ kind: 'card', rank: 'PHOENIX' }] } }));

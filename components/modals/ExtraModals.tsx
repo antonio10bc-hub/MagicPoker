@@ -31,7 +31,7 @@ import { Card as CardType, Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
 import { useStage } from '@/components/pixel/Stage';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { HEART, HEART_LOST, ICONS, SEAL_ICONS } from '@/components/pixel/sprites';
+import { CROWN_ICON, HEART, HEART_LOST, ICONS, SEAL_ICONS, SKULLS } from '@/components/pixel/sprites';
 import { CARD_SIZE, INK } from '@/theme/tokens';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 
@@ -452,9 +452,22 @@ export const CheckpointModal = () => {
 
 // --- DESAFÍOS DEL CASTILLO ---
 // Tras conquistarlo, al entrar eliges desafíos (interruptores). Se recuerdan los últimos.
+/** Lo difícil que es cada desafío (de la simulación: intentos que necesita un buen jugador) */
+const CH_SKULLS: Record<ChallengeId, 1 | 2 | 3> = { noHeal: 1, sealed: 1, fragile: 1, fierce: 2, short: 2, noDeath: 3 };
+/** Cada calavera, su tinta: menta, bermellón y carmesí que brilla */
+const SKULL_INK = [INK.mint, INK.orange, INK.crimson];
+
+const Skull = ({ level, on }: { level: 1 | 2 | 3; on: boolean }) => (
+  <span className={clsx('shrink-0 flex items-center justify-center', on && level === 3 && 'anim-throb')}
+    style={{ width: 18, opacity: on ? 1 : 0.5, filter: on ? `drop-shadow(0 0 ${level + 1}px ${SKULL_INK[level - 1]})` : undefined }}>
+    <PixelSprite sprite={SKULLS[level - 1]} tint={SKULL_INK[level - 1]} scale={2} />
+  </span>
+);
+
 export const ChallengesModal = () => {
   const t = useTranslations();
   const [picked, setPicked] = useState<ChallengeId[]>(() => getCastle().lastChallenges ?? []);
+  const [crownGot] = useState(() => castleBacks().includes('crown'));
   const toggle = (c: ChallengeId) => {
     playSfx('select', 0.6);
     setPicked(p => (p.includes(c) ? p.filter(x => x !== c) : [...p, c]));
@@ -465,27 +478,47 @@ export const ChallengesModal = () => {
     useUiStore.getState().closeModal();
     useGameStore.getState().startCastle();
   };
+  const all = picked.length === CHALLENGES.length;
   return (
     <Dialog title={t.ch_title} size="sm" tone="castle" width={230}
       footer={<PxButton size="lg" tone="yellow" onClick={enter}>{picked.length ? t.ch_enter_n.replace('{n}', String(picked.length)) : t.ch_enter}</PxButton>}>
-      <DialogBody scroll={false} className="gap-[4px]">
+      <DialogBody scroll={false} className="gap-[3px]">
         <p className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.ch_intro}</p>
         {CHALLENGES.map(c => {
           const on = picked.includes(c);
+          const level = CH_SKULLS[c];
           return (
             <button key={c} aria-label={`challenge ${c}`} aria-pressed={on} onClick={() => toggle(c)}
-              className="px-inset px-round flex items-center gap-[5px] p-[3px] text-left cursor-pointer"
-              style={{ boxShadow: on ? 'inset 0 0 0 1px var(--ink-crimson), 0 0 6px rgba(255,31,75,0.4)' : 'inset 0 0 0 1px rgba(185,207,200,0.12)' }}>
+              className="px-inset px-round flex items-center gap-[4px] px-[3px] py-[2px] text-left cursor-pointer"
+              style={{ boxShadow: on ? `inset 0 0 0 1px var(--ink-crimson), 0 0 ${level * 3}px rgba(255,31,75,${0.2 + level * 0.12})` : 'inset 0 0 0 1px rgba(185,207,200,0.12)' }}>
               {/* Casilla: carmesí encendida si está puesto */}
-              <span className="shrink-0 rounded-[2px]" style={{ width: 8, height: 8, background: on ? 'var(--ink-crimson)' : 'transparent',
+              <span className="shrink-0 rounded-[2px]" style={{ width: 7, height: 7, background: on ? 'var(--ink-crimson)' : 'transparent',
                 boxShadow: on ? '0 0 4px rgba(255,31,75,0.9)' : 'inset 0 0 0 1px var(--ink-teal)' }} />
-              <span className="flex flex-col leading-[9px]" style={{ fontSize: 8 }}>
+              <span className="flex-1 flex flex-col" style={{ fontSize: 7, lineHeight: '8px' }}>
                 <span style={{ color: on ? 'var(--ink-crimson)' : 'var(--ink-cream)' }}>{t[`ch_${c}` as keyof Translations]}</span>
-                <span style={{ color: 'var(--ink-mint)' }}>{t[`ch_${c}_desc` as keyof Translations]}</span>
+                <span style={{ color: 'var(--ink-mint)', opacity: 0.85 }}>{t[`ch_${c}_desc` as keyof Translations]}</span>
               </span>
+              {/* Lo difícil que es: calavera lisa, agrietada o con cuernos */}
+              <span aria-label={t.ch_skulls.replace('{n}', String(level))}><Skull level={level} on={on} /></span>
             </button>
           );
         })}
+        {/* Hacia la Corona: una muesca por desafío; con los 6, se enciende en oro */}
+        <div className="flex items-center gap-[4px] mt-[1px] px-[2px]" aria-label="crown progress">
+          <span className={clsx(all && 'anim-throb')} style={{ filter: all || crownGot ? 'drop-shadow(0 0 3px rgba(232,182,74,0.9))' : undefined }}>
+            <PixelSprite sprite={CROWN_ICON} tint={all || crownGot ? INK.gold : INK.teal} />
+          </span>
+          <span className={clsx('font-display', (all || crownGot) && 'glow-gold')} style={{ fontSize: 8, lineHeight: '8px', color: all || crownGot ? 'var(--ink-gold)' : 'var(--ink-teal)', letterSpacing: 1 }}>
+            {t.ch_crown}{crownGot && ` · ${t.ch_crown_got}`}
+          </span>
+          <span className="flex-1 flex gap-[2px] justify-end">
+            {CHALLENGES.map((c, i) => (
+              <motion.span key={c} className="rounded-[1px]" style={{ width: 8, height: 3 }}
+                animate={{ background: i < picked.length ? (all ? INK.gold : INK.crimson) : INK.slate, boxShadow: i < picked.length ? `0 0 3px ${all ? INK.gold : INK.crimson}` : '0 0 0 transparent' }}
+                transition={{ duration: 0.2 }} />
+            ))}
+          </span>
+        </div>
       </DialogBody>
     </Dialog>
   );

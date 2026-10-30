@@ -551,8 +551,14 @@ se mueve rápido y una vibración leve a las masas naranjas.
   si ya lo conquistaste, pasa por los desafíos).
 - **Desafíos:** al conquistarlo por primera vez, ENTRAR abre la ventana DESAFÍOS (banda
   carmesí): seis interruptores con casilla carmesí (Sin curas, Jefes feroces, Jefes
-  sellados, Mazo corto, Frágil, Sin caer) y ENTRAR · n desafíos. El dorso de la Corona
-  pide 5 a la vez.
+  sellados, Mazo corto, Frágil, Sin caer) en texto pequeño (7 px) y ENTRAR · n desafíos.
+  A la derecha de cada uno, una calavera dice lo difícil que es: lisa en menta (1: Sin
+  curas, Jefes sellados, Frágil), agrietada en bermellón (2: Jefes feroces, Mazo corto)
+  y con cuernos en carmesí (3: Sin caer). Apagada si no está puesto; encendida con su
+  brillo si lo está (la de cuernos además late), y el filo de la fila brilla más cuanto
+  más difícil. Debajo, CORONA: una corona pequeña y seis muescas que se llenan en
+  carmesí; con los 6 puestos, todo se enciende en oro (y si ya la tienes, "CONSEGUIDA").
+  El dorso de la Corona pide los 6 a la vez.
 - **Fase 2 del Soberano** (pausada, unos 9 s, para que se entienda):
   1. Se ve el golpe: su barra baja a la mitad (con su "-N"), su panel parpadea con un
      filo carmesí y sale "¡MITAD DE VIDA!" debajo, en una pastilla negra.
@@ -579,7 +585,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   - Menú y Bosque: el botón del mazo son dos cartas con tu dorso.
 - **Dorsos del Castillo** (al final de la galería, con el Castillo abierto): Castillo
   (carmesí con la silueta del castillo; al conquistarlo), Mercader (azul con su
-  silueta; al conseguir una legendaria) y Corona (al conquistarlo con los 5 desafíos a
+  silueta; al conseguir una legendaria) y Corona (al conquistarlo con los 6 desafíos a
   la vez): fondo carmesí profundo, rayos de oro que giran despacio, una corona de oro de
   cinco puntas con una gema carmesí por desafío (contorno negro de 1 px para que no se
   funda con el halo), un arco de cinco destellos, marco doble y esquinas de oro y un

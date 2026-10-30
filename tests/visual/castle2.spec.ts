@@ -102,7 +102,9 @@ test('desafíos: tras conquistarlo, se eligen al entrar y cambian la subida', as
   await expect(page.getByText('DESAFÍOS', { exact: true })).toBeVisible();
   await page.locator('[aria-label="challenge fragile"]').click();
   await page.locator('[aria-label="challenge fierce"]').click();
+  await page.locator('[aria-label="challenge noDeath"]').click();
   await shot(page, info, 'desafios');
+  await page.locator('[aria-label="challenge noDeath"]').click();
   await page.getByText('ENTRAR · 2 desafíos').click({ force: true });
   await page.waitForFunction(() => (window as unknown as G).__game.getState().castle?.stage === 0);
   const run = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_castle')!).run);

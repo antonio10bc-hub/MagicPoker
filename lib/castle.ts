@@ -142,7 +142,7 @@ export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short',
 /** Cartas que quita «Mazo corto» (ajustado con la simulación: con 4 era casi imposible) */
 const SHORT_REMOVES = 2;
 /** Desafíos a la vez para el dorso de la Corona (eran todos cuando había cinco) */
-export const CROWN_CHALLENGES = 5;
+export const CROWN_CHALLENGES = 6;
 const has = (run: CastleRun | undefined | null, c: ChallengeId) => !!run?.challenges?.includes(c);
 
 export interface CastleState {
@@ -183,7 +183,7 @@ const withCheckpoint = (state: CastleState, run: CastleRun): CastleState =>
 // --- DORSOS DEL CASTILLO ---
 //  castle   · conquistar el Castillo
 //  merchant · conseguir una carta legendaria (del mercader o de un cofre)
-//  crown    · conquistarlo con 5 desafíos a la vez
+//  crown    · conquistarlo con los 6 desafíos a la vez
 export const CASTLE_BACKS = ['castle', 'merchant', 'crown'] as const;
 export type CastleBack = typeof CASTLE_BACKS[number];
 export const castleBacks = (s: CastleState = getCastle()): CastleBack[] => CASTLE_BACKS.filter(b =>
