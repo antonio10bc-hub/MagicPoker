@@ -172,6 +172,7 @@ export const MenuScreen = () => {
   const total = String(BOSSES.length);
   // La primera vez, el ente del claro: la acción es escucharle (el tutorial)
   const prologue = useSyncExternalStore(subscribePrologue, getPrologue, () => null);
+  const tutorialDone = useSyncExternalStore(noSubscribe, isTutorialDone, () => true);
   const cta = prologue === 'intro' ? { title: t.listen, sub: t.listen_sub } : castleSel
     ? castleRun
       ? { title: t.castle_continue_title, sub: (castleSave ? t.castle_resume_sub : t.castle_floor_sub).replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
@@ -213,8 +214,9 @@ export const MenuScreen = () => {
           </PxButton>
         )}
         {(collection || editor) && <span className="w-[1px] mx-[2px] self-stretch" style={{ background: 'rgba(185,207,200,0.15)' }} />}
-        <IconButton icon={ICONS.info} aria-label={t.aria_rules} onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />
-        <IconButton icon={ICONS.trophy} aria-label={t.aria_stats} onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />
+        {/* Reglas y estadísticas, cuando ya has escuchado al ente (hasta entonces, solo ajustes) */}
+        {tutorialDone && <IconButton icon={ICONS.info} aria-label={t.aria_rules} onClick={() => { playSound('click'); useUiStore.getState().openModal('rules'); }} />}
+        {tutorialDone && <IconButton icon={ICONS.trophy} aria-label={t.aria_stats} onClick={() => { playSound('click'); useUiStore.getState().openModal('stats'); }} />}
         <IconButton icon={ICONS.gear} aria-label={t.aria_settings} onClick={() => { playSound('click'); useUiStore.getState().openModal('settings'); }} />
         {debug && (
           <PxButton aria-label="debug" className="w-[18px] h-[18px] font-display" style={{ fontSize: 7, color: 'var(--ink-volt)' }}

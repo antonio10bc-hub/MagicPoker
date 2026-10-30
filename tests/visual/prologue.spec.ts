@@ -17,6 +17,10 @@ test('prólogo: el ente habla, ESCUCHAR abre el tutorial y al volver se despide 
   // (el bocadillo se escribe letra a letra: se espera a la frase entera)
   await expect(page.getByText(/te enseñaré a sobrevivir\.$/).last()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('ESCUCHAR')).toBeVisible();
+  // Hasta hacer el tutorial, solo ajustes
+  await expect(page.getByLabel('reglas')).toHaveCount(0);
+  await expect(page.getByLabel('estadísticas')).toHaveCount(0);
+  await expect(page.getByLabel('ajustes')).toHaveCount(1);
   await page.waitForTimeout(800);
   await shot(page, info, 'ente');
   await page.getByText('ESCUCHAR').click({ force: true });
@@ -36,6 +40,8 @@ test('prólogo: el ente habla, ESCUCHAR abre el tutorial y al volver se despide 
   await page.waitForTimeout(4200);
   await shot(page, info, 'camino');
   await expect(page.getByText('¡DESAFIAR!')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByLabel('reglas')).toHaveCount(1);
+  await expect(page.getByLabel('estadísticas')).toHaveCount(1);
   await page.waitForTimeout(800);
   await shot(page, info, 'forastero');
   expect(await page.evaluate(() => localStorage.getItem('magic_poker_prologue'))).toBe('done');

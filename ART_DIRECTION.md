@@ -644,6 +644,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   del claro) y abre el tutorial. A la vuelta (o si se salta) se despide en otro
   bocadillo, se desvanece hacia arriba, el sendero se dibuja hasta el Forastero y este
   llega con su destello. Quien ya había jugado no lo ve.
+  Hasta completar (o saltar) el tutorial, arriba a la derecha solo está Ajustes: Cómo
+  jugar y Estadísticas aparecen después.
 - **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): tras
   ESCUCHAR al ente (y desde Ajustes → Repetir tutorial). Una partida guionizada
   de 4 rondas y 14 pasos con las reglas reales que siempre se gana: cartas normales y
