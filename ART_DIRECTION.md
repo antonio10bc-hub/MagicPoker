@@ -844,7 +844,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   - Una sola acción principal ancha con el verbo grande y el contexto en pequeño
     ("¡DESAFIAR! · El Trilero", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si
     hay, continuar partida debajo, del mismo ancho que la acción principal (en el
-    Castillo, el de los dos modos de juego).
+    Castillo, el de los dos modos de juego). Un combate del Castillo a medias (se cerró
+    la web) no tiene botón aparte: lo retoma SEGUIR, con "piso N · combate a medias".
 - **Revelaciones del mapa (por fases, input bloqueado, pausadas):** al vencer a un jefe
   por primera vez, el final de partida ofrece una sola acción, "¡AL MAPA!". Allí no
   responde nada hasta acabar (la acción principal se oculta) y la cámara se desliza

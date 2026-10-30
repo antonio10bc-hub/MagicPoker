@@ -26,6 +26,8 @@ import { useMenuLayout } from '@/components/pixel/Stage';
 
 const noSubscribe = () => () => {};
 const hasSavedGame = () => loadGame() !== null;
+/** ¿La partida a medias es un combate del Castillo? (entonces la retoma SEGUIR) */
+const hasCastleSave = () => loadGame()?.castle === true;
 const { Backdrop, Diorama } = ACTIVE_THEME;
 
 /** Fondo de menú y final: la plaza vacía */
@@ -124,7 +126,9 @@ export const MenuScreen = () => {
       // Castillo: si quedó una mejora por elegir, primero eso
       // Subida nueva tras haberlo conquistado: antes, los desafíos
       const castle = getCastle();
-      if (castle.run?.offer || castle.run?.chest) useUiStore.getState().openModal('boons');
+      // Un combate del Castillo a medias (se cerró la web): SEGUIR lo retoma tal cual
+      if (castle.run && hasCastleSave()) useGameStore.getState().resumeGame();
+      else if (castle.run?.offer || castle.run?.chest) useUiStore.getState().openModal('boons');
       // Caíste tras un punto de guardado: retomar desde él o empezar de cero
       else if (!castle.run && castle.checkpoint) useUiStore.getState().openModal('checkpoint');
       else if (!castle.run && castle.conquered > 0) useUiStore.getState().openModal('challenges');
@@ -159,12 +163,14 @@ export const MenuScreen = () => {
   const level = canRematch ? rematchLevel(selected, progress) : 0;
   // ¿Hay una partida a medias? (solo en el navegador)
   const hasSave = useSyncExternalStore(noSubscribe, hasSavedGame, () => false);
+  // Si es del Castillo y la subida sigue, no hay botón aparte: SEGUIR lo retoma
+  const castleSave = useSyncExternalStore(noSubscribe, hasCastleSave, () => false) && !!castleRun;
   const resumeGame = useGameStore(s => s.resumeGame);
   // Botón principal: el verbo y, debajo, contra quién o qué pasa
   const total = String(BOSSES.length);
   const cta = castleSel
     ? castleRun
-      ? { title: t.castle_continue_title, sub: t.castle_floor_sub.replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
+      ? { title: t.castle_continue_title, sub: (castleSave ? t.castle_resume_sub : t.castle_floor_sub).replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
       : castleState.checkpoint
         ? { title: t.castle_enter, sub: t.cp_sub.replace('{n}', String(castleState.checkpoint.stage + 1)) }
         : { title: t.castle_enter, sub: t.castle_sub_new }
@@ -240,7 +246,7 @@ export const MenuScreen = () => {
             </PxButton>
           </motion.div>
         )}
-        {hasSave && (
+        {hasSave && !castleSave && (
           // Del ancho de la acción principal (en el Castillo, el de los modos de juego)
           <PxButton size="md" className={castleSel ? 'self-center' : 'w-full'} style={castleSel ? { width: '72%' } : undefined} onClick={() => { playSound('click'); resumeGame(); }}>{t.continue_game}</PxButton>
         )}

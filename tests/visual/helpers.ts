@@ -58,7 +58,8 @@ export const startScenario = async (page: Page, s: Scenario) => {
   await page.goto('/');
   // Igual que "Continuar partida" (sin depender de cuándo se puede pulsar el botón)
   await page.waitForFunction(() => !!(window as unknown as { __game?: unknown }).__game);
-  await page.getByText(/continuar partida/i).waitFor();
+  // (un combate del Castillo no tiene botón aparte: lo retoma SEGUIR, "combate a medias")
+  await page.getByText(/continuar partida|combate a medias/i).first().waitFor();
   await page.evaluate(() => (window as unknown as { __game: { getState: () => { resumeGame: () => boolean } } }).__game.getState().resumeGame());
   await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { phase: string } } }).__game.getState().phase === 'placement');
   // Se guarda el último resultado de pelea: la cuenta atrás de CONTINUAR puede cerrar

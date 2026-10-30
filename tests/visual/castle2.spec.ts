@@ -202,3 +202,17 @@ test('punto de guardado: tras caer, desde el menú se retoma en el piso 4 con la
   expect(await page.evaluate(() => (window as unknown as { __game: { getState: () => { player: { lives: number } } } }).__game.getState().player.lives)).toBe(4);
   noErrors();
 });
+
+test('combate del Castillo a medias: SEGUIR lo retoma tal cual (sin botón de continuar aparte)', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await startScenario(page, { defeated: 12, bossIndex: 3, castle: true, player: { board: [card('player', '9', 'a')] }, opponent: { board: [] },
+    castleState: { run: { stage: 3, lives: 3, maxLives: 4, deck: DECK }, best: 3, conquered: 0 } });
+  await page.waitForTimeout(800);
+  await page.reload();
+  await expect(page.getByText('piso 4 · combate a medias')).toBeVisible();
+  await expect(page.getByText(/continuar partida/i)).toHaveCount(0);
+  await shot(page, info, 'menu');
+  await page.getByText('SEGUIR').first().click({ force: true });
+  await page.waitForFunction(() => (window as unknown as { __game: { getState: () => { screen: string; player: { board: { card: { id: string } | null }[] } } } }).__game.getState().player.board[0].card?.id === 'player-9-a');
+  noErrors();
+});
