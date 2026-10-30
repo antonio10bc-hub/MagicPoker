@@ -633,9 +633,12 @@ se mueve rápido y una vibración leve a las masas naranjas.
   victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
   favorita y la colección de sellos.
 - **Prólogo: el ente del claro** (`lib/prologue.ts`, `SagaMap`): la primera vez el
-  juego empieza en el mapa, abajo del todo, en un claro bañado por la luna (luz crema en
-  el suelo y un haz inclinado que respira) donde nace el camino; el Forastero espera en
-  sombra ("???") y el sendero aún apagado. Aparece un ente encapuchado que flota (capa
+  juego empieza en el mapa, abajo del todo y lejos del Forastero (no se ve desde allí),
+  en un claro diminuto donde nace el camino. El bosque lo encierra: una espesura de
+  árboles pegados (`thickets` de `MapTerrain`) y una oscuridad que aprieta alrededor; por
+  el centro baja un haz de luna ancho e inclinado (con otro fino que lo cruza) que
+  respira, con motas de polvo cayendo, y la luz crema en el suelo. El sendero aún está
+  apagado. Aparece un ente encapuchado que flota (capa
   menta con brillo, cara en sombra, ojos crema que laten) y habla en un bocadillo crema
   que se escribe letra a letra. Al terminar, la acción principal es **ESCUCHAR** (al ente
   del claro) y abre el tutorial. A la vuelta (o si se salta) se despide en otro
@@ -788,6 +791,10 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   toque el borde de arriba, y el contexto debajo.
 - **Pie de acciones:** los botones van abajo, no mezclados con el contenido. El
   resultado de una partida usa el mismo esquema que una ventana pequeña.
+- **Ancho de las ventanas:** las medianas (Ajustes) y grandes (Grimorio, Cómo jugar,
+  Estadísticas…) son proporcionales a la pantalla: 50 % y 62 % del ancho, entre 260–360 y
+  300–440 px internos; el contenido no crece, gana aire, con 12 px de margen a cada lado
+  (8 en el móvil). Las pequeñas siguen al contenido.
 - **Capas y orden:** solo una ventana a la vez. Al cambiar de pantalla o acabar la
   partida se cierra la que hubiera. Los avisos (sello nuevo, logro) esperan a que no
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.

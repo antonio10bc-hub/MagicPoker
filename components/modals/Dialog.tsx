@@ -18,6 +18,8 @@ import { INK } from '@/theme/tokens';
 //  · md: listas cortas con controles (ajustes). Al contenido, con tope y scroll.
 //  · lg: contenido largo (reglas, estadísticas, colección, editor, catálogo). Alto
 //    fijo, el cuerpo hace scroll.
+// Medianas y grandes ocupan un tanto por ciento del ancho de la pantalla (con mínimo y
+// tope) y llevan más margen a los lados: el contenido no crece, gana aire.
 // El tono cambia solo la banda: naranja (normal), carmesí (Castillo), azul (mercader).
 
 export const closeWithClick = () => {
@@ -48,6 +50,12 @@ export const Overlay = ({ onClose, children }: { onClose?: () => void; children:
 
 export type DialogSize = 'sm' | 'md' | 'lg';
 const WIDTH: Record<DialogSize, number> = { sm: 210, md: 240, lg: 280 };
+/** Las medianas y grandes crecen con la pantalla: este tanto por uno del ancho, entre su
+ *  mínimo y su tope (el contenido no cambia de tamaño: gana aire) */
+const FLUID: Partial<Record<DialogSize, { k: number; min: number; max: number }>> = {
+  md: { k: 0.5, min: 260, max: 360 },
+  lg: { k: 0.62, min: 300, max: 440 },
+};
 
 const BAND = { default: 'var(--c-chip)', castle: 'var(--ink-crimson)', merchant: 'var(--ink-azure)', amber: 'var(--ink-amber)' } as const;
 
@@ -71,7 +79,11 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
   const stage = useStage();
   const t = useTranslations();
   const portrait = stage.mode === 'portrait';
-  const w = Math.min(width ?? WIDTH[size], stage.width - 16);
+  const fluid = FLUID[size];
+  const base = width ?? (fluid ? Math.max(fluid.min, Math.min(fluid.max, Math.round(stage.width * fluid.k))) : WIDTH[size]);
+  const w = Math.min(base, stage.width - 16);
+  // Margen interior: más aire a los lados en las medianas y grandes (en el móvil, algo menos)
+  const pad = fluid ? (portrait ? 8 : 12) : 6;
   const maxH = stage.height - (portrait ? 48 : 16);
   // Las grandes tienen alto fijo (en vertical aprovechan la pantalla); el resto, al contenido
   const height = size === 'lg' ? Math.min(portrait ? 420 : 270, maxH) : undefined;
@@ -88,7 +100,7 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
         title={<span>{title}</span>}
         band={BAND[tone]}
         titleClassName={tone !== 'default' ? 'text-ink' : undefined}
-        style={{ width: w, height, maxHeight: maxH }}
+        style={{ width: w, height, maxHeight: maxH, ['--dlg-pad' as string]: `${pad}px` }}
         bodyClassName="flex flex-col"
       >
         {!modal && (
@@ -108,7 +120,8 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
 
 /** Cuerpo con scroll y el espaciado común */
 export const DialogBody = ({ children, className, scroll = true }: { children: ReactNode; className?: string; scroll?: boolean }) => (
-  <div className={clsx(scroll && 'px-scroll', 'flex-1 min-h-0 p-[6px] flex flex-col gap-[6px] leading-[11px]', className)}>{children}</div>
+  <div className={clsx(scroll && 'px-scroll', 'flex-1 min-h-0 py-[6px] flex flex-col gap-[6px] leading-[11px]', className)}
+    style={{ paddingLeft: 'var(--dlg-pad, 6px)', paddingRight: 'var(--dlg-pad, 6px)' }}>{children}</div>
 );
 
 /** Bloque con título dentro de una ventana */

@@ -55,20 +55,24 @@ const treeUri = (id: SceneryId) => {
   return u;
 };
 
+const NO_THICKETS: { x: number; y: number; rx: number; ry: number }[] = [];
+
 /** Lo que puede mecerse: árboles, matas y hierba (sin otro delante que los tape mucho) */
 const SWAYS: SceneryId[] = ['pine_s', 'pine_m', 'pine_l', 'oak', 'bush', 'grass'];
 /** Las rachas de viento: tres ritmos para que no vayan todos a la vez */
 const GUSTS = [7, 9.5, 12];
 
-export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOut, sway = false }: {
+export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOut, thickets = NO_THICKETS, sway = false }: {
   width: number; height: number;
   /** Puntos seguidos del camino (cada ~1 px) */
   road: Pt[];
-  /** Paradas: claro de niebla alrededor */
-  clearings: Pt[];
+  /** Paradas: claro de niebla alrededor (de 100×66 si no se dice otra cosa) */
+  clearings: (Pt & { rx?: number; ry?: number })[];
   biomes: Biome[];
   /** Zonas sin árboles (paradas y sus decorados) */
   keepOut: { x: number; y: number; rx: number; ry: number }[];
+  /** Espesuras: el bosque se cierra (casi todo árboles, pegados al camino) */
+  thickets?: { x: number; y: number; rx: number; ry: number }[];
   /** Algunos árboles sueltos se mecen con el viento (no en bajo consumo) */
   sway?: boolean;
 }) => {
@@ -106,12 +110,13 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
         if (x >= W || y >= H) continue;
         const edge = edgeOf(x, y, W);
         // Más bosque hacia los bordes; en el centro, alguna mata suelta
-        const density = edge < 0.16 ? 0.75 : edge < 0.3 ? 0.3 : 0.08;
+        const thick = thickets.some(k => inside(k, x, y) < 1);
+        const density = thick ? 0.97 : edge < 0.16 ? 0.75 : edge < 0.3 ? 0.3 : 0.08;
         if (hash(gx, gy, 23) > density) continue;
-        if (roadD[y * W + x] < 13) continue;
+        if (roadD[y * W + x] < (thick ? 8 : 13)) continue;
         if (keepOut.some(k => inside(k, x, y) < 1)) continue;
         if (biomes.some(b => b.kind !== 'field' && inside(b, x, y) < 1.15)) continue;
-        const pick = edge < 0.3 ? TREES[Math.floor(hash(gx, gy, 24) * 5)] : TREES[4 + Math.floor(hash(gx, gy, 25) * 4)];
+        const pick = edge < 0.3 || thick ? TREES[Math.floor(hash(gx, gy, 24) * 5)] : TREES[4 + Math.floor(hash(gx, gy, 25) * 4)];
         spots.push({ x, y, id: pick, flip: hash(gx, gy, 26) > 0.5 });
       }
     }
@@ -129,7 +134,7 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
       swaying.add(k);
     });
     return { roadD, spots, swaying };
-  }, [width, height, road, keepOut, biomes]);
+  }, [width, height, road, keepOut, biomes, thickets]);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -151,7 +156,7 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
         // Claros de niebla en las paradas
         clearings.forEach(c => {
           if (Math.abs(y - c.y) > 76) return;
-          const k = inside({ ...c, rx: 100, ry: 66 }, x, y + 12);
+          const k = inside({ x: c.x, y: c.y, rx: c.rx ?? 100, ry: c.ry ?? 66 }, x, y + 12);
           if (k < 1) L += (1 - k) * (1 - k) * 0.42;
         });
         // Agua, ciénaga, huerto

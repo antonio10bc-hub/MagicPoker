@@ -46,8 +46,8 @@ export const CASTLE_INDEX = BOSSES.length;
 
 const STEP = 200;
 const BOTTOM = 120;
-/** Del claro de luna (donde nace el camino) al primer jefe */
-const ORIGIN_GAP = 210;
+/** Del claro de luna (donde nace el camino) al primer jefe: lejos, que desde allí no se vea */
+const ORIGIN_GAP = 440;
 /** Del Soberano al Castillo: más camino que entre pueblos (los dos son grandes y llevan texto) */
 const CASTLE_GAP = 250;
 /** Sitio sobre el Castillo para su pastilla y la cabecera del menú */
@@ -74,8 +74,8 @@ const geometry = (w: number) => {
   // Las paradas, a un lado y a otro del centro; el Soberano, en medio, ante su puerta
   const amp = Math.round(w * 0.13);
   const nodes = BOSSES.map((b, i) => ({ x: b.secret ? cx : cx + sideOf(i) * amp, y: origin.y - ORIGIN_GAP - i * STEP }));
-  // El camino entero: entra por abajo, nace en el claro, pasa por cada parada y llega al Castillo
-  const stops = [{ x: origin.x, y: contentH + 10 }, origin, ...nodes, castle];
+  // El camino entero: nace en el claro, pasa por cada parada y llega al Castillo
+  const stops = [origin, ...nodes, castle];
   const road: Pt[] = stops.slice(1).flatMap((b, n) => curve(stops[n], b, 1));
   const terrain = BOSSES.map((b, i) => {
     const st = STATIONS[b.id];
@@ -88,9 +88,11 @@ const geometry = (w: number) => {
   });
   return {
     contentH, nodes, castle, road, origin,
-    clearings: [origin, ...terrain.map(t => t.clearing), castle],
+    // El claro es pequeño y el bosque lo encierra (espesura alrededor, asfixiante)
+    clearings: [{ ...origin, rx: 52, ry: 32 }, ...terrain.map(t => t.clearing), castle],
+    thickets: [{ x: origin.x, y: origin.y + 10, rx: Math.max(220, w * 0.6), ry: 190 }],
     // Sin árboles solo lo justo alrededor del Castillo: el bosque lo rodea
-    keepOut: [{ x: origin.x, y: origin.y - 8, rx: 96, ry: 58 }, ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
+    keepOut: [{ x: origin.x, y: origin.y - 6, rx: 46, ry: 26 }, ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
     biomes: terrain.flatMap(t => (t.biome ? [t.biome] : [])),
   };
 };
@@ -382,16 +384,30 @@ const CastleLitFx = () => (
 
 /** Aviso grande en el centro (jefe secreto, Castillo): oscurece el mapa y lo dice claro */
 // --- EL CLARO DE LUNA Y EL ENTE (prólogo) ---
-/** Donde nace el camino: un claro bañado por la luna (luz crema y un haz que respira) */
+/** Donde nace el camino: un claro diminuto bañado por la luna, con el bosque cerrándose
+ *  alrededor (oscuridad que aprieta), un haz de luna ancho que respira y motas que caen en él */
 const MoonClearing = ({ at, still }: { at: Pt; still: boolean }) => (
   <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y, width: 0, height: 0, zIndex: 1 }}>
-    {/* El haz de luna, inclinado, que baja hasta el claro */}
-    <div className={clsx('absolute', !still && 'anim-pulse-soft')} style={{ left: -34, top: -230, width: 68, height: 236, transform: 'rotate(-12deg)', transformOrigin: '50% 100%',
-      background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.10) 30%, rgba(237,235,224,0.16) 50%, rgba(237,235,224,0.10) 70%, transparent)',
-      maskImage: 'linear-gradient(to bottom, transparent, black 35%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 35%, black 85%, transparent)' }} />
+    {/* El bosque aprieta: todo se oscurece salvo el claro */}
+    <div className="absolute" style={{ left: -340, top: -300, width: 680, height: 560,
+      background: 'radial-gradient(ellipse 30% 28% at 50% 55%, transparent 0%, rgba(11,13,12,0.12) 50%, rgba(11,13,12,0.45) 80%, rgba(11,13,12,0.7) 100%)' }} />
+    {/* El haz de luna: ancho, inclinado, baja hasta el claro */}
+    <div className={clsx('absolute', !still && 'anim-pulse-soft')} style={{ left: -48, top: -300, width: 96, height: 306, transform: 'rotate(-14deg)', transformOrigin: '50% 100%',
+      background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.16) 25%, rgba(237,235,224,0.30) 50%, rgba(237,235,224,0.16) 75%, transparent)',
+      maskImage: 'linear-gradient(to bottom, transparent, black 30%, black 88%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 30%, black 88%, transparent)' }} />
+    {/* Un segundo haz, fino, que cruza */}
+    <div className={clsx('absolute', !still && 'anim-pulse-soft')} style={{ left: -6, top: -280, width: 22, height: 284, transform: 'rotate(-6deg)', transformOrigin: '50% 100%', animationDelay: '-2s',
+      background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.22), transparent)',
+      maskImage: 'linear-gradient(to bottom, transparent, black 40%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 40%, black 85%, transparent)' }} />
+    {/* Motas de polvo que bajan despacio por el haz */}
+    {!still && [0, 1, 2, 3, 4, 5].map(i => (
+      <motion.span key={i} className="absolute rounded-full" style={{ left: -22 + ((i * 17) % 44), top: -200, width: 1, height: 1, background: 'var(--ink-cream)', boxShadow: '0 0 2px rgba(237,235,224,0.8)' }}
+        animate={{ y: [0, 190], x: [0, -6 - (i % 3) * 4], opacity: [0, 0.9, 0.9, 0] }}
+        transition={{ duration: 6 + i, delay: i * 1.3, repeat: Infinity, ease: 'linear' }} />
+    ))}
     {/* La luz en el suelo */}
-    <div className="absolute" style={{ left: -90, top: -40, width: 180, height: 80, borderRadius: '50%',
-      background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(237,235,224,0.22) 0%, rgba(185,207,200,0.10) 45%, transparent 72%)' }} />
+    <div className="absolute" style={{ left: -70, top: -30, width: 140, height: 60, borderRadius: '50%',
+      background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(237,235,224,0.32) 0%, rgba(185,207,200,0.14) 45%, transparent 72%)' }} />
   </div>
 );
 
@@ -481,7 +497,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
-  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin } = useMemo(() => geometry(rect.w), [rect.w]);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin, thickets } = useMemo(() => geometry(rect.w), [rect.w]);
   // Prólogo (la primera vez): el ente del claro (se decide al montar en el navegador)
   const [pro, setPro] = useState<{ kind: Prologue; phase: ProPhase } | null>(null);
   const lifeKeepOut = useMemo(() => [...keepOut, { x: castlePt.x, y: castlePt.y - 50, rx: rect.w, ry: 170 }], [keepOut, castlePt, rect.w]);
@@ -677,7 +693,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
             : phase === 'emerge' ? { x: [0, -2, 2, -2, 2, -1, 1, -2, 2, 0], y: [0, 1, 0, 1, 0] } : { x: 0, y: 0 }}
           transition={phase === 'emerge' ? { duration: 3.2, ease: 'linear' } : { duration: 0.6 }}>
           {/* El campo: camino de tierra, claros, agua y bosque */}
-          <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} sway={!lowPower} />
+          <MapTerrain width={rect.w} height={contentH} road={road} clearings={clearings} biomes={biomes} keepOut={keepOut} thickets={thickets} sway={!lowPower} />
           {/* Las luciérnagas, lejos del Castillo: ese bosque es de los ojos */}
           <MapLife width={rect.w} height={contentH} road={road} keepOut={lifeKeepOut} biomes={biomes} flockY={nodes[current].y - 130} />
           {eyes && castleVisible && !revealing && <MapEyes castle={castlePt} width={rect.w} />}

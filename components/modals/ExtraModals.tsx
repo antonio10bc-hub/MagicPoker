@@ -302,7 +302,7 @@ export const GrimoireModal = () => {
   const [tab, setTab] = useState<GrimoireTab>(() => { const first = nextTab; nextTab = 'cards'; return first; });
   useEffect(() => markSeen('collection'), []);
   return (
-    <Dialog title={t.grim_title} width={260}>
+    <Dialog title={t.grim_title}>
       {/* Pestañas con icono (con texto no caben bien en el móvil) */}
       <Tabs className="px-[6px] pt-[6px]" value={tab} onChange={setTab} icons={GRIMOIRE_ICONS}
         options={[['cards', t.grim_tab_cards], ['seals', t.tab_seals], ['castle', t.grim_tab_castle]]} />
