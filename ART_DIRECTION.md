@@ -878,10 +878,12 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   mazo, tus dorsos, los dos en naranja) va separado por una rayita de lo del juego (reglas, estadísticas,
   ajustes). Recién desbloqueados, el Grimorio y el mazo llevan un **punto naranja** que
   late en la esquina (aviso de nuevo, `NewDot`); se quita la primera vez que se abren.
-- **Icono de la app:** nocturno y misterioso: fondo negro con un rojo muy profundo,
-  una luna-brasa naranja detrás de la cabeza, el Rey en silueta negra sin cetro con un
-  filo de contraluz naranja, los ojos encendidos (crema con resplandor), niebla baja,
-  viñeta y grano de impresión (`app/icon.png`, `app/apple-icon.png`, `public/icons/*`).
+- **Icono de la app (web, app instalable y el .exe de Steam):** fondo bermellón a sangre
+  con el centro encendido (sin disco ni viñeta), el busto del Rey en silueta negra
+  (cabeza con corona y hombros, cortado por abajo, simétrico y centrado, sin cetro), los
+  ojos crema encendidos y grano de impresión. Lo genera `scripts/icon/make_icon.py`
+  (`app/icon.png`, `app/apple-icon.png`, `public/icons/*`, `desktop/build/icon.png`):
+  cada tamaño se pinta con el Rey a escala entera para que no se emborrone.
 
 ## Escritorio (Steam, Windows)
 
