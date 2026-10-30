@@ -389,8 +389,11 @@ const CastleLitFx = () => (
 const MoonClearing = ({ at, still }: { at: Pt; still: boolean }) => (
   <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y, width: 0, height: 0, zIndex: 1 }}>
     {/* El bosque aprieta: todo se oscurece salvo el claro */}
-    <div className="absolute" style={{ left: -340, top: -300, width: 680, height: 560,
-      background: 'radial-gradient(ellipse 30% 28% at 50% 55%, transparent 0%, rgba(11,13,12,0.12) 50%, rgba(11,13,12,0.45) 80%, rgba(11,13,12,0.7) 100%)' }} />
+    {/* (ancha de sobra, fundida hacia arriba y hasta el final del mapa: sin bordes a la vista
+        ni sitio de más para bajar) */}
+    <div className="absolute" style={{ left: -1200, top: -700, width: 2400, height: 700 + BOTTOM,
+      background: 'radial-gradient(ellipse 210px 160px at 50% 712px, transparent 0%, rgba(11,13,12,0.14) 45%, rgba(11,13,12,0.5) 100%)',
+      maskImage: 'linear-gradient(to bottom, transparent 0, black 460px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 460px)' }} />
     {/* El haz de luna: ancho, inclinado, baja hasta el claro */}
     <div className={clsx('absolute', !still && 'anim-pulse-soft')} style={{ left: -48, top: -300, width: 96, height: 306, transform: 'rotate(-14deg)', transformOrigin: '50% 100%',
       background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.16) 25%, rgba(237,235,224,0.30) 50%, rgba(237,235,224,0.16) 75%, transparent)',
