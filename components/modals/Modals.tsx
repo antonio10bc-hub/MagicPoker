@@ -6,7 +6,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { useTranslations, Translations } from '@/lib/i18n';
 import { getStats } from '@/lib/stats';
 import { haptic, playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/sounds';
-import { GrainLevel, Quality, updateSettings } from '@/lib/settings';
+import { GrainLevel, Quality, UiSize, updateSettings } from '@/lib/settings';
 import { useSettings } from '@/hooks/useSettings';
 import { useMuted } from '@/hooks/useMuted';
 import { Rank } from '@/types';
@@ -116,7 +116,7 @@ const StatsModal = () => {
 
   return (
     <Dialog title={t.stats_title}>
-      <DialogBody>
+      <DialogBody className="t-dense">
         <Section title={t.results}>
           <div className="grid gap-x-[3px] text-center" style={{ gridTemplateColumns: "1fr 1fr 1fr 0.7fr" }}>
             {([
@@ -194,6 +194,22 @@ const Slider = ({ value, onChange, label }: { value: number; onChange: (v: numbe
   </>
 );
 
+/** Salir del juego (escritorio), con confirmación: el primer toque pregunta */
+const QuitGame = () => {
+  const t = useTranslations();
+  const [asking, setAsking] = useState(false);
+  if (!asking) return <PxButton size="md" onClick={() => { playSound('click'); setAsking(true); }}>{t.quit_game}</PxButton>;
+  return (
+    <div className="flex flex-col gap-[3px]">
+      <span className="text-center" style={{ color: 'var(--ink-cream)' }}>{t.quit_confirm}</span>
+      <div className="flex gap-[4px]">
+        <PxButton size="md" className="flex-1" onClick={() => { playSound('click'); setAsking(false); }}>{t.cancel}</PxButton>
+        <PxButton size="md" tone="red" className="flex-1" onClick={() => { playSound('click'); desktop()?.quit(); }}>{t.quit_yes}</PxButton>
+      </div>
+    </div>
+  );
+};
+
 const SettingsModal = () => {
   const t = useTranslations();
   const settings = useSettings();
@@ -201,7 +217,7 @@ const SettingsModal = () => {
   const [fullscreen, setFullscreen] = useFullscreen();
   return (
     <Dialog title={t.settings_title} size="md">
-      <DialogBody>
+      <DialogBody className="t-dense">
         <Section title={t.sec_sound} className="flex flex-col gap-[3px]">
           <OptionRow label={t.set_sound}>
             <Choice value={!isMuted} options={[[true, t.on], [false, t.off]]} onChange={on => { if (on === isMuted) toggleMute(); }} />
@@ -230,6 +246,9 @@ const SettingsModal = () => {
               <Choice value={fullscreen} options={[[true, t.on], [false, t.off]]} onChange={setFullscreen} />
             </OptionRow>
           )}
+          <OptionRow label={t.set_ui_size}>
+            <Choice<UiSize> value={settings.uiSize} options={[['normal', t.ui_normal], ['large', t.ui_large]]} onChange={uiSize => updateSettings({ uiSize })} />
+          </OptionRow>
           <span>{t.set_grain}</span>
           <Tabs<GrainLevel> value={settings.grain} options={[['full', t.grain_full], ['soft', t.grain_soft], ['off', t.grain_off]]}
             onChange={grain => updateSettings({ grain })} />
@@ -245,9 +264,7 @@ const SettingsModal = () => {
             useUiStore.getState().closeModal();
             useGameStore.getState().startTutorial();
           }}>{t.replay_tutorial}</PxButton>
-          {IS_DESKTOP && (
-            <PxButton size="md" onClick={() => { playSound('click'); desktop()?.quit(); }}>{t.quit_game}</PxButton>
-          )}
+          {IS_DESKTOP && <QuitGame />}
         </Section>
       </DialogBody>
     </Dialog>
@@ -313,7 +330,7 @@ const RulesModal = () => {
   const t = useTranslations();
   return (
     <Dialog title={t.rules_title} actions={<MuteButton />}>
-      <DialogBody>
+      <DialogBody className="t-dense">
         {RULES.map(section => (
           <Section key={section.title} title={t[section.title]}>
             <ul className="flex flex-col gap-[3px]">

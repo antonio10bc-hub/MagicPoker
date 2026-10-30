@@ -8,7 +8,7 @@
 //  Ronda 2 · el Joker (no ataca, roba 2) y el Príncipe (golpea uno al azar).
 //  Ronda 3 · el rival enseña Rey y Reina: parece que pierdes… y el As lo anula todo.
 //  Ronda 4 · un golpe directo y ganas.
-// Cada explicación va dentro del paso en el que se usa: 13 pasos en total.
+// Cada explicación va dentro del paso en el que se usa (el Príncipe, en dos): 14 pasos.
 import { BoardSlot, Card, Owner, PlayerState, Rank, Rng } from '@/types';
 import { getTargetIndices, playCardToSlot, RANKS } from '@/lib/game-utils';
 import { STARTING_LIVES } from '@/lib/constants';
@@ -24,7 +24,9 @@ export type TutorialStep =
   /** Plántate; el rival juega lo que le quede */
   | { kind: 'stand'; text: Text; rival?: TutorialMove[] }
   /** Repaso de la pelea (con el resultado a la vista); "Continuar" sigue */
-  | { kind: 'review'; text: Text };
+  | { kind: 'review'; text: Text }
+  /** Explicación antes de jugar (sin pelea); "Continuar" sigue */
+  | { kind: 'note'; text: Text };
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
   // Ronda 1: choque cara a cara, golpe directo y huecos amenazados
@@ -34,6 +36,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   { kind: 'review', text: 'tut_review_1' },
   // Ronda 2: Joker y Príncipe
   { kind: 'play', rank: 'JOKER', slot: 0, text: 'tut_play_joker' },
+  // El Príncipe en dos pasos: primero qué hace, luego dónde ponerlo
+  { kind: 'note', text: 'tut_jack_info' },
   { kind: 'play', rank: 'J', slot: 2, text: 'tut_play_jack' },
   { kind: 'stand', text: 'tut_stand_2' },
   { kind: 'review', text: 'tut_review_2' },

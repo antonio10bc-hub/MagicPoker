@@ -197,6 +197,10 @@ html, body {
 /* Escala de texto de los menús: cuerpo (por defecto), nota y micro */
 .t-note { font-size: 9px; line-height: 10px; color: var(--ink-mint); }
 .t-micro { font-size: 8px; line-height: 9px; }
+/* Ventanas de texto (ajustes, cómo jugar, estadísticas): todo un punto menos */
+.t-dense { font-size: 9px; line-height: 10px; }
+.t-dense .t-note, .t-dense .t-section { font-size: 8px; line-height: 9px; }
+.t-dense .px-btn-sm { font-size: 9px; }
 /* Listas densas (colección, catálogo): un punto menos */
 .t-list { font-size: 9px; line-height: 10px; }
 /* Título de sección: versalitas apagadas con una línea debajo */

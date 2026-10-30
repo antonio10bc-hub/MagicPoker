@@ -32,6 +32,14 @@ const PROGRESS_KEYS = [
   'magic_poker_save', 'magic_poker_deck', 'magic_poker_decks', 'magic_poker_back',
 ];
 
+/** Volver a ver el prólogo: como recién llegado, también sin tutorial (recarga) */
+export const replayPrologue = () => {
+  try {
+    [...PROGRESS_KEYS, 'magic_poker_tutorial_done', 'magic_poker_prologue', 'has_played_before'].forEach(k => localStorage.removeItem(k));
+  } catch { /* sin almacenamiento */ }
+  window.location.reload();
+};
+
 export const unlockAll = () => {
   try {
     const castle = JSON.parse(localStorage.getItem('magic_poker_castle') ?? '{}');
@@ -43,6 +51,7 @@ export const unlockAll = () => {
     localStorage.setItem('magic_poker_forest_seen', '1');
     localStorage.setItem('magic_poker_map_seen', String(BOSSES.length));
     localStorage.setItem('magic_poker_tutorial_done', '1');
+    localStorage.setItem('magic_poker_prologue', 'done');
     localStorage.setItem('has_played_before', 'true');
     localStorage.removeItem('magic_poker_save');
   } catch { /* sin almacenamiento */ }

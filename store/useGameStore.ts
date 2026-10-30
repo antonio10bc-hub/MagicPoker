@@ -83,6 +83,8 @@ interface GameState {
   resolveCombatPhase: () => void;
   finishCombatPhase: () => void;
   drawCard: (target: Owner, amount?: number) => void;
+  /** Tutorial: "Continuar" en un paso de explicación */
+  nextTutorialNote: () => void;
   /** Truco de pruebas: gana la partida en curso */
   debugWin: () => void;
   /** Tras el cara o cruz: empieza la primera ronda, la abra quien la abra */
@@ -348,6 +350,11 @@ export const useGameStore = create<GameState>((set, get) => {
       opponent: saved.opponent,
     });
     return true;
+  },
+
+  nextTutorialNote: () => {
+    const { tutorialStep } = get();
+    if (tutorialStep !== null && TUTORIAL_STEPS[tutorialStep]?.kind === 'note') set({ tutorialStep: tutorialStep + 1 });
   },
 
   exitToMenu: () => {

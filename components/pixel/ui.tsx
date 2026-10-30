@@ -46,7 +46,7 @@ interface PxButtonProps extends HTMLMotionProps<'button'> {
 export const PxButton = ({ tone = 'white', size, className, children, onPointerEnter, ...rest }: PxButtonProps) => (
   <motion.button
     className={clsx('px-btn px-round uppercase', tone !== 'white' && `px-btn-${tone}`, size && `px-btn-${size}`, size === 'lg' && 'text-title', className)}
-    whileHover={{ scale: 1.025, y: -1 }}
+    whileHover={{ scale: 1.01 }}
     whileTap={{ scale: 0.9, y: 2 }}
     transition={{ type: 'spring', stiffness: 600, damping: 18 }}
     onPointerEnter={e => { playSfx('hover'); onPointerEnter?.(e); }}

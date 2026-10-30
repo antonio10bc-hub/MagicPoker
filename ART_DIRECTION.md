@@ -76,7 +76,8 @@ dos fuentes de color compitiendo: el decorado es negro y grises fríos.
 
 Se aplica sin *shaders* WebGL, con capas baratas de composición:
 
-- **Grano** (`components/fx/FilmGrain.tsx`): un mosaico de ruido a resolución de
+- **Grano** (`components/fx/FilmGrain.tsx`, por defecto **suave**; en Ajustes, completo,
+  suave o apagado): un mosaico de ruido a resolución de
   pantalla (1 punto = 1 px CSS, no un píxel interno) que salta a 4 desplazamientos a
   ~8 fps (*boil* lento) con un `transform` que hace el compositor.
   - Capa `overlay` al 60 %: grano de luminancia con colas largas. Convierte todo
@@ -321,7 +322,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   - personajes que respiran y saltan;
   - cámara del menú que se mece.
 - **Interfaz:**
-  - botones con muelle (al pasar el ratón crecen apenas, un 2,5 % y 1 px arriba, sin deformarse; se aplastan al pulsar);
+  - botones con muelle (al pasar el ratón crecen apenas, un 1 %, sin deformarse; se aplastan al pulsar);
   - cartel "RONDA N" que barre la pantalla (borroso al moverse) al empezar cada ronda;
   - cinta "¡PELEA!": una masa naranja que entra de golpe;
   - corazones (brasas) que salen despedidos al perder una vida, y viñeta naranja con
@@ -631,13 +632,23 @@ se mueve rápido y una vibración leve a las masas naranjas.
   últimas partidas (puntos: naranja victoria, pizarra derrota, teal empate), rachas,
   victoria más rápida, victorias sin rasguños, vidas quitadas y perdidas, carta
   favorita y la colección de sellos.
-- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): la
-  primera vez que juegas (y desde Ajustes → Repetir tutorial). Una partida guionizada
-  de 4 rondas y 13 pasos con las reglas reales que siempre se gana: cartas normales y
+- **Prólogo: el ente del claro** (`lib/prologue.ts`, `SagaMap`): la primera vez el
+  juego empieza en el mapa, abajo del todo, en un claro bañado por la luna (luz crema en
+  el suelo y un haz inclinado que respira) donde nace el camino; el Forastero espera en
+  sombra ("???") y el sendero aún apagado. Aparece un ente encapuchado que flota (capa
+  menta con brillo, cara en sombra, ojos crema que laten) y habla en un bocadillo crema
+  que se escribe letra a letra. Al terminar, la acción principal es **ESCUCHAR** (al ente
+  del claro) y abre el tutorial. A la vuelta (o si se salta) se despide en otro
+  bocadillo, se desvanece hacia arriba, el sendero se dibuja hasta el Forastero y este
+  llega con su destello. Quien ya había jugado no lo ve.
+- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): tras
+  ESCUCHAR al ente (y desde Ajustes → Repetir tutorial). Una partida guionizada
+  de 4 rondas y 14 pasos con las reglas reales que siempre se gana: cartas normales y
   huecos vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" →
   el As barre la mesa → un golpe directo y ganas. Cada explicación va dentro del paso
-  que la usa (sin pantallas de "Entendido"); solo los repasos de pelea esperan a
-  "Continuar". Mientras juegas, el entrenador es un cartel sobre la franja central con
+  que la usa; el Príncipe va en dos (primero qué hace, con "Continuar", y luego dónde
+  ponerlo). Los repasos de pelea y esa explicación esperan a "Continuar", abajo. Al
+  ganar, la pantalla final solo ofrece VOLVER AL MENÚ. Mientras juegas, el entrenador es un cartel sobre la franja central con
   textos de ~60 caracteres y letra de 10, 9 u 8 px elegida para caber en el hueco entre
   filas de cada móvil; los repasos van abajo, sobre la mano. La carta y el hueco que
   tocan laten con un halo; lo demás queda bloqueado.
@@ -764,7 +775,16 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   línea debajo (`.t-section`). Ajustes se agrupa en Sonido, Partida, Pantalla y Más.
 - **Texto:** cuerpo (por defecto), nota (`.t-note`, menta, para explicaciones),
   listas densas (`.t-list`) y micro (`.t-micro`, etiquetas pequeñas). Nada de tamaños
-  sueltos.
+  sueltos. Las ventanas de texto (Ajustes, Cómo jugar, Estadísticas) van un punto más
+  pequeñas (`.t-dense`: cuerpo 9 px; notas y títulos de sección 8 px).
+- **Tamaño de la interfaz** (Ajustes → Pantalla): todo el juego es un lienzo de píxeles
+  que se amplía un número entero de veces. En **Normal** (por defecto) el lienzo es más
+  alto (330–420 px internos en horizontal, unos 360 en 1080p: ×3) y todo se ve más
+  pequeño; en **Grande**, el de antes (260–330 px, ×4 en 1080p). En vertical, igual con
+  el ancho (220–300 px en Normal, 180–300 en Grande).
+- **Botones al pasar el ratón:** crecen apenas (1 %) y se aclaran; se aplastan al pulsar.
+- **Acción principal:** el verbo (13–15 px) con su misma altura de línea, para que no
+  toque el borde de arriba, y el contexto debajo.
 - **Pie de acciones:** los botones van abajo, no mezclados con el contenido. El
   resultado de una partida usa el mismo esquema que una ventana pequeña.
 - **Capas y orden:** solo una ventana a la vez. Al cambiar de pantalla o acabar la
@@ -891,4 +911,5 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   completa (fondo negro de la paleta mientras carga, sin barra de menús).
 - En Ajustes, Pantalla → **Pantalla completa** (SÍ/NO, como el resto de opciones; F11 y
   Alt+Enter hacen lo mismo y la opción se entera) y, en Más, **Salir del juego** debajo de
-  Repetir tutorial. La opción de vibración no sale.
+  Repetir tutorial, con confirmación: el primer toque pregunta "¿Seguro que quieres
+  salir?" con CANCELAR y SÍ, SALIR (rojo). La opción de vibración no sale.

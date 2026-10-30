@@ -8,13 +8,14 @@ import {
   BOSSES, bossLives, bossSeals, bossWins, getProgress, getServerProgress, subscribeProgress, WINS_FOR_BACK,
 } from '@/lib/bosses';
 import { getMapSeen, revealSteps, RevealStep, setMapSeen } from '@/lib/mapReveal';
+import { finishPrologue, getPrologue, Prologue } from '@/lib/prologue';
 import { haptic, playSfx } from '@/lib/sounds';
 import { useLowPower } from '@/lib/quality';
 import { INK } from '@/theme/tokens';
 import { Rect } from '@/theme/layout';
 import { PixelSprite, spriteSize } from '@/components/pixel/PixelSprite';
 import { CASTLE_ART, spriteAura } from '@/components/pixel/bosses';
-import { HEART, ICONS, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { HEART, ICONS, SEAL_ICONS, STAR, WISP } from '@/components/pixel/sprites';
 import { Sprite } from '@/components/pixel/PixelSprite';
 import { SCENERY } from '@/components/pixel/scenery';
 import { MapTerrain, Pt } from './MapTerrain';
@@ -45,6 +46,8 @@ export const CASTLE_INDEX = BOSSES.length;
 
 const STEP = 200;
 const BOTTOM = 120;
+/** Del claro de luna (donde nace el camino) al primer jefe */
+const ORIGIN_GAP = 210;
 /** Del Soberano al Castillo: más camino que entre pueblos (los dos son grandes y llevan texto) */
 const CASTLE_GAP = 250;
 /** Sitio sobre el Castillo para su pastilla y la cabecera del menú */
@@ -65,12 +68,14 @@ const geometry = (w: number) => {
   const n = BOSSES.length;
   const cx = Math.round(w / 2);
   const castle = { x: cx, y: TOP + CASTLE_H };
-  const contentH = castle.y + CASTLE_GAP + (n - 1) * STEP + BOTTOM;
+  const contentH = castle.y + CASTLE_GAP + (n - 1) * STEP + ORIGIN_GAP + BOTTOM;
+  // Abajo del todo, el claro a la luz de la luna donde empieza todo (el prólogo)
+  const origin = { x: cx, y: contentH - BOTTOM };
   // Las paradas, a un lado y a otro del centro; el Soberano, en medio, ante su puerta
   const amp = Math.round(w * 0.13);
-  const nodes = BOSSES.map((b, i) => ({ x: b.secret ? cx : cx + sideOf(i) * amp, y: contentH - BOTTOM - i * STEP }));
-  // El camino entero: entra por abajo, pasa por cada parada y llega al Castillo
-  const stops = [{ x: nodes[0].x - 10, y: contentH + 10 }, ...nodes, castle];
+  const nodes = BOSSES.map((b, i) => ({ x: b.secret ? cx : cx + sideOf(i) * amp, y: origin.y - ORIGIN_GAP - i * STEP }));
+  // El camino entero: entra por abajo, nace en el claro, pasa por cada parada y llega al Castillo
+  const stops = [{ x: origin.x, y: contentH + 10 }, origin, ...nodes, castle];
   const road: Pt[] = stops.slice(1).flatMap((b, n) => curve(stops[n], b, 1));
   const terrain = BOSSES.map((b, i) => {
     const st = STATIONS[b.id];
@@ -82,10 +87,10 @@ const geometry = (w: number) => {
     };
   });
   return {
-    contentH, nodes, castle, road,
-    clearings: [...terrain.map(t => t.clearing), castle],
+    contentH, nodes, castle, road, origin,
+    clearings: [origin, ...terrain.map(t => t.clearing), castle],
     // Sin árboles solo lo justo alrededor del Castillo: el bosque lo rodea
-    keepOut: [...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
+    keepOut: [{ x: origin.x, y: origin.y - 8, rx: 96, ry: 58 }, ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
     biomes: terrain.flatMap(t => (t.biome ? [t.biome] : [])),
   };
 };
@@ -376,6 +381,64 @@ const CastleLitFx = () => (
 );
 
 /** Aviso grande en el centro (jefe secreto, Castillo): oscurece el mapa y lo dice claro */
+// --- EL CLARO DE LUNA Y EL ENTE (prólogo) ---
+/** Donde nace el camino: un claro bañado por la luna (luz crema y un haz que respira) */
+const MoonClearing = ({ at, still }: { at: Pt; still: boolean }) => (
+  <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y, width: 0, height: 0, zIndex: 1 }}>
+    {/* El haz de luna, inclinado, que baja hasta el claro */}
+    <div className={clsx('absolute', !still && 'anim-pulse-soft')} style={{ left: -34, top: -230, width: 68, height: 236, transform: 'rotate(-12deg)', transformOrigin: '50% 100%',
+      background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.10) 30%, rgba(237,235,224,0.16) 50%, rgba(237,235,224,0.10) 70%, transparent)',
+      maskImage: 'linear-gradient(to bottom, transparent, black 35%, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 35%, black 85%, transparent)' }} />
+    {/* La luz en el suelo */}
+    <div className="absolute" style={{ left: -90, top: -40, width: 180, height: 80, borderRadius: '50%',
+      background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(237,235,224,0.22) 0%, rgba(185,207,200,0.10) 45%, transparent 72%)' }} />
+  </div>
+);
+
+/** El ente: flota sobre el claro, encapuchado, con los ojos encendidos */
+const Wisp = ({ leaving }: { leaving: boolean }) => (
+  <motion.div className="absolute" style={{ left: 0, bottom: 4, x: '-50%' }}
+    initial={{ opacity: 0, y: 8, filter: 'blur(3px) brightness(2)' }}
+    animate={leaving ? { opacity: 0, y: -18, filter: 'blur(3px) brightness(2.2)' } : { opacity: 1, y: 0, filter: 'blur(0px) brightness(1)' }}
+    transition={{ duration: leaving ? 1.1 : 1.4, ease: 'easeOut' }}>
+    <div className="anim-float relative" style={{ filter: 'drop-shadow(0 0 5px rgba(185,207,200,0.55))' }}>
+      <PixelSprite sprite={WISP.cloak} tint={INK.mint} scale={2} style={{ opacity: 0.9 }} />
+      <PixelSprite sprite={WISP.face} tint={INK.black} scale={2} style={{ position: 'absolute', left: 0, top: 0 }} />
+      <PixelSprite sprite={WISP.eyes} tint={INK.cream} scale={2} className="anim-pulse-soft"
+        style={{ position: 'absolute', left: 0, top: 0, filter: 'drop-shadow(0 0 3px rgba(237,235,224,0.95))' }} />
+    </div>
+  </motion.div>
+);
+
+/** Bocadillo del ente: el texto sale letra a letra (avisa al terminar) */
+const WispBubble = ({ text, onDone }: { text: string; onDone: () => void }) => {
+  const [n, setN] = useState(0);
+  const done = useRef(onDone);
+  useEffect(() => { done.current = onDone; }, [onDone]);
+  useEffect(() => {
+    const id = setInterval(() => setN(v => {
+      if (v + 1 >= text.length) { clearInterval(id); setTimeout(() => done.current(), 250); }
+      return Math.min(text.length, v + 1);
+    }), 32);
+    return () => clearInterval(id);
+  }, [text]);
+  return (
+    <motion.div className="absolute px-[6px] py-[4px] leading-[11px]" style={{ left: 0, bottom: 46, width: 150, x: '-50%',
+      background: 'var(--ink-cream)', color: 'var(--ink-black)', borderRadius: 4, boxShadow: '0 0 0 1px var(--ink-black), 0 0 12px rgba(185,207,200,0.5)' }}
+      initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0, transition: { duration: 0.2 } }}
+      transition={{ type: 'spring', stiffness: 520, damping: 20 }}>
+      <span className="absolute" style={{ left: 'calc(50% - 4px)', bottom: -4, width: 8, height: 8, background: 'var(--ink-cream)', transform: 'rotate(45deg)' }} />
+      {/* El texto entero ocupa su sitio desde el principio (no salta al escribirse) */}
+      <span className="relative block">
+        <span style={{ visibility: 'hidden' }}>{text}</span>
+        <span className="absolute inset-0">{text.slice(0, n)}</span>
+      </span>
+    </motion.div>
+  );
+};
+
+type ProPhase = 'wait' | 'appear' | 'speak' | 'ready' | 'leave' | 'path' | 'arrive';
+
 const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gold' | 'crimson' }) => {
   const rgb = tone === 'gold' ? '232,182,74' : '255,31,75';
   return (
@@ -418,7 +481,9 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
-  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes } = useMemo(() => geometry(rect.w), [rect.w]);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin } = useMemo(() => geometry(rect.w), [rect.w]);
+  // Prólogo (la primera vez): el ente del claro (se decide al montar en el navegador)
+  const [pro, setPro] = useState<{ kind: Prologue; phase: ProPhase } | null>(null);
   const lifeKeepOut = useMemo(() => [...keepOut, { x: castlePt.x, y: castlePt.y - 50, rx: rect.w, ry: 170 }], [keepOut, castlePt, rect.w]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
@@ -460,6 +525,13 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   // Al abrir: la cámara en el jefe a derrotar (o en el Castillo); con algo por contar,
   // en el último vencido de antes
   useLayoutEffect(() => {
+    const prologue = replay === null ? getPrologue() : null;
+    if (prologue) {
+      setPro({ kind: prologue, phase: 'wait' });
+      lookAt(origin.y - 30, false);
+      setMenuBoss(0);
+      return;
+    }
     const defeated = replay ?? getProgress().defeated;
     const seen = replay !== null ? replay - 1 : getMapSeen(defeated);
     const pending = revealSteps(seen, defeated);
@@ -475,6 +547,41 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rect.w, rect.h]);
+
+  // El prólogo: el ente aparece y habla; a la vuelta del tutorial se despide, se va y
+  // el sendero avanza hasta el Forastero
+  const proKind = pro?.kind;
+  useEffect(() => {
+    if (!proKind) return;
+    onRevealing?.(true);
+    if (proKind === 'farewell') useUiStore.getState().setCinematic(true);
+    const timers = [
+      setTimeout(() => { setPro(p => p && { ...p, phase: 'appear' }); playSfx('reveal', 0.5, 0.7); }, proKind === 'intro' ? 700 : 500),
+      setTimeout(() => { setPro(p => p && { ...p, phase: 'speak' }); playSfx('pop', 0.5, 0.7); }, proKind === 'intro' ? 2000 : 1500),
+    ];
+    return () => {
+      timers.forEach(clearTimeout);
+      useUiStore.getState().setCinematic(false);
+      onRevealing?.(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proKind]);
+  // Al terminar de hablar: en la entrada, espera a ESCUCHAR; en la despedida, se abre el camino
+  const spoken = () => {
+    if (pro?.kind === 'intro') { setPro(p => p && { ...p, phase: 'ready' }); onRevealing?.(false); return; }
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+    at(1500, () => { setPro(p => p && { ...p, phase: 'leave' }); playSfx('whoosh', 0.5, 0.8); });
+    at(2600, () => { setPro(p => p && { ...p, phase: 'path' }); playSfx('whoosh', 0.5, 1.2); lookAt((origin.y + nodes[0].y) / 2); });
+    at(4600, () => { setPro(p => p && { ...p, phase: 'arrive' }); lookAt(nodes[0].y); playSfx('flip', 0.7, 0.9); playSfx('sparkle', 0.6, 1.2); haptic('stamp'); });
+    at(6400, () => {
+      finishPrologue();
+      setPro(null);
+      setMenuBoss(0);
+      useUiStore.getState().setCinematic(false);
+      onRevealing?.(false);
+    });
+  };
 
   // Las revelaciones, paso a paso, con la cámara siguiendo
   useEffect(() => {
@@ -550,8 +657,10 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   // Hasta dónde llegan las nubes con todo por descubrir (encima del último jefe normal)
   const fogBottom = nodes[BOSSES.length - 2].y - 70;
 
+  // En el prólogo el Forastero espera en sombra hasta que se abre el camino
+  const proLocked = (i: number) => i === 0 && pro !== null && pro.phase !== 'arrive';
   const pick = (i: number) => {
-    if (revealing) return;
+    if (revealing || pro) return;
     playSfx('select', 0.5, 1.1);
     setMenuBoss(i);
   };
@@ -588,6 +697,20 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
               animate={lowPower ? undefined : { x: [i % 2 ? -18 : 18, i % 2 ? 18 : -18] }} transition={{ duration: 9 + i * 2, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
           ))}
 
+          {/* El claro de luna, el ente y el sendero que nace en él */}
+          <MoonClearing at={origin} still={lowPower} />
+          <Trail a={origin} b={nodes[0]} lit={!pro || pro.phase === 'path' || pro.phase === 'arrive'} drawing={pro?.phase === 'path'} />
+          {pro && pro.phase !== 'wait' && pro.phase !== 'path' && pro.phase !== 'arrive' && (
+            <div className="absolute" style={{ left: origin.x + 30, top: origin.y - 2, width: 0, height: 0, zIndex: 6 }}>
+              <Wisp leaving={pro.phase === 'leave'} />
+              <AnimatePresence>
+                {(pro.phase === 'speak' || pro.phase === 'ready') && (
+                  <WispBubble key={pro.kind} text={pro.kind === 'intro' ? t.wisp_intro : t.wisp_farewell} onDone={spoken} />
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
           {/* El sendero */}
           {nodes.slice(1).map((b, n) => {
             const i = n + 1;
@@ -605,12 +728,12 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
             if (!visible(i)) return null;
             const p = nodes[i];
             const beaten = i < shown;
-            const locked = i > current || pendingLocked(i);
+            const locked = i > current || pendingLocked(i) || proLocked(i);
             const isCurrent = i === current && !beaten && !locked;
-            const isSel = selected === i && !revealing;
+            const isSel = selected === i && !revealing && !pro;
             const wins = Math.min(bossWins(i, progress), WINS_FOR_BACK);
             const justBeaten = step?.beaten === i && phase !== 'focus';
-            const arriving = i === target && (phase === 'next' || phase === 'summon' || phase === 'land');
+            const arriving = (i === target && (phase === 'next' || phase === 'summon' || phase === 'land')) || (i === 0 && pro?.phase === 'arrive');
             const seals = Array.from(new Set(bossSeals(boss)));
             const summoning = arriving && step?.then === 'secret';
             return (

@@ -4,60 +4,59 @@ import { STAGE } from '@/theme/tokens';
 import { computeGameLayout, computeMenuLayout, LANDSCAPE_STAGE, StageSize } from '@/theme/layout';
 import { useFxStore } from '@/components/fx/fxStore';
 import { FilmGrain } from '@/components/fx/FilmGrain';
+import { getSettings, subscribeSettings, UiSize } from '@/lib/settings';
 
 // --- ESCALADO ENTERO ---
 // La escala se calcula en píxeles FÍSICOS (devicePixelRatio) para que cada píxel
 // interno ocupe un número entero de píxeles reales.
-//  - Horizontal (ordenador): el alto interno ronda los 288 px y el ancho sigue la
-//    proporción de la pantalla (de 4:3 a 32:9), así el juego la llena sin franjas
-//    negras. Se busca el entero n que deja el alto en [LANDSCAPE_MIN_H, LANDSCAPE_MAX_H];
-//    si no hay, ajuste exacto a 288 de alto.
-//  - Vertical (móvil): se elige el entero n que deja un ancho interno ≤ 260 px y el
-//    alto interno se adapta a la pantalla, así el juego la llena entera.
-const LANDSCAPE_MIN_H = 260;
-const LANDSCAPE_MAX_H = 330;
-// Tope de ancho (hasta 32:9): las distribuciones centran lo importante y el fondo llena
-const LANDSCAPE_MAX_W = 1100;
-// Ancho interno mínimo en vertical: el tablero de 4 cartas cabe justo. Cuanto más
-// estrecho, más grande se ve todo en el móvil.
-const PORTRAIT_MIN_W = 180;
-const PORTRAIT_MAX_W = 300;
+//  - Horizontal (ordenador): se busca el entero n que deja el alto interno en
+//    [minH, maxH] y el ancho sigue la proporción de la pantalla (de 4:3 a 32:9), así el
+//    juego la llena sin franjas negras. Si no hay, ajuste exacto al alto de referencia.
+//  - Vertical (móvil): se elige el entero n que deja un ancho interno en [minW, maxW] y
+//    el alto interno se adapta a la pantalla, así el juego la llena entera.
+// Tamaño de la interfaz (Ajustes): en "normal" el lienzo interno es más grande (todo se
+// ve más pequeño: en 1080p, ×3 en vez de ×4); "grande" es el tamaño de siempre.
+interface Fit { minH: number; maxH: number; refH: number; maxW: number; minPW: number; maxPW: number }
+const FITS: Record<UiSize, Fit> = {
+  normal: { minH: 330, maxH: 420, refH: 360, maxW: 1400, minPW: 220, maxPW: 300 },
+  large: { minH: 260, maxH: 330, refH: STAGE.height, maxW: 1100, minPW: 180, maxPW: 300 },
+};
 const PORTRAIT_MIN_H = 330;
 const PORTRAIT_RATIO = 1.15; // alto / ancho a partir del cual se considera vertical
 
-const landscape = (vw: number, vh: number, dpr: number): StageSize => {
+const landscape = (vw: number, vh: number, dpr: number, fit: Fit): StageSize => {
   const devW = vw * dpr;
   const devH = vh * dpr;
-  for (let n = Math.floor(devH / LANDSCAPE_MIN_H); n >= 1; n--) {
+  for (let n = Math.floor(devH / fit.minH); n >= 1; n--) {
     const height = Math.floor(devH / n);
-    if (height > LANDSCAPE_MAX_H) break;
-    const width = Math.min(LANDSCAPE_MAX_W, Math.floor(devW / n));
+    if (height > fit.maxH) break;
+    const width = Math.min(fit.maxW, Math.floor(devW / n));
     if (width >= STAGE.width) return { width, height, scale: n / dpr, mode: 'landscape' };
   }
-  // Sin entero que cuadre: ajuste exacto (288 de alto o 384 de ancho, lo que limite)
-  const scale = Math.min(vw / STAGE.width, vh / STAGE.height);
+  // Sin entero que cuadre: ajuste exacto (al alto de referencia o a 384 de ancho, lo que limite)
+  const scale = Math.min(vw / STAGE.width, vh / fit.refH);
   return {
-    width: Math.min(LANDSCAPE_MAX_W, Math.floor(vw / scale)),
-    height: Math.min(LANDSCAPE_MAX_H, Math.floor(vh / scale)),
+    width: Math.min(fit.maxW, Math.floor(vw / scale)),
+    height: Math.min(fit.maxH, Math.floor(vh / scale)),
     scale,
     mode: 'landscape',
   };
 };
 
-/** Elige el mayor factor entero n que deja al menos PORTRAIT_MIN_W × PORTRAIT_MIN_H internos */
-const portrait = (vw: number, vh: number, dpr: number): StageSize | null => {
+/** Elige el mayor factor entero n que deja al menos minPW × PORTRAIT_MIN_H internos */
+const portrait = (vw: number, vh: number, dpr: number, fit: Fit): StageSize | null => {
   const devW = vw * dpr;
   const devH = vh * dpr;
-  for (let n = Math.floor(devW / PORTRAIT_MIN_W); n >= 1; n--) {
+  for (let n = Math.floor(devW / fit.minPW); n >= 1; n--) {
     const width = Math.floor(devW / n);
     const height = Math.floor(devH / n);
-    if (width > PORTRAIT_MAX_W) break;
+    if (width > fit.maxPW) break;
     if (height >= PORTRAIT_MIN_H) return { width, height, scale: n / dpr, mode: 'portrait' };
   }
   // Pantalla rara: ajuste exacto en lugar de entero
-  const scale = vw / PORTRAIT_MIN_W;
+  const scale = vw / fit.minPW;
   const height = Math.floor(vh / scale);
-  return height >= PORTRAIT_MIN_H ? { width: PORTRAIT_MIN_W, height, scale, mode: 'portrait' } : null;
+  return height >= PORTRAIT_MIN_H ? { width: fit.minPW, height, scale, mode: 'portrait' } : null;
 };
 
 let cached: StageSize = LANDSCAPE_STAGE;
@@ -65,7 +64,8 @@ const computeStage = (): StageSize => {
   const dpr = window.devicePixelRatio || 1;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const next = (vh > vw * PORTRAIT_RATIO && portrait(vw, vh, dpr)) || landscape(vw, vh, dpr);
+  const fit = FITS[getSettings().uiSize] ?? FITS.normal;
+  const next = (vh > vw * PORTRAIT_RATIO && portrait(vw, vh, dpr, fit)) || landscape(vw, vh, dpr, fit);
   // Misma referencia si nada cambia (requisito de useSyncExternalStore)
   if (next.width !== cached.width || next.height !== cached.height || next.scale !== cached.scale || next.mode !== cached.mode) {
     cached = next;
@@ -73,12 +73,15 @@ const computeStage = (): StageSize => {
   return cached;
 };
 
+/** Se recalcula al cambiar la ventana y al cambiar el tamaño de la interfaz en Ajustes */
 const subscribeResize = (cb: () => void) => {
   window.addEventListener('resize', cb);
   window.addEventListener('orientationchange', cb);
+  const offSettings = subscribeSettings(cb);
   return () => {
     window.removeEventListener('resize', cb);
     window.removeEventListener('orientationchange', cb);
+    offSettings();
   };
 };
 

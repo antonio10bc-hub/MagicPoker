@@ -7,6 +7,7 @@ import { playSound } from '@/lib/sounds';
 import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
+import { getPrologue, subscribePrologue } from '@/lib/prologue';
 import { loadGame } from '@/lib/savegame';
 import { isDebug } from '@/lib/debug';
 import { isForestUnlocked } from '@/lib/forest';
@@ -121,7 +122,8 @@ export const MenuScreen = () => {
     playSound('click');
     // La primera vez se juega el tutorial guiado (si no se completó antes)
     const first = consumeFirstPlay();
-    if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
+    // Prólogo: ESCUCHAR al ente es el tutorial
+    if (prologue === 'intro' || (first && !isTutorialDone())) useGameStore.getState().startTutorial();
     else if (castleSel) {
       // Castillo: si quedó una mejora por elegir, primero eso
       // Subida nueva tras haberlo conquistado: antes, los desafíos
@@ -168,7 +170,9 @@ export const MenuScreen = () => {
   const resumeGame = useGameStore(s => s.resumeGame);
   // Botón principal: el verbo y, debajo, contra quién o qué pasa
   const total = String(BOSSES.length);
-  const cta = castleSel
+  // La primera vez, el ente del claro: la acción es escucharle (el tutorial)
+  const prologue = useSyncExternalStore(subscribePrologue, getPrologue, () => null);
+  const cta = prologue === 'intro' ? { title: t.listen, sub: t.listen_sub } : castleSel
     ? castleRun
       ? { title: t.castle_continue_title, sub: (castleSave ? t.castle_resume_sub : t.castle_floor_sub).replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
       : castleState.checkpoint
@@ -232,7 +236,7 @@ export const MenuScreen = () => {
           // En el Castillo, del ancho del Bosque (los dos modos de juego, a la par)
           className={clsx('flex-col gap-[1px] overflow-hidden', castleSel ? 'self-center' : 'w-full', locked && 'opacity-50')}
           style={{ height: ctaBox.h, ...(castleSel ? { width: '72%' } : {}), ...(castleSel ? { boxShadow: '0 0 0 1px var(--ink-crimson), 0 0 10px rgba(255,31,75,0.6)' } : {}) }}>
-          <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{cta.title}</span>
+          <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: `${ctaBox.titleSize}px` }}>{cta.title}</span>
           {cta.sub && <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{cta.sub}</span>}
         </PxButton>
         {/* El Bosque: duelos contra quien salga de entre los árboles (debajo de la acción principal, más estrecho: es lo secundario) */}
@@ -241,7 +245,7 @@ export const MenuScreen = () => {
             transition={{ type: 'spring', stiffness: 260, damping: 14, delay: awaken ? 0.2 : 0 }}>
             <PxButton tone="amber" aria-label="forest" disabled={revealing} className="w-full flex-col gap-[1px] overflow-hidden" style={{ height: ctaBox.h }}
               onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>
-              <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: '13px' }}>{t.forest_button}</span>
+              <span className="text-title" style={{ fontSize: ctaBox.titleSize, lineHeight: `${ctaBox.titleSize}px` }}>{t.forest_button}</span>
               <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>{t.forest_button_sub}</span>
             </PxButton>
           </motion.div>

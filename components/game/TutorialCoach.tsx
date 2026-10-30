@@ -45,16 +45,16 @@ const fitFont = (text: string, textW: number, maxH: number) => {
 /**
  * El "entrenador". Dónde se coloca depende del paso, para no tapar nunca lo que importa:
  *  · jugar / plantarse: cartel compacto sobre la franja central (entre las dos filas);
- *  · repasos de pelea: abajo, sobre la mano (que entonces no se usa), con el tablero
- *    entero a la vista; esperan a "Continuar".
+ *  · repasos de pelea y explicaciones: abajo, sobre la mano (que entonces no se usa),
+ *    con el tablero entero a la vista; esperan a "Continuar".
  * El texto del cartel central baja a 9 px si es largo, para caber entre las filas.
  */
 export const TutorialCoach = () => {
   const t = useTranslations();
   const { width, height } = useStage();
   const { board, hand } = useGameLayout();
-  const { stepIndex, phase, finish, exit } = useGameStore(useShallow(s => ({
-    stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, exit: s.exitToMenu,
+  const { stepIndex, phase, finish, next, exit } = useGameStore(useShallow(s => ({
+    stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, exit: s.exitToMenu,
   })));
   if (stepIndex === null || phase === 'end') return null;
   const step = TUTORIAL_STEPS[stepIndex];
@@ -63,7 +63,8 @@ export const TutorialCoach = () => {
   if (step.kind === 'review' && phase !== 'combat-reveal') return null;
   if (step.kind !== 'review' && phase !== 'placement') return null;
 
-  const blocking = step.kind === 'review';
+  // Repasos y explicaciones: cartel grande abajo que espera a "Continuar"
+  const blocking = step.kind === 'review' || step.kind === 'note';
   const text = t[step.text];
   const d = board.diorama;
   const panelW = blocking ? Math.min(width - 8, hand.w) : d.w - 8;
@@ -103,7 +104,7 @@ export const TutorialCoach = () => {
         {blocking && (
           <div className="flex justify-end">
             <PxButton tone="green" className="h-[15px] px-[8px]" data-coach-next
-              onClick={() => { playSfx('select', 0.7); finish(); }}>
+              onClick={() => { playSfx('select', 0.7); if (step.kind === 'note') next(); else finish(); }}>
               <span className="text-outline">{t.continue}</span>
             </PxButton>
           </div>

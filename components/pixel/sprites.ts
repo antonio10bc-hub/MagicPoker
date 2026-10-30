@@ -341,6 +341,17 @@ export const CROWN_ICON = s(
   'xxxxxxx',
 );
 
+// --- EL ENTE DEL CLARO (prólogo) ---
+// Encapuchado y sin pies: flota. Capa (o), cara en sombra (f) y dos ojos (e), simétrico
+// (13 de ancho). Se pinta en tres capas teñidas: capa menta, cara negra y ojos crema.
+const WISP_HALF = [
+  '.....oo', '....ooo', '...oooo', '..oofff', '..ofeff', '..offff', '..oooff', '..ooooo',
+  '.oooooo', '.oooooo', '.oooooo', '.oooooo', 'ooooooo', 'ooooooo', 'ooooooo', '.o.oo.o', '...o..o',
+];
+const WISP_ROWS = WISP_HALF.map(r => r + r.slice(0, -1).split('').reverse().join(''));
+const wispLayer = (ch: string) => s(...WISP_ROWS.map(r => r.replace(new RegExp(`[^${ch}]`, 'g'), '.').replace(new RegExp(ch, 'g'), 'o')));
+export const WISP = { cloak: wispLayer('o'), face: wispLayer('f'), eyes: wispLayer('e') };
+
 /** Halo del Ángel (puntos de guardado del Castillo), para teñir */
 export const HALO = s(
   '.xxx.',

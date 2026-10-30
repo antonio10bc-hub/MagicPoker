@@ -4,6 +4,8 @@
 export type GrainLevel = 'full' | 'soft' | 'off';
 /** Calidad gráfica: auto (baja sola si el dispositivo va justo), alta o baja */
 export type Quality = 'auto' | 'high' | 'low';
+/** Tamaño de la interfaz: normal o grande (todo se dibuja un punto más grande) */
+export type UiSize = 'normal' | 'large';
 
 export interface Settings {
   /** 0–1 */
@@ -18,10 +20,11 @@ export interface Settings {
   confirmStand: boolean;
   /** Velocidad de la partida (x1 o x2) */
   speed: 1 | 2;
+  uiSize: UiSize;
 }
 
 const KEY = 'magic_poker_settings';
-const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'full', quality: 'auto', confirmStand: true, speed: 1 };
+const DEFAULTS: Settings = { music: 0.7, sfx: 0.9, vibration: true, grain: 'soft', quality: 'auto', confirmStand: true, speed: 1, uiSize: 'normal' };
 
 const listeners = new Set<() => void>();
 let current: Settings = DEFAULTS;

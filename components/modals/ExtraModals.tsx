@@ -24,7 +24,7 @@ import {
   copyDeck, readCopiedDeck, sanitizeDeckConfig, saveDeckConfig, totalSeals,
 } from '@/lib/deck';
 import { updateSettings } from '@/lib/settings';
-import { isDebug, lockAll, unlockAll } from '@/lib/debug';
+import { isDebug, lockAll, replayPrologue, unlockAll } from '@/lib/debug';
 import { track } from '@/lib/analytics';
 import { useSettings } from '@/hooks/useSettings';
 import { Card as CardType, Rank, SealId } from '@/types';
@@ -647,6 +647,7 @@ export const DebugModal = () => {
           <PxButton size="md" tone="green" className="flex-1" onClick={() => { if (window.confirm('¿Desbloquear todo? Se recargará la página.')) unlockAll(); }}>Desbloquear todo</PxButton>
           <PxButton size="md" className="flex-1 px-btn-danger" onClick={() => { if (window.confirm('¿Bloquear todo? Se borra tu progreso (jefes, Castillo, Bosque, mazos y dorsos).')) lockAll(); }}>Bloquear todo</PxButton>
         </span>
+        <PxButton size="md" onClick={() => { if (window.confirm('¿Ver el prólogo? Empiezas como recién llegado (se borra tu progreso). Se recargará la página.')) replayPrologue(); }}>Ver el prólogo (empezar de cero)</PxButton>
         <ResetProgress />
         <div className="t-section mt-[4px]">El Bosque: elige quién sale</div>
         {TIERS.map(tier => (
