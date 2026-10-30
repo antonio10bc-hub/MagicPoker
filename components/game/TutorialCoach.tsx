@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
 import { markTutorialDone, stepCard, TUTORIAL_STEPS, TutorialStep } from '@/lib/tutorial';
-import { useGameLayout, useStage } from '@/components/pixel/Stage';
+import { useGameLayout } from '@/components/pixel/Stage';
 import { PxButton } from '@/components/pixel/ui';
 import { CARD_SIZE } from '@/theme/tokens';
 
@@ -44,15 +45,14 @@ const fitFont = (text: string, textW: number, maxH: number) => {
 
 /**
  * El "entrenador". Dónde se coloca depende del paso, para no tapar nunca lo que importa:
- *  · jugar / plantarse: cartel compacto sobre la franja central (entre las dos filas);
- *  · repasos de pelea y explicaciones: abajo, sobre la mano (que entonces no se usa),
- *    con el tablero entero a la vista; esperan a "Continuar".
- * El texto del cartel central baja a 9 px si es largo, para caber entre las filas.
+ * Siempre el mismo sitio: un cartel compacto sobre la franja central (entre las dos
+ * filas), que se lee bien. Los repasos de pelea y las explicaciones esperan a
+ * "Continuar", con el botón a la derecha del texto. La letra baja a 9 u 8 px si el texto
+ * es largo, para caber entre las filas.
  */
 export const TutorialCoach = () => {
   const t = useTranslations();
-  const { width, height } = useStage();
-  const { board, hand } = useGameLayout();
+  const { board } = useGameLayout();
   const { stepIndex, phase, finish, next, exit } = useGameStore(useShallow(s => ({
     stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, exit: s.exitToMenu,
   })));
@@ -67,47 +67,37 @@ export const TutorialCoach = () => {
   const blocking = step.kind === 'review' || step.kind === 'note';
   const text = t[step.text];
   const d = board.diorama;
-  const panelW = blocking ? Math.min(width - 8, hand.w) : d.w - 8;
-  // Cartel central: el mayor tamaño de letra cuyas líneas caben en el hueco entre filas
+  const panelW = d.w - 8;
+  // Siempre en el centro, entre las dos filas (se lee mejor): el mayor tamaño de letra que
+  // cabe en el hueco; los que esperan a "Continuar" llevan el botón a la derecha
   const gap = board.slots.player[0].y - (board.slots.opponent[0].y + CARD_SIZE.height);
-  const font = blocking ? 10 : fitFont(text, panelW - 12, gap + 4);
-  const place = blocking
-    ? { left: Math.max(4, hand.x), width: panelW, top: height - 4, translateY: '-100%' }
-    : { left: d.x + 4, width: panelW, top: board.centerLine.y + board.centerLine.h / 2, translateY: '-50%' };
+  // Sitio que se reserva para el botón al calcular la letra
+  const BTN_W = 62;
+  const font = fitFont(text, panelW - 12 - (blocking ? BTN_W + 4 : 0), gap + 4);
+  const place = { left: d.x + 4, width: panelW, top: board.centerLine.y + board.centerLine.h / 2, translateY: '-50%' };
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
         key={stepIndex}
-        className={blocking ? 'px-panel px-round absolute z-[82] flex flex-col gap-[4px] leading-[11px]' : 'px-panel px-round absolute z-[82] flex flex-col leading-[10px]'}
+        className={clsx('px-panel px-round absolute z-[82] flex leading-[10px]', blocking ? 'flex-row items-center gap-[4px]' : 'flex-col')}
         data-popover
-        style={{ ...place, padding: blocking ? 6 : '2px 6px', boxShadow: '0 0 0 1px rgba(255,74,28,0.55), 0 0 14px 2px rgba(255,74,28,0.25)' }}
+        style={{ ...place, padding: '2px 6px', boxShadow: '0 0 0 1px rgba(255,74,28,0.55), 0 0 14px 2px rgba(255,74,28,0.25)' }}
         initial={{ opacity: 0, scale: 0.9, filter: 'blur(3px)' }}
         animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', transitionEnd: { filter: 'none' } }}
         exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.12 } }}
         transition={{ type: 'spring', stiffness: 420, damping: 26 }}
       >
+        {/* Saltar: pestaña encima del cartel (no ocupa sitio dentro), con el paso por el que vas */}
+        <button className="absolute cursor-pointer px-[4px] rounded-t-[3px]" data-skip
+          style={{ right: 6, top: -10, height: 10, fontSize: 8, lineHeight: '10px', color: 'var(--ink-teal)', background: 'rgba(11,13,12,0.95)' }}
+          onClick={() => { playSound('click'); markTutorialDone(); exit(); }}>{stepIndex + 1}/{TUTORIAL_STEPS.length} · {t.tut_skip}</button>
+        <span className={clsx('text-outline', blocking && 'flex-1')} style={{ fontSize: font, lineHeight: `${font}px` }}>{text}</span>
         {blocking && (
-          <div className="flex items-start justify-between gap-[6px]">
-            <span className="font-display glow-text" style={{ color: 'var(--ink-orange)', fontSize: 11 }}>{t.tutorial} · {stepIndex + 1}/{TUTORIAL_STEPS.length}</span>
-            <button className="cursor-pointer" style={{ color: 'var(--ink-teal)' }} data-skip
-              onClick={() => { playSound('click'); markTutorialDone(); exit(); }}>{t.tut_skip}</button>
-          </div>
-        )}
-        {/* Saltar: pestaña encima del cartel central (no ocupa sitio dentro) */}
-        {!blocking && (
-          <button className="absolute cursor-pointer px-[4px] rounded-t-[3px]" data-skip
-            style={{ right: 6, top: -10, height: 10, fontSize: 8, lineHeight: '10px', color: 'var(--ink-teal)', background: 'rgba(11,13,12,0.95)' }}
-            onClick={() => { playSound('click'); markTutorialDone(); exit(); }}>{t.tut_skip}</button>
-        )}
-        <span className="text-outline" style={{ fontSize: font, lineHeight: `${font}px` }}>{text}</span>
-        {blocking && (
-          <div className="flex justify-end">
-            <PxButton tone="green" className="h-[15px] px-[8px]" data-coach-next
-              onClick={() => { playSfx('select', 0.7); if (step.kind === 'note') next(); else finish(); }}>
-              <span className="text-outline">{t.continue}</span>
-            </PxButton>
-          </div>
+          <PxButton tone="green" className="h-[15px] shrink-0 px-[5px]" data-coach-next
+            onClick={() => { playSfx('select', 0.7); if (step.kind === 'note') next(); else finish(); }}>
+            <span className="text-outline">{t.continue}</span>
+          </PxButton>
         )}
       </motion.div>
     </AnimatePresence>

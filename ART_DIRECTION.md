@@ -652,11 +652,14 @@ se mueve rápido y una vibración leve a las masas naranjas.
   huecos vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" →
   el As barre la mesa → un golpe directo y ganas. Cada explicación va dentro del paso
   que la usa; el Príncipe va en dos (primero qué hace, con "Continuar", y luego dónde
-  ponerlo). Los repasos de pelea y esa explicación esperan a "Continuar", abajo. Al
+  ponerlo). Todos los carteles salen en el mismo sitio, la franja central entre las
+  dos filas (se lee mejor), con una pestaña encima con el paso y Saltar ("4/14 · Saltar");
+  los repasos de pelea y esa explicación llevan "Continuar" a la derecha del texto. Al
   ganar, la pantalla final habla en clave de historia ("Ya estás preparado para conocer a
-  los demás… Te esperan en el camino.") y solo ofrece VOLVER AL CAMINO. Mientras juegas, el entrenador es un cartel sobre la franja central con
-  textos de ~60 caracteres y letra de 10, 9 u 8 px elegida para caber en el hueco entre
-  filas de cada móvil; los repasos van abajo, sobre la mano. La carta y el hueco que
+  los demás… Te esperan en el camino.") y solo ofrece VOLVER AL CAMINO. Los
+  textos son cortos y la letra (10, 9 u 8 px) se elige para caber en el hueco entre
+  filas de cada móvil. Con el Rey y la Reina a la vista avisa "¡así vas a perder!" y deja
+  claro que el As limpia todo el tablero, también tus cartas. La carta y el hueco que
   tocan laten con un halo; lo demás queda bloqueado.
   No cuenta para estadísticas ni sellos. Un test juega el guion entero.
 - **Partida guardada** (`lib/savegame.ts`): se guarda en cada turno tuyo y el menú
