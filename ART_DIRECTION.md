@@ -363,9 +363,10 @@ se mueve rápido y una vibración leve a las masas naranjas.
   con 3 cartas y 1 sello, y cada ronda se roban 2 cartas y 1 sello (si quedan).
 - **Contadores de los mazos:** en el panel de cada bando, el mazo de cartas (dorsos en
   pila, `xN` en crema) y a su lado el de sellos (dorsos verde voltio con un rombo negro,
-  `xN` en verde). Si no quedan sellos, el contador se apaga a medias. En columna en las
-  barras del móvil (con un solo dorso cada uno) y en el panel del rival (a la derecha va
-  su figura). Al tocar tu mazo, la ficha enseña también los sellos que quedan, por tipo.
+  `xN` en verde). Si no quedan sellos, el contador se apaga a medias. En columna y con
+  un solo dorso cada uno en las barras del móvil y en el panel del rival (a la derecha va
+  su figura); en ese panel la mano del rival y el piso del Castillo comparten fila para
+  que todo quepa en sus 62 px. Al tocar tu mazo, la ficha enseña también los sellos que quedan, por tipo.
 - **El As del rival:** no se carga su propia mesa cuando va claramente por delante
   (más de 6 puntos de fuerza: valor de las cartas y 4 por sello); con poca ventaja lo
   usa a veces (25 %); parejos o perdiendo, lo usa. Si solo le queda el As y no le

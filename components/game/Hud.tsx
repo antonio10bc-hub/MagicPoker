@@ -134,7 +134,7 @@ const DeckCount = ({ owner, count, seals, single }: { owner: Owner; count: numbe
  * la derecha); en las barras del móvil, con un solo dorso para que quepan los dos.
  */
 const Decks = ({ owner, cards, seals, column, single }: { owner: Owner; cards: number; seals: number | null; column?: boolean; single?: boolean }) => (
-  <div className={clsx('flex', column ? 'flex-col items-start gap-[2px]' : 'items-center gap-[5px]')}>
+  <div className={clsx('flex', column ? 'flex-col items-start gap-[1px]' : 'items-center gap-[5px]')}>
     <DeckCount owner={owner} count={cards} single={single && seals !== null} />
     {seals !== null && <DeckCount owner={owner} count={seals} seals single={single} />}
   </div>
@@ -213,13 +213,13 @@ export const RivalPanel = () => {
   }
   return (
     <>
-      <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > Math.floor((rect.w - 10) / 6) ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[3px]">
+      <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > Math.floor((rect.w - 10) / 6) ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[2px]">
         {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><BossFigure id={boss.id} height={26} evolved={!!castle} /></Flinch></div>}
         {forest && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><ForestFigure id={forest.id} tier={forest.tier} height={26} /></Flinch></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
-        <RivalHand count={handCount} />
-        <Decks owner="opponent" cards={deckCount} seals={sealCount} column />
-        {floor}
+        {/* La mano y el piso del Castillo en una fila; debajo, los dos mazos (cabe todo en 62 px) */}
+        <div className="flex items-center gap-[4px]"><RivalHand count={handCount} />{floor}</div>
+        <Decks owner="opponent" cards={deckCount} seals={sealCount} column single />
       </Panel>
     </>
   );

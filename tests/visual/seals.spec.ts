@@ -139,7 +139,8 @@ test('dos mazos: el contador de cartas y el de sellos en los paneles, y la ficha
     const st = g.getState();
     g.setState({
       player: { ...st.player, sealDeck: [seal('player', 'shield', 1), seal('player', 'shield', 2), seal('player', 'double', 3), seal('player', undefined, 4)] },
-      opponent: { ...st.opponent, sealDeck: [seal('opponent', 'poison', 1), seal('opponent', 'swap', 2)] },
+      opponent: { ...st.opponent, hand: [1, 2, 3, 4].map(i => ({ id: `opponent-h${i}`, rank: '5', owner: 'opponent' })), sealDeck: [seal('opponent', 'poison', 1), seal('opponent', 'swap', 2)] },
+      castle: { stage: 1, lives: 4, maxLives: 4, deck: [] },
     });
   });
   await page.waitForTimeout(600);
