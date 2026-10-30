@@ -241,7 +241,8 @@ export const MenuScreen = () => {
           </motion.div>
         )}
         {hasSave && (
-          <PxButton size="md" onClick={() => { playSound('click'); resumeGame(); }}>{t.continue_game}</PxButton>
+          // Del ancho de la acción principal (en el Castillo, el de los modos de juego)
+          <PxButton size="md" className={castleSel ? 'self-center' : 'w-full'} style={castleSel ? { width: '72%' } : undefined} onClick={() => { playSound('click'); resumeGame(); }}>{t.continue_game}</PxButton>
         )}
       </motion.div>
 

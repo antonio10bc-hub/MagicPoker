@@ -321,7 +321,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   - personajes que respiran y saltan;
   - cámara del menú que se mece.
 - **Interfaz:**
-  - botones con muelle (crecen al pasar, se aplastan al pulsar);
+  - botones con muelle (al pasar el ratón crecen apenas, un 2,5 % y 1 px arriba, sin deformarse; se aplastan al pulsar);
   - cartel "RONDA N" que barre la pantalla (borroso al moverse) al empezar cada ronda;
   - cinta "¡PELEA!": una masa naranja que entra de golpe;
   - corazones (brasas) que salen despedidos al perder una vida, y viñeta naranja con
@@ -843,7 +843,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
     en el hueco que dejan cabecera y botones, nunca debajo de ellos.
   - Una sola acción principal ancha con el verbo grande y el contexto en pequeño
     ("¡DESAFIAR! · El Trilero", "REVANCHA · nivel 2", "SEGUIR · piso 2 de 12") y, si
-    hay, continuar partida debajo.
+    hay, continuar partida debajo, del mismo ancho que la acción principal (en el
+    Castillo, el de los dos modos de juego).
 - **Revelaciones del mapa (por fases, input bloqueado, pausadas):** al vencer a un jefe
   por primera vez, el final de partida ofrece una sola acción, "¡AL MAPA!". Allí no
   responde nada hasta acabar (la acción principal se oculta) y la cámara se desliza
