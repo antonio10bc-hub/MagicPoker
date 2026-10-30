@@ -634,7 +634,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   favorita y la colección de sellos.
 - **Prólogo: el ente del claro** (`lib/prologue.ts`, `SagaMap`): la primera vez el
   juego empieza en el mapa, abajo del todo y lejos del Forastero (no se ve desde allí),
-  en un claro diminuto donde nace el camino. El bosque lo encierra: una espesura de
+  en un claro diminuto. El camino no lo cruza: nace justo al salir de él, ya entre los
+  árboles. El bosque lo encierra: una espesura de
   árboles pegados (`thickets` de `MapTerrain`) y una oscuridad que aprieta alrededor; por
   el centro baja un haz de luna ancho e inclinado (con otro fino que lo cruza) que
   respira, con motas de polvo cayendo, y la luz crema en el suelo. El sendero aún está

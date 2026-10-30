@@ -74,8 +74,10 @@ const geometry = (w: number) => {
   // Las paradas, a un lado y a otro del centro; el Soberano, en medio, ante su puerta
   const amp = Math.round(w * 0.13);
   const nodes = BOSSES.map((b, i) => ({ x: b.secret ? cx : cx + sideOf(i) * amp, y: origin.y - ORIGIN_GAP - i * STEP }));
-  // El camino entero: nace en el claro, pasa por cada parada y llega al Castillo
-  const stops = [origin, ...nodes, castle];
+  // El camino entero: nace al borde del claro, pasa por cada parada y llega al Castillo
+  // (el camino no cruza el claro: nace justo al salir de él, ya entre los árboles)
+  const trailhead = { x: origin.x, y: origin.y - 40 };
+  const stops = [trailhead, ...nodes, castle];
   const road: Pt[] = stops.slice(1).flatMap((b, n) => curve(stops[n], b, 1));
   const terrain = BOSSES.map((b, i) => {
     const st = STATIONS[b.id];
@@ -87,7 +89,7 @@ const geometry = (w: number) => {
     };
   });
   return {
-    contentH, nodes, castle, road, origin,
+    contentH, nodes, castle, road, origin, trailhead,
     // El claro es pequeño y el bosque lo encierra (espesura alrededor, asfixiante)
     clearings: [{ ...origin, rx: 52, ry: 32 }, ...terrain.map(t => t.clearing), castle],
     thickets: [{ x: origin.x, y: origin.y + 10, rx: Math.max(220, w * 0.6), ry: 190 }],
@@ -521,7 +523,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
-  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin, thickets } = useMemo(() => geometry(rect.w), [rect.w]);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin, thickets, trailhead } = useMemo(() => geometry(rect.w), [rect.w]);
   // Prólogo (la primera vez): el ente del claro (se decide al montar en el navegador)
   const [pro, setPro] = useState<{ kind: Prologue; phase: ProPhase } | null>(null);
   const lifeKeepOut = useMemo(() => [...keepOut, { x: castlePt.x, y: castlePt.y - 50, rx: rect.w, ry: 170 }], [keepOut, castlePt, rect.w]);
@@ -757,7 +759,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
 
           {/* El claro de luna, el ente y el sendero que nace en él */}
           <MoonClearing at={origin} still={lowPower} />
-          <Trail a={origin} b={nodes[0]} lit={!pro || pro.phase === 'path' || pro.phase === 'arrive'} drawing={pro?.phase === 'path'} />
+          <Trail a={trailhead} b={nodes[0]} lit={!pro || pro.phase === 'path' || pro.phase === 'arrive'} drawing={pro?.phase === 'path'} />
           {pro && pro.phase !== 'path' && pro.phase !== 'arrive' && (
             <div className="absolute" style={{ left: origin.x + 30, top: origin.y - 2, width: 0, height: 0, zIndex: 6 }}>
               {/* El humillo: en la entrada espera a que toques; luego se abre */}
