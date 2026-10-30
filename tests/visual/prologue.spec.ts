@@ -24,7 +24,7 @@ test('prólogo: el ente habla, ESCUCHAR abre el tutorial y al volver se despide 
   await shot(page, info, 'tutorial');
   // Se gana el tutorial: solo queda volver al menú
   await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
-  const back = page.getByText(/volver al menú|salir al menú|menú/i).first();
+  const back = page.getByText('VOLVER AL CAMINO', { exact: true });
   await back.waitFor({ timeout: 15_000 });
   await page.waitForTimeout(1500);
   await shot(page, info, 'fin-tutorial');

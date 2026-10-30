@@ -648,7 +648,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   el As barre la mesa → un golpe directo y ganas. Cada explicación va dentro del paso
   que la usa; el Príncipe va en dos (primero qué hace, con "Continuar", y luego dónde
   ponerlo). Los repasos de pelea y esa explicación esperan a "Continuar", abajo. Al
-  ganar, la pantalla final solo ofrece VOLVER AL MENÚ. Mientras juegas, el entrenador es un cartel sobre la franja central con
+  ganar, la pantalla final habla en clave de historia ("Ya estás preparado para conocer a
+  los demás… Te esperan en el camino.") y solo ofrece VOLVER AL CAMINO. Mientras juegas, el entrenador es un cartel sobre la franja central con
   textos de ~60 caracteres y letra de 10, 9 u 8 px elegida para caber en el hueco entre
   filas de cada móvil; los repasos van abajo, sobre la mano. La carta y el hueco que
   tocan laten con un halo; lo demás queda bloqueado.

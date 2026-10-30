@@ -189,7 +189,7 @@ export const EndScreen = () => {
             <PxButton size="lg" tone="amber" onClick={() => { playSound('click'); useGameStore.getState().enterForest(); }}>{t.forest_again}</PxButton>
           ) : wasTutorial ? (
             // Tutorial: solo de vuelta al mapa (allí espera el ente con su despedida)
-            <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); exitToMenu(); }}>{t.exit_menu}</PxButton>
+            <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); exitToMenu(); }}>{t.tut_back}</PxButton>
           ) : toMap ? (
             // Jefe nuevo vencido: al mapa, que cuenta lo que se desbloquea
             <PxButton size="lg" tone="yellow" onClick={() => { playSound('click'); exitToMenu(); }}>{t.to_map}</PxButton>
