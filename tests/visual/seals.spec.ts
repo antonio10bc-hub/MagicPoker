@@ -129,3 +129,24 @@ test('revelar: al ponerlo se da la vuelta la carta de enfrente y vale 1 menos', 
   expect(s.result!.deadCardIds.sort()).toEqual(['opponent-9-b', 'player-8-a']);
   noErrors();
 });
+
+test('dos mazos: el contador de cartas y el de sellos en los paneles, y la ficha del mazo', async ({ page }, info) => {
+  const noErrors = watchErrors(page);
+  await startScenario(page, { player: { board: [] }, opponent: { board: [] } });
+  await page.evaluate(() => {
+    const g = (window as unknown as { __game: { getState: () => Record<string, { deck: unknown[] }>; setState: (s: unknown) => void } }).__game;
+    const seal = (owner: string, seal: string | undefined, i: number) => ({ id: `${owner}-seal-${i}`, rank: 'SEAL', owner, ...(seal ? { seal } : { wild: true }) });
+    const st = g.getState();
+    g.setState({
+      player: { ...st.player, sealDeck: [seal('player', 'shield', 1), seal('player', 'shield', 2), seal('player', 'double', 3), seal('player', undefined, 4)] },
+      opponent: { ...st.opponent, sealDeck: [seal('opponent', 'poison', 1), seal('opponent', 'swap', 2)] },
+    });
+  });
+  await page.waitForTimeout(600);
+  await expect(page.getByText('x4', { exact: true })).toBeVisible();
+  await shot(page, info, 'paneles');
+  await page.getByLabel('mazo').click();
+  await expect(page.getByText(/SELLOS QUE QUEDAN · 4/)).toBeVisible();
+  await shot(page, info, 'ficha');
+  noErrors();
+});

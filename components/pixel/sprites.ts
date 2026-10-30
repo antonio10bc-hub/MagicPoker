@@ -311,6 +311,15 @@ export const HALO = s(
   '.xxx.',
 );
 
+/** Marca del mazo de sellos (dorso en miniatura del contador): un rombo */
+export const SEAL_MARK = s(
+  '..x..',
+  '.x.x.',
+  'x...x',
+  '.x.x.',
+  '..x..',
+);
+
 // --- SELLOS (9×9): se pintan en verde eléctrico ---
 export const SEAL_ICONS: Record<SealId, Sprite> = {
   /** Defensa: escudo */

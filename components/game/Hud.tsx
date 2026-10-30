@@ -10,12 +10,12 @@ import { CARD_SIZE, INK } from '@/theme/tokens';
 import { Card as CardType, Owner } from '@/types';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { Panel } from '@/components/pixel/ui';
-import { HEART, HEART_LOST } from '@/components/pixel/sprites';
+import { HEART, HEART_LOST, SEAL_ICONS, SEAL_MARK } from '@/components/pixel/sprites';
 import { useGameLayout, useStage } from '@/components/pixel/Stage';
 import { Rect } from '@/theme/layout';
 import { ScaledBack } from './Backs';
 import { Card } from './Card';
-import { deckSummary, forecastFight } from './forecast';
+import { deckSummary, forecastFight, sealDeckSummary } from './forecast';
 import { ForestFigure } from './ForestFigure';
 import { BossFigure } from './BossFigure';
 import { Flinch } from './Juice';
@@ -103,15 +103,40 @@ const MiniBack = ({ owner, style }: { owner: Owner; style?: CSSProperties }) => 
   <ScaledBack owner={owner} w={8} style={{ boxShadow: owner === 'opponent' ? '0 0 3px rgba(255,74,28,0.6)' : '0 0 0 1px rgba(185,207,200,0.35)', ...style }} />
 );
 
-const DeckCount = ({ owner, count }: { owner: Owner; count: number }) => (
-  <div className="flex items-center gap-[3px]">
-    <div className="relative" style={{ width: 10, height: 13 }}>
-      <MiniBack owner={owner} style={{ position: 'absolute', left: 2, top: 0 }} />
-      <MiniBack owner={owner} style={{ position: 'absolute', left: 0, top: 2 }} />
+/** Dorso en miniatura de una carta de sello: masa verde voltio con la marca en negro */
+const MiniSeal = ({ style }: { style?: CSSProperties }) => (
+  <div className="flex items-center justify-center rounded-[1px]" style={{ width: 8, height: 11, background: 'var(--ink-volt)', boxShadow: '0 0 3px rgba(125,255,43,0.55)', ...style }}>
+    <PixelSprite sprite={SEAL_MARK} tint={INK.black} />
+  </div>
+);
+
+/** Contador de un mazo: dos dorsos en pila (uno si va apretado) y cuántas quedan (salta al cambiar) */
+const DeckCount = ({ owner, count, seals, single }: { owner: Owner; count: number; seals?: boolean; single?: boolean }) => {
+  const back = (style?: CSSProperties) => (seals ? <MiniSeal style={style} /> : <MiniBack owner={owner} style={style} />);
+  return (
+    <div className="flex items-center gap-[3px]" style={{ opacity: seals && count === 0 ? 0.4 : 1, lineHeight: single ? '11px' : undefined }}>
+      {single ? back() : (
+        <div className="relative" style={{ width: 10, height: 13 }}>
+          {back({ position: 'absolute', left: 2, top: 0 })}
+          {back({ position: 'absolute', left: 0, top: 2 })}
+        </div>
+      )}
+      <motion.span key={count} initial={{ scale: 1.7, color: seals ? '#7DFF2B' : '#F2652A' }} animate={{ scale: 1, color: seals ? '#7DFF2B' : '#EDEBE0' }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
+        x{count}
+      </motion.span>
     </div>
-    <motion.span key={count} initial={{ scale: 1.7, color: '#F2652A' }} animate={{ scale: 1, color: '#EDEBE0' }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
-      x{count}
-    </motion.span>
+  );
+};
+
+/**
+ * Los mazos de un bando: el de cartas y, si lo tiene, el de sellos (verde). En columna
+ * cuando no caben en fila (barras del móvil, y el panel del rival, que lleva su figura a
+ * la derecha); en las barras del móvil, con un solo dorso para que quepan los dos.
+ */
+const Decks = ({ owner, cards, seals, column, single }: { owner: Owner; cards: number; seals: number | null; column?: boolean; single?: boolean }) => (
+  <div className={clsx('flex', column ? 'flex-col items-start gap-[2px]' : 'items-center gap-[5px]')}>
+    <DeckCount owner={owner} count={cards} single={single && seals !== null} />
+    {seals !== null && <DeckCount owner={owner} count={seals} seals single={single} />}
   </div>
 );
 
@@ -122,7 +147,8 @@ const TEAM_BAND_TEXT: Record<Owner, string> = { player: 'text-outline', opponent
 const usePlayerHud = (owner: Owner) => useGameStore(useShallow(s => ({
   lives: s[owner].lives,
   maxLives: s[owner].maxLives ?? STARTING_LIVES,
-  deckCount: s[owner].deck.length + (s[owner].sealDeck?.length ?? 0),
+  deckCount: s[owner].deck.length,
+  sealCount: s[owner].sealDeck ? s[owner].sealDeck.length : null,
   handCount: s[owner].hand.length,
 })));
 
@@ -155,7 +181,7 @@ const RivalHand = ({ count }: { count: number }) => (
 export const RivalPanel = () => {
   const t = useTranslations();
   const { rivalPanel: rect, compactPanels } = useGameLayout();
-  const { lives: realLives, maxLives, deckCount, handCount } = usePlayerHud('opponent');
+  const { lives: realLives, maxLives, deckCount, sealCount, handCount } = usePlayerHud('opponent');
   // Durante la fase 2 del Soberano el panel enseña las vidas que anima la cinemática
   const shown = useUiStore(s => s.rivalLivesShown);
   const lives = shown ?? realLives;
@@ -180,7 +206,7 @@ export const RivalPanel = () => {
           <Lives lives={lives} max={maxLives} owner="opponent" />
           <RivalHand count={handCount} />
           {floor}
-          <div className="ml-auto"><DeckCount owner="opponent" count={deckCount} /></div>
+          <div className="ml-auto"><Decks owner="opponent" cards={deckCount} seals={sealCount} column single /></div>
         </CompactPanel>
       </>
     );
@@ -192,7 +218,7 @@ export const RivalPanel = () => {
         {forest && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><ForestFigure id={forest.id} tier={forest.tier} height={26} /></Flinch></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
         <RivalHand count={handCount} />
-        <DeckCount owner="opponent" count={deckCount} />
+        <Decks owner="opponent" cards={deckCount} seals={sealCount} column />
         {floor}
       </Panel>
     </>
@@ -234,7 +260,9 @@ const DeckPeek = ({ anchor, onClose }: { anchor: Rect; onClose: () => void }) =>
   const t = useTranslations();
   const { width } = useStage();
   const deck = useGameStore(s => s.player.deck);
+  const sealDeck = useGameStore(s => s.player.sealDeck);
   const summary = useMemo(() => deckSummary(deck), [deck]);
+  const sealSummary = useMemo(() => sealDeckSummary(sealDeck ?? []), [sealDeck]);
   const w = Math.min(150, width - 8);
   return (
     <>
@@ -255,6 +283,23 @@ const DeckPeek = ({ anchor, onClose }: { anchor: Rect; onClose: () => void }) =>
             </div>
           ))}
         </div>
+        {sealDeck && (
+          <>
+            <div className="mt-[5px] mb-[4px] glow-volt" style={{ color: 'var(--ink-volt)' }}>{t.seals_left} · {sealDeck.length}</div>
+            {sealSummary.length > 0 && (
+              <div className="flex flex-wrap gap-[2px]">
+                {sealSummary.map(({ seal, count }) => (
+                  <div key={seal ?? 'wild'} className="flex items-center gap-[2px] rounded-[2px] px-[2px] py-[1px]" style={{ background: 'var(--ink-slate)' }}>
+                    <span className="flex items-center justify-center rounded-full" style={{ width: 11, height: 11, background: 'var(--ink-volt)' }}>
+                      {seal ? <PixelSprite sprite={SEAL_ICONS[seal]} tint={INK.black} /> : <span className="font-display" style={{ fontSize: 8, lineHeight: '8px', color: 'var(--ink-black)' }}>?</span>}
+                    </span>
+                    <span className="font-display" style={{ fontSize: 9, lineHeight: '9px', color: 'var(--ink-ember)' }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </motion.div>
     </>
   );
@@ -263,12 +308,12 @@ const DeckPeek = ({ anchor, onClose }: { anchor: Rect; onClose: () => void }) =>
 export const PlayerPanel = () => {
   const t = useTranslations();
   const { playerPanel: rect, compactPanels } = useGameLayout();
-  const { lives, maxLives, deckCount } = usePlayerHud('player');
+  const { lives, maxLives, deckCount, sealCount } = usePlayerHud('player');
   const [peek, setPeek] = useState(false);
   const togglePeek = () => { playSfx(peek ? 'deselect' : 'open', 0.6); setPeek(p => !p); };
   const deck = (
     <button className="cursor-pointer" onClick={togglePeek} aria-label={t.aria_deck}>
-      <DeckCount owner="player" count={deckCount} />
+      <Decks owner="player" cards={deckCount} seals={sealCount} column={compactPanels} single={compactPanels} />
     </button>
   );
   const peekLayer = <AnimatePresence>{peek && <DeckPeek key="peek" anchor={rect} onClose={togglePeek} />}</AnimatePresence>;

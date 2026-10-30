@@ -1,4 +1,4 @@
-import { BoardSlot, Card, Owner, Rank } from '@/types';
+import { BoardSlot, Card, Owner, Rank, SealId } from '@/types';
 import { combatValue, getTargetIndices, RANKS } from '@/lib/game-utils';
 
 // --- PRONÓSTICOS CON INFORMACIÓN VISIBLE ---
@@ -61,6 +61,13 @@ export const deckSummary = (deck: Card[]): { rank: Rank; count: number }[] => {
   const counts = new Map<Rank, number>();
   deck.forEach(c => counts.set(c.rank, (counts.get(c.rank) ?? 0) + 1));
   return order.map(rank => ({ rank, count: counts.get(rank) ?? 0 }));
+};
+
+/** Sellos que quedan en el mazo de sellos, agrupados por tipo (el comodín, sin tipo, al final) */
+export const sealDeckSummary = (deck: Card[]): { seal: SealId | undefined; count: number }[] => {
+  const counts = new Map<SealId | undefined, number>();
+  deck.forEach(c => counts.set(c.seal, (counts.get(c.seal) ?? 0) + 1));
+  return [...counts].map(([seal, count]) => ({ seal, count })).sort((a, b) => (a.seal ? 0 : 1) - (b.seal ? 0 : 1));
 };
 
 // --- FLECHAS DE ATAQUE (lógica, sin geometría) ---
