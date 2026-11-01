@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
-import { playMusic, preloadSounds, setMusicHeat, setMusicTension, stopMusic } from '@/lib/sounds';
+import { playMusic, preloadSounds, setMusicHeat, setMusicMatch, setMusicTension, stopMusic } from '@/lib/sounds';
+import { getPrologue, subscribePrologue } from '@/lib/prologue';
 import { Stage } from '@/components/pixel/Stage';
 import { MenuScreen } from '@/components/screens/MenuScreen';
 import { GameScreen } from '@/components/screens/GameScreen';
@@ -75,12 +76,18 @@ export default function Home() {
   // (en el Bosque, el del jefe que más se parece a quien ha salido)
   const musicBoss = useGameStore(s => (s.tutorialStep !== null ? undefined : s.forest ? archetype(s.forest.id)?.music : BOSSES[s.bossIndex]?.id));
   const inCastle = useGameStore(s => !!s.castle);
+  // El prólogo (el paseo con el ente y sus partidas) tiene su nana, seguida, sin cortes
+  const prologue = useSyncExternalStore(subscribePrologue, getPrologue, () => null);
+  const tutorial = useGameStore(s => s.tutorialStep !== null);
+  const inPrologue = (screen === 'menu' && !!prologue) || (screen === 'game' && tutorial) || (isEnd && tutorial);
+  useEffect(() => { setMusicMatch(screen === 'game'); }, [screen]);
   useEffect(() => {
-    if (screen === 'menu') playMusic('menu_music', 0.55);
+    if (inPrologue) playMusic('wisp_music', 0.55, { key: 'prologue' });
+    else if (screen === 'menu') playMusic('menu_music', 0.55);
     else if (screen === 'forest') playMusic('menu_music', 0.3);
     else if (isEnd) stopMusic();
     else playMusic('game_music', 0.4, musicBoss ? bossMusic(musicBoss, inCastle) : undefined);
-  }, [screen, isEnd, musicBoss, inCastle]);
+  }, [screen, isEnd, musicBoss, inCastle, inPrologue]);
 
   // La música se tensa durante la pelea y crece al borde: con 1 vida (de cualquiera) a
   // tope; con 2, a medias; el Soberano en su fase 2, siempre a tope

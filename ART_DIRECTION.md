@@ -650,9 +650,12 @@ se mueve rápido y una vibración leve a las masas naranjas.
   setas, un menhir, juncos, una calavera, un cristal) en un bosque cerrado a los dos lados
   (espesura en todo el paseo). Lo que espera en cada parada no se ve: solo un destello,
   como una luciérnaga quieta. El ente anda flotando hasta la siguiente (2 s, la cámara le
-  sigue y el sendero se dibuja tramo a tramo); al llegar, el destello se abre y aparece
-  la carta en el suelo (crema, torcida, brillo ámbar; el 6, el Príncipe, la Reina, el Rey,
-  el Joker y el As) y luego habla con una frase corta ("Empecemos por lo básico."). La
+  sigue y el sendero se dibuja tramo a tramo); al llegar, el destello sube en una columna
+  de luz ámbar y la carta baja girando boca abajo desde lo alto (dorso naranja a rayas,
+  con su sombra creciendo en el suelo), se da la vuelta al aterrizar con un anillo de
+  polvo y unas chispas ámbar, y se queda flotando (crema, torcida, brillo ámbar; el 6, el
+  Príncipe, la Reina, el Rey, el Joker y el As). Suena un silbido al caer y el giro al
+  tocar el suelo. Luego habla con una frase corta ("Empecemos por lo básico."). La
   acción es **ESCUCHAR · el 6** (la Reina…). Cada lección es una mano de un solo turno
   contra el ente (panel del rival: "El ente", con su figura); sus cartas también te
   golpean, para que se entienda. La primera empieza con la mesa vacía ("Pon tu carta en
@@ -829,6 +832,13 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   (verde en el tuyo, naranja en el del rival) y luego respira en ese color mientras dura.
 - **Avisos de desbloqueo:** el del Grimorio y el del editor de mazo no se van solos
   (se explican): "toca para seguir"; los demás se van a los 3,6 s (o al tocarlos).
+- **La nana del ente** (`lib/wispMusic.ts`): la música de todo el prólogo. Una caja de
+  música perdida en el bosque, en Re dórico y a ritmo de vals lento (54), con campanitas
+  que se apagan, viento que sube y baja y un bordón grave que respira, en una sala grande.
+  Suena seguida del mapa a cada minipartida y de vuelta, sin cortes (mismo tema). En
+  partida se suman pasos (un bajo pellizcado en el 1 y el 3) y un latido sordo; en la
+  pelea la caja toca más y el viento sube. Sin la cuerda tensa de los jefes: el ente no
+  aprieta. Al acabar el prólogo vuelve la música del menú.
 - **Rendimiento del mapa:** el suelo (millones de píxeles) se pinta una vez y se
   reutiliza al volver al menú; en la espesura no se mece ningún árbol y nunca más de 700
   en todo el mapa (cada uno es una pieza animada aparte).

@@ -522,25 +522,63 @@ const StopGlint = ({ at, still }: { at: Pt; still: boolean }) => (
   <span className={clsx('absolute pointer-events-none rounded-full', !still && 'anim-pulse')}
     style={{ left: at.x - 1, top: at.y - 7, width: 2, height: 2, zIndex: 2, background: 'var(--ink-cream)', boxShadow: '0 0 4px 2px rgba(237,235,224,0.5)' }} />
 );
-/** La carta de la parada, al llegar el ente: el destello se abre y aparece en el suelo,
- *  y luego brilla y respira */
-const GroundCard = ({ at, rank, still }: { at: Pt; rank: string; still: boolean }) => (
-  <div className="absolute pointer-events-none" style={{ left: at.x - 8, top: at.y - 16, zIndex: 2 }}>
-    {!still && (
-      <motion.span className="absolute rounded-full" style={{ left: -16, top: -10, width: 48, height: 42,
-        background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,194,51,0.4) 0%, transparent 70%)' }}
-        initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0.6], scale: [0.3, 1.3, 1] }} transition={{ duration: 1 }} />
-    )}
-    <motion.div className="relative flex items-center justify-center font-display rounded-[2px]"
-      style={{ width: 16, height: 22, rotate: rank === 'A' ? 8 : -10, background: 'var(--ink-cream)', color: 'var(--ink-black)',
-        fontSize: rank.length > 1 ? 7 : 11, boxShadow: '0 0 0 1px var(--ink-black), 0 0 8px 2px rgba(255,194,51,0.6)' }}
-      initial={{ scale: 0.2, opacity: 0, filter: 'brightness(3)' }}
-      animate={{ scale: 1, opacity: 1, filter: 'brightness(1)', y: still ? 0 : [0, -2, 0] }}
-      transition={{ duration: 0.7, ease: 'easeOut', y: { duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.7 } }}>
-      {rank}
-    </motion.div>
-  </div>
-);
+/** La carta de la parada, al llegar el ente: el destello sube en una columna de luz,
+ *  la carta baja girando boca abajo desde lo alto, se da la vuelta al tocar el suelo
+ *  (con un anillo de polvo y chispas ámbar) y se queda flotando sobre su sombra */
+const GroundCard = ({ at, rank, still }: { at: Pt; rank: string; still: boolean }) => {
+  const W = 18, H = 25;
+  const tilt = rank === 'A' ? 8 : -8;
+  const face = (back: boolean) => (
+    <div className="absolute inset-0 flex items-center justify-center font-display rounded-[2px]" style={{
+      backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: back ? 'rotateY(180deg)' : undefined,
+      background: back ? 'repeating-linear-gradient(45deg, #A82A0C 0 2px, var(--ink-orange) 2px 4px)' : 'var(--ink-cream)',
+      color: 'var(--ink-black)', fontSize: rank.length > 1 ? 7 : 12,
+      boxShadow: back ? '0 0 0 1px var(--ink-black), inset 0 0 0 2px var(--ink-black)' : '0 0 0 1px var(--ink-black), 0 0 8px 2px rgba(255,194,51,0.65)' }}>
+      {!back && rank}
+    </div>
+  );
+  return (
+    <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y - 4, width: 0, height: 0, zIndex: 3 }}>
+      {/* La columna de luz que nace del destello */}
+      {!still && (
+        <motion.span className="absolute" style={{ left: -7, top: -90, width: 14, height: 92, transformOrigin: '50% 100%',
+          background: 'linear-gradient(to top, rgba(255,194,51,0.55), rgba(255,194,51,0.15) 60%, transparent)', filter: 'blur(1px)' }}
+          initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: [0, 1, 1], opacity: [0, 1, 0] }} transition={{ duration: 1.3, times: [0, 0.3, 1] }} />
+      )}
+      {/* Su sombra en el suelo: crece mientras baja */}
+      <motion.span className="absolute rounded-[50%]" style={{ left: -10, top: -2, width: 20, height: 5, background: 'rgba(11,13,12,0.65)' }}
+        initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 1, 0.85], opacity: [0, 0.8, 0.6] }}
+        transition={{ duration: 2.6, times: [0, 0.4, 1], scale: still ? undefined : { duration: 2.6, times: [0, 0.4, 1] } }} />
+      {/* Al tocar el suelo: un anillo de polvo y unas chispas */}
+      {!still && (
+        <>
+          <motion.span className="absolute rounded-[50%]" style={{ left: -16, top: -5, width: 32, height: 10, boxShadow: '0 0 0 1px rgba(237,235,224,0.7)' }}
+            initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: [0.3, 1.8], opacity: [0, 0.9, 0] }} transition={{ delay: 0.75, duration: 0.7 }} />
+          {[0, 1, 2, 3, 4, 5].map(i => {
+            const a = -Math.PI / 2 + (i - 2.5) * 0.45;
+            return (
+              <motion.span key={i} className="absolute rounded-full" style={{ left: -1, top: -12, width: 2, height: 2, background: 'var(--ink-amber)', boxShadow: '0 0 3px rgba(255,194,51,0.9)' }}
+                initial={{ opacity: 0 }} animate={{ x: [0, Math.cos(a) * 20], y: [0, Math.sin(a) * 18 - 6], opacity: [0, 1, 0] }}
+                transition={{ delay: 0.8, duration: 0.9, ease: 'easeOut' }} />
+            );
+          })}
+        </>
+      )}
+      {/* La carta: baja girando boca abajo, se da la vuelta al aterrizar y flota */}
+      <motion.div className="absolute" style={{ left: -W / 2, top: -H - 6, width: W, height: H, perspective: 120 }}
+        animate={still ? undefined : { y: [0, -2, 0] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', delay: 1.6 }}>
+        <motion.div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d' }}
+          initial={still ? false : { y: -70, rotateY: 180, rotateZ: tilt - 200, scale: 0.6, opacity: 0 }}
+          animate={{ y: 0, rotateY: 0, rotateZ: tilt, scale: 1, opacity: 1 }}
+          transition={{ y: { duration: 0.8, ease: [0.3, 0, 0.6, 1] }, rotateZ: { duration: 0.8, ease: 'easeOut' }, opacity: { duration: 0.3 },
+            scale: { duration: 0.8 }, rotateY: { delay: 0.8, duration: 0.45, ease: 'easeOut' } }}>
+          {face(true)}
+          {face(false)}
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+};
 /** El claro del duelo: la luna lo baña (luz en el suelo y un haz fino) */
 const DuelGlade = ({ at, still }: { at: Pt; still: boolean }) => (
   <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y, width: 0, height: 0, zIndex: 1 }}>
@@ -686,8 +724,12 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
       // En la parada: se desvela su carta y luego habla (y después, a escuchar)
       setProPhase('reveal');
       lookAt(walkStops[proState.n].y, false);
-      if (proState.n < GROUND_RANK.length) playSfx('flip', 0.6, 1.1);
-      later(proState.n < GROUND_RANK.length ? 1200 : 400, () => { setProPhase('speak'); playSfx('pop', 0.5, 0.7); });
+      // (la carta baja silbando y suena al darse la vuelta en el suelo)
+      if (proState.n < GROUND_RANK.length) {
+        playSfx('whoosh', 0.4, 1.3);
+        later(800, () => { playSfx('flip', 0.7, 1.05); playSfx('sparkle', 0.4, 1.3); });
+      }
+      later(proState.n < GROUND_RANK.length ? 1700 : 400, () => { setProPhase('speak'); playSfx('pop', 0.5, 0.7); });
     } else {
       // La despedida: vuelve entre humo, habla, se va y el camino se abre
       useUiStore.getState().setCinematic(true);

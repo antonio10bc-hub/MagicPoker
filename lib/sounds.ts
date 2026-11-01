@@ -10,6 +10,7 @@
 
 import { SYNTHS, SynthName } from './synth';
 import { MusicHandle, MusicVariant, startMusic } from './music';
+import { startWispMusic } from './wispMusic';
 import { getSettings, subscribeSettings } from './settings';
 
 // Único efecto en archivo: barajar (encaja con la estética). El resto de nombres de
@@ -17,7 +18,8 @@ import { getSettings, subscribeSettings } from './settings';
 const SFX_FILES = { shuffle: 'shuffle.mp3' } as const;
 const SOUND_SYNTHS = { click: 'tick', defeat: 'defeat', victory: 'victory', as_reveal: 'reveal' } as const;
 
-const MUSIC_STYLES = { menu_music: 'menu', game_music: 'game' } as const;
+// (wisp_music: la nana del ente, propia, ver lib/wispMusic)
+const MUSIC_STYLES = { menu_music: 'menu', game_music: 'game', wisp_music: 'wisp' } as const;
 
 export type SoundName = keyof typeof SFX_FILES | keyof typeof SOUND_SYNTHS;
 export type MusicName = keyof typeof MUSIC_STYLES;
@@ -41,7 +43,7 @@ let engine: Engine | null = null;
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 
 type TrackVariant = MusicVariant & { key: string };
-interface MusicTrack { name: MusicName; key?: string; handle: MusicHandle }
+interface MusicTrack { name: MusicName; key?: string; handle: MusicHandle & { setMatch?: (on: boolean) => void } }
 let currentTrack: MusicTrack | null = null;
 let desiredMusic: { name: MusicName; volume: number; variant?: TrackVariant } | null = null;
 
@@ -239,8 +241,10 @@ export const playMusic = (name: MusicName, volume = 0.3, variant?: TrackVariant)
   if (!e || e.ctx.state !== 'running') return; // arrancará al desbloquear el audio
 
   currentTrack?.handle.stop(MUSIC_FADE_S * 2);
-  const handle = startMusic(e.ctx, e.musicFilter, MUSIC_STYLES[name], volume, variant);
+  const style = MUSIC_STYLES[name];
+  const handle = style === 'wisp' ? startWispMusic(e.ctx, e.musicFilter, volume) : startMusic(e.ctx, e.musicFilter, style, volume, variant);
   handle.setHeat(musicHeat);
+  (handle as { setMatch?: (on: boolean) => void }).setMatch?.(musicMatch);
   handle.setTension(musicTension);
   currentTrack = { name, key: variant?.key, handle };
 };
@@ -249,6 +253,13 @@ export const stopMusic = (fadeSeconds = 0.8) => {
   desiredMusic = null;
   currentTrack?.handle.stop(fadeSeconds);
   currentTrack = null;
+};
+
+let musicMatch = false;
+/** La nana del ente: en partida suma pasos y latido (en el mapa, solo la caja) */
+export const setMusicMatch = (on: boolean) => {
+  musicMatch = on;
+  currentTrack?.handle.setMatch?.(on);
 };
 
 /** Tensión de la música: 0 calma, 1 pelea */
