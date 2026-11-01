@@ -8,8 +8,6 @@ import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
 import { ALERT, CHECK, CROSS, HEART_LOST } from '@/components/pixel/sprites';
 import { useArrowsVisible } from './AttackArrows';
 import { aimAtOpponent, threatsFrom } from './forecast';
-import { useGameStore } from '@/store/useGameStore';
-import { SCRIPTS } from '@/lib/tutorial';
 
 // --- AVISOS DEL TABLERO ---
 // Ayudas visuales que se calculan SOLO con información visible (sin mirar las cartas
@@ -57,9 +55,7 @@ export const BoardHints = ({ geo, playerBoard, opponentBoard, phase, combat, pre
   const opponentRevealed = opponentBoard.some(s => s.card?.isFaceUp);
 
   const aims = useMemo(() => aimAtOpponent(playerBoard, preview, shown), [playerBoard, preview, shown]);
-  // En las lecciones del prólogo el ente no hace daño: no hay huecos amenazados
-  const lesson = useGameStore(s => s.tutorialStep !== null && !!SCRIPTS[s.tutorialId].lesson);
-  const threats = useMemo(() => (lesson ? opponentBoard.map(() => false) : threatsFrom(opponentBoard)), [opponentBoard, lesson]);
+  const threats = useMemo(() => threatsFrom(opponentBoard), [opponentBoard]);
 
   // Predicción justo antes del golpe (cartas ya destapadas, resultado aún no llegado).
   // El Príncipe elige al azar: se usa su objetivo central solo para avisar.

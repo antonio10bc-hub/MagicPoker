@@ -57,8 +57,17 @@ const treeUri = (id: SceneryId) => {
 
 const NO_THICKETS: { x: number; y: number; rx: number; ry: number }[] = [];
 
+// El último suelo pintado: al volver al menú el mapa se monta otra vez igual y no hace
+// falta repintarlo (son millones de píxeles)
+let paintCache: { key: string; img: ImageData } | null = null;
+// (el mapa sale siempre igual para un mismo tamaño: basta con el tamaño y lo que contiene)
+const paintKey = (spots: number, clearings: number, biomes: number, sway: boolean, w: number, h: number) =>
+  `${w}x${h}:${sway}:${spots}:${clearings}:${biomes}`;
+
 /** Lo que puede mecerse: árboles, matas y hierba (sin otro delante que los tape mucho) */
 const SWAYS: SceneryId[] = ['pine_s', 'pine_m', 'pine_l', 'oak', 'bush', 'grass'];
+/** Tope de árboles que se mecen (cada uno es una pieza animada aparte) */
+const MAX_SWAY = 700;
 /** Las rachas de viento: tres ritmos para que no vayan todos a la vez */
 const GUSTS = [7, 9.5, 12];
 
@@ -101,7 +110,7 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
     const inside = (b: { x: number; y: number; rx: number; ry: number }, x: number, y: number) =>
       ((x - b.x) / b.rx) ** 2 + ((y - b.y) / b.ry) ** 2;
 
-    const spots: { x: number; y: number; id: SceneryId; flip: boolean }[] = [];
+    const spots: { x: number; y: number; id: SceneryId; flip: boolean; thick: boolean }[] = [];
     const STEP = 11;
     for (let gy = 0; gy < H; gy += STEP) {
       for (let gx = 0; gx < W; gx += STEP) {
@@ -117,18 +126,23 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
         if (keepOut.some(k => inside(k, x, y) < 1)) continue;
         if (biomes.some(b => b.kind !== 'field' && inside(b, x, y) < 1.15)) continue;
         const pick = edge < 0.3 || thick ? TREES[Math.floor(hash(gx, gy, 24) * 5)] : TREES[4 + Math.floor(hash(gx, gy, 25) * 4)];
-        spots.push({ x, y, id: pick, flip: hash(gx, gy, 26) > 0.5 });
+        spots.push({ x, y, id: pick, flip: hash(gx, gy, 26) > 0.5, thick });
       }
     }
     spots.sort((a, b) => a.y - b.y);
     // Los que se mecen: fuera del negro de los bordes y sin nadie delante que los tape mucho
     // (son siluetas casi negras: que uno pise un poco al de delante no se nota)
     const swaying = new Set<number>();
+    // (el tamaño de cada sprite, medido una vez: con la espesura hay miles de árboles)
+    const sizes = new Map<SceneryId, { width: number; height: number }>();
+    const sizeOf = (id: SceneryId) => sizes.get(id) ?? sizes.set(id, spriteSize(SCENERY[id])).get(id)!;
+    // (en la espesura no se mece ninguno: allí no se aprecia y serían miles de piezas
+    // animadas; y nunca más de MAX_SWAY en todo el mapa)
     spots.forEach((t, k) => {
-      if (!SWAYS.includes(t.id) || edgeOf(t.x, t.y, W) < 0.05 || hash(t.x, t.y, 27) > 0.6) return;
-      const { width: sw, height: th } = spriteSize(SCENERY[t.id]);
+      if (swaying.size >= MAX_SWAY || t.thick || !SWAYS.includes(t.id) || edgeOf(t.x, t.y, W) < 0.05 || hash(t.x, t.y, 27) > 0.6) return;
+      const { width: sw, height: th } = sizeOf(t.id);
       for (let j = k + 1; j < spots.length && spots[j].y - t.y < 40; j++) {
-        const f = spots[j], fs = spriteSize(SCENERY[f.id]);
+        const f = spots[j], fs = sizeOf(f.id);
         if (Math.abs(f.x - t.x) < (sw + fs.width) / 2 && f.y - fs.height < t.y - th * 0.4) return;
       }
       swaying.add(k);
@@ -142,6 +156,9 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
     if (!canvas || !ctx) return;
     const W = width, H = height;
     const { roadD, spots, swaying } = layout;
+    // Ya pintado igual (volver al menú lo vuelve a montar): se reutiliza
+    const key = paintKey(spots.length, clearings.length, biomes.length, sway, W, H);
+    if (paintCache?.key === key) { ctx.putImageData(paintCache.img, 0, 0); return; }
     const inside = (b: { x: number; y: number; rx: number; ry: number }, x: number, y: number) =>
       ((x - b.x) / b.rx) ** 2 + ((y - b.y) / b.ry) ** 2;
     const img = ctx.createImageData(W, H);
@@ -185,28 +202,32 @@ export const MapTerrain = memo(({ width, height, road, clearings, biomes, keepOu
     }
 
     // Árboles y matas en silueta, ordenados por altura (los de abajo tapan a los de arriba)
-    const colors = spriteColors('player');
-    const stamp = (sprite: Sprite, left: number, top: number, flip: boolean) => {
-      const { width: sw } = spriteSize(sprite);
+    // (los colores, pasados a números una vez: son miles de árboles)
+    const rgb = Object.fromEntries(Object.entries(spriteColors('player')).map(([ch, hex]) =>
+      [ch, [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]])) as Record<string, number[]>;
+    const sizes = new Map<SceneryId, { width: number; height: number }>();
+    const sizeOf = (id: SceneryId) => sizes.get(id) ?? sizes.set(id, spriteSize(SCENERY[id])).get(id)!;
+    const stamp = (sprite: Sprite, sw: number, left: number, top: number, flip: boolean) => {
       sprite.rows.forEach((row, ry) => {
+        const y = top + ry;
+        if (y < 0 || y >= H) return;
         for (let rx = 0; rx < row.length; rx++) {
-          const ch = row[flip ? sw - 1 - rx : rx];
-          if (!ch || ch === '.' || !colors[ch]) continue;
-          const x = left + rx, y = top + ry;
-          if (x < 0 || x >= W || y < 0 || y >= H) continue;
-          const hex = colors[ch];
+          const c = rgb[row[flip ? sw - 1 - rx : rx]];
+          if (!c) continue;
+          const x = left + rx;
+          if (x < 0 || x >= W) continue;
           const j = (y * W + x) * 4;
-          img.data[j] = parseInt(hex.slice(1, 3), 16); img.data[j + 1] = parseInt(hex.slice(3, 5), 16); img.data[j + 2] = parseInt(hex.slice(5, 7), 16);
+          img.data[j] = c[0]; img.data[j + 1] = c[1]; img.data[j + 2] = c[2];
         }
       });
     };
     spots.forEach((t, k) => {
       if (sway && swaying.has(k)) return;
-      const sprite = SCENERY[t.id];
-      const { width: sw, height: sh } = spriteSize(sprite);
-      stamp(sprite, t.x - Math.floor(sw / 2), t.y - sh, t.flip);
+      const { width: sw, height: sh } = sizeOf(t.id);
+      stamp(SCENERY[t.id], sw, t.x - Math.floor(sw / 2), t.y - sh, t.flip);
     });
     ctx.putImageData(img, 0, 0);
+    paintCache = { key, img };
   }, [width, height, clearings, biomes, layout, sway]);
 
   return (

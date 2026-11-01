@@ -5,12 +5,11 @@ import {
 } from '@/lib/game-utils';
 import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS } from '@/lib/constants';
 import { forecastFight } from '@/components/game/forecast';
-import { applyRivalMoves, LESSONS, SCRIPTS, stepCard, stepsOf, TutorialId, tutorialOpening, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
+import { applyRivalMoves, LESSONS, stepCard, stepsOf, TutorialId, tutorialOpening, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
 
 /** Reproduce el flujo de la tienda con el guion del tutorial */
 const playTutorial = (id: TutorialId = 'full') => {
   let { player, opponent } = tutorialPlayers(id);
-  const lesson = !!SCRIPTS[id].lesson;
   let round = 1;
   const lives: [number, number][] = [];
   let result: ReturnType<typeof getGameResult> = null;
@@ -20,19 +19,19 @@ const playTutorial = (id: TutorialId = 'full') => {
     if (step.kind === 'play') {
       const card = stepCard(player.hand, step);
       expect(card, `paso ${step.text}: falta ${step.rank} en la mano`).toBeDefined();
-      const next = playCardToSlot(player, card!.id, step.slot, true);
+      // (sin hueco en el guion: el segundo, como haría cualquiera)
+      const slot = step.slot ?? 1;
+      const next = playCardToSlot(player, card!.id, slot, true);
       expect(next, `paso ${step.text}: hueco ${step.slot} ocupado`).not.toBeNull();
       player = next!;
-      opponent = applyRivalMoves(opponent, step.rival);
+      opponent = applyRivalMoves(opponent, step.rival, slot);
     }
     if (step.kind === 'stand') {
       opponent = applyRivalMoves(opponent, step.rival);
       // Pelea: se revela, los Jokers roban, se resuelve
       opponent = { ...opponent, board: revealBoard(opponent.board) };
       player = drawCards(player, countRankOnBoard(player.board, 'JOKER') * JOKER_DRAW_BONUS, true);
-      const fight = calculateCombat(player.board, opponent.board, tutorialRng(player.board, round, id));
-      // En las lecciones el ente no te hace daño
-      const combat = lesson ? { ...fight, playerDamageTaken: 0 } : fight;
+      const combat = calculateCombat(player.board, opponent.board, tutorialRng(player.board, round, id));
       player = { ...player, lives: Math.max(0, player.lives - combat.playerDamageTaken), board: clearDefeatedCards(markCombatResult(player.board, combat)) };
       opponent = { ...opponent, lives: Math.max(0, opponent.lives - combat.opponentDamageTaken), board: clearDefeatedCards(markCombatResult(opponent.board, combat)) };
       lives.push([player.lives, opponent.lives]);
@@ -68,15 +67,15 @@ describe('tutorial', () => {
     expect(TUTORIAL_STEPS.filter(s => s.kind === 'note')).toHaveLength(1);
     expect(TUTORIAL_STEPS).toHaveLength(14);
   });
-  it('every prologue lesson is one turn that teaches its card and never hurts you', () => {
-    // Lo que debe quedar en la mesa del rival tras la pelea de cada lección
-    const expected: Record<string, { rivalLeft: number; mineLeft: number }> = {
-      number: { rivalLeft: 0, mineLeft: 1 }, // el 6 rompe al 4
-      jack: { rivalLeft: 0, mineLeft: 1 },   // el Príncipe va a por el 5
-      queen: { rivalLeft: 0, mineLeft: 1 },  // la Reina, los dos de los lados
-      king: { rivalLeft: 0, mineLeft: 1 },   // el Rey, los tres
-      joker: { rivalLeft: 0, mineLeft: 1 },  // el Joker no ataca (y no hay nadie)
-      ace: { rivalLeft: 0, mineLeft: 0 },    // el As lo barre todo, también tu 9
+  it('every prologue lesson is one turn that teaches its card (and its hits on your empty slots)', () => {
+    // Tras la pelea de cada lección: lo que queda en cada mesa y tus vidas
+    const expected: Record<string, { rivalLeft: number; mineLeft: number; lives: number }> = {
+      number: { rivalLeft: 0, mineLeft: 1, lives: 4 }, // el 6 rompe al 4 (enfrente)
+      jack: { rivalLeft: 0, mineLeft: 1, lives: 3 },   // el Príncipe va a por el 5… que te da a ti
+      queen: { rivalLeft: 0, mineLeft: 1, lives: 2 },  // la Reina, los dos de los lados (y te dan)
+      king: { rivalLeft: 0, mineLeft: 1, lives: 2 },   // el Rey, los tres (los de los lados te dan)
+      joker: { rivalLeft: 1, mineLeft: 0, lives: 4 },  // el 5 se estrella contra el Joker: te cubre
+      ace: { rivalLeft: 0, mineLeft: 0, lives: 4 },    // el As lo barre todo, también tu 9
     };
     for (const id of LESSONS) {
       const steps = stepsOf(id);
@@ -84,7 +83,7 @@ describe('tutorial', () => {
       expect(steps[steps.length - 1].kind, id).toBe('review');
       const { lives, result, player, opponent } = playTutorial(id);
       expect(result, id).toBeNull();
-      expect(lives[0][0], `${id}: no te hace daño`).toBe(4);
+      expect(lives[0][0], `${id}: tus vidas`).toBe(expected[id].lives);
       expect(opponent.board.filter(s => s.card).length, `${id}: mesa del rival`).toBe(expected[id].rivalLeft);
       expect(player.board.filter(s => s.card).length, `${id}: tu mesa`).toBe(expected[id].mineLeft);
     }
@@ -93,9 +92,12 @@ describe('tutorial', () => {
     expect(joker.player.hand.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('the duel against the spirit: empty slots hurt, covering them wins', () => {
+  it('the duel against the spirit: a guided round (empty slots hurt), then free', () => {
+    const steps = stepsOf('duel');
+    expect(steps[steps.length - 1].kind).toBe('free');
     const { lives, result } = playTutorial('duel');
-    expect(lives).toEqual([[2, 1], [2, 0]]);
-    expect(result).toBe('win');
+    // Tu 7 le quita una; sus 4 y 3 golpean tus 2 huecos vacíos. Lo demás lo juegas tú
+    expect(lives).toEqual([[2, 1]]);
+    expect(result).toBeNull();
   });
 });

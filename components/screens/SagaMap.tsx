@@ -48,9 +48,23 @@ const STEP = 200;
 const BOTTOM = 120;
 /** El paseo del prólogo: del borde del claro a la primera parada, entre paradas y de la
  *  última (el duelo) al Forastero. Lejos: desde el claro no se le ve */
-const WALK = { first: 100, step: 100, last: 170 };
+const WALK = { first: 100, step: 100, last: 480 };
 /** Paradas del paseo: las 6 lecciones y el duelo (un poco a un lado y a otro del camino) */
 const WALK_SWAY = [-26, 22, -18, 26, -22, 18, 0];
+/** Cada claro del paseo, distinto del anterior: su forma y lo que hay en él */
+const WALK_GLADES: { rx: number; ry: number; dx: number; dy: number; props: StationProp[] }[] = [
+  { rx: 34, ry: 20, dx: 0, dy: 0, props: [{ id: 'rock', dx: -22, dy: 6 }, { id: 'grass', dx: 26, dy: 4 }] },
+  { rx: 44, ry: 24, dx: 6, dy: -4, props: [{ id: 'dead_tree', dx: 30, dy: -2 }, { id: 'mushrooms', dx: -20, dy: 8 }] },
+  { rx: 30, ry: 22, dx: -4, dy: 2, props: [{ id: 'menhir_s', dx: -24, dy: 0 }, { id: 'bush', dx: 28, dy: 8 }] },
+  { rx: 46, ry: 18, dx: 4, dy: 4, props: [{ id: 'reeds', dx: -26, dy: 6 }, { id: 'reeds', dx: 30, dy: 2, flip: true }] },
+  { rx: 36, ry: 26, dx: -6, dy: -2, props: [{ id: 'skull', dx: 24, dy: 8 }, { id: 'grass', dx: -24, dy: 2 }] },
+  { rx: 40, ry: 22, dx: 2, dy: 0, props: [{ id: 'crystal', dx: -26, dy: 4 }, { id: 'rock', dx: 28, dy: 8, flip: true }] },
+  // El duelo: un claro más grande, un círculo de piedras y la luna encima
+  { rx: 70, ry: 40, dx: 0, dy: -6, props: [
+    { id: 'menhir_l', dx: 0, dy: -38 }, { id: 'menhir_s', dx: -46, dy: -18 }, { id: 'menhir_s', dx: 46, dy: -18, flip: true },
+    { id: 'menhir_s', dx: -54, dy: 10 }, { id: 'menhir_s', dx: 54, dy: 10, flip: true },
+  ] },
+];
 const ORIGIN_GAP = 40 + WALK.first + (WALK_SWAY.length - 1) * WALK.step + WALK.last;
 /** Del Soberano al Castillo: más camino que entre pueblos (los dos son grandes y llevan texto) */
 const CASTLE_GAP = 250;
@@ -97,10 +111,13 @@ const geometry = (w: number) => {
     contentH, nodes, castle, road, origin, trailhead, walkStops,
     // El claro es pequeño y el bosque lo encierra (espesura alrededor, asfixiante)
     // (y cada parada del paseo, un claro chiquito donde espera su carta)
-    clearings: [{ ...origin, rx: 52, ry: 32 }, ...walkStops.map(p => ({ ...p, rx: 38, ry: 24 })), ...terrain.map(t => t.clearing), castle],
-    thickets: [{ x: origin.x, y: origin.y + 10, rx: Math.max(220, w * 0.6), ry: 190 }],
+    clearings: [{ ...origin, rx: 52, ry: 32 }, ...walkStops.map((p, i) => ({ x: p.x + WALK_GLADES[i].dx, y: p.y + WALK_GLADES[i].dy, rx: WALK_GLADES[i].rx, ry: WALK_GLADES[i].ry })),
+      ...terrain.map(t => t.clearing), castle],
+    // (y todo el paseo: bosque cerrado a los dos lados del camino, hasta el claro del duelo)
+    thickets: [{ x: origin.x, y: origin.y + 10, rx: Math.max(220, w * 0.6), ry: 190 },
+      { x: cx, y: (trailhead.y + walkStops[walkStops.length - 1].y) / 2, rx: Math.max(240, w * 0.62), ry: (trailhead.y - walkStops[walkStops.length - 1].y) / 2 + 80 }],
     // Sin árboles solo lo justo alrededor del Castillo: el bosque lo rodea
-    keepOut: [{ x: origin.x, y: origin.y - 6, rx: 46, ry: 26 }, ...walkStops.map(p => ({ x: p.x + 8, y: p.y - 6, rx: 36, ry: 20 })), ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
+    keepOut: [{ x: origin.x, y: origin.y - 6, rx: 46, ry: 26 }, ...walkStops.map((p, i) => ({ x: p.x + WALK_GLADES[i].dx, y: p.y + WALK_GLADES[i].dy - 6, rx: WALK_GLADES[i].rx - 4, ry: WALK_GLADES[i].ry - 2 })), ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
     biomes: terrain.flatMap(t => (t.biome ? [t.biome] : [])),
   };
 };
@@ -485,7 +502,7 @@ const WispBubble = ({ text, onDone }: { text: string; onDone: () => void }) => {
   );
 };
 
-type ProPhase = 'wait' | 'appear' | 'speak' | 'ready' | 'walk' | 'leave' | 'path' | 'arrive';
+type ProPhase = 'wait' | 'appear' | 'reveal' | 'speak' | 'ready' | 'walk' | 'leave' | 'path' | 'arrive';
 
 /** El prólogo según lo guardado (ver lib/prologue): "intro", "stage:N[:walk]", "farewell:N" */
 type ProState = { kind: 'intro' } | { kind: 'stage'; n: number; walk: boolean } | { kind: 'farewell'; n: number };
@@ -499,20 +516,39 @@ const parsePrologue = (raw: string | null): ProState | null => {
 };
 
 const GROUND_RANK = ['6', 'J', 'Q', 'K', 'JKR', 'A'];
-/** La carta de una lección, tirada en el suelo de su parada (la de ahora brilla y respira) */
-const GroundCard = ({ at, rank, current, still }: { at: Pt; rank: string; current: boolean; still: boolean }) => (
+/** Lo que espera en una parada: solo un destello, como una luciérnaga quieta (la carta no
+ *  se ve hasta que llega el ente) */
+const StopGlint = ({ at, still }: { at: Pt; still: boolean }) => (
+  <span className={clsx('absolute pointer-events-none rounded-full', !still && 'anim-pulse')}
+    style={{ left: at.x - 1, top: at.y - 7, width: 2, height: 2, zIndex: 2, background: 'var(--ink-cream)', boxShadow: '0 0 4px 2px rgba(237,235,224,0.5)' }} />
+);
+/** La carta de la parada, al llegar el ente: el destello se abre y aparece en el suelo,
+ *  y luego brilla y respira */
+const GroundCard = ({ at, rank, still }: { at: Pt; rank: string; still: boolean }) => (
   <div className="absolute pointer-events-none" style={{ left: at.x - 8, top: at.y - 16, zIndex: 2 }}>
-    {current && !still && (
-      <span className="absolute anim-pulse-soft rounded-full" style={{ left: -12, top: -6, width: 40, height: 34,
-        background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,194,51,0.35) 0%, transparent 70%)' }} />
+    {!still && (
+      <motion.span className="absolute rounded-full" style={{ left: -16, top: -10, width: 48, height: 42,
+        background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,194,51,0.4) 0%, transparent 70%)' }}
+        initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: [0, 1, 0.6], scale: [0.3, 1.3, 1] }} transition={{ duration: 1 }} />
     )}
     <motion.div className="relative flex items-center justify-center font-display rounded-[2px]"
       style={{ width: 16, height: 22, rotate: rank === 'A' ? 8 : -10, background: 'var(--ink-cream)', color: 'var(--ink-black)',
-        fontSize: rank.length > 1 ? 7 : 11, boxShadow: current ? '0 0 0 1px var(--ink-black), 0 0 8px 2px rgba(255,194,51,0.6)' : '0 0 0 1px var(--ink-black)',
-        opacity: current ? 1 : 0.55 }}
-      animate={current && !still ? { y: [0, -2, 0] } : undefined} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>
+        fontSize: rank.length > 1 ? 7 : 11, boxShadow: '0 0 0 1px var(--ink-black), 0 0 8px 2px rgba(255,194,51,0.6)' }}
+      initial={{ scale: 0.2, opacity: 0, filter: 'brightness(3)' }}
+      animate={{ scale: 1, opacity: 1, filter: 'brightness(1)', y: still ? 0 : [0, -2, 0] }}
+      transition={{ duration: 0.7, ease: 'easeOut', y: { duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.7 } }}>
       {rank}
     </motion.div>
+  </div>
+);
+/** El claro del duelo: la luna lo baña (luz en el suelo y un haz fino) */
+const DuelGlade = ({ at, still }: { at: Pt; still: boolean }) => (
+  <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y, width: 0, height: 0, zIndex: 1 }}>
+    <div className={clsx('absolute', !still && 'anim-pulse-soft')} style={{ left: -26, top: -190, width: 52, height: 192, transform: 'rotate(-12deg)', transformOrigin: '50% 100%',
+      background: 'linear-gradient(to right, transparent, rgba(237,235,224,0.14) 35%, rgba(237,235,224,0.22) 50%, rgba(237,235,224,0.14) 65%, transparent)',
+      maskImage: 'linear-gradient(to bottom, transparent, black 40%, black 88%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 40%, black 88%, transparent)' }} />
+    <div className="absolute" style={{ left: -80, top: -32, width: 160, height: 64, borderRadius: '50%',
+      background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(237,235,224,0.26) 0%, rgba(185,207,200,0.1) 50%, transparent 72%)' }} />
   </div>
 );
 
@@ -647,10 +683,11 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
       later(300, () => { lookAt(walkStops[proState.n].y); playSfx('whoosh', 0.4, 0.8); });
       later(2600, () => walked());
     } else if (proState.kind === 'stage') {
-      // En la parada: habla (y luego, a jugar)
-      setProPhase('speak');
+      // En la parada: se desvela su carta y luego habla (y después, a escuchar)
+      setProPhase('reveal');
       lookAt(walkStops[proState.n].y, false);
-      playSfx('pop', 0.5, 0.7);
+      if (proState.n < GROUND_RANK.length) playSfx('flip', 0.6, 1.1);
+      later(proState.n < GROUND_RANK.length ? 1200 : 400, () => { setProPhase('speak'); playSfx('pop', 0.5, 0.7); });
     } else {
       // La despedida: vuelve entre humo, habla, se va y el camino se abre
       useUiStore.getState().setCinematic(true);
@@ -833,10 +870,18 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
           {walkPts.slice(1).map((b, k) => (
             <Trail key={`walk${k}`} a={walkPts[k]} b={b} lit={walkLit(k)} drawing={walkDrawing(k)} />
           ))}
-          {/* Las cartas que esperan en el suelo de cada parada (la de ahora brilla) */}
-          {pro && GROUND_RANK.map((rank, k) => (pro.kind === 'intro' || (pro.kind === 'stage' && k >= pro.n)) && (
-            <GroundCard key={rank} at={walkStops[k]} rank={rank} current={pro.kind === 'stage' && k === pro.n} still={lowPower} />
-          ))}
+          {/* Los claros del paseo, cada uno distinto (y el del duelo, bañado por la luna) */}
+          <DuelGlade at={walkStops[walkStops.length - 1]} still={lowPower} />
+          {WALK_GLADES.map((g, i) => g.props.map((prop, n) => (
+            <MapProp key={`glade${i}-${n}`} prop={prop} at={walkStops[i]} side={1} lit z={1} mapW={rect.w} />
+          )))}
+          {/* Lo que espera en cada parada: un destello; al llegar el ente, su carta */}
+          {pro && GROUND_RANK.map((rank, k) => {
+            if (pro.kind === 'farewell' || (pro.kind === 'stage' && k < pro.n)) return null;
+            const here = pro.kind === 'stage' && k === pro.n && !pro.walk;
+            return here ? <GroundCard key={rank} at={walkStops[k]} rank={rank} still={lowPower} />
+              : <StopGlint key={rank} at={walkStops[k]} still={lowPower} />;
+          })}
           {/* El ente (andando, de una parada a otra) */}
           {pro && wispNow && pro.phase !== 'path' && pro.phase !== 'arrive' && (
             <motion.div className="absolute" style={{ width: 0, height: 0, zIndex: 6 }}

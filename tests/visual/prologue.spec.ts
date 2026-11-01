@@ -11,10 +11,6 @@ type St = {
 };
 type W = { __game: { getState: () => St } };
 
-const state = (page: Page) => page.evaluate(() => {
-  const s = (window as unknown as W).__game.getState();
-  return { screen: s.screen, phase: s.phase, turn: s.turn, step: s.tutorialStep, id: s.tutorialId, lives: s.player.lives };
-});
 /** Espera a que toque jugar (paso `step`) o a la pelea */
 const ready = (page: Page, step: number, phase = 'placement') => page.waitForFunction(([st, ph]) => {
   const s = (window as unknown as W).__game.getState();
@@ -56,9 +52,9 @@ test('prólogo: el paseo con el ente, sus lecciones, el duelo y el camino al For
   await shot(page, info, '02-ente');
   await cta(page, 'SEGUIR');
 
-  // Las seis paradas: el ente llega, habla y se juega su carta en un turno
+  // Las seis paradas: el ente llega, se desvela su carta, habla y se juega en un turno
   for (const [i, [rank, slot]] of LESSONS.entries()) {
-    await cta(page, 'JUGAR');
+    await cta(page, 'ESCUCHAR');
     if (i === 0) await shot(page, info, '03-parada-6');
     await ready(page, 0);
     await page.waitForTimeout(600);
@@ -69,8 +65,6 @@ test('prólogo: el paseo con el ente, sus lecciones, el duelo y el camino al For
     await ready(page, 2, 'combat-reveal');
     await page.waitForTimeout(1800);
     await shot(page, info, `05-repaso-${rank}`);
-    // El ente enseña sin hacerte daño
-    expect((await state(page)).lives).toBe(4);
     await call(page, 'finishCombatPhase');
     await page.waitForFunction(() => (window as unknown as W).__game.getState().screen === 'menu');
   }
@@ -82,9 +76,25 @@ test('prólogo: el paseo con el ente, sus lecciones, el duelo y el camino al For
   await ready(page, 1); await play(page, '7', 3);
   await ready(page, 2); await call(page, 'passTurn');
   await ready(page, 3, 'combat-reveal'); await page.waitForTimeout(1500); await call(page, 'finishCombatPhase');
-  await ready(page, 4); await play(page, '10', 0);
-  await ready(page, 5); await play(page, '8', 2);
-  await ready(page, 6); await call(page, 'passTurn');
+  // Y libre: lo cierras tú (una carta por turno en un hueco libre, y plantarse)
+  await ready(page, 4);
+  await page.waitForTimeout(600);
+  await shot(page, info, '06b-libre');
+  for (let turn = 0; turn < 12; turn++) {
+    const done = await page.evaluate(() => {
+      const s = (window as unknown as { __game: { getState: () => St & { player: { board: { card: unknown }[] } } } }).__game.getState();
+      if (s.screen !== 'game' || s.phase === 'end') return true;
+      if (s.phase === 'combat-reveal') { s.finishCombatPhase(); return false; }
+      if (s.phase !== 'placement' || s.turn !== 'player') return false;
+      const empty = s.player.board.findIndex(b => !b.card);
+      const card = s.player.hand[0];
+      if (card && empty >= 0) s.placeCard(card.id, empty);
+      else s.passTurn();
+      return false;
+    });
+    if (done) break;
+    await page.waitForTimeout(1800);
+  }
   const back = page.getByText('VOLVER AL CAMINO', { exact: true });
   await back.waitFor({ timeout: 20_000 });
   await page.waitForTimeout(1200);

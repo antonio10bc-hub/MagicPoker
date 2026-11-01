@@ -327,7 +327,7 @@ export const useGameStore = create<GameState>((set, get) => {
     cancelScheduled();
     trackEvent('tutorial_started', { script: id });
     playSound('shuffle', 0.6);
-    set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, tutorialId: id, ...tutorialPlayers(id) });
+    set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, tutorialId: id, difficulty: 'easy', ...tutorialPlayers(id) });
   },
 
   resumeGame: () => {
@@ -375,8 +375,10 @@ export const useGameStore = create<GameState>((set, get) => {
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
 
     // Tutorial: solo vale la carta y el hueco que pide el paso
+    // (sin hueco en el paso: el que quieras; en el tramo libre, todo vale)
     const step = tutorialStep !== null ? stepsOf(get().tutorialId)[tutorialStep] : undefined;
-    if (tutorialStep !== null && (step?.kind !== 'play' || step.slot !== slotIndex || stepCard(player.hand, step)?.id !== cardId)) return;
+    const free = step?.kind === 'free';
+    if (tutorialStep !== null && !free && (step?.kind !== 'play' || (step.slot !== undefined && step.slot !== slotIndex) || stepCard(player.hand, step)?.id !== cardId)) return;
 
     const placed = playCardToSlot(player, cardId, slotIndex, true, wildSeal);
     if (!placed) return;
@@ -390,7 +392,7 @@ export const useGameStore = create<GameState>((set, get) => {
         set({ player: nextPlayer, turn: 'opponent', tutorialStep: tutorialStep! + 1 });
         schedule(() => {
           playSound('click', 0.4);
-          set({ opponent: applyRivalMoves(get().opponent, step.rival), turn: 'player' });
+          set({ opponent: applyRivalMoves(get().opponent, step.rival, slotIndex), turn: 'player' });
         }, TIMINGS.opponentThink);
       } else {
         set({ player: nextPlayer, tutorialStep: tutorialStep! + 1 });
@@ -403,7 +405,7 @@ export const useGameStore = create<GameState>((set, get) => {
     // Cada sello suena a lo suyo al ponerlo
     const sealPut = played?.rank === 'SEAL' ? (played.wild ? wildSeal : played.seal) : undefined;
     if (sealPut) playSfx(SEAL_SFX[sealPut]);
-    if (played) {
+    if (played && tutorialStep === null) {
       // Analíticas: qué cartas y sellos se juegan
       trackEvent('card_played', {
         rank: played.rank, seal: sealPut ?? played.seal ?? null, wild: !!played.wild, bonus: played.bonus ?? 0,
@@ -432,7 +434,7 @@ export const useGameStore = create<GameState>((set, get) => {
     const { phase, turn, player, opponent, tutorialStep } = get();
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
 
-    if (tutorialStep !== null) {
+    if (tutorialStep !== null && stepsOf(get().tutorialId)[tutorialStep]?.kind !== 'free') {
       const step = stepsOf(get().tutorialId)[tutorialStep];
       if (step?.kind !== 'stand') return;
       playSound('click');
@@ -455,7 +457,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   opponentTurnAction: () => {
     const { opponent, player, difficulty, phase, tutorialStep } = get();
-    if (phase !== 'placement' || tutorialStep !== null) return;
+    if (phase !== 'placement' || (tutorialStep !== null && stepsOf(get().tutorialId)[tutorialStep]?.kind !== 'free')) return;
 
     // Piensa con lo que hay: sus vidas, las tuyas y si ya te has plantado
     // Tus cartas boca abajo no las ve: las imagina entre las que aún no conoce
@@ -512,9 +514,7 @@ export const useGameStore = create<GameState>((set, get) => {
       schedule(() => {
         const { player, opponent, tutorialStep, roundNumber, tutorialId } = get();
         const tutorial = tutorialStep !== null;
-        const fight = calculateCombat(player.board, opponent.board, tutorial ? tutorialRng(player.board, roundNumber, tutorialId) : undefined);
-        // En las lecciones del prólogo el ente enseña sin hacerte daño
-        const result = tutorial && SCRIPTS[tutorialId].lesson ? { ...fight, playerDamageTaken: 0, playerEmptySlotsHit: {} } : fight;
+        const result = calculateCombat(player.board, opponent.board, tutorial ? tutorialRng(player.board, roundNumber, tutorialId) : undefined);
 
         if (!tutorial) {
           recordRound(result.cardsDestroyedCount, result.opponentDamageTaken, result.playerDamageTaken);

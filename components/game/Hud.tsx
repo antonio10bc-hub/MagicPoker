@@ -21,7 +21,6 @@ import { BossFigure } from './BossFigure';
 import { WispFigure } from './WispFigure';
 import { Flinch } from './Juice';
 import { BOSSES } from '@/lib/bosses';
-import { SCRIPTS } from '@/lib/tutorial';
 import { haptic, playSfx } from '@/lib/sounds';
 
 // --- PIEZAS DEL HUD ---
@@ -241,10 +240,8 @@ const DangerChip = ({ lives }: { lives: number }) => {
   const { playerBoard, opponentBoard, placement } = useGameStore(useShallow(s => ({
     playerBoard: s.player.board, opponentBoard: s.opponent.board, placement: s.phase === 'placement',
   })));
-  // (en las lecciones del prólogo el ente no hace daño: no hay aviso)
-  const lesson = useGameStore(s => s.tutorialStep !== null && !!SCRIPTS[s.tutorialId].lesson);
   const { taken } = useMemo(() => forecastFight(playerBoard, opponentBoard), [playerBoard, opponentBoard]);
-  const total = lesson ? 0 : taken.sure + taken.maybe;
+  const total = taken.sure + taken.maybe;
   const lethal = taken.sure >= lives || total >= lives;
   const warn = placement && total > 0 && lethal;
   useEffect(() => { if (warn) haptic('danger'); }, [warn]);

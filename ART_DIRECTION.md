@@ -646,21 +646,24 @@ se mueve rápido y una vibración leve a las masas naranjas.
   menta con brillo, cara en sombra, ojos crema que laten) y habla en un bocadillo crema
   que se escribe letra a letra. Al terminar, la acción principal es **SEGUIR** (al ente).
 - **El paseo con el ente:** del claro al Forastero el camino tiene 7 paradas, cada una un
-  claro chiquito un poco a un lado. En las 6 primeras espera una carta tirada en el suelo
-  (crema, torcida; la de ahora brilla en ámbar y respira; las que faltan, apagadas): el
-  6, el Príncipe, la Reina, el Rey, el Joker y el As. El ente anda flotando de una parada
-  a la siguiente (2 s, la cámara le sigue y el sendero se dibuja tramo a tramo), dice una
-  frase corta de la carta y la acción es **JUGAR · el 6** (la Reina…). Cada lección es una
-  mano de un solo turno contra el ente (panel del rival: "El ente", con su figura): pones
-  la carta donde te dice, te plantas y ves qué hace; al cerrar el repaso se vuelve al
-  mapa, a andar hasta la siguiente. Mientras enseña, el ente no hace daño (ni avisos de
-  hueco amenazado). En la última parada: "Ya sabes lo necesario. Ahora, enfréntate a mí",
-  **ENFRENTARSE · al ente**: un duelo guiado de dos rondas (los huecos vacíos castigan;
-  tápalos y gana). Al ganarlo (o si se salta) el ente se despide entre humo, se desvanece,
-  el sendero se dibuja hasta el Forastero y este llega con su destello. Quien ya había
-  jugado no lo ve.
-  Hasta completar (o saltar) el tutorial, arriba a la derecha solo está Ajustes: Cómo
-  jugar y Estadísticas aparecen después.
+  claro chiquito distinto del anterior (forma y decorado: una roca, un árbol muerto con
+  setas, un menhir, juncos, una calavera, un cristal) en un bosque cerrado a los dos lados
+  (espesura en todo el paseo). Lo que espera en cada parada no se ve: solo un destello,
+  como una luciérnaga quieta. El ente anda flotando hasta la siguiente (2 s, la cámara le
+  sigue y el sendero se dibuja tramo a tramo); al llegar, el destello se abre y aparece
+  la carta en el suelo (crema, torcida, brillo ámbar; el 6, el Príncipe, la Reina, el Rey,
+  el Joker y el As) y luego habla con una frase corta ("Empecemos por lo básico."). La
+  acción es **ESCUCHAR · el 6** (la Reina…). Cada lección es una mano de un solo turno
+  contra el ente (panel del rival: "El ente", con su figura); sus cartas también te
+  golpean, para que se entienda. La primera empieza con la mesa vacía ("Pon tu carta en
+  uno de los cuatro huecos") y el ente pone su 4 enfrente; en la del Joker, su 5 se
+  estrella contra él (bloquea un golpe). Al cerrar el repaso se vuelve al mapa. La última
+  parada es especial: un claro más grande con un círculo de menhires y un haz de luna;
+  "Tu última prueba: enfréntate a mí", **ENFRENTARSE · al ente**: una ronda guiada (tu 9
+  contra su 6, que ya está en la mesa; tu 7 al vacío; sus cartas castigan tus huecos
+  vacíos) y después libre ("Ahora tú solo. Acaba conmigo."): lo cierras tú. Al ganar (o si
+  se salta) el ente se despide entre humo, el sendero se dibuja hasta el Forastero (lejos:
+  desde el duelo no se ve) y este llega con su destello. Quien ya había jugado no lo ve.
 - **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): varios
   guiones con las mismas reglas: las lecciones y el duelo del paseo, y la partida
   completa de siempre (Ajustes → Repetir tutorial). Esa es una partida guionizada
@@ -821,6 +824,9 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
 - **Mano:** ×1,375 en móviles altos (55×77), ×1 en horizontal panorámico (40×56) y
   ×0,875 en 4:3 y móviles bajos (35×49); siempre en píxeles enteros.
+- **Rendimiento del mapa:** el suelo (millones de píxeles) se pinta una vez y se
+  reutiliza al volver al menú; en la espesura no se mece ningún árbol y nunca más de 700
+  en todo el mapa (cada uno es una pieza animada aparte).
 - **Arrastrar con ratón (PC):** cursor de mano (agarrar/agarrando); la carta crece
   desde su centro y queda bajo el cursor donde se agarró; el hueco de destino lo
   decide el cursor (con el dedo, el centro de la carta). Pulsar una carta quita su
