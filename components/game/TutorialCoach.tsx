@@ -53,13 +53,17 @@ const fitFont = (text: string, textW: number, maxH: number) => {
 export const TutorialCoach = () => {
   const t = useTranslations();
   const { board } = useGameLayout();
-  const { stepIndex, phase, finish, next, exit, id } = useGameStore(useShallow(s => ({
+  const { stepIndex, phase, finish, next, exit, id, passed, round } = useGameStore(useShallow(s => ({
     stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, exit: s.exitToMenu, id: s.tutorialId,
+    passed: s.player.isPassed, round: s.roundNumber,
   })));
   if (stepIndex === null || phase === 'end') return null;
   const steps = stepsOf(id);
   const step = steps[stepIndex];
   if (!step) return null;
+  // Tramo libre: el cartel solo en su primera ronda y hasta que te plantas; luego, nada
+  const freeRound = steps.slice(0, stepIndex).filter(st => st.kind === 'stand').length + 1;
+  if (step.kind === 'free' && (passed || round !== freeRound)) return null;
   // Los repasos solo se ven con el resultado de la pelea a la vista
   if (step.kind === 'review' && phase !== 'combat-reveal') return null;
   if (step.kind !== 'review' && phase !== 'placement') return null;

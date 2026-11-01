@@ -31,8 +31,10 @@ export const GameScreen = () => {
   })));
   // Tutorial: solo se juega en los pasos "play" (y solo la carta y el hueco que piden)
   const tutorial = useTutorialGate();
-  const canPlay = yourTurn && (!tutorial.active || tutorial.step?.kind === 'play');
-  const canStand = yourTurn && (!tutorial.active || tutorial.step?.kind === 'stand');
+  // (en el tramo libre del duelo del tutorial, todo vale)
+  const free = tutorial.step?.kind === 'free';
+  const canPlay = yourTurn && (!tutorial.active || free || tutorial.step?.kind === 'play');
+  const canStand = yourTurn && (!tutorial.active || free || tutorial.step?.kind === 'stand');
 
   const handleSelectCard = useCallback((id: string) => {
     if (!canPlay || (tutorial.cardId && id !== tutorial.cardId)) return;
