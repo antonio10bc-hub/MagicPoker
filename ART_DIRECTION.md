@@ -646,8 +646,7 @@ se mueve rápido y una vibración leve a las masas naranjas.
   menta con brillo, cara en sombra, ojos crema que laten) y habla en un bocadillo crema
   que se escribe letra a letra. Al terminar, la acción principal es **SEGUIR** (al ente).
 - **El paseo con el ente:** del claro al Forastero el camino tiene 7 paradas, cada una un
-  claro chiquito distinto del anterior (forma y decorado: una roca, un árbol muerto con
-  setas, un menhir, juncos, una calavera, un cristal) en un bosque cerrado a los dos lados
+  claro chiquito distinto del anterior (forma y decorado: una roca, un árbol muerto, un menhir, juncos, una calavera, un cristal) en un bosque cerrado a los dos lados
   (espesura en todo el paseo). Lo que espera en cada parada no se ve: solo un destello,
   como una luciérnaga quieta. El ente anda flotando hasta la siguiente (2 s, la cámara le
   sigue y el sendero se dibuja tramo a tramo); al llegar, el destello sube en una columna

@@ -54,7 +54,7 @@ const WALK_SWAY = [-26, 22, -18, 26, -22, 18, 0];
 /** Cada claro del paseo, distinto del anterior: su forma y lo que hay en él */
 const WALK_GLADES: { rx: number; ry: number; dx: number; dy: number; props: StationProp[] }[] = [
   { rx: 34, ry: 20, dx: 0, dy: 0, props: [{ id: 'rock', dx: -22, dy: 6 }, { id: 'grass', dx: 26, dy: 4 }] },
-  { rx: 44, ry: 24, dx: 6, dy: -4, props: [{ id: 'dead_tree', dx: 30, dy: -2 }, { id: 'mushrooms', dx: -20, dy: 8 }] },
+  { rx: 44, ry: 24, dx: 6, dy: -4, props: [{ id: 'dead_tree', dx: 30, dy: -2 }, { id: 'grass', dx: -20, dy: 8, flip: true }] },
   { rx: 30, ry: 22, dx: -4, dy: 2, props: [{ id: 'menhir_s', dx: -24, dy: 0 }, { id: 'bush', dx: 28, dy: 8 }] },
   { rx: 46, ry: 18, dx: 4, dy: 4, props: [{ id: 'reeds', dx: -26, dy: 6 }, { id: 'reeds', dx: 30, dy: 2, flip: true }] },
   { rx: 36, ry: 26, dx: -6, dy: -2, props: [{ id: 'skull', dx: 24, dy: 8 }, { id: 'grass', dx: -24, dy: 2 }] },
