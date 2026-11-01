@@ -76,10 +76,19 @@ test('prólogo: el paseo con el ente, sus lecciones, el duelo y el camino al For
   await ready(page, 1); await play(page, '7', 3);
   await ready(page, 2); await call(page, 'passTurn');
   await ready(page, 3, 'combat-reveal'); await page.waitForTimeout(1500); await call(page, 'finishCombatPhase');
-  // Y libre: lo cierras tú (una carta por turno en un hueco libre, y plantarse)
+  // Y libre: lo cierras tú. Se juega con la interfaz de verdad: tocar carta y hueco
   await ready(page, 4);
   await page.waitForTimeout(600);
+  await expect(page.getByText('Ahora tú solo. Acaba conmigo.')).toBeVisible();
   await shot(page, info, '06b-libre');
+  const emptySlot = await page.evaluate(() => (window as unknown as { __game: { getState: () => { player: { board: { card: unknown }[] } } } }).__game.getState().player.board.findIndex(b => !b.card));
+  await page.locator('[data-hand-card]').first().click();
+  await page.locator(`[data-slot="${emptySlot}"]`).click();
+  await page.waitForFunction(i => !!(window as unknown as { __game: { getState: () => { player: { board: { card: unknown }[] } } } }).__game.getState().player.board[i as number].card, emptySlot);
+  // Al plantarse, el cartel ya no vuelve
+  await page.waitForFunction(() => (window as unknown as W).__game.getState().turn === 'player', undefined, { timeout: 10_000 });
+  await call(page, 'passTurn');
+  await expect(page.getByText('Ahora tú solo. Acaba conmigo.')).toHaveCount(0);
   for (let turn = 0; turn < 12; turn++) {
     const done = await page.evaluate(() => {
       const s = (window as unknown as { __game: { getState: () => St & { player: { board: { card: unknown }[] } } } }).__game.getState();
