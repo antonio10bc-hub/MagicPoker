@@ -653,7 +653,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
   de luz ámbar y la carta baja girando boca abajo desde lo alto (dorso naranja a rayas,
   con su sombra creciendo en el suelo), se da la vuelta al aterrizar con un anillo de
   polvo y unas chispas ámbar, y se queda flotando (crema, torcida, brillo ámbar; el 6, el
-  Príncipe, la Reina, el Rey, el Joker y el As). Suena un silbido al caer y el giro al
+  Príncipe, la Reina, el Rey, el Joker y el As; es la carta de la partida en pequeño,
+  con su mismo fondo y figura). La caída y el giro son animaciones CSS (`gc-fall`,
+  `gc-flip`) para que no se salten si el navegador va cargado. Suena un silbido al caer y el giro al
   tocar el suelo. Luego habla con una frase corta ("Empecemos por lo básico."). La
   acción es **ESCUCHAR · el 6** (la Reina…). Cada lección es una mano de un solo turno
   contra el ente (panel del rival: "El ente", con su figura); sus cartas también te
@@ -664,8 +666,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   "Tu última prueba: enfréntate a mí", **ENFRENTARSE · al ente**: una ronda guiada (tu 9
   contra su 6, que ya está en la mesa; tu 7 al vacío; sus cartas castigan tus huecos
   vacíos) y después libre ("Ahora tú solo. Acaba conmigo."): lo cierras tú. Al ganar (o si
-  se salta) el ente se despide entre humo, el sendero se dibuja hasta el Forastero (lejos:
-  desde el duelo no se ve) y este llega con su destello. Quien ya había jugado no lo ve.
+  se salta) el ente se despide entre humo, el sendero se dibuja despacio hasta el Forastero (4 s, con la cámara
+  acompañándolo; lejos: desde el duelo no se ve) y este llega con su destello. Quien ya había jugado no lo ve.
 - **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): las
   lecciones y el duelo del paseo son guiones con las reglas reales (mazos ordenados, el
   rival juega lo que dice el guion). Ajustes → Repetir tutorial juega el duelo contra el
@@ -822,9 +824,11 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
 - **Mano:** ×1,375 en móviles altos (55×77), ×1 en horizontal panorámico (40×56) y
   ×0,875 en 4:3 y móviles bajos (35×49); siempre en píxeles enteros.
-- **El Joker roba, y se ve:** al revelarse en la pelea, de él salen sus 2 cartas boca
-  abajo (con brillo ámbar), una tras otra, y vuelan en arco a la mano de quien lo jugó
-  (la tuya, abajo; la del rival, a su panel). Sin el antiguo "+2" flotante.
+- **El Joker roba, y se ve:** al revelarse en la pelea se enciende (halo ámbar que
+  respira) y de él salen sus 2 cartas: las tuyas son las cartas de verdad de la mano, que
+  nacen pequeñas en el Joker, suben un poco y bajan suaves (muelle blando) a su sitio en
+  el abanico, una tras otra, y se dan la vuelta; las del rival vuelan boca abajo en arco
+  hasta su panel. Nada sale del mazo. Sin el antiguo "+2" flotante.
 - **La mano del rival:** sus dorsos en abanico y, al lado, cuántas tiene en una ficha
   naranja que salta al cambiar.
 - **De quién es el turno:** el cuadro de turno, al cambiar, da un fogonazo en el filo

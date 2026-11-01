@@ -358,3 +358,18 @@ html, body {
 .low-power .anim-wave, .low-power .anim-flicker, .low-power .anim-pulse-soft, .low-power .anim-spin,
 .low-power .anim-lamp, .low-power .anim-glint, .low-power .anim-tree, .low-power .anim-banner, .low-power .anim-ember, .low-power .anim-shine,
 .low-power .anim-sway, .low-power .anim-float, .low-power .anim-bob { animation: none; }
+
+/* Carta de una parada del prólogo: cae girando boca abajo (0,8 s), se da la vuelta al
+   aterrizar (0,45 s) y luego flota. En CSS para que no se salte con el navegador cargado */
+@keyframes gc-fall {
+  0% { transform: translateY(-70px) rotate(calc(var(--gc-tilt) - 200deg)) scale(0.6); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateY(0) rotate(var(--gc-tilt)) scale(1); opacity: 1; }
+}
+@keyframes gc-flip { from { transform: rotateY(180deg); } to { transform: rotateY(0deg); } }
+@keyframes gc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes gc-shadow { 0% { transform: scale(0.2); opacity: 0; } 40% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(0.85); opacity: 0.6; } }
+.gc-fall { animation: gc-fall 0.8s cubic-bezier(0.3, 0, 0.6, 1) both; }
+.gc-flip { animation: gc-flip 0.45s ease-out 0.8s both; }
+.gc-float { animation: gc-float 2.6s ease-in-out 1.6s infinite; }
+.gc-shadow { animation: gc-shadow 2.6s ease-out both; }

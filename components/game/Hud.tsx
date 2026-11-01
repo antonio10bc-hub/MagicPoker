@@ -366,6 +366,8 @@ interface HandCardProps {
   /** Fila de la mano y punto desde el que llegan las cartas robadas */
   y: number;
   fromX: number;
+  /** Robada por un Joker: sale de él (centro de su hueco, en el escenario) */
+  fromJoker?: { x: number; y: number };
   /** Escala de dibujo de la carta en la mano */
   scale: number;
   /** Posición en el abanico: -1 (izquierda) … 0 (centro) … 1 (derecha) */
@@ -426,7 +428,7 @@ const HOVER_INFO_MS = 1000;
 
 const SPRING = { type: 'spring', stiffness: 380, damping: 24 } as const;
 
-const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, canPlay, hinted, handlers }: HandCardProps) => {
+const HandCard = memo(({ card, x, y, fromX, fromJoker, scale, fan, enterDelay, isSelected, canPlay, hinted, handlers }: HandCardProps) => {
   const [hovered, setHovered] = useState(false);
   const [dragging, setDragging] = useState(false);
   const faceRef = useRef<HTMLDivElement>(null);
@@ -487,6 +489,8 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
 
   // El retraso solo importa al llegar a la mano (luego la carta puede cambiar de posición)
   const [initialDelay] = useState(enterDelay);
+  // Las del Joker salen de él: pequeñas y brillando, suben un poco y bajan suaves a la mano
+  const [joker] = useState(fromJoker);
   // Llega del mazo boca abajo (con tu dorso) y se da la vuelta al llegar a la mano
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
@@ -519,10 +523,11 @@ const HandCard = memo(({ card, x, y, fromX, scale, fan, enterDelay, isSelected, 
       className="absolute"
       style={{ top: y, zIndex: dragging ? 90 : isSelected ? 60 : hinted ? 58 : hovered ? 55 : undefined, rotateX: rx, rotateY: ry, transformPerspective: 260 }}
       // Robar: llega desde el mazo girando y se coloca en el abanico con un rebote
-      initial={{ left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
+      initial={joker ? { left: joker.x - 20 * scale, y: joker.y - y - 28 * scale, rotate: -12, scale: 0.35, opacity: 0 } : { left: fromX, y: -40, rotate: 30, scale: 0.5, opacity: 0 }}
       animate={{ left: x, y: dragY ?? arcY, rotate, scale: dragging ? 1 : isSelected ? 1.12 : hovered && canPlay ? 1.08 : 1, opacity: 1,
         x: denied ? [0, -3, 3, -2, 2, 0] : 0 }}
-      transition={{ ...SPRING, delay: entered ? 0 : initialDelay, x: { duration: 0.3 } }}
+      transition={entered || !joker ? { ...SPRING, delay: entered ? 0 : initialDelay, x: { duration: 0.3 } }
+        : { type: 'spring', stiffness: 90, damping: 15, mass: 0.9, delay: initialDelay, opacity: { duration: 0.35, delay: initialDelay }, x: { duration: 0.3 } }}
       onAnimationComplete={() => setEntered(true)}
       onPointerEnter={e => { setHovered(true); if (canPlay) playSfx('hover'); if (e.pointerType === 'mouse') startInfo(HOVER_INFO_MS, false); }}
       // Con ratón, pulsar quita la ficha (vas a jugarla); con el dedo, mantener la enseña.
@@ -601,11 +606,28 @@ interface HandProps {
   handlers: HandHandlers;
 }
 
+// Cartas vistas en la mano y las que ha robado un Joker (para que salgan de él)
+const SEEN_IN_HAND = new Set<string>();
+const JOKER_DRAWN = new Map<string, number>();
+
 export const Hand = ({ selectedCardId, canPlay, onlyCardId, handlers }: HandProps) => {
   const hand = useGameStore(s => s.player.hand);
   // Una carta de sello necesita una carta propia sin sello en la mesa
   const canSeal = useGameStore(s => s.player.board.some(b => b.card && !b.card.seal));
-  const area = useGameLayout().hand;
+  const { hand: area, board } = useGameLayout();
+  // Cartas que llegan durante la pelea con un Joker tuyo en la mesa: las ha robado él
+  const jokerSlot = useGameStore(s => (s.phase === 'combat' ? s.player.board.findIndex(b => b.card?.rank === 'JOKER') : -1));
+  const jokerAt = jokerSlot >= 0 ? { x: board.slots.player[jokerSlot].x + CARD_SIZE.width / 2, y: board.slots.player[jokerSlot].y + CARD_SIZE.height / 2 } : undefined;
+  // (las robadas en la pelea con un Joker tuyo: el resto de robos son al empezar la ronda)
+  const fromJokerIds = useMemo(() => {
+    hand.forEach(c => {
+      if (SEEN_IN_HAND.has(c.id)) return;
+      SEEN_IN_HAND.add(c.id);
+      if (jokerAt) JOKER_DRAWN.set(c.id, JOKER_DRAWN.size);
+    });
+    return JOKER_DRAWN;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hand, jokerSlot]);
   const cardW = Math.round(CARD_SIZE.width * area.scale);
   // Las cartas se solapan si no caben en el hueco
   const step = hand.length > 1 ? Math.min(cardW + HAND_GAP, Math.floor((area.w - cardW) / (hand.length - 1))) : 0;
@@ -621,9 +643,10 @@ export const Hand = ({ selectedCardId, canPlay, onlyCardId, handlers }: HandProp
           x={startX + i * step}
           y={area.y}
           fromX={area.x + area.w}
+          fromJoker={jokerAt && fromJokerIds.has(card.id) ? jokerAt : undefined}
           scale={area.scale}
           fan={hand.length > 1 ? (i - (hand.length - 1) / 2) / ((hand.length - 1) / 2) : 0}
-          enterDelay={(i % 4) * 0.08}
+          enterDelay={fromJokerIds.has(card.id) ? 0.35 + (fromJokerIds.get(card.id)! % 2) * 0.32 : (i % 4) * 0.08}
           isSelected={selectedCardId === card.id}
           canPlay={canPlay && (!onlyCardId || card.id === onlyCardId) && (card.rank !== 'SEAL' || canSeal)}
           hinted={onlyCardId === card.id && selectedCardId !== card.id}

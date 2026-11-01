@@ -24,6 +24,10 @@ import { MapEyes } from './MapEyes';
 import { MapClouds } from './MapClouds';
 import { StationProp, STATIONS } from './mapStations';
 import { BossFigure } from '@/components/game/BossFigure';
+import { Card, CardBack } from '@/components/game/Card';
+import { createCard } from '@/lib/game-utils';
+import { CARD_SIZE } from '@/theme/tokens';
+import { Rank } from '@/types';
 import { CastleMap } from '@/components/game/CastleMap';
 
 // --- MAPA DE JEFES (menú) ---
@@ -145,7 +149,7 @@ const trail = (a: Pt, b: Pt, endPad = 16) =>
   curve(a, b, 6).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }))
     .filter(p => Math.hypot(p.x - a.x, p.y - a.y) > 18 && Math.hypot(p.x - b.x, p.y - b.y) > endPad);
 
-const Trail = ({ a, b, lit, drawing, endPad }: { a: { x: number; y: number }; b: { x: number; y: number }; lit: boolean; drawing?: boolean; endPad?: number }) => {
+const Trail = ({ a, b, lit, drawing, endPad, seconds = 1.6 }: { a: { x: number; y: number }; b: { x: number; y: number }; lit: boolean; drawing?: boolean; endPad?: number; /** Lo que tarda en dibujarse */ seconds?: number }) => {
   const pts = useMemo(() => trail(a, b, endPad), [a, b, endPad]);
   return (
     <>
@@ -154,7 +158,7 @@ const Trail = ({ a, b, lit, drawing, endPad }: { a: { x: number; y: number }; b:
           style={{ left: p.x - 1, top: p.y - 1, width: 2, height: 2, animationDelay: `${-p.y / 120}s`,
             background: lit ? 'var(--ink-cream)' : 'var(--ink-slate)', boxShadow: lit ? '0 0 3px rgba(237,235,224,0.6)' : undefined }}
           initial={drawing ? { opacity: 0, scale: 2.5 } : false} animate={{ opacity: lit ? 0.9 : 0.6, scale: 1 }}
-          transition={drawing ? { delay: (i / pts.length) * 1.6, duration: 0.25 } : undefined} />
+          transition={drawing ? { delay: (i / pts.length) * seconds, duration: 0.35 } : undefined} />
       ))}
     </>
   );
@@ -502,6 +506,9 @@ const WispBubble = ({ text, onDone }: { text: string; onDone: () => void }) => {
   );
 };
 
+/** La despedida: lo que tarda el sendero en llegar al Forastero */
+const FAREWELL_PATH_S = 4;
+
 type ProPhase = 'wait' | 'appear' | 'reveal' | 'speak' | 'ready' | 'walk' | 'leave' | 'path' | 'arrive';
 
 /** El prólogo según lo guardado (ver lib/prologue): "intro", "stage:N[:walk]", "farewell:N" */
@@ -515,7 +522,7 @@ const parsePrologue = (raw: string | null): ProState | null => {
   return null;
 };
 
-const GROUND_RANK = ['6', 'J', 'Q', 'K', 'JKR', 'A'];
+const GROUND_RANK: Rank[] = ['6', 'J', 'Q', 'K', 'JOKER', 'A'];
 /** Lo que espera en una parada: solo un destello, como una luciérnaga quieta (la carta no
  *  se ve hasta que llega el ente) */
 const StopGlint = ({ at, still }: { at: Pt; still: boolean }) => (
@@ -524,18 +531,16 @@ const StopGlint = ({ at, still }: { at: Pt; still: boolean }) => (
 );
 /** La carta de la parada, al llegar el ente: el destello sube en una columna de luz,
  *  la carta baja girando boca abajo desde lo alto, se da la vuelta al tocar el suelo
- *  (con un anillo de polvo y chispas ámbar) y se queda flotando sobre su sombra */
-const GroundCard = ({ at, rank, still }: { at: Pt; rank: string; still: boolean }) => {
-  const W = 18, H = 25;
-  const tilt = rank === 'A' ? 8 : -8;
-  const face = (back: boolean) => (
-    <div className="absolute inset-0 flex items-center justify-center font-display rounded-[2px]" style={{
-      backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: back ? 'rotateY(180deg)' : undefined,
-      background: back ? 'repeating-linear-gradient(45deg, #A82A0C 0 2px, var(--ink-orange) 2px 4px)' : 'var(--ink-cream)',
-      color: 'var(--ink-black)', fontSize: rank.length > 1 ? 7 : 12,
-      boxShadow: back ? '0 0 0 1px var(--ink-black), inset 0 0 0 2px var(--ink-black)' : '0 0 0 1px var(--ink-black), 0 0 8px 2px rgba(255,194,51,0.65)' }}>
-      {!back && rank}
-    </div>
+ *  (con un anillo de polvo y chispas ámbar) y se queda flotando sobre su sombra. Es la
+ *  carta de la partida, en pequeño (mismo fondo y figura). La caída y el giro son
+ *  animaciones CSS (`gc-fall`, `gc-flip` en globals.css): no se saltan aunque el
+ *  navegador vaya cargado justo al llegar (pasaba con el 6, al salir del claro) */
+const GROUND_SCALE = 0.45;
+const GroundCard = ({ at, rank, still }: { at: Pt; rank: Rank; still: boolean }) => {
+  const W = Math.round(CARD_SIZE.width * GROUND_SCALE), H = Math.round(CARD_SIZE.height * GROUND_SCALE);
+  const card = useMemo(() => ({ ...createCard('player', rank), isFaceUp: true }), [rank]);
+  const scaled = (child: ReactNode) => (
+    <div className="absolute left-0 top-0" style={{ width: CARD_SIZE.width, height: CARD_SIZE.height, transform: `scale(${GROUND_SCALE})`, transformOrigin: '0 0' }}>{child}</div>
   );
   return (
     <div className="absolute pointer-events-none" style={{ left: at.x, top: at.y - 4, width: 0, height: 0, zIndex: 3 }}>
@@ -545,10 +550,8 @@ const GroundCard = ({ at, rank, still }: { at: Pt; rank: string; still: boolean 
           background: 'linear-gradient(to top, rgba(255,194,51,0.55), rgba(255,194,51,0.15) 60%, transparent)', filter: 'blur(1px)' }}
           initial={{ scaleY: 0, opacity: 0 }} animate={{ scaleY: [0, 1, 1], opacity: [0, 1, 0] }} transition={{ duration: 1.3, times: [0, 0.3, 1] }} />
       )}
-      {/* Su sombra en el suelo: crece mientras baja */}
-      <motion.span className="absolute rounded-[50%]" style={{ left: -10, top: -2, width: 20, height: 5, background: 'rgba(11,13,12,0.65)' }}
-        initial={{ scale: 0.2, opacity: 0 }} animate={{ scale: [0.2, 1, 0.85], opacity: [0, 0.8, 0.6] }}
-        transition={{ duration: 2.6, times: [0, 0.4, 1], scale: still ? undefined : { duration: 2.6, times: [0, 0.4, 1] } }} />
+      {/* Su sombra en el suelo */}
+      <span className={clsx('absolute rounded-[50%]', !still && 'gc-shadow')} style={{ left: -10, top: -2, width: 20, height: 5, background: 'rgba(11,13,12,0.65)' }} />
       {/* Al tocar el suelo: un anillo de polvo y unas chispas */}
       {!still && (
         <>
@@ -565,17 +568,18 @@ const GroundCard = ({ at, rank, still }: { at: Pt; rank: string; still: boolean 
         </>
       )}
       {/* La carta: baja girando boca abajo, se da la vuelta al aterrizar y flota */}
-      <motion.div className="absolute" style={{ left: -W / 2, top: -H - 6, width: W, height: H, perspective: 120 }}
-        animate={still ? undefined : { y: [0, -2, 0] }} transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', delay: 1.6 }}>
-        <motion.div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d' }}
-          initial={still ? false : { y: -70, rotateY: 180, rotateZ: tilt - 200, scale: 0.6, opacity: 0 }}
-          animate={{ y: 0, rotateY: 0, rotateZ: tilt, scale: 1, opacity: 1 }}
-          transition={{ y: { duration: 0.8, ease: [0.3, 0, 0.6, 1] }, rotateZ: { duration: 0.8, ease: 'easeOut' }, opacity: { duration: 0.3 },
-            scale: { duration: 0.8 }, rotateY: { delay: 0.8, duration: 0.45, ease: 'easeOut' } }}>
-          {face(true)}
-          {face(false)}
-        </motion.div>
-      </motion.div>
+      <div className={clsx('absolute', !still && 'gc-float')} style={{ left: -W / 2, top: -H - 6, width: W, height: H, perspective: 120 }}>
+        <div className={clsx('relative w-full h-full', !still && 'gc-fall')} style={{ ['--gc-tilt' as string]: `${rank === 'A' ? 8 : -8}deg`, transform: `rotate(${rank === 'A' ? 8 : -8}deg)` }}>
+          <div className={clsx('relative w-full h-full', !still && 'gc-flip')} style={{ transformStyle: 'preserve-3d' }}>
+            <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+              {scaled(<CardBack owner="player" />)}
+            </div>
+            <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', filter: 'drop-shadow(0 0 4px rgba(255,194,51,0.6))' }}>
+              {scaled(<Card card={card} />)}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -653,7 +657,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const castleOpen = shown >= BOSSES.length;
 
   /** Centra la cámara en un sitio (en la zona que no tapa la interfaz) */
-  const lookAt = (y: number, smooth = true) => {
+  const lookAt = (y: number, smooth = true, duration = 1500) => {
     const el = scroller.current;
     if (!el) return;
     const visible = rect.h - safeTop - safeBottom;
@@ -663,7 +667,7 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     // Travelling lento y suave (el scroll suave del navegador va demasiado rápido)
     const from = el.scrollTop;
     const start = performance.now();
-    const DURATION = 1500;
+    const DURATION = duration;
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / DURATION);
       const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
@@ -765,9 +769,10 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const spoken = () => {
     if (pro?.kind !== 'farewell') { setProPhase('ready'); onRevealing?.(false); return; }
     later(1500, () => { setProPhase('leave'); playSfx('whoosh', 0.5, 0.8); });
-    later(2600, () => { setProPhase('path'); playSfx('whoosh', 0.5, 1.2); lookAt((wispAt(pro.n).y + nodes[0].y) / 2); });
-    later(4600, () => { setProPhase('arrive'); lookAt(nodes[0].y); playSfx('flip', 0.7, 0.9); playSfx('sparkle', 0.6, 1.2); haptic('stamp'); });
-    later(6400, () => {
+    // El sendero se dibuja despacio hasta el Forastero y la cámara lo acompaña
+    later(2600, () => { setProPhase('path'); playSfx('whoosh', 0.5, 0.9); lookAt(nodes[0].y, true, FAREWELL_PATH_S * 1000); });
+    later(2600 + FAREWELL_PATH_S * 1000, () => { setProPhase('arrive'); playSfx('flip', 0.7, 0.9); playSfx('sparkle', 0.6, 1.2); haptic('stamp'); });
+    later(4400 + FAREWELL_PATH_S * 1000, () => {
       finishPrologue();
       setMenuBoss(0);
       useUiStore.getState().setCinematic(false);
@@ -910,7 +915,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
           <MoonClearing at={origin} still={lowPower} />
           {/* El paseo: los tramos del sendero, parada a parada, hasta el Forastero */}
           {walkPts.slice(1).map((b, k) => (
-            <Trail key={`walk${k}`} a={walkPts[k]} b={b} lit={walkLit(k)} drawing={walkDrawing(k)} />
+            <Trail key={`walk${k}`} a={walkPts[k]} b={b} lit={walkLit(k)} drawing={walkDrawing(k)}
+              seconds={pro?.kind === 'farewell' ? FAREWELL_PATH_S : 1.6} />
           ))}
           {/* Los claros del paseo, cada uno distinto (y el del duelo, bañado por la luna) */}
           <DuelGlade at={walkStops[walkStops.length - 1]} still={lowPower} />
