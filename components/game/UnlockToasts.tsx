@@ -33,12 +33,14 @@ export const UnlockToasts = () => {
   const onMap = current?.kind === 'secret' || current?.kind === 'castle';
   useEffect(() => { if (onMap) shift(); }, [onMap, current, shift]);
 
+  const waitsTap = current?.kind === 'collection' || current?.kind === 'editor';
   useEffect(() => {
     if (!show || onMap) return;
     const slam = setTimeout(() => { playSfx('wipe', 0.6, 1.3); playSfx('sparkle'); haptic('win'); }, 150);
-    const done = setTimeout(shift, 3600);
-    return () => { clearTimeout(slam); clearTimeout(done); };
-  }, [show, onMap, current, shift]);
+    // El Grimorio y el editor se explican: esperan a que toques (para leer sin prisa)
+    const done = waitsTap ? null : setTimeout(shift, 3600);
+    return () => { clearTimeout(slam); if (done) clearTimeout(done); };
+  }, [show, onMap, current, shift, waitsTap]);
 
   const w = Math.min(210, width - 16);
   const seal = current?.kind === 'seal' ? current.seal : null;
@@ -92,6 +94,12 @@ export const UnlockToasts = () => {
             <span className="text-center leading-[11px]" style={{ color: 'var(--ink-mint)' }}>
               {desc}
             </span>
+            {waitsTap && (
+              <motion.span className="t-micro anim-pulse-soft mt-[2px]" style={{ color: 'var(--ink-teal)' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+                {t.tap_continue}
+              </motion.span>
+            )}
           </motion.div>
         </motion.button>
       )}

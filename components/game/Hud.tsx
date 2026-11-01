@@ -164,7 +164,18 @@ const CompactPanel = ({ label, owner, rect, children }: { label: ReactNode; owne
   </div>
 );
 
+/** La mano del rival: sus dorsos en abanico y, al lado, cuántas tiene (bien a la vista) */
 const RivalHand = ({ count }: { count: number }) => (
+  <div className="flex items-center gap-[3px]">
+    <RivalHandBacks count={count} />
+    <motion.span key={count} className="font-display px-[3px] rounded-[2px] text-ink" style={{ fontSize: 9, lineHeight: '10px', paddingTop: 1, background: 'var(--ink-orange)', boxShadow: '0 0 4px rgba(255,74,28,0.6)' }}
+      initial={{ scale: 1.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
+      {count}
+    </motion.span>
+  </div>
+);
+
+const RivalHandBacks = ({ count }: { count: number }) => (
   <div className="flex h-[11px]">
     <AnimatePresence initial={false}>
       {Array.from({ length: count }, (_, i) => (

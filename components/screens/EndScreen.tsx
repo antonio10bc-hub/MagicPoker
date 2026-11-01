@@ -14,6 +14,7 @@ import { PALETTE } from '@/theme/tokens';
 import { useMenuLayout, useStage } from '@/components/pixel/Stage';
 import { Panel, PxButton } from '@/components/pixel/ui';
 import { BackFan } from '@/components/game/Backs';
+import { WispFigure } from '@/components/game/WispFigure';
 import { Mascot, MenuBackground } from './MenuScreen';
 
 const RESULT_UI: Record<GameResult, { title: keyof Translations; sub: keyof Translations; band: string }> = {
@@ -146,7 +147,10 @@ export const EndScreen = () => {
       {isWin && !waiting && <Confetti />}
       {/* Tu mazo en abanico, boca abajo con tu dorso, asomando tras el panel */}
       {!waiting && <div className="absolute z-[6]" style={{ left: cx - 13, top: panelY - 34 }}><BackFan win={isWin} /></div>}
-      <Mascot rank={gameResult === 'loss' ? 'K' : 'J'} owner={gameResult === 'loss' ? 'opponent' : 'player'} x={cx - 16} y={board.diorama.y + 6} />
+      {/* En el tutorial, quien te ha enseñado: el ente */}
+      {wasTutorial
+        ? <div className="absolute z-[5] anim-float" style={{ left: cx - 13, top: board.diorama.y + 2 }}><WispFigure scale={2} /></div>
+        : <Mascot rank={gameResult === 'loss' ? 'K' : 'J'} owner={gameResult === 'loss' ? 'opponent' : 'player'} x={cx - 16} y={board.diorama.y + 6} />}
 
       {!waiting && <motion.div
         className="absolute z-10"

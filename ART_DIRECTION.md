@@ -672,7 +672,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   repasos de pelea llevan "Continuar" a la derecha del texto. La carta y el hueco que
   tocan laten con un halo; lo demás queda bloqueado (en el tramo libre del duelo, nada).
   Al ganar el duelo, la pantalla final habla en clave de historia ("Ya estás preparado
-  para conocer a los demás… Te esperan en el camino.") y solo ofrece VOLVER AL CAMINO.
+  para conocer a los demás… Te esperan en el camino."), con el ente flotando sobre el
+  panel en vez de la mascota, y solo ofrece VOLVER AL CAMINO.
   Los textos son cortos y la letra (10, 9 u 8 px) se elige para caber en el hueco entre
   filas de cada móvil. No cuenta para estadísticas ni sellos. Los tests juegan cada
   lección y el duelo.
@@ -819,6 +820,15 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   haya ninguna ventana abierta y ocupan siempre el mismo sitio y ancho.
 - **Mano:** ×1,375 en móviles altos (55×77), ×1 en horizontal panorámico (40×56) y
   ×0,875 en 4:3 y móviles bajos (35×49); siempre en píxeles enteros.
+- **El Joker roba, y se ve:** al revelarse en la pelea, de él salen sus 2 cartas boca
+  abajo (con brillo ámbar), una tras otra, y vuelan en arco a la mano de quien lo jugó
+  (la tuya, abajo; la del rival, a su panel). Sin el antiguo "+2" flotante.
+- **La mano del rival:** sus dorsos en abanico y, al lado, cuántas tiene en una ficha
+  naranja que salta al cambiar.
+- **De quién es el turno:** el cuadro de turno, al cambiar, da un fogonazo en el filo
+  (verde en el tuyo, naranja en el del rival) y luego respira en ese color mientras dura.
+- **Avisos de desbloqueo:** el del Grimorio y el del editor de mazo no se van solos
+  (se explican): "toca para seguir"; los demás se van a los 3,6 s (o al tocarlos).
 - **Rendimiento del mapa:** el suelo (millones de píxeles) se pinta una vez y se
   reutiliza al volver al menú; en la espesura no se mece ningún árbol y nunca más de 700
   en todo el mapa (cada uno es una pieza animada aparte).

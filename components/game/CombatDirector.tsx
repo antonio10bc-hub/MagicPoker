@@ -3,7 +3,7 @@ import { useGameStore } from '@/store/useGameStore';
 import { BoardSlot, Owner } from '@/types';
 import { BoardGeometry } from '@/theme/layout';
 import { CARD_SIZE, PALETTE, TEAM } from '@/theme/tokens';
-import { JOKER_DRAW_BONUS, TIMINGS } from '@/lib/constants';
+import { TIMINGS } from '@/lib/constants';
 import { duckMusic, haptic, playSfx } from '@/lib/sounds';
 import { SEAL_SFX } from '@/lib/synth';
 import { fx } from '@/components/fx/fxStore';
@@ -105,7 +105,7 @@ export const CombatDirector = ({ geo }: { geo: BoardGeometry }) => {
         .filter(l => l.slot.card?.rank === 'JOKER')
         .forEach(l => {
           playSfx('sparkle');
-          fx.emit({ kind: 'text', x: l.x, y: l.y - 20, text: `+${JOKER_DRAW_BONUS}`, bg: 'var(--c-chip)', size: 20, life: 1100 });
+          // (sus cartas vuelan a la mano: ver JokerDraw)
           fx.emit({ kind: 'particles', x: l.x, y: l.y, colors: [PALETTE.yellow, PALETTE.white], count: 14, speed: 30, gravity: -10, size: [1, 2], life: 800 });
         });
     }, TIMINGS.combatFlip + 20);

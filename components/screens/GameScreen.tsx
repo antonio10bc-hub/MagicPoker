@@ -13,6 +13,7 @@ import { Phase2Scene } from '@/components/game/Phase2Scene';
 import { HurtFlash, SlowMoLayer } from '@/components/game/Juice';
 import { WildSealPicker } from '@/components/game/WildSealPicker';
 import { TutorialCoach, useTutorialGate } from '@/components/game/TutorialCoach';
+import { JokerDraw } from '@/components/game/JokerDraw';
 import { ActionButton, MenuButtons, RoundAnnouncer, TurnBox } from '@/components/game/GameControls';
 import { FxLayer } from '@/components/fx/FxLayer';
 import { AmbientDust, LowHealth } from '@/components/fx/Ambient';
@@ -97,6 +98,7 @@ export const GameScreen = () => {
       <ActionButton canPlay={canStand} tutorial={tutorial.step?.kind === 'review' || tutorial.step?.kind === 'note'} />
       <Hand selectedCardId={selectedCardId} canPlay={canPlay} onlyCardId={tutorial.cardId} handlers={handHandlers} />
       <TutorialCoach />
+      <JokerDraw />
       <CardInfo cardId={infoCardId} />
       <FxLayer layer="ui" />
       <RoundAnnouncer />

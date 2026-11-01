@@ -44,6 +44,17 @@ export const TurnBox = () => {
       animate={{ scale: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 500, damping: 16 }}
     >
+      {/* De quién es el turno, que se note: al cambiar, un fogonazo en el filo; en tu
+          turno, el cuadro respira en verde; en el del rival, en naranja tenue */}
+      {!isFighting && (
+        <>
+          <motion.span className="absolute inset-0 rounded-[3px] pointer-events-none"
+            style={{ boxShadow: isPlayerTurn ? '0 0 0 1px var(--c-green-light), 0 0 14px 3px rgba(134,239,172,0.55)' : '0 0 0 1px var(--ink-orange), 0 0 14px 3px rgba(255,74,28,0.5)' }}
+            initial={{ opacity: 1, scale: 1.15 }} animate={{ opacity: 0, scale: 1 }} transition={{ duration: 1.1, ease: 'easeOut' }} />
+          <span className="absolute inset-0 rounded-[3px] pointer-events-none anim-pulse-soft"
+            style={{ boxShadow: isPlayerTurn ? '0 0 0 1px rgba(134,239,172,0.55), 0 0 8px 1px rgba(134,239,172,0.3)' : '0 0 0 1px rgba(255,74,28,0.3), 0 0 6px 1px rgba(255,74,28,0.15)' }} />
+        </>
+      )}
       <TextBox
         text={text}
         style={{ minHeight: box.h, color: isFighting ? 'var(--c-mult)' : isPlayerTurn ? 'var(--c-green-light)' : 'var(--c-cyan)' }}
