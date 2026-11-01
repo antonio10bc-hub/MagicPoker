@@ -644,14 +644,26 @@ se mueve rápido y una vibración leve a las masas naranjas.
   abre y se disipa y el ente aparece despacio desde el desenfoque (2 s). Es un ente
   encapuchado que flota (capa
   menta con brillo, cara en sombra, ojos crema que laten) y habla en un bocadillo crema
-  que se escribe letra a letra. Al terminar, la acción principal es **ESCUCHAR** (al ente
-  del claro) y abre el tutorial. A la vuelta (o si se salta) se despide en otro
-  bocadillo, se desvanece hacia arriba, el sendero se dibuja hasta el Forastero y este
-  llega con su destello. Quien ya había jugado no lo ve.
+  que se escribe letra a letra. Al terminar, la acción principal es **SEGUIR** (al ente).
+- **El paseo con el ente:** del claro al Forastero el camino tiene 7 paradas, cada una un
+  claro chiquito un poco a un lado. En las 6 primeras espera una carta tirada en el suelo
+  (crema, torcida; la de ahora brilla en ámbar y respira; las que faltan, apagadas): el
+  6, el Príncipe, la Reina, el Rey, el Joker y el As. El ente anda flotando de una parada
+  a la siguiente (2 s, la cámara le sigue y el sendero se dibuja tramo a tramo), dice una
+  frase corta de la carta y la acción es **JUGAR · el 6** (la Reina…). Cada lección es una
+  mano de un solo turno contra el ente (panel del rival: "El ente", con su figura): pones
+  la carta donde te dice, te plantas y ves qué hace; al cerrar el repaso se vuelve al
+  mapa, a andar hasta la siguiente. Mientras enseña, el ente no hace daño (ni avisos de
+  hueco amenazado). En la última parada: "Ya sabes lo necesario. Ahora, enfréntate a mí",
+  **ENFRENTARSE · al ente**: un duelo guiado de dos rondas (los huecos vacíos castigan;
+  tápalos y gana). Al ganarlo (o si se salta) el ente se despide entre humo, se desvanece,
+  el sendero se dibuja hasta el Forastero y este llega con su destello. Quien ya había
+  jugado no lo ve.
   Hasta completar (o saltar) el tutorial, arriba a la derecha solo está Ajustes: Cómo
   jugar y Estadísticas aparecen después.
-- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): tras
-  ESCUCHAR al ente (y desde Ajustes → Repetir tutorial). Una partida guionizada
+- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): varios
+  guiones con las mismas reglas: las lecciones y el duelo del paseo, y la partida
+  completa de siempre (Ajustes → Repetir tutorial). Esa es una partida guionizada
   de 4 rondas y 14 pasos con las reglas reales que siempre se gana: cartas normales y
   huecos vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" →
   el As barre la mesa → un golpe directo y ganas. Cada explicación va dentro del paso

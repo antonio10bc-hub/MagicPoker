@@ -35,7 +35,7 @@ const PROGRESS_KEYS = [
 /** Volver a ver el prólogo: como recién llegado, también sin tutorial (recarga) */
 export const replayPrologue = () => {
   try {
-    [...PROGRESS_KEYS, 'magic_poker_tutorial_done', 'magic_poker_prologue', 'has_played_before'].forEach(k => localStorage.removeItem(k));
+    [...PROGRESS_KEYS, 'magic_poker_tutorial_done', 'magic_poker_prologue', 'magic_poker_prologue_walk', 'has_played_before'].forEach(k => localStorage.removeItem(k));
   } catch { /* sin almacenamiento */ }
   window.location.reload();
 };

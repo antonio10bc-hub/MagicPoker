@@ -1,10 +1,42 @@
-import { expect, test } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { shot, watchErrors } from './helpers';
 
-// --- PRÓLOGO: el ente del claro, el tutorial y la despedida ---
-type G = { __game: { getState: () => { screen: string; tutorialStep: number | null; debugWin: () => void } } };
+// --- PRÓLOGO: el paseo con el ente ---
+// El claro (humo → tocar → el ente habla → SEGUIR), las seis paradas con su lección de un
+// turno (JUGAR), el duelo (ENFRENTARSE) y la despedida que abre el camino al Forastero.
+type St = {
+  screen: string; phase: string; turn: string; tutorialStep: number | null; tutorialId: string;
+  player: { hand: { id: string; rank: string }[]; lives: number };
+  placeCard: (id: string, slot: number) => void; passTurn: () => void; finishCombatPhase: () => void;
+};
+type W = { __game: { getState: () => St } };
 
-test('prólogo: el ente habla, ESCUCHAR abre el tutorial y al volver se despide y abre el camino', async ({ page }, info) => {
+const state = (page: Page) => page.evaluate(() => {
+  const s = (window as unknown as W).__game.getState();
+  return { screen: s.screen, phase: s.phase, turn: s.turn, step: s.tutorialStep, id: s.tutorialId, lives: s.player.lives };
+});
+/** Espera a que toque jugar (paso `step`) o a la pelea */
+const ready = (page: Page, step: number, phase = 'placement') => page.waitForFunction(([st, ph]) => {
+  const s = (window as unknown as W).__game.getState();
+  return s.tutorialStep === st && s.phase === ph && (ph !== 'placement' || s.turn === 'player');
+}, [step, phase] as const, { timeout: 20_000 });
+const play = (page: Page, rank: string, slot: number) => page.evaluate(([r, sl]) => {
+  const s = (window as unknown as W).__game.getState();
+  s.placeCard(s.player.hand.find(c => c.rank === r)!.id, sl as number);
+}, [rank, slot] as const);
+const call = (page: Page, fn: 'passTurn' | 'finishCombatPhase') => page.evaluate(f => (window as unknown as W).__game.getState()[f](), fn);
+/** La acción principal del menú, cuando el ente ha terminado de hablar */
+const cta = async (page: Page, title: string) => {
+  const b = page.locator('button', { has: page.getByText(title, { exact: true }) });
+  await expect(b).toBeEnabled({ timeout: 25_000 });
+  await page.waitForTimeout(700);
+  await b.click({ force: true });
+};
+
+const LESSONS: [string, number][] = [['6', 1], ['J', 1], ['Q', 1], ['K', 1], ['JOKER', 1], ['A', 3]];
+
+test('prólogo: el paseo con el ente, sus lecciones, el duelo y el camino al Forastero', async ({ page }, info) => {
+  test.setTimeout(240_000);
   const noErrors = watchErrors(page);
   await page.addInitScript(() => {
     if (sessionStorage.getItem('seeded')) return;
@@ -13,48 +45,62 @@ test('prólogo: el ente habla, ESCUCHAR abre el tutorial y al volver se despide 
     localStorage.setItem('magic_poker_settings', JSON.stringify({ grain: 'off', quality: 'high', music: 0, sfx: 0 }));
   });
   await page.goto('/');
-  // Primero solo hay humo y el aviso de tocar; al tocar, aparece el ente
+  // El claro: humo y aviso de tocar; hasta hacer el tutorial, solo ajustes
   await expect(page.getByText(/^(TOCA|HAZ CLIC)$/)).toBeVisible({ timeout: 15_000 });
-  await page.waitForTimeout(1500);
-  await shot(page, info, 'humo');
-  await page.getByLabel('map reveal').click();
-  await page.waitForTimeout(1000);
-  await shot(page, info, 'aparece');
-  // Habla el ente y, al terminar, la acción es ESCUCHAR
-  // (el bocadillo se escribe letra a letra: se espera a la frase entera)
-  await expect(page.getByText(/te enseñaré a sobrevivir\.$/).last()).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText('ESCUCHAR')).toBeVisible();
-  // Hasta hacer el tutorial, solo ajustes
   await expect(page.getByLabel('reglas')).toHaveCount(0);
   await expect(page.getByLabel('estadísticas')).toHaveCount(0);
-  await expect(page.getByLabel('ajustes')).toHaveCount(1);
-  await page.waitForTimeout(800);
-  await shot(page, info, 'ente');
-  await page.getByText('ESCUCHAR').click({ force: true });
-  await page.waitForFunction(() => (window as unknown as G).__game.getState().tutorialStep === 0);
-  await shot(page, info, 'tutorial');
-  // Se gana el tutorial: solo queda volver al menú
-  await page.evaluate(() => (window as unknown as G).__game.getState().debugWin());
+  await page.waitForTimeout(1200);
+  await shot(page, info, '01-humo');
+  await page.getByLabel('map reveal').click();
+  await expect(page.getByText(/te enseñaré a sobrevivir\.$/).last()).toBeVisible({ timeout: 15_000 });
+  await shot(page, info, '02-ente');
+  await cta(page, 'SEGUIR');
+
+  // Las seis paradas: el ente llega, habla y se juega su carta en un turno
+  for (const [i, [rank, slot]] of LESSONS.entries()) {
+    await cta(page, 'JUGAR');
+    if (i === 0) await shot(page, info, '03-parada-6');
+    await ready(page, 0);
+    await page.waitForTimeout(600);
+    if (i === 0) await shot(page, info, '04-leccion-6');
+    await play(page, rank, slot);
+    await ready(page, 1);
+    await call(page, 'passTurn');
+    await ready(page, 2, 'combat-reveal');
+    await page.waitForTimeout(1800);
+    await shot(page, info, `05-repaso-${rank}`);
+    // El ente enseña sin hacerte daño
+    expect((await state(page)).lives).toBe(4);
+    await call(page, 'finishCombatPhase');
+    await page.waitForFunction(() => (window as unknown as W).__game.getState().screen === 'menu');
+  }
+
+  // El duelo
+  await cta(page, 'ENFRENTARSE');
+  await shot(page, info, '06-duelo');
+  await ready(page, 0); await play(page, '9', 1);
+  await ready(page, 1); await play(page, '7', 3);
+  await ready(page, 2); await call(page, 'passTurn');
+  await ready(page, 3, 'combat-reveal'); await page.waitForTimeout(1500); await call(page, 'finishCombatPhase');
+  await ready(page, 4); await play(page, '10', 0);
+  await ready(page, 5); await play(page, '8', 2);
+  await ready(page, 6); await call(page, 'passTurn');
   const back = page.getByText('VOLVER AL CAMINO', { exact: true });
-  await back.waitFor({ timeout: 15_000 });
-  await page.waitForTimeout(1500);
-  await shot(page, info, 'fin-tutorial');
+  await back.waitFor({ timeout: 20_000 });
+  await page.waitForTimeout(1200);
+  await shot(page, info, '07-fin-duelo');
   await back.click({ force: true });
+
   // La despedida y el camino hasta el Forastero
-  await expect(page.getByText(/Mucha suerte, extraño\.$/).last()).toBeVisible({ timeout: 10_000 });
-  await page.waitForTimeout(1500);
-  await shot(page, info, 'despedida');
-  await page.waitForTimeout(4200);
-  await shot(page, info, 'camino');
-  await expect(page.getByText('¡DESAFIAR!')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Mucha suerte, extraño\.$/).last()).toBeVisible({ timeout: 15_000 });
+  await shot(page, info, '08-despedida');
+  await expect(page.locator('button', { has: page.getByText('¡DESAFIAR!', { exact: true }) })).toBeEnabled({ timeout: 20_000 });
   await expect(page.getByLabel('reglas')).toHaveCount(1);
-  await expect(page.getByLabel('estadísticas')).toHaveCount(1);
   await page.waitForTimeout(800);
-  await shot(page, info, 'forastero');
+  await shot(page, info, '09-forastero');
   expect(await page.evaluate(() => localStorage.getItem('magic_poker_prologue'))).toBe('done');
   // Al volver, ya no se repite
   await page.reload();
   await expect(page.getByText('¡DESAFIAR!')).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/otra alma perdida/)).toHaveCount(0);
   noErrors();
 });

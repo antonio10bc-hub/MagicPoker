@@ -8,7 +8,7 @@ import {
   BOSSES, bossLives, bossSeals, bossWins, getProgress, getServerProgress, subscribeProgress, WINS_FOR_BACK,
 } from '@/lib/bosses';
 import { getMapSeen, revealSteps, RevealStep, setMapSeen } from '@/lib/mapReveal';
-import { finishPrologue, getPrologue, onProloguePoke, Prologue } from '@/lib/prologue';
+import { finishPrologue, getPrologue, onProloguePoke, subscribePrologue, walked } from '@/lib/prologue';
 import { haptic, playSfx } from '@/lib/sounds';
 import { useLowPower } from '@/lib/quality';
 import { INK } from '@/theme/tokens';
@@ -46,8 +46,12 @@ export const CASTLE_INDEX = BOSSES.length;
 
 const STEP = 200;
 const BOTTOM = 120;
-/** Del claro de luna (donde nace el camino) al primer jefe: lejos, que desde allí no se vea */
-const ORIGIN_GAP = 440;
+/** El paseo del prólogo: del borde del claro a la primera parada, entre paradas y de la
+ *  última (el duelo) al Forastero. Lejos: desde el claro no se le ve */
+const WALK = { first: 100, step: 100, last: 170 };
+/** Paradas del paseo: las 6 lecciones y el duelo (un poco a un lado y a otro del camino) */
+const WALK_SWAY = [-26, 22, -18, 26, -22, 18, 0];
+const ORIGIN_GAP = 40 + WALK.first + (WALK_SWAY.length - 1) * WALK.step + WALK.last;
 /** Del Soberano al Castillo: más camino que entre pueblos (los dos son grandes y llevan texto) */
 const CASTLE_GAP = 250;
 /** Sitio sobre el Castillo para su pastilla y la cabecera del menú */
@@ -77,7 +81,8 @@ const geometry = (w: number) => {
   // El camino entero: nace al borde del claro, pasa por cada parada y llega al Castillo
   // (el camino no cruza el claro: nace justo al salir de él, ya entre los árboles)
   const trailhead = { x: origin.x, y: origin.y - 40 };
-  const stops = [trailhead, ...nodes, castle];
+  const walkStops = WALK_SWAY.map((dx, i) => ({ x: cx + dx, y: trailhead.y - WALK.first - i * WALK.step }));
+  const stops = [trailhead, ...walkStops, ...nodes, castle];
   const road: Pt[] = stops.slice(1).flatMap((b, n) => curve(stops[n], b, 1));
   const terrain = BOSSES.map((b, i) => {
     const st = STATIONS[b.id];
@@ -89,12 +94,13 @@ const geometry = (w: number) => {
     };
   });
   return {
-    contentH, nodes, castle, road, origin, trailhead,
+    contentH, nodes, castle, road, origin, trailhead, walkStops,
     // El claro es pequeño y el bosque lo encierra (espesura alrededor, asfixiante)
-    clearings: [{ ...origin, rx: 52, ry: 32 }, ...terrain.map(t => t.clearing), castle],
+    // (y cada parada del paseo, un claro chiquito donde espera su carta)
+    clearings: [{ ...origin, rx: 52, ry: 32 }, ...walkStops.map(p => ({ ...p, rx: 38, ry: 24 })), ...terrain.map(t => t.clearing), castle],
     thickets: [{ x: origin.x, y: origin.y + 10, rx: Math.max(220, w * 0.6), ry: 190 }],
     // Sin árboles solo lo justo alrededor del Castillo: el bosque lo rodea
-    keepOut: [{ x: origin.x, y: origin.y - 6, rx: 46, ry: 26 }, ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
+    keepOut: [{ x: origin.x, y: origin.y - 6, rx: 46, ry: 26 }, ...walkStops.map(p => ({ x: p.x + 8, y: p.y - 6, rx: 36, ry: 20 })), ...terrain.map(t => t.keep), { x: castle.x, y: castle.y - 46, rx: 54, ry: 64 }],
     biomes: terrain.flatMap(t => (t.biome ? [t.biome] : [])),
   };
 };
@@ -479,7 +485,36 @@ const WispBubble = ({ text, onDone }: { text: string; onDone: () => void }) => {
   );
 };
 
-type ProPhase = 'wait' | 'appear' | 'speak' | 'ready' | 'leave' | 'path' | 'arrive';
+type ProPhase = 'wait' | 'appear' | 'speak' | 'ready' | 'walk' | 'leave' | 'path' | 'arrive';
+
+/** El prólogo según lo guardado (ver lib/prologue): "intro", "stage:N[:walk]", "farewell:N" */
+type ProState = { kind: 'intro' } | { kind: 'stage'; n: number; walk: boolean } | { kind: 'farewell'; n: number };
+const parsePrologue = (raw: string | null): ProState | null => {
+  if (!raw) return null;
+  if (raw === 'intro') return { kind: 'intro' };
+  const [kind, n, walk] = raw.split(':');
+  if (kind === 'stage') return { kind: 'stage', n: Number(n), walk: walk === 'walk' };
+  if (kind === 'farewell') return { kind: 'farewell', n: Number(n) };
+  return null;
+};
+
+const GROUND_RANK = ['6', 'J', 'Q', 'K', 'JKR', 'A'];
+/** La carta de una lección, tirada en el suelo de su parada (la de ahora brilla y respira) */
+const GroundCard = ({ at, rank, current, still }: { at: Pt; rank: string; current: boolean; still: boolean }) => (
+  <div className="absolute pointer-events-none" style={{ left: at.x - 8, top: at.y - 16, zIndex: 2 }}>
+    {current && !still && (
+      <span className="absolute anim-pulse-soft rounded-full" style={{ left: -12, top: -6, width: 40, height: 34,
+        background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,194,51,0.35) 0%, transparent 70%)' }} />
+    )}
+    <motion.div className="relative flex items-center justify-center font-display rounded-[2px]"
+      style={{ width: 16, height: 22, rotate: rank === 'A' ? 8 : -10, background: 'var(--ink-cream)', color: 'var(--ink-black)',
+        fontSize: rank.length > 1 ? 7 : 11, boxShadow: current ? '0 0 0 1px var(--ink-black), 0 0 8px 2px rgba(255,194,51,0.6)' : '0 0 0 1px var(--ink-black)',
+        opacity: current ? 1 : 0.55 }}
+      animate={current && !still ? { y: [0, -2, 0] } : undefined} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>
+      {rank}
+    </motion.div>
+  </div>
+);
 
 const Announce = ({ title, sub, tone }: { title: string; sub: string; tone: 'gold' | 'crimson' }) => {
   const rgb = tone === 'gold' ? '232,182,74' : '255,31,75';
@@ -523,9 +558,12 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   const selected = useUiStore(s => s.menuBoss);
   const scroller = useRef<HTMLDivElement>(null);
   const camera = useRef(0);
-  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin, thickets, trailhead } = useMemo(() => geometry(rect.w), [rect.w]);
-  // Prólogo (la primera vez): el ente del claro (se decide al montar en el navegador)
-  const [pro, setPro] = useState<{ kind: Prologue; phase: ProPhase } | null>(null);
+  const { contentH, nodes, castle: castlePt, road, clearings, keepOut, biomes, origin, thickets, trailhead, walkStops } = useMemo(() => geometry(rect.w), [rect.w]);
+  // Prólogo (la primera vez): el paseo con el ente (lo guardado, y la fase de su escena)
+  const proRaw = useSyncExternalStore(subscribePrologue, () => (replay === null ? getPrologue() : null), () => null);
+  const proState = useMemo(() => parsePrologue(proRaw), [proRaw]);
+  const [proPhase, setProPhase] = useState<ProPhase>('wait');
+  const pro = proState && { ...proState, phase: proPhase };
   const lifeKeepOut = useMemo(() => [...keepOut, { x: castlePt.x, y: castlePt.y - 50, rx: rect.w, ry: 170 }], [keepOut, castlePt, rect.w]);
 
   // Lo que el mapa enseña: hasta dónde ya se contó, y lo nuevo por contar
@@ -567,13 +605,8 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
   // Al abrir: la cámara en el jefe a derrotar (o en el Castillo); con algo por contar,
   // en el último vencido de antes
   useLayoutEffect(() => {
-    const prologue = replay === null ? getPrologue() : null;
-    if (prologue) {
-      setPro({ kind: prologue, phase: 'wait' });
-      lookAt(origin.y - 30, false);
-      setMenuBoss(0);
-      return;
-    }
+    // El prólogo lleva su propia cámara (ver más abajo)
+    if (replay === null && getPrologue()) { setMenuBoss(0); return; }
     const defeated = replay ?? getProgress().defeated;
     const seen = replay !== null ? replay - 1 : getMapSeen(defeated);
     const pending = revealSteps(seen, defeated);
@@ -590,32 +623,56 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rect.w, rect.h]);
 
-  // El prólogo: el ente aparece y habla; a la vuelta del tutorial se despide, se va y
-  // el sendero avanza hasta el Forastero
-  const proKind = pro?.kind;
-  useEffect(() => {
-    if (!proKind) return;
+  // --- EL PRÓLOGO: el paseo con el ente ---
+  // Dónde está el ente: en el claro (-1) o en una parada del paseo
+  const wispAt = (n: number) => (n < 0 ? { x: origin.x + 30, y: origin.y - 2 } : { x: walkStops[n].x + 24, y: walkStops[n].y - 2 });
+  // El tramo k del sendero lleva a la parada k (el 7, de la última al Forastero)
+  const walkPts = useMemo(() => [trailhead, ...walkStops, nodes[0]], [trailhead, walkStops, nodes]);
+  const proTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = (ms: number, fn: () => void) => { proTimers.current.push(setTimeout(fn, ms)); };
+  // Cada vez que cambia lo guardado (seguir, lección hecha, ya llegó…), empieza su escena
+  useLayoutEffect(() => {
+    proTimers.current.forEach(clearTimeout);
+    proTimers.current = [];
+    if (!proState) return;
     onRevealing?.(true);
-    if (proKind === 'farewell') useUiStore.getState().setCinematic(true);
-    // En la entrada, el humo espera a que toques (ver summon); en la despedida, vuelve solo
-    const timers = proKind === 'intro' ? [] : [
-      setTimeout(() => { setPro(p => p && { ...p, phase: 'appear' }); playSfx('reveal', 0.5, 0.7); }, 500),
-      setTimeout(() => { setPro(p => p && { ...p, phase: 'speak' }); playSfx('pop', 0.5, 0.7); }, 2300),
-    ];
+    if (proState.kind === 'intro') {
+      // El humo espera a que toques (ver summon)
+      setProPhase('wait');
+      lookAt(origin.y - 30, false);
+    } else if (proState.kind === 'stage' && proState.walk) {
+      // A andar: el ente va de donde estaba a la parada nueva y el sendero se dibuja
+      setProPhase('walk');
+      lookAt(wispAt(proState.n - 1).y, false);
+      later(300, () => { lookAt(walkStops[proState.n].y); playSfx('whoosh', 0.4, 0.8); });
+      later(2600, () => walked());
+    } else if (proState.kind === 'stage') {
+      // En la parada: habla (y luego, a jugar)
+      setProPhase('speak');
+      lookAt(walkStops[proState.n].y, false);
+      playSfx('pop', 0.5, 0.7);
+    } else {
+      // La despedida: vuelve entre humo, habla, se va y el camino se abre
+      useUiStore.getState().setCinematic(true);
+      setProPhase('wait');
+      lookAt(wispAt(proState.n).y, false);
+      later(500, () => { setProPhase('appear'); playSfx('reveal', 0.5, 0.7); });
+      later(2300, () => { setProPhase('speak'); playSfx('pop', 0.5, 0.7); });
+    }
     return () => {
-      timers.forEach(clearTimeout);
+      proTimers.current.forEach(clearTimeout);
       useUiStore.getState().setCinematic(false);
       onRevealing?.(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proKind]);
+  }, [proRaw]);
   // Tocar el humo (o cualquier sitio): el humo se abre y aparece el ente; luego habla
   const summon = () => {
     if (pro?.kind !== 'intro' || pro.phase !== 'wait') return;
-    setPro(p => p && { ...p, phase: 'appear' });
+    setProPhase('appear');
     playSfx('reveal', 0.6, 0.6);
     playSfx('whoosh', 0.4, 0.6);
-    setTimeout(() => { setPro(p => p && { ...p, phase: 'speak' }); playSfx('pop', 0.5, 0.7); }, 2400);
+    later(2400, () => { setProPhase('speak'); playSfx('pop', 0.5, 0.7); });
   };
   // (el toque llega desde la capa del menú que bloquea el input durante las escenas)
   const summonRef = useRef(summon);
@@ -624,22 +681,35 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
     onProloguePoke(() => summonRef.current());
     return () => onProloguePoke(null);
   }, []);
-  // Al terminar de hablar: en la entrada, espera a ESCUCHAR; en la despedida, se abre el camino
+  // Al terminar de hablar: en la entrada y en las paradas, espera a la acción principal
+  // (SEGUIR, JUGAR, ENFRENTARSE); en la despedida, se va y se abre el camino
   const spoken = () => {
-    if (pro?.kind === 'intro') { setPro(p => p && { ...p, phase: 'ready' }); onRevealing?.(false); return; }
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
-    at(1500, () => { setPro(p => p && { ...p, phase: 'leave' }); playSfx('whoosh', 0.5, 0.8); });
-    at(2600, () => { setPro(p => p && { ...p, phase: 'path' }); playSfx('whoosh', 0.5, 1.2); lookAt((origin.y + nodes[0].y) / 2); });
-    at(4600, () => { setPro(p => p && { ...p, phase: 'arrive' }); lookAt(nodes[0].y); playSfx('flip', 0.7, 0.9); playSfx('sparkle', 0.6, 1.2); haptic('stamp'); });
-    at(6400, () => {
+    if (pro?.kind !== 'farewell') { setProPhase('ready'); onRevealing?.(false); return; }
+    later(1500, () => { setProPhase('leave'); playSfx('whoosh', 0.5, 0.8); });
+    later(2600, () => { setProPhase('path'); playSfx('whoosh', 0.5, 1.2); lookAt((wispAt(pro.n).y + nodes[0].y) / 2); });
+    later(4600, () => { setProPhase('arrive'); lookAt(nodes[0].y); playSfx('flip', 0.7, 0.9); playSfx('sparkle', 0.6, 1.2); haptic('stamp'); });
+    later(6400, () => {
       finishPrologue();
-      setPro(null);
       setMenuBoss(0);
       useUiStore.getState().setCinematic(false);
       onRevealing?.(false);
     });
   };
+  // Qué tramos del sendero están encendidos y cuál se dibuja ahora
+  const walkLit = (k: number) => {
+    if (!pro) return true;
+    if (pro.kind === 'intro') return false;
+    if (pro.kind === 'stage') return k < pro.n || (k === pro.n && !pro.walk);
+    return k <= pro.n || pro.phase === 'path' || pro.phase === 'arrive';
+  };
+  const walkDrawing = (k: number) => (pro?.kind === 'stage' && pro.walk && k === pro.n)
+    || (pro?.kind === 'farewell' && pro.phase === 'path' && k > pro.n);
+  // Dónde está el ente ahora (andando: de la parada anterior a la nueva)
+  const wispNow = pro ? wispAt(pro.kind === 'intro' ? -1 : pro.n) : null;
+  const wispFrom = pro?.kind === 'stage' && pro.walk ? wispAt(pro.n - 1) : null;
+  // Lo que dice en cada momento
+  const wispLine = !pro ? '' : pro.kind === 'intro' ? t.wisp_intro : pro.kind === 'farewell' ? t.wisp_farewell
+    : t[`wisp_st_${pro.n}` as keyof Translations];
 
   // Las revelaciones, paso a paso, con la cámara siguiendo
   useEffect(() => {
@@ -759,9 +829,19 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
 
           {/* El claro de luna, el ente y el sendero que nace en él */}
           <MoonClearing at={origin} still={lowPower} />
-          <Trail a={trailhead} b={nodes[0]} lit={!pro || pro.phase === 'path' || pro.phase === 'arrive'} drawing={pro?.phase === 'path'} />
-          {pro && pro.phase !== 'path' && pro.phase !== 'arrive' && (
-            <div className="absolute" style={{ left: origin.x + 30, top: origin.y - 2, width: 0, height: 0, zIndex: 6 }}>
+          {/* El paseo: los tramos del sendero, parada a parada, hasta el Forastero */}
+          {walkPts.slice(1).map((b, k) => (
+            <Trail key={`walk${k}`} a={walkPts[k]} b={b} lit={walkLit(k)} drawing={walkDrawing(k)} />
+          ))}
+          {/* Las cartas que esperan en el suelo de cada parada (la de ahora brilla) */}
+          {pro && GROUND_RANK.map((rank, k) => (pro.kind === 'intro' || (pro.kind === 'stage' && k >= pro.n)) && (
+            <GroundCard key={rank} at={walkStops[k]} rank={rank} current={pro.kind === 'stage' && k === pro.n} still={lowPower} />
+          ))}
+          {/* El ente (andando, de una parada a otra) */}
+          {pro && wispNow && pro.phase !== 'path' && pro.phase !== 'arrive' && (
+            <motion.div className="absolute" style={{ width: 0, height: 0, zIndex: 6 }}
+              initial={wispFrom ? { left: wispFrom.x, top: wispFrom.y } : { left: wispNow.x, top: wispNow.y }}
+              animate={{ left: wispNow.x, top: wispNow.y }} transition={{ duration: 2.2, ease: 'easeInOut' }}>
               {/* El humillo: en la entrada espera a que toques; luego se abre */}
               {(pro.phase === 'wait' || pro.phase === 'appear') && <WispSmoke parting={pro.phase === 'appear'} still={lowPower} />}
               {pro.phase !== 'wait' && <Wisp leaving={pro.phase === 'leave'} />}
@@ -776,10 +856,10 @@ export const SagaMap = ({ rect, safeTop = 0, safeBottom = 0, onRevealing, replay
               </AnimatePresence>
               <AnimatePresence>
                 {(pro.phase === 'speak' || pro.phase === 'ready') && (
-                  <WispBubble key={pro.kind} text={pro.kind === 'intro' ? t.wisp_intro : t.wisp_farewell} onDone={spoken} />
+                  <WispBubble key={proRaw} text={wispLine} onDone={spoken} />
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           )}
 
           {/* El sendero */}

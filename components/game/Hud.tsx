@@ -18,8 +18,10 @@ import { Card } from './Card';
 import { deckSummary, forecastFight, sealDeckSummary } from './forecast';
 import { ForestFigure } from './ForestFigure';
 import { BossFigure } from './BossFigure';
+import { WispFigure } from './WispFigure';
 import { Flinch } from './Juice';
 import { BOSSES } from '@/lib/bosses';
+import { SCRIPTS } from '@/lib/tutorial';
 import { haptic, playSfx } from '@/lib/sounds';
 
 // --- PIEZAS DEL HUD ---
@@ -185,11 +187,13 @@ export const RivalPanel = () => {
   // Durante la fase 2 del Soberano el panel enseña las vidas que anima la cinemática
   const shown = useUiStore(s => s.rivalLivesShown);
   const lives = shown ?? realLives;
-  // El boss de esta partida (en el tutorial, un rival sin nombre)
+  // El boss de esta partida (en el tutorial, el ente)
   // En el Bosque, quien salió de entre los árboles (en el color de su dificultad)
   const forest = useGameStore(s => s.forest);
   const boss = useGameStore(s => (s.tutorialStep === null && !s.forest ? BOSSES[s.bossIndex] : null));
-  const name = forest ? t[`forest_${forest.id}` as keyof typeof t] : boss ? t[`boss_${boss.id}` as keyof typeof t] : t.rival;
+  // En el tutorial juegas contra el ente del prólogo
+  const wisp = useGameStore(s => s.tutorialStep !== null);
+  const name = forest ? t[`forest_${forest.id}` as keyof typeof t] : boss ? t[`boss_${boss.id}` as keyof typeof t] : wisp ? t.wisp_name : t.rival;
   // En el Castillo: jefe evolucionado y el piso por el que vas
   const castle = useGameStore(s => s.castle);
   const floor = castle && (
@@ -202,7 +206,8 @@ export const RivalPanel = () => {
     return (
       <>
         <CompactPanel label={forest ? <Flinch><ForestFigure id={forest.id} tier={forest.tier} height={22} mode="shadow" /></Flinch>
-          : boss ? <Flinch><BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /></Flinch> : t.rival} owner="opponent" rect={rect}>
+          : boss ? <Flinch><BossFigure id={boss.id} height={22} dark glow={false} evolved={!!castle} /></Flinch>
+            : wisp ? <Flinch><WispFigure /></Flinch> : t.rival} owner="opponent" rect={rect}>
           <Lives lives={lives} max={maxLives} owner="opponent" />
           <RivalHand count={handCount} />
           {floor}
@@ -216,6 +221,7 @@ export const RivalPanel = () => {
       <Panel title={<span className="block overflow-hidden text-ellipsis" style={{ fontSize: name.length > Math.floor((rect.w - 10) / 6) ? 8 : 10 }}>{name}</span>} band={TEAM_BAND.opponent} titleClassName={TEAM_BAND_TEXT.opponent} className="absolute" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} bodyClassName="px-[4px] pt-[3px] flex flex-col gap-[2px]">
         {boss && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><BossFigure id={boss.id} height={26} evolved={!!castle} /></Flinch></div>}
         {forest && <div className="absolute" style={{ right: 3, bottom: 2 }}><Flinch><ForestFigure id={forest.id} tier={forest.tier} height={26} /></Flinch></div>}
+        {wisp && <div className="absolute" style={{ right: 4, bottom: 4 }}><Flinch><WispFigure /></Flinch></div>}
         <Lives lives={lives} max={maxLives} owner="opponent" />
         {/* La mano y el piso del Castillo en una fila; debajo, los dos mazos (cabe todo en 62 px) */}
         <div className="flex items-center gap-[4px]"><RivalHand count={handCount} />{floor}</div>
@@ -235,8 +241,10 @@ const DangerChip = ({ lives }: { lives: number }) => {
   const { playerBoard, opponentBoard, placement } = useGameStore(useShallow(s => ({
     playerBoard: s.player.board, opponentBoard: s.opponent.board, placement: s.phase === 'placement',
   })));
+  // (en las lecciones del prólogo el ente no hace daño: no hay aviso)
+  const lesson = useGameStore(s => s.tutorialStep !== null && !!SCRIPTS[s.tutorialId].lesson);
   const { taken } = useMemo(() => forecastFight(playerBoard, opponentBoard), [playerBoard, opponentBoard]);
-  const total = taken.sure + taken.maybe;
+  const total = lesson ? 0 : taken.sure + taken.maybe;
   const lethal = taken.sure >= lives || total >= lives;
   const warn = placement && total > 0 && lethal;
   useEffect(() => { if (warn) haptic('danger'); }, [warn]);

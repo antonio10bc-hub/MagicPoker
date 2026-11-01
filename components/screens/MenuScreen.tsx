@@ -7,7 +7,8 @@ import { playSound } from '@/lib/sounds';
 import { motion } from 'framer-motion';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { consumeFirstPlay } from '@/lib/stats';
-import { getPrologue, pokePrologue, subscribePrologue } from '@/lib/prologue';
+import { DUEL_STAGE, getPrologue, pokePrologue, startWalk, subscribePrologue } from '@/lib/prologue';
+import { LESSONS } from '@/lib/tutorial';
 import { loadGame } from '@/lib/savegame';
 import { isDebug } from '@/lib/debug';
 import { isForestUnlocked } from '@/lib/forest';
@@ -123,7 +124,10 @@ export const MenuScreen = () => {
     // La primera vez se juega el tutorial guiado (si no se completó antes)
     const first = consumeFirstPlay();
     // Prólogo: ESCUCHAR al ente es el tutorial
-    if (prologue === 'intro' || (first && !isTutorialDone())) useGameStore.getState().startTutorial();
+    // Prólogo: seguir al ente, jugar la lección de la parada o el duelo con él
+    if (prologue === 'intro') startWalk();
+    else if (proStage !== null) useGameStore.getState().startTutorial(proStage >= DUEL_STAGE ? 'duel' : LESSONS[proStage]);
+    else if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
     else if (castleSel) {
       // Castillo: si quedó una mejora por elegir, primero eso
       // Subida nueva tras haberlo conquistado: antes, los desafíos
@@ -173,7 +177,11 @@ export const MenuScreen = () => {
   // La primera vez, el ente del claro: la acción es escucharle (el tutorial)
   const prologue = useSyncExternalStore(subscribePrologue, getPrologue, () => null);
   const tutorialDone = useSyncExternalStore(noSubscribe, isTutorialDone, () => true);
-  const cta = prologue === 'intro' ? { title: t.listen, sub: t.listen_sub } : castleSel
+  // (en una parada del paseo: su número)
+  const proStage = prologue?.startsWith('stage:') ? Number(prologue.split(':')[1]) : null;
+  const cta = prologue === 'intro' ? { title: t.pro_follow, sub: t.pro_follow_sub }
+    : proStage !== null ? (proStage >= DUEL_STAGE ? { title: t.pro_face, sub: t.pro_follow_sub } : { title: t.pro_play, sub: t[`pro_card_${proStage}` as keyof Translations] })
+      : castleSel
     ? castleRun
       ? { title: t.castle_continue_title, sub: (castleSave ? t.castle_resume_sub : t.castle_floor_sub).replace('{n}', String(castleRun.stage + 1)).replace('{total}', total) }
       : castleState.checkpoint

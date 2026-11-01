@@ -19,7 +19,8 @@ import { endStamps, newMatchTrack, roundStamps, StampId } from '@/lib/stamps';
 import { clearGame, loadGame, saveGame } from '@/lib/savegame';
 import { useUiStore } from '@/store/useUiStore';
 import { track as trackEvent } from '@/lib/analytics';
-import { applyRivalMoves, markTutorialDone, stepCard, TUTORIAL_OPENINGS, TUTORIAL_STEPS, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
+import { applyRivalMoves, markTutorialDone, stepCard, stepsOf, SCRIPTS, TutorialId, tutorialOpening, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
+import { completeLesson } from '@/lib/prologue';
 import { CARDS_DRAWN_PER_ROUND, JOKER_DRAW_BONUS, STARTING_HAND_SIZE, STARTING_LIVES, TIMINGS } from '@/lib/constants';
 
 interface GameState {
@@ -57,6 +58,8 @@ interface GameState {
   sealFx: { id: number; events: SealEvent[] } | null;
   /** Paso del tutorial guiado (null = partida normal) */
   tutorialStep: number | null;
+  /** Qué guion se juega (la partida completa, una lección del prólogo o el duelo) */
+  tutorialId: TutorialId;
   /** Cara o cruz al empezar: quién abre la partida (se lanza tras la presentación) */
   coin: { id: number; opener: Owner } | null;
   /** Quién abre la ronda en curso (la 1.ª, la moneda; luego, quien tiene más vidas) */
@@ -73,7 +76,7 @@ interface GameState {
   /** Retoma la partida guardada (si la hay) */
   resumeGame: () => boolean;
   /** Partida guionizada que enseña a jugar */
-  startTutorial: () => void;
+  startTutorial: (id?: TutorialId) => void;
 
   exitToMenu: () => void;
   /** Juega una carta en un hueco (el comodín de sello necesita saber qué sello es) */
@@ -157,6 +160,7 @@ const initialMatchState = () => ({
   sealFx: null,
   spyFx: null,
   tutorialStep: null,
+  tutorialId: 'full' as TutorialId,
   player: createPlayerState(),
   opponent: createPlayerState(),
 });
@@ -319,11 +323,11 @@ export const useGameStore = create<GameState>((set, get) => {
     });
   },
 
-  startTutorial: () => {
+  startTutorial: (id = 'full') => {
     cancelScheduled();
-    trackEvent('tutorial_started');
+    trackEvent('tutorial_started', { script: id });
     playSound('shuffle', 0.6);
-    set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, ...tutorialPlayers() });
+    set({ ...initialMatchState(), screen: 'game', phase: 'placement', tutorialStep: 0, tutorialId: id, ...tutorialPlayers(id) });
   },
 
   resumeGame: () => {
@@ -354,7 +358,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   nextTutorialNote: () => {
     const { tutorialStep } = get();
-    if (tutorialStep !== null && TUTORIAL_STEPS[tutorialStep]?.kind === 'note') set({ tutorialStep: tutorialStep + 1 });
+    if (tutorialStep !== null && stepsOf(get().tutorialId)[tutorialStep]?.kind === 'note') set({ tutorialStep: tutorialStep + 1 });
   },
 
   exitToMenu: () => {
@@ -371,7 +375,7 @@ export const useGameStore = create<GameState>((set, get) => {
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
 
     // Tutorial: solo vale la carta y el hueco que pide el paso
-    const step = tutorialStep !== null ? TUTORIAL_STEPS[tutorialStep] : undefined;
+    const step = tutorialStep !== null ? stepsOf(get().tutorialId)[tutorialStep] : undefined;
     if (tutorialStep !== null && (step?.kind !== 'play' || step.slot !== slotIndex || stepCard(player.hand, step)?.id !== cardId)) return;
 
     const placed = playCardToSlot(player, cardId, slotIndex, true, wildSeal);
@@ -429,7 +433,7 @@ export const useGameStore = create<GameState>((set, get) => {
     if (phase !== 'placement' || turn !== 'player' || player.isPassed) return;
 
     if (tutorialStep !== null) {
-      const step = TUTORIAL_STEPS[tutorialStep];
+      const step = stepsOf(get().tutorialId)[tutorialStep];
       if (step?.kind !== 'stand') return;
       playSound('click');
       set({ player: { ...player, isPassed: true }, turn: 'opponent', tutorialStep: tutorialStep + 1 });
@@ -506,9 +510,11 @@ export const useGameStore = create<GameState>((set, get) => {
 
       // 3. Se calcula el choque y se marcan las cartas afectadas
       schedule(() => {
-        const { player, opponent, tutorialStep, roundNumber } = get();
+        const { player, opponent, tutorialStep, roundNumber, tutorialId } = get();
         const tutorial = tutorialStep !== null;
-        const result = calculateCombat(player.board, opponent.board, tutorial ? tutorialRng(player.board, roundNumber) : undefined);
+        const fight = calculateCombat(player.board, opponent.board, tutorial ? tutorialRng(player.board, roundNumber, tutorialId) : undefined);
+        // En las lecciones del prólogo el ente enseña sin hacerte daño
+        const result = tutorial && SCRIPTS[tutorialId].lesson ? { ...fight, playerDamageTaken: 0, playerEmptySlotsHit: {} } : fight;
 
         if (!tutorial) {
           recordRound(result.cardsDestroyedCount, result.opponentDamageTaken, result.playerDamageTaken);
@@ -542,7 +548,15 @@ export const useGameStore = create<GameState>((set, get) => {
     if (phase !== 'combat-reveal') return;
     const tutorial = tutorialStep !== null;
     // En el tutorial, "Continuar" cierra el repaso de la pelea
-    if (tutorial && TUTORIAL_STEPS[tutorialStep]?.kind === 'review') set({ tutorialStep: tutorialStep + 1 });
+    if (tutorial && stepsOf(get().tutorialId)[tutorialStep]?.kind === 'review') set({ tutorialStep: tutorialStep + 1 });
+    // Lección del prólogo terminada: de vuelta al mapa, a la siguiente parada del paseo
+    if (tutorial && SCRIPTS[get().tutorialId].lesson && tutorialStep + 1 >= stepsOf(get().tutorialId).length) {
+      cancelScheduled();
+      playSound('click');
+      completeLesson();
+      set({ ...initialMatchState(), screen: 'menu' });
+      return;
+    }
 
     playSound('click');
 
@@ -612,7 +626,7 @@ export const useGameStore = create<GameState>((set, get) => {
       player: drawRound(nextPlayer, CARDS_DRAWN_PER_ROUND, true),
       // En el tutorial el rival puede abrir la ronda (Rey y Reina a la vista)
       opponent: tutorial
-        ? applyRivalMoves(drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false), TUTORIAL_OPENINGS[roundNumber + 1])
+        ? applyRivalMoves(drawCards(nextOpponent, CARDS_DRAWN_PER_ROUND, false), tutorialOpening(get().tutorialId, roundNumber + 1))
         : drawRound(nextOpponent, CARDS_DRAWN_PER_ROUND, false),
     });
     if (opener === 'opponent') schedule(get().opponentTurnAction, RIVAL_OPENS_MS);

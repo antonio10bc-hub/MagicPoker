@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
-import { markTutorialDone, stepCard, TUTORIAL_STEPS, TutorialStep } from '@/lib/tutorial';
+import { markTutorialDone, stepCard, stepsOf, TutorialStep } from '@/lib/tutorial';
 import { useGameLayout } from '@/components/pixel/Stage';
 import { PxButton } from '@/components/pixel/ui';
 import { CARD_SIZE } from '@/theme/tokens';
@@ -21,8 +21,8 @@ export interface TutorialGate {
 }
 
 export const useTutorialGate = (): TutorialGate => {
-  const { stepIndex, hand } = useGameStore(useShallow(s => ({ stepIndex: s.tutorialStep, hand: s.player.hand })));
-  const step = stepIndex !== null ? TUTORIAL_STEPS[stepIndex] : undefined;
+  const { stepIndex, hand, id } = useGameStore(useShallow(s => ({ stepIndex: s.tutorialStep, hand: s.player.hand, id: s.tutorialId })));
+  const step = stepIndex !== null ? stepsOf(id)[stepIndex] : undefined;
   return {
     active: stepIndex !== null,
     step,
@@ -53,11 +53,12 @@ const fitFont = (text: string, textW: number, maxH: number) => {
 export const TutorialCoach = () => {
   const t = useTranslations();
   const { board } = useGameLayout();
-  const { stepIndex, phase, finish, next, exit } = useGameStore(useShallow(s => ({
-    stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, exit: s.exitToMenu,
+  const { stepIndex, phase, finish, next, exit, id } = useGameStore(useShallow(s => ({
+    stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, exit: s.exitToMenu, id: s.tutorialId,
   })));
   if (stepIndex === null || phase === 'end') return null;
-  const step = TUTORIAL_STEPS[stepIndex];
+  const steps = stepsOf(id);
+  const step = steps[stepIndex];
   if (!step) return null;
   // Los repasos solo se ven con el resultado de la pelea a la vista
   if (step.kind === 'review' && phase !== 'combat-reveal') return null;
@@ -91,7 +92,7 @@ export const TutorialCoach = () => {
         {/* Saltar: pestaña encima del cartel (no ocupa sitio dentro), con el paso por el que vas */}
         <button className="absolute cursor-pointer px-[4px] rounded-t-[3px]" data-skip
           style={{ right: 6, top: -10, height: 10, fontSize: 8, lineHeight: '10px', color: 'var(--ink-teal)', background: 'rgba(11,13,12,0.95)' }}
-          onClick={() => { playSound('click'); markTutorialDone(); exit(); }}>{stepIndex + 1}/{TUTORIAL_STEPS.length} · {t.tut_skip}</button>
+          onClick={() => { playSound('click'); markTutorialDone(); exit(); }}>{stepIndex + 1}/{steps.length} · {t.tut_skip}</button>
         <span className={clsx('text-outline', blocking && 'flex-1')} style={{ fontSize: font, lineHeight: `${font}px` }}>{text}</span>
         {blocking && (
           <PxButton tone="green" className="h-[15px] shrink-0 px-[5px]" data-coach-next
