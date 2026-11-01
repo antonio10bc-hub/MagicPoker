@@ -8,7 +8,7 @@ import { forecastFight } from '@/components/game/forecast';
 import { applyRivalMoves, LESSONS, stepCard, stepsOf, TutorialId, tutorialOpening, tutorialPlayers, tutorialRng } from '@/lib/tutorial';
 
 /** Reproduce el flujo de la tienda con el guion del tutorial */
-const playTutorial = (id: TutorialId = 'full') => {
+const playTutorial = (id: TutorialId = 'duel') => {
   let { player, opponent } = tutorialPlayers(id);
   let round = 1;
   const lives: [number, number][] = [];
@@ -51,22 +51,6 @@ const playTutorial = (id: TutorialId = 'full') => {
 };
 
 describe('tutorial', () => {
-  it('follows the story: lose lives to empty slots, specials, the Ace saves you, you win', () => {
-    const { lives, result, dangerAtRound3 } = playTutorial();
-    expect(dangerAtRound3).toBe(true);
-    // [tus vidas, vidas del rival] tras cada pelea
-    expect(lives).toEqual([[2, 3], [2, 1], [2, 1], [2, 0]]);
-    expect(result).toBe('win');
-  });
-
-  it('the review steps match the fights and every play step is reachable', () => {
-    const TUTORIAL_STEPS = stepsOf('full');
-    expect(TUTORIAL_STEPS.filter(s => s.kind === 'stand')).toHaveLength(4);
-    // La última pelea no tiene repaso: la cuenta la pantalla final
-    expect(TUTORIAL_STEPS.filter(s => s.kind === 'review')).toHaveLength(3);
-    expect(TUTORIAL_STEPS.filter(s => s.kind === 'note')).toHaveLength(1);
-    expect(TUTORIAL_STEPS).toHaveLength(14);
-  });
   it('every prologue lesson is one turn that teaches its card (and its hits on your empty slots)', () => {
     // Tras la pelea de cada lección: lo que queda en cada mesa y tus vidas
     const expected: Record<string, { rivalLeft: number; mineLeft: number; lives: number }> = {

@@ -262,7 +262,7 @@ const SettingsModal = () => {
           <PxButton size="md" onClick={() => {
             playSound('click');
             useUiStore.getState().closeModal();
-            useGameStore.getState().startTutorial();
+            useGameStore.getState().startTutorial('duel');
           }}>{t.replay_tutorial}</PxButton>
           {IS_DESKTOP && <QuitGame />}
         </Section>

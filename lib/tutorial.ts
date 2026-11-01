@@ -6,13 +6,7 @@
 //    el Príncipe, la Reina, el Rey, el Joker y el As). Sus cartas también te golpean
 //    (así se entiende), y al cerrar el repaso de la pelea se vuelve al mapa.
 //  · El duelo final contra el ente: una ronda guiada (los huecos vacíos castigan) y
-//    luego libre: lo cierras tú.
-//  · La partida completa de antes ("full"), para Repetir tutorial desde Ajustes:
-//      Ronda 1 · cartas normales: cara a cara gana el más alto; contra un hueco vacío,
-//                daño directo. El rival castiga tus huecos vacíos.
-//      Ronda 2 · el Joker (no ataca, roba 2) y el Príncipe (golpea uno al azar).
-//      Ronda 3 · el rival enseña Rey y Reina: parece que pierdes… y el As lo anula todo.
-//      Ronda 4 · un golpe directo y ganas.
+//    luego libre: lo cierras tú. Es también lo que juega Ajustes → Repetir tutorial.
 import { BoardSlot, Card, Owner, PlayerState, Rank, Rng } from '@/types';
 import { getTargetIndices, playCardToSlot, RANKS } from '@/lib/game-utils';
 import { STARTING_LIVES } from '@/lib/constants';
@@ -35,30 +29,9 @@ export type TutorialStep =
   /** A partir de aquí, libre: juegas como quieras (el rival también) hasta el final */
   | { kind: 'free'; text: Text };
 
-const FULL_STEPS: TutorialStep[] = [
-  // Ronda 1: choque cara a cara, golpe directo y huecos amenazados
-  { kind: 'play', rank: '9', slot: 1, text: 'tut_play_9', rival: [{ rank: '6', slot: 1 }] },
-  { kind: 'play', rank: '7', slot: 3, text: 'tut_play_7', rival: [{ rank: '4', slot: 0 }] },
-  { kind: 'stand', text: 'tut_stand', rival: [{ rank: '3', slot: 2 }] },
-  { kind: 'review', text: 'tut_review_1' },
-  // Ronda 2: Joker y Príncipe
-  { kind: 'play', rank: 'JOKER', slot: 0, text: 'tut_play_joker' },
-  // El Príncipe en dos pasos: primero qué hace, luego dónde ponerlo
-  { kind: 'note', text: 'tut_jack_info' },
-  { kind: 'play', rank: 'J', slot: 2, text: 'tut_play_jack' },
-  { kind: 'stand', text: 'tut_stand_2' },
-  { kind: 'review', text: 'tut_review_2' },
-  // Ronda 3: el rival abre con Rey y Reina a la vista… y el As lo anula todo
-  { kind: 'play', rank: 'A', slot: 0, text: 'tut_play_ace' },
-  { kind: 'stand', text: 'tut_stand_3' },
-  { kind: 'review', text: 'tut_review_3' },
-  // Ronda 4: un golpe directo para ganar (el cierre lo cuenta la pantalla final)
-  { kind: 'play', rank: '6', slot: 2, text: 'tut_play_6' },
-  { kind: 'stand', text: 'tut_stand_4' },
-];
 
 // --- LOS GUIONES ---
-export type TutorialId = 'full' | 'number' | 'jack' | 'queen' | 'king' | 'joker' | 'ace' | 'duel';
+export type TutorialId = 'number' | 'jack' | 'queen' | 'king' | 'joker' | 'ace' | 'duel';
 /** Las lecciones del prólogo, en orden (después, el duelo) */
 export const LESSONS: TutorialId[] = ['number', 'jack', 'queen', 'king', 'joker', 'ace'];
 
@@ -128,19 +101,10 @@ export const SCRIPTS: Record<TutorialId, TutorialScript> = {
     player: { hand: ['9', '7', '3'], deck: ['10', '8', 'K', '5', '4', '6', '9', '2'] },
     rival: { hand: ['4', '3'], deck: ['2', '3', '2', '4', '3', '2'], board: [{ rank: '6', slot: 1, faceUp: true }], lives: 2 },
   },
-  full: {
-    steps: FULL_STEPS,
-    player: { hand: ['9', '7', '3'], deck: ['J', 'JOKER', 'A', '2', '10', '6', '8', '5', '4'] },
-    rival: { hand: ['6', '4', '3'], deck: ['K', 'Q', '5', '2', '8', '9', '7'] },
-    openings: { 3: [{ rank: 'K', slot: 2, faceUp: true }, { rank: 'Q', slot: 1, faceUp: true }] },
-    jackTargets: { 2: 2 },
-  },
 };
 
-/** Los pasos de un guion (el de antes, si no se dice) */
-export const stepsOf = (id: TutorialId = 'full') => SCRIPTS[id].steps;
-/** Compatibilidad: los pasos de la partida completa */
-export const TUTORIAL_STEPS = FULL_STEPS;
+/** Los pasos de un guion (el duelo, si no se dice) */
+export const stepsOf = (id: TutorialId = 'duel') => SCRIPTS[id].steps;
 
 const makeCards = (owner: Owner, ranks: Rank[], faceUp: boolean, from: number): Card[] =>
   ranks.map((rank, i) => ({
@@ -162,7 +126,7 @@ const sideState = (owner: Owner, side: Side): PlayerState => ({
   isPassed: false,
 });
 
-export const tutorialPlayers = (id: TutorialId = 'full'): { player: PlayerState; opponent: PlayerState } => ({
+export const tutorialPlayers = (id: TutorialId = 'duel'): { player: PlayerState; opponent: PlayerState } => ({
   player: sideState('player', SCRIPTS[id].player),
   opponent: sideState('opponent', SCRIPTS[id].rival),
 });
@@ -186,7 +150,7 @@ export const stepCard = (hand: Card[], step: TutorialStep | undefined): Card | u
  * Azar de la pelea en el tutorial: el Príncipe elige el objetivo del guion. El resto
  * de cartas no usan el azar.
  */
-export const tutorialRng = (playerBoard: BoardSlot[], round: number, id: TutorialId = 'full'): Rng => {
+export const tutorialRng = (playerBoard: BoardSlot[], round: number, id: TutorialId = 'duel'): Rng => {
   const target = SCRIPTS[id].jackTargets?.[round];
   const jack = playerBoard.find(s => s.card?.rank === 'J');
   if (target === undefined || !jack) return () => 0;

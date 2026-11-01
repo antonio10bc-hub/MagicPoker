@@ -58,7 +58,7 @@ interface GameState {
   sealFx: { id: number; events: SealEvent[] } | null;
   /** Paso del tutorial guiado (null = partida normal) */
   tutorialStep: number | null;
-  /** Qué guion se juega (la partida completa, una lección del prólogo o el duelo) */
+  /** Qué guion se juega (una lección del prólogo o el duelo con el ente) */
   tutorialId: TutorialId;
   /** Cara o cruz al empezar: quién abre la partida (se lanza tras la presentación) */
   coin: { id: number; opener: Owner } | null;
@@ -160,7 +160,7 @@ const initialMatchState = () => ({
   sealFx: null,
   spyFx: null,
   tutorialStep: null,
-  tutorialId: 'full' as TutorialId,
+  tutorialId: 'duel' as TutorialId,
   player: createPlayerState(),
   opponent: createPlayerState(),
 });
@@ -323,7 +323,7 @@ export const useGameStore = create<GameState>((set, get) => {
     });
   },
 
-  startTutorial: (id = 'full') => {
+  startTutorial: (id = 'duel') => {
     cancelScheduled();
     trackEvent('tutorial_started', { script: id });
     playSound('shuffle', 0.6);

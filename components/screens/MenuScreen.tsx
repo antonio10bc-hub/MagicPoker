@@ -127,7 +127,7 @@ export const MenuScreen = () => {
     // Prólogo: seguir al ente, jugar la lección de la parada o el duelo con él
     if (prologue === 'intro') startWalk();
     else if (proStage !== null) useGameStore.getState().startTutorial(proStage >= DUEL_STAGE ? 'duel' : LESSONS[proStage]);
-    else if (first && !isTutorialDone()) useGameStore.getState().startTutorial();
+    else if (first && !isTutorialDone()) useGameStore.getState().startTutorial('duel');
     else if (castleSel) {
       // Castillo: si quedó una mejora por elegir, primero eso
       // Subida nueva tras haberlo conquistado: antes, los desafíos

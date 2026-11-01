@@ -664,23 +664,18 @@ se mueve rápido y una vibración leve a las masas naranjas.
   vacíos) y después libre ("Ahora tú solo. Acaba conmigo."): lo cierras tú. Al ganar (o si
   se salta) el ente se despide entre humo, el sendero se dibuja hasta el Forastero (lejos:
   desde el duelo no se ve) y este llega con su destello. Quien ya había jugado no lo ve.
-- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): varios
-  guiones con las mismas reglas: las lecciones y el duelo del paseo, y la partida
-  completa de siempre (Ajustes → Repetir tutorial). Esa es una partida guionizada
-  de 4 rondas y 14 pasos con las reglas reales que siempre se gana: cartas normales y
-  huecos vacíos → Joker y Príncipe → el rival enseña Rey y Reina y salta "¡PELIGRO!" →
-  el As barre la mesa → un golpe directo y ganas. Cada explicación va dentro del paso
-  que la usa; el Príncipe va en dos (primero qué hace, con "Continuar", y luego dónde
-  ponerlo). Todos los carteles salen en el mismo sitio, la franja central entre las
-  dos filas (se lee mejor), con una pestaña encima con el paso y Saltar ("4/14 · Saltar");
-  los repasos de pelea y esa explicación llevan "Continuar" a la derecha del texto. Al
-  ganar, la pantalla final habla en clave de historia ("Ya estás preparado para conocer a
-  los demás… Te esperan en el camino.") y solo ofrece VOLVER AL CAMINO. Los
-  textos son cortos y la letra (10, 9 u 8 px) se elige para caber en el hueco entre
-  filas de cada móvil. Con el Rey y la Reina a la vista avisa "¡así vas a perder!" y deja
-  claro que el As limpia todo el tablero, también tus cartas. La carta y el hueco que
-  tocan laten con un halo; lo demás queda bloqueado.
-  No cuenta para estadísticas ni sellos. Un test juega el guion entero.
+- **Tutorial guiado** (`lib/tutorial.ts`, `components/game/TutorialCoach.tsx`): las
+  lecciones y el duelo del paseo son guiones con las reglas reales (mazos ordenados, el
+  rival juega lo que dice el guion). Ajustes → Repetir tutorial juega el duelo contra el
+  ente. Todos los carteles salen en el mismo sitio, la franja central entre las dos filas
+  (se lee mejor), con una pestaña encima con el paso y Saltar ("2/3 · Saltar"); los
+  repasos de pelea llevan "Continuar" a la derecha del texto. La carta y el hueco que
+  tocan laten con un halo; lo demás queda bloqueado (en el tramo libre del duelo, nada).
+  Al ganar el duelo, la pantalla final habla en clave de historia ("Ya estás preparado
+  para conocer a los demás… Te esperan en el camino.") y solo ofrece VOLVER AL CAMINO.
+  Los textos son cortos y la letra (10, 9 u 8 px) se elige para caber en el hueco entre
+  filas de cada móvil. No cuenta para estadísticas ni sellos. Los tests juegan cada
+  lección y el duelo.
 - **Partida guardada** (`lib/savegame.ts`): se guarda en cada turno tuyo y el menú
   ofrece "CONTINUAR PARTIDA".
 - **App instalable y sin conexión:** manifiesto, icono (carta naranja que brilla con
