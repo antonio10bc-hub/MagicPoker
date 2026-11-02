@@ -135,7 +135,7 @@ const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: numbe
 //  fierce  · los jefes piensan con la IA difícil desde el primer piso
 //  sealed  · los jefes llevan dos niveles más (más sellos)
 //  short   · empiezas sin tus 2 cartas más flojas (el Joker no cuenta: se queda)
-//  fragile · empiezas con 3 vidas (y 3 de tope)
+//  fragile · empiezas con una vida menos (3 en vez de 4); la vida de más la sigue subiendo
 //  noDeath · sin puntos de guardado: hay que conquistarlo de una tirada, sin caer
 export type ChallengeId = 'noHeal' | 'fierce' | 'sealed' | 'short' | 'fragile' | 'noDeath';
 export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short', 'fragile', 'noDeath'];
