@@ -110,7 +110,7 @@ const StatsModal = () => {
     [t.cards_destroyed, stats.cardsDestroyed],
     [t.lives_taken, stats.livesTaken],
     [t.lives_lost, stats.livesLost],
-    [t.favorite_card, favorite ? `${playedName(t, favorite[0])} ×${favorite[1]}` : '—'],
+    [t.favorite_card, favorite ? `${playedName(t, favorite[0])} (×${favorite[1]})` : '—'],
   ];
   const rows = (items: [string, string | number][]) => items.map(([label, value]) => (
     <div key={label} className="flex justify-between"><span>{label}</span><span className="font-display" style={{ fontSize: 11 }}>{value}</span></div>
@@ -147,7 +147,13 @@ const StatsModal = () => {
             </div>
           )}
         </Section>
-        <Section title={`${t.stamps_title} · ${earnedCount}/${STAMP_IDS.length}`}>
+        <Section title={
+          // El aviso va en pequeño junto al título: así el hueco de abajo es solo para los logros
+          <span className="flex items-baseline justify-between gap-[6px]">
+            <span>{t.stamps_title} · {earnedCount}/{STAMP_IDS.length}</span>
+            <span className="t-micro normal-case text-right" style={{ letterSpacing: 0 }}>{t.stamp_hint}</span>
+          </span>
+        }>
           <div className="grid grid-cols-6 gap-y-[4px] justify-items-center">
             {STAMP_IDS.map((id, i) => (
               <button key={id} aria-label={id} className="cursor-pointer" onClick={() => { playSfx('select', 0.5); setPicked(p => (p === id ? null : id)); }}
@@ -156,16 +162,15 @@ const StatsModal = () => {
               </button>
             ))}
           </div>
-          <div className="mt-[4px] min-h-[24px]">
-            {picked ? (
-              <>
-                <div className={stats.stamps[picked] !== undefined ? 'glow-text' : undefined} style={{ color: stats.stamps[picked] !== undefined ? 'var(--ink-orange)' : 'var(--ink-mint)' }}>
-                  {stampName(t, picked)}
-                </div>
-                <div style={{ color: 'var(--ink-mint)' }}>{stampDesc(t, picked)}</div>
-              </>
-            ) : <div className="t-note">{t.stamp_hint}</div>}
-          </div>
+          {/* El logro tocado: su nombre y cómo se consigue */}
+          {picked && (
+            <div className="mt-[4px]">
+              <div className={stats.stamps[picked] !== undefined ? 'glow-text' : undefined} style={{ color: stats.stamps[picked] !== undefined ? 'var(--ink-orange)' : 'var(--ink-mint)' }}>
+                {stampName(t, picked)}
+              </div>
+              <div style={{ color: 'var(--ink-mint)' }}>{stampDesc(t, picked)}</div>
+            </div>
+          )}
         </Section>
         <Section title={t.records}>{rows(records)}</Section>
         <Section title={t.global}>{rows(globals)}</Section>
