@@ -17,6 +17,7 @@ import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { STAMP_IDS, StampId } from '@/lib/stamps';
 import { ALERT, CHARACTERS, CHECK, CROSS, ICONS, STAR } from '@/components/pixel/sprites';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
+import { BackupModal } from './BackupModal';
 import { BoonsModal, ChallengesModal, CheckpointModal, RunSummaryModal, DebugModal, BestiaryModal, GrimoireModal, DeckEditorModal, PauseModal } from './ExtraModals';
 import { desktop, IS_DESKTOP } from '@/lib/platform';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -45,6 +46,7 @@ export const Modals = () => {
       {modal === 'summary' && <RunSummaryModal key="summary" />}
       {modal === 'debug' && <DebugModal key="debug" />}
       {modal === 'bestiary' && <BestiaryModal key="bestiary" />}
+      {modal === 'backup' && <BackupModal key="backup" />}
     </AnimatePresence>
   );
 };
@@ -264,6 +266,8 @@ const SettingsModal = () => {
             useUiStore.getState().closeModal();
             useGameStore.getState().startTutorial('duel');
           }}>{t.replay_tutorial}</PxButton>
+          {/* Todo el juego en un código: llevárselo a otro navegador o guardarlo aparte */}
+          <PxButton size="md" aria-label="backup" onClick={() => { playSound('click'); useUiStore.getState().openModal('backup'); }}>{t.backup}</PxButton>
           {IS_DESKTOP && <QuitGame />}
         </Section>
       </DialogBody>
