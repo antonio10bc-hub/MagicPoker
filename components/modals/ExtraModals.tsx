@@ -542,7 +542,7 @@ const forestSeals = (a: Archetype) => Object.entries(forestDeckConfig(a).seals) 
 const ForestStat = ({ label, n, icon, glow }: { label: string; n: number; icon: Sprite; glow?: boolean }) => (
   <div className="flex-1 flex flex-col items-center gap-[2px] py-[3px] rounded-[3px]"
     style={{ background: 'rgba(11,13,12,0.45)', boxShadow: glow ? 'inset 0 0 0 1px rgba(255,194,51,0.55), 0 0 8px rgba(255,194,51,0.25)' : 'inset 0 0 0 1px rgba(255,194,51,0.15)' }}>
-    <span className={clsx(glow && 'anim-pulse-soft')} style={{ filter: glow ? 'drop-shadow(0 0 3px rgba(255,194,51,0.9))' : undefined }}>
+    <span className={clsx('h-[9px] flex items-center', glow && 'anim-pulse-soft')} style={{ filter: glow ? 'drop-shadow(0 0 3px rgba(255,194,51,0.9))' : undefined }}>
       <PixelSprite sprite={icon} tint={glow || n > 0 ? INK.amber : INK.teal} />
     </span>
     <span className={clsx('font-display', n > 0 && 'glow-text')} style={{ fontSize: 18, lineHeight: '18px', color: n > 0 ? 'var(--ink-amber)' : 'var(--ink-teal)' }}>{n}</span>

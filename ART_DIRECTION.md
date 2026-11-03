@@ -847,6 +847,14 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   partida se suman pasos (un bajo pellizcado en el 1 y el 3) y un latido sordo; en la
   pelea la caja toca más y el viento sube. Sin la cuerda tensa de los jefes: el ente no
   aprieta. Al acabar el prólogo vuelve la música del menú.
+- **Bestiario del Bosque: tus noches en el Bosque.** Arriba, una placa ámbar bajo una
+  luna: tres cifras grandes en ámbar (Duelos con luna, Racha con una llama que late y un
+  filo que brilla si está viva, Mejor racha con corona) y debajo LOGROS DEL BOSQUE · n/8:
+  los 8 logros del Bosque en sellos ámbar (los de siempre son naranjas), al tocarlos su
+  nombre y cómo se consiguen. Los nuevos: Cazador (racha de 5, huella), Fuego fatuo
+  (racha de 10, llama), Raíces (ganar en las cinco dificultades, pino), Regicida (al
+  Príncipe, la Reina y el Rey, corona), Sin fe (a un renegado, calavera con cuernos) y
+  Noctámbulo (50 duelos, luna); más Sin miedo y Bestiario. También salen en Estadísticas.
 - **Rendimiento del mapa:** el suelo (millones de píxeles) se pinta una vez y se
   reutiliza al volver al menú; en la espesura no se mece ningún árbol y nunca más de 700
   en todo el mapa (cada uno es una pieza animada aparte).
