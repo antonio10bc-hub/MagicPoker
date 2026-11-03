@@ -17,7 +17,7 @@ import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
 import { CastleMap } from '@/components/game/CastleMap';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
-import { Archetype, archetypesOf, forestDeckConfig, ForestState, getForest, recordOf, TIERS } from '@/lib/forest';
+import { Archetype, archetypesOf, forestDeckConfig, ForestState, getForest, REALM_MARKS, REALMS, realmOpen, recordOf, TIERS } from '@/lib/forest';
 import { getStats } from '@/lib/stats';
 import { FOREST_STAMPS, StampId } from '@/lib/stamps';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
@@ -550,6 +550,43 @@ const ForestStat = ({ label, n, icon, glow }: { label: string; n: number; icon: 
   </div>
 );
 
+/** La marca del Bosque: una barra con los tres hitos que abren los reinos (en su color) */
+const ForestMarks = ({ f }: { f: ForestState }) => {
+  const t = useTranslations();
+  const max = REALM_MARKS.renegade;
+  const marks = Math.min(max, f.marks ?? 0);
+  return (
+    <div className="flex flex-col gap-[3px]">
+      <div className="flex items-center justify-between">
+        <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_marks}</span>
+        <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 10 }}>{f.marks ?? 0}</span>
+      </div>
+      <div className="relative h-[6px] rounded-full" style={{ background: 'rgba(11,13,12,0.6)', boxShadow: 'inset 0 0 0 1px rgba(255,194,51,0.25)' }}>
+        <motion.div className="absolute left-0 top-0 bottom-0 rounded-full" style={{ background: 'linear-gradient(to right, #C98A12, var(--ink-amber))', boxShadow: '0 0 6px rgba(255,194,51,0.6)' }}
+          initial={{ width: 0 }} animate={{ width: `${(marks / max) * 100}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} />
+        {REALMS.map(r => {
+          const open = realmOpen(f, r);
+          return (
+            <span key={r} className="absolute flex flex-col items-center" style={{ left: `${(REALM_MARKS[r] / max) * 100}%`, top: -3, transform: 'translateX(-50%)' }}>
+              <span className={clsx('rounded-[1px]', open && 'anim-pulse-soft')} style={{ width: 4, height: 12, background: open ? TIER_INK[r] : 'var(--ink-slate)',
+                boxShadow: open ? `0 0 6px rgba(${TIER_RGB[r]},0.9)` : 'inset 0 0 0 1px rgba(94,122,118,0.6)' }} />
+            </span>
+          );
+        })}
+      </div>
+      <div className="relative h-[16px]">
+        {REALMS.map(r => (
+          <span key={r} className="absolute font-display whitespace-nowrap" style={{ left: `${(REALM_MARKS[r] / max) * 100}%`, transform: r === 'renegade' ? 'translateX(-100%)' : 'translateX(-50%)',
+            fontSize: 7, lineHeight: '8px', textAlign: 'center', color: realmOpen(f, r) ? TIER_INK[r] : 'var(--ink-teal)' }}>
+            {t[`realm_${r}` as keyof Translations]}<br />{REALM_MARKS[r]}
+          </span>
+        ))}
+      </div>
+      <span className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.forest_marks_hint}</span>
+    </div>
+  );
+};
+
 const ForestRecord = ({ f }: { f: ForestState }) => {
   const t = useTranslations();
   const [stats] = useState(getStats);
@@ -569,6 +606,7 @@ const ForestRecord = ({ f }: { f: ForestState }) => {
         <ForestStat label={t.forest_stat_streak} n={f.streak} icon={FLAME} glow={hot} />
         <ForestStat label={t.forest_stat_best} n={f.bestStreak} icon={CROWN_ICON} />
       </div>
+      <ForestMarks f={f} />
       <div className="flex items-center gap-[5px]">
         <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_stamps} · {earned}/{FOREST_STAMPS.length}</span>
         <span className="flex-1 h-[1px]" style={{ background: 'rgba(255,194,51,0.3)' }} />

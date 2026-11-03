@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { Translations, useTranslations } from '@/lib/i18n';
-import { Encounter, getForest, getServerForest, rollEncounter, subscribeForest } from '@/lib/forest';
+import { Encounter, getForest, getServerForest, Realm, realmOpen, rollEncounter, subscribeForest } from '@/lib/forest';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { track as trackEvent } from '@/lib/analytics';
 import { isCollectionUnlocked, isEditorUnlocked } from '@/lib/bosses';
@@ -13,6 +13,7 @@ import { IconButton, PxButton } from '@/components/pixel/ui';
 import { NewDot } from '@/components/pixel/NewDot';
 import { PixelSprite } from '@/components/pixel/PixelSprite';
 import { ICONS, MASK } from '@/components/pixel/sprites';
+import { SCENERY, SceneryId } from '@/components/pixel/scenery';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
 import { AmbientDust } from '@/components/fx/Ambient';
 import { smooth } from './MapTerrain';
@@ -200,6 +201,63 @@ const Eyes = ({ color, rgb, phase }: { color: string; rgb: string; phase: Phase 
   );
 };
 
+// --- LOS REINOS: bosques donde solo sale una dificultad ---
+// Se abren con la marca del Bosque (ver REALMS en lib/forest). Están a los lados del
+// bosque de siempre: las pesadillas a la izquierda (y, más allá, los renegados) y los
+// únicos a la derecha. En el borde, unos ojos del color del reino: al tocarlos, la vista
+// gira hacia allí. Cada reino tiñe el bosque y la niebla de su color, sus ojos (muchos
+// más) son de ese color y tiene su decoración: calaveras, estacas y árboles muertos en las
+// pesadillas; estandartes de oro y braseros en los únicos; cristales y menhires en los
+// renegados.
+
+/** Dónde está cada vista, de izquierda a derecha (el bosque de siempre en el 0) */
+const POS: Record<Realm | 'main', number> = { renegade: -2, nightmare: -1, main: 0, unique: 1 };
+const AT: (Realm | 'main')[] = ['renegade', 'nightmare', 'main', 'unique'];
+
+/** La decoración de cada reino: piezas del mapa en silueta con un filo de su color */
+const DECOR: Record<Realm, { id: SceneryId; x: number; scale: number; flip?: boolean }[]> = {
+  nightmare: [{ id: 'dead_tree', x: 0.08, scale: 3 }, { id: 'stakes', x: 0.24, scale: 2 }, { id: 'skull', x: 0.33, scale: 2 }, { id: 'skull', x: 0.7, scale: 2, flip: true }, { id: 'stakes', x: 0.8, scale: 2, flip: true }, { id: 'dead_tree', x: 0.94, scale: 3, flip: true }],
+  unique: [{ id: 'gold_banner', x: 0.1, scale: 3 }, { id: 'brazier', x: 0.27, scale: 2 }, { id: 'brazier', x: 0.73, scale: 2 }, { id: 'gold_banner', x: 0.9, scale: 3, flip: true }],
+  renegade: [{ id: 'menhir_l', x: 0.09, scale: 3 }, { id: 'crystal', x: 0.25, scale: 2 }, { id: 'menhir_s', x: 0.36, scale: 2 }, { id: 'crystal', x: 0.68, scale: 2, flip: true }, { id: 'menhir_l', x: 0.91, scale: 3, flip: true }],
+};
+
+const RealmDecor = ({ realm, W, H }: { realm: Realm; W: number; H: number }) => (
+  <div className="absolute inset-0 pointer-events-none">
+    {DECOR[realm].map((d, i) => {
+      const sprite = SCENERY[d.id];
+      const w = Math.max(...sprite.rows.map(r => r.length)) * d.scale, h = sprite.rows.length * d.scale;
+      return (
+        <div key={i} className="absolute" style={{ left: W * d.x - w / 2, top: H * 0.97 - h, transform: d.flip ? 'scaleX(-1)' : undefined,
+          filter: `drop-shadow(0 0 1px rgba(${TIER_RGB[realm]},1)) drop-shadow(0 0 3px rgba(${TIER_RGB[realm]},0.9)) drop-shadow(0 0 12px rgba(${TIER_RGB[realm]},0.45))` }}>
+          <PixelSprite sprite={sprite} tint={INK.black} scale={d.scale} />
+        </div>
+      );
+    })}
+  </div>
+);
+
+/** En el borde de la pantalla, los ojos de un reino (o de vuelta): al tocarlos, la vista gira */
+const SideEyes = ({ side, to, label, isNew, onGo }: { side: -1 | 1; to: Realm | 'main'; label: string; isNew: boolean; onGo: () => void }) => {
+  const rgb = to === 'main' ? '255,194,51' : TIER_RGB[to];
+  const eye = { width: 4, height: 2, background: `rgb(${rgb})`, boxShadow: `0 0 3px rgba(${rgb},0.95), 0 0 9px 2px rgba(${rgb},0.5)` };
+  return (
+    <button aria-label={`realm ${to}`} onClick={onGo}
+      className="absolute z-20 flex flex-col items-center gap-[4px] cursor-pointer px-[6px] py-[10px]"
+      style={{ [side < 0 ? 'left' : 'right']: 0, top: '40%' }}>
+      <span className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 50% at ${side < 0 ? '0%' : '100%'} 50%, rgba(${rgb},0.22), transparent 70%)` }} />
+      <motion.span className="relative flex gap-[4px]" animate={{ scaleY: [1, 1, 0.1, 1, 1], x: [0, side * 2, side * 2, 0, 0] }}
+        transition={{ duration: 4, repeat: Infinity, times: [0, 0.45, 0.5, 0.55, 1] }}>
+        <span style={eye} /><span style={eye} />
+      </motion.span>
+      <span className="relative font-display" style={{ fontSize: 8, lineHeight: '8px', letterSpacing: 1, color: `rgb(${rgb})` }}>{side < 0 ? '‹ ' : ''}{label}{side > 0 ? ' ›' : ''}</span>
+      {isNew && <span className="relative font-display anim-pulse px-[3px] rounded-[2px] text-ink" style={{ fontSize: 7, lineHeight: '9px', background: `rgb(${rgb})` }}>NEW</span>}
+    </button>
+  );
+};
+
+const REALMS_SEEN_KEY = 'magic_poker_realms_seen';
+const realmsSeen = (): string[] => { try { return JSON.parse(localStorage.getItem(REALMS_SEEN_KEY) ?? '[]'); } catch { return []; } };
+
 export const ForestScreen = () => {
   const t = useTranslations();
   const { width: W, height: H, mode } = useStage();
@@ -211,15 +269,37 @@ export const ForestScreen = () => {
   const trunks = useMemo(() => trunksFor(W), [W]);
   const layers = useMemo(() => [trunks.filter(tr => tr.d < 0.35), trunks.filter(tr => tr.d >= 0.35 && tr.d < 0.8), trunks.filter(tr => tr.d >= 0.8)], [trunks]);
   const busy = phase !== 'idle';
+  // El reino en el que estás (null: el bosque de siempre) y hacia dónde giró la vista
+  const [realm, setRealm] = useState<Realm | null>(null);
+  const [turn, setTurn] = useState<1 | -1>(1);
+  const [seen, setSeen] = useState<string[]>(() => (typeof window === 'undefined' ? [] : realmsSeen()));
+  const here = realm ?? 'main';
+  const go = (to: Realm | 'main') => {
+    if (busy) return;
+    setTurn(POS[to] < POS[here] ? -1 : 1);
+    setRealm(to === 'main' ? null : to);
+    playSfx('whoosh', 0.6, POS[to] < POS[here] ? 0.8 : 1);
+    if (to !== 'main' && !seen.includes(to)) {
+      const next = [...seen, to];
+      setSeen(next);
+      try { localStorage.setItem(REALMS_SEEN_KEY, JSON.stringify(next)); } catch { /* sin almacenamiento */ }
+    }
+  };
+  // Los vecinos de la vista: a cada lado, si ese reino está abierto
+  const neighbor = (side: -1 | 1) => {
+    const to = AT[AT.indexOf(here) + side];
+    return to && (to === 'main' || realmOpen(forest, to)) ? to : null;
+  };
+  const tint = realm ? TIER_RGB[realm] : null;
 
   const seek = () => {
     if (busy) return;
     // (depuración: alguien elegido a mano)
     const forced = useUiStore.getState().forestForce;
-    const e = forced ?? rollEncounter();
+    const e = forced ?? rollEncounter(Math.random, realm ?? undefined);
     if (forced) useUiStore.getState().setForestForce(null);
     // Analíticas: quién sale del bosque (y en qué dificultad)
-    trackEvent('forest_encounter', { rival: e.id, tier: e.tier, streak: forest.streak, duels: forest.duels });
+    trackEvent('forest_encounter', { rival: e.id, tier: e.tier, streak: forest.streak, duels: forest.duels, realm: realm ?? 'forest' });
     setEnc(e);
     setPhase('stir');
     playSound('click');
@@ -240,19 +320,30 @@ export const ForestScreen = () => {
     return () => timers.forEach(clearTimeout);
   }, [enc]);
 
-  const color = enc && phase !== 'stir' ? TIER_INK[enc.tier] : INK.amber;
-  const rgb = enc && phase !== 'stir' ? TIER_RGB[enc.tier] : '255,194,51';
+  const color = enc && phase !== 'stir' ? TIER_INK[enc.tier] : realm ? TIER_INK[realm] : INK.amber;
+  const rgb = enc && phase !== 'stir' ? TIER_RGB[enc.tier] : tint ?? '255,194,51';
   const zoom = phase === 'lunge' ? 1.25 : 1;
   const figureH = 44;
 
   return (
-    <div className="absolute inset-0 overflow-hidden" style={{ background: 'var(--ink-black)' }}>
+    <div className="absolute inset-0 overflow-hidden" style={{ background: 'var(--ink-black)', perspective: 700 }}>
+      {/* La vista gira al cambiar de reino: el bosque nuevo entra por el lado al que miras */}
+      <AnimatePresence initial={false} custom={turn}>
+      <motion.div key={here} className="absolute inset-0" custom={turn}
+        variants={{
+          enter: (d: number) => ({ x: d * -W * 0.55, rotateY: d * 28, opacity: 0 }),
+          center: { x: 0, rotateY: 0, opacity: 1 },
+          exit: (d: number) => ({ x: d * W * 0.55, rotateY: d * -28, opacity: 0 }),
+        }}
+        initial="enter" animate="center" exit="exit" transition={{ duration: 0.85, ease: [0.45, 0, 0.2, 1] }}>
       {/* El bosque en tres capas que se mecen distinto (y se acercan al abalanzarse) */}
       <motion.div className="absolute inset-0" animate={phase === 'lunge' ? { x: [0, -4, 4, -3, 3, 0], y: [0, 2, -2, 1, 0] } : { x: 0, y: 0 }} transition={{ duration: 0.6 }}>
         <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[0]} kind="far" sway={0} zoom={phase === 'lunge' ? 1.08 : 1} />
         {/* Niebla que cruza, rayos de luna y otros ojos que asoman a los lados */}
         <ForestLife W={W} H={H} horizon={horizon} layer="back" busy={busy} />
-        {!busy && <ForestWatchers W={W} H={H} horizon={horizon} />}
+        {/* El reino tiñe la niebla de su color */}
+        {tint && <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 90% 40% at 50% ${(horizon / H) * 100}%, rgba(${tint},0.28), transparent 70%), linear-gradient(to bottom, rgba(${tint},0.06), rgba(${tint},0.12))`, mixBlendMode: 'screen' }} />}
+        {!busy && <ForestWatchers W={W} H={H} horizon={horizon} rgb={tint ?? undefined} count={realm ? 7 : 2} />}
         {/* Los ojos y quien sale, en la niebla del fondo */}
         <div className="absolute" style={{ left: W / 2, top: horizon - 4 }}>
           <AnimatePresence>
@@ -275,7 +366,18 @@ export const ForestScreen = () => {
         {/* Luciérnagas entre los árboles cercanos y hojas que caen */}
         <ForestLife W={W} H={H} horizon={horizon} layer="front" busy={busy} />
         <ForestLayer W={W} H={H} horizon={horizon} trunks={layers[2]} kind="near" sway={2} zoom={zoom} />
+        {/* La decoración del reino, delante, en el suelo */}
+        {realm && <RealmDecor realm={realm} W={W} H={H} />}
       </motion.div>
+      </motion.div>
+      </AnimatePresence>
+      {/* A los lados, los ojos de los reinos abiertos (o de vuelta al bosque) */}
+      {!busy && ([-1, 1] as const).map(side => {
+        const to = neighbor(side);
+        if (!to) return null;
+        return <SideEyes key={`${here}${side}`} side={side} to={to} label={to === 'main' ? t.forest_title : t[`realm_${to}` as keyof Translations]}
+          isNew={to !== 'main' && !seen.includes(to)} onGo={() => go(to)} />;
+      })}
       <AmbientDust />
       {/* Viñeta */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 75% 65% at 50% 48%, transparent 40%, rgba(11,13,12,0.85) 100%)' }} />
@@ -283,7 +385,8 @@ export const ForestScreen = () => {
       {/* Cabecera: volver, título y bestiario */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-[6px] pt-[6px]">
         <IconButton icon={ICONS.home} aria-label={t.aria_forest_back} onClick={() => { if (busy) return; playSound('click'); exitToMenu(); }} />
-        <span className="font-display glow-amber" style={{ color: 'var(--ink-amber)', fontSize: 14, letterSpacing: 3 }}>{t.forest_title}</span>
+        <span className="font-display glow-amber" style={{ color: realm ? TIER_INK[realm] : 'var(--ink-amber)', fontSize: 14, letterSpacing: 3,
+          textShadow: tint ? `0 0 6px rgba(${tint},0.8)` : undefined }}>{realm ? t[`realm_${realm}` as keyof Translations] : t.forest_title}</span>
         {/* Lo tuyo (sellos y mazo), como en el menú, y el bestiario */}
         <span className="flex gap-[3px]">
           {isCollectionUnlocked() && (
@@ -329,7 +432,7 @@ export const ForestScreen = () => {
       {/* Abajo: la frase y buscar duelo */}
       <motion.div className="absolute inset-x-0 z-20 flex flex-col items-center gap-[5px]" style={{ bottom: mode === 'portrait' ? 24 : 18 }}
         animate={{ opacity: busy ? 0 : 1 }} transition={{ duration: 0.4 }}>
-        <span className="t-micro text-center px-[16px]" style={{ color: 'var(--ink-mint)' }}>{t.forest_idle}</span>
+        <span className="t-micro text-center px-[16px]" style={{ color: 'var(--ink-mint)' }}>{realm ? t[`realm_${realm}_idle` as keyof Translations] : t.forest_idle}</span>
         <PxButton tone="amber" onClick={seek} disabled={busy} className="h-[30px] flex-col gap-[1px] anim-breathe" style={{ width: Math.min(170, W - 24) }}>
           <span className="text-title" style={{ lineHeight: '14px' }}>{t.forest_search}</span>
           <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>

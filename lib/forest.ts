@@ -69,9 +69,10 @@ export const isForestUnlocked = (castle = getCastle()) => castle.conquered > 0;
 export interface Encounter { id: string; tier: Tier }
 
 /** Quién sale del bosque: primero el nivel, luego alguien de ese nivel */
-export const rollEncounter = (rng: () => number = Math.random): Encounter => {
+/** Quién sale (en un reino, siempre de su dificultad) */
+export const rollEncounter = (rng: () => number = Math.random, realm?: Realm): Encounter => {
   let roll = rng() * 100;
-  const tier = TIERS.find(t => (roll -= TIER_WEIGHTS[t]) < 0) ?? 'normal';
+  const tier = realm ?? TIERS.find(t => (roll -= TIER_WEIGHTS[t]) < 0) ?? 'normal';
   const pool = archetypesOf(tier);
   return { id: pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))].id, tier };
 };
@@ -127,9 +128,24 @@ export interface ForestState {
   duels: number;
   streak: number;
   bestStreak: number;
+  /** La marca del Bosque: +2 al ganar, -1 al perder (nunca bajo 0). Abre los reinos */
+  marks?: number;
+  /** La mayor marca a la que has llegado (los reinos, una vez abiertos, no se cierran) */
+  bestMarks?: number;
 }
 
-const EMPTY: ForestState = { seen: {}, duels: 0, streak: 0, bestStreak: 0 };
+const EMPTY: ForestState = { seen: {}, duels: 0, streak: 0, bestStreak: 0, marks: 0, bestMarks: 0 };
+
+// --- LOS REINOS DEL BOSQUE ---
+// Con la marca se abren bosques donde solo sale una dificultad: primero las pesadillas,
+// luego los únicos y luego los renegados (calibrado con el simulador: un buen jugador
+// abre el primero en unos 30 duelos, el segundo en unos 80 y el tercero en unos 130).
+export type Realm = 'nightmare' | 'unique' | 'renegade';
+export const REALMS: Realm[] = ['nightmare', 'unique', 'renegade'];
+export const REALM_MARKS: Record<Realm, number> = { nightmare: 25, unique: 60, renegade: 100 };
+export const realmOpen = (f: ForestState, r: Realm) => (f.bestMarks ?? 0) >= REALM_MARKS[r];
+/** La marca tras un duelo */
+export const nextMarks = (marks: number, result: GameResult) => Math.max(0, marks + (result === 'win' ? 2 : result === 'loss' ? -1 : 0));
 const listeners = new Set<() => void>();
 let cached: ForestState | null = null;
 
@@ -165,6 +181,8 @@ export const recordForestDuel = (e: Encounter, result: GameResult): ForestState 
     duels: f.duels + 1,
     streak,
     bestStreak: Math.max(f.bestStreak, streak),
+    marks: nextMarks(f.marks ?? 0, result),
+    bestMarks: Math.max(f.bestMarks ?? 0, nextMarks(f.marks ?? 0, result)),
   };
   save(next);
   return next;

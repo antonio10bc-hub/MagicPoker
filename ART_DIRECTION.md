@@ -855,6 +855,18 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   (racha de 10, llama), Raíces (ganar en las cinco dificultades, pino), Regicida (al
   Príncipe, la Reina y el Rey, corona), Sin fe (a un renegado, calavera con cuernos) y
   Noctámbulo (50 duelos, luna); más Sin miedo y Bestiario. También salen en Estadísticas.
+- **La marca del Bosque y sus reinos** (`REALMS` en `lib/forest.ts`): además de la racha,
+  cada duelo suma +2 si ganas y resta 1 si pierdes (nunca bajo 0). A 25, 60 y 100 se
+  abren tres bosques donde solo sale una dificultad: pesadillas, únicos y renegados (no
+  se cierran). En el bestiario, bajo las cifras, una barra ámbar con los tres hitos, que
+  se encienden en el color del reino al abrirse. En el Bosque, en el borde, unos ojos del
+  color del reino con su nombre (y NEW la primera vez): las pesadillas a la izquierda, más
+  allá los renegados, y los únicos a la derecha. Al tocarlos la vista gira hacia ese lado
+  (el bosque sale por un lado y entra el otro, con un giro 3D). Cada reino tiñe la niebla
+  de su color, tiene muchos más ojos de ese color y su decoración en primer plano con un
+  filo de luz: árboles muertos, estacas y calaveras (pesadillas, carmesí); estandartes y
+  braseros (únicos, oro); menhires y cristales (renegados, azul). El título y la frase
+  cambian ("PESADILLAS · Aquí solo se oyen pesadillas…").
 - **Rendimiento del mapa:** el suelo (millones de píxeles) se pinta una vez y se
   reutiliza al volver al menú; en la espesura no se mece ningún árbol y nunca más de 700
   en todo el mapa (cada uno es una pieza animada aparte).

@@ -47,7 +47,7 @@ export const unlockAll = () => {
     localStorage.setItem('magic_poker_castle', JSON.stringify({ ...castle, run: null, best: BOSSES.length, conquered: Math.max(1, castle.conquered ?? 0), legendary: true, bestChallenges: CHALLENGES.length }));
     const forest = JSON.parse(localStorage.getItem('magic_poker_forest') ?? '{}');
     const seen = Object.fromEntries(ARCHETYPES.map(a => [a.id, { [a.tier]: forest.seen?.[a.id]?.[a.tier] ?? { wins: 1, losses: 0 } }]));
-    localStorage.setItem('magic_poker_forest', JSON.stringify({ duels: 0, streak: 0, bestStreak: 0, ...forest, seen: { ...forest.seen, ...seen } }));
+    localStorage.setItem('magic_poker_forest', JSON.stringify({ duels: 0, streak: 0, bestStreak: 0, ...forest, seen: { ...forest.seen, ...seen }, marks: Math.max(100, forest.marks ?? 0), bestMarks: Math.max(100, forest.bestMarks ?? 0) }));
     localStorage.setItem('magic_poker_forest_seen', '1');
     localStorage.setItem('magic_poker_map_seen', String(BOSSES.length));
     localStorage.setItem('magic_poker_tutorial_done', '1');

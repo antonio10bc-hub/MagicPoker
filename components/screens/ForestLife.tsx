@@ -73,7 +73,7 @@ export const ForestLife = memo(({ W, H, horizon, layer, busy }: Props) => {
 ForestLife.displayName = 'ForestLife';
 
 /** Un par de ojos pequeños que asoma en un sitio de los lados y se va (animación CSS `anim-eyes`) */
-const Watcher = ({ W, H, horizon, index }: { W: number; H: number; horizon: number; index: number }) => {
+const Watcher = ({ W, H, horizon, index, rgb }: { W: number; H: number; horizon: number; index: number; rgb: string }) => {
   const [show, setShow] = useState<{ x: number; y: number; s: number; key: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -86,11 +86,11 @@ const Watcher = ({ W, H, horizon, index }: { W: number; H: number; horizon: numb
         timer.current = setTimeout(() => { setShow(null); next(1500 + Math.random() * 4500); }, s * 1000);
       }, delay);
     };
-    next(1500 + index * 2500 + Math.random() * 2000);
+    next(1500 + (index % 3) * 1200 + Math.floor(index / 3) * 600 + Math.random() * 2000);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [W, H, horizon, index]);
   if (!show) return null;
-  const eye = { width: 2, height: 1, background: 'var(--ink-amber)', boxShadow: '0 0 2px rgba(255,194,51,0.9), 0 0 5px 1px rgba(255,194,51,0.4)' };
+  const eye = { width: 2, height: 1, background: `rgb(${rgb})`, boxShadow: `0 0 2px rgba(${rgb},0.9), 0 0 5px 1px rgba(${rgb},0.4)` };
   return (
     <div key={show.key} className="absolute flex gap-[2px] anim-eyes" style={{ left: show.x, top: show.y, animationDuration: `${show.s}s` }}>
       <span style={eye} /><span style={eye} />
@@ -98,12 +98,13 @@ const Watcher = ({ W, H, horizon, index }: { W: number; H: number; horizon: numb
   );
 };
 
-export const ForestWatchers = memo(({ W, H, horizon }: { W: number; H: number; horizon: number }) => {
+/** Los ojos que asoman (en los reinos, de su color y muchos más) */
+export const ForestWatchers = memo(({ W, H, horizon, rgb = '255,194,51', count = 2 }: { W: number; H: number; horizon: number; rgb?: string; count?: number }) => {
   const lowPower = useLowPower();
   if (lowPower) return null;
   return (
     <div className="absolute inset-0 pointer-events-none">
-      {[0, 1].map(i => <Watcher key={i} index={i} W={W} H={H} horizon={horizon} />)}
+      {Array.from({ length: count }, (_, i) => <Watcher key={i} index={i} W={W} H={H} horizon={horizon} rgb={rgb} />)}
     </div>
   );
 });

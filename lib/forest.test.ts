@@ -110,3 +110,19 @@ describe('logros del Bosque', () => {
     expect(forestStamps({ ...base, seen: { prince: { unique: { wins: 1, losses: 0 } } } })).toEqual([]);
   });
 });
+
+describe('la marca del Bosque y sus reinos', () => {
+  it('+2 al ganar, -1 al perder (nunca bajo 0) y los reinos se abren y no se cierran', async () => {
+    const { nextMarks, realmOpen, rollEncounter } = await import('./forest');
+    expect(nextMarks(0, 'win')).toBe(2);
+    expect(nextMarks(3, 'loss')).toBe(2);
+    expect(nextMarks(0, 'loss')).toBe(0);
+    expect(nextMarks(5, 'draw')).toBe(5);
+    const f = { seen: {}, duels: 0, streak: 0, bestStreak: 0, marks: 3, bestMarks: 60 };
+    expect(realmOpen(f, 'nightmare')).toBe(true);
+    expect(realmOpen(f, 'unique')).toBe(true);
+    expect(realmOpen(f, 'renegade')).toBe(false);
+    // En un reino solo sale su dificultad
+    for (let i = 0; i < 30; i++) expect(rollEncounter(Math.random, 'unique').tier).toBe('unique');
+  });
+});
