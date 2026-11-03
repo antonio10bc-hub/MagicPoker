@@ -134,8 +134,8 @@ const summarize = (run: CastleRun, outcome: RunSummary['outcome'], floors: numbe
 //  noHeal  · nadie te ofrece curarte
 //  fierce  · los jefes piensan con la IA difícil desde el primer piso
 //  sealed  · los jefes llevan dos niveles más (más sellos)
-//  short   · empiezas sin tus 2 cartas más flojas
-//  fragile · empiezas con 3 vidas (y 3 de tope)
+//  short   · empiezas sin tus 2 cartas más flojas (el Joker no cuenta: se queda)
+//  fragile · empiezas con una vida menos (3 en vez de 4); la vida de más la sigue subiendo
 //  noDeath · sin puntos de guardado: hay que conquistarlo de una tirada, sin caer
 export type ChallengeId = 'noHeal' | 'fierce' | 'sealed' | 'short' | 'fragile' | 'noDeath';
 export const CHALLENGES: ChallengeId[] = ['noHeal', 'fierce', 'sealed', 'short', 'fragile', 'noDeath'];
@@ -245,8 +245,9 @@ export const ensureRun = (challenges: ChallengeId[] = []): CastleRun => {
   const lives = valid.includes('fragile') ? STARTING_LIVES - 1 : STARTING_LIVES;
   let deck = startingDeck();
   if (valid.includes('short')) {
-    // Fuera las 4 cartas normales más flojas
-    const weakest = deck.map((c, i) => ({ c, i })).filter(({ c }) => c.rank !== 'SEAL')
+    // Fuera las 2 cartas normales más flojas. El Joker vale 0 pero no es una carta floja
+    // (da cartas): no se quita
+    const weakest = deck.map((c, i) => ({ c, i })).filter(({ c }) => c.rank !== 'SEAL' && c.rank !== 'JOKER')
       .sort((a, b) => RANKS[a.c.rank].value - RANKS[b.c.rank].value).slice(0, SHORT_REMOVES).map(w => w.i);
     deck = deck.filter((_, i) => !weakest.includes(i));
   }

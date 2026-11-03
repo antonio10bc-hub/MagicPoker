@@ -128,9 +128,10 @@ describe('el Castillo', () => {
     const c = await load();
     const run = c.ensureRun(['fragile', 'short', 'noHeal', 'fierce', 'sealed']);
     expect(run).toMatchObject({ lives: 3, maxLives: 3 });
+    // Mazo corto: sin las 2 más flojas (el 2 y el 3); el Joker, aunque vale 0, se queda
     expect(run.deck.some(card => card.rank === '2')).toBe(false);
-    // Mazo corto: sin las 2 más flojas (el Joker, que vale 0, y el 2)
-    expect(run.deck.some(card => card.rank === 'JOKER')).toBe(false);
+    expect(run.deck.some(card => card.rank === '3')).toBe(false);
+    expect(run.deck.some(card => card.rank === 'JOKER')).toBe(true);
     expect(run.deck.filter(card => card.rank !== 'SEAL')).toHaveLength(12);
     const plain = { ...run, challenges: undefined };
     // Jefes feroces: la IA difícil desde el primer piso; jefes sellados: dos niveles más

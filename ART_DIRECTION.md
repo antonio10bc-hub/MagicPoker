@@ -612,6 +612,11 @@ se mueve rápido y una vibración leve a las masas naranjas.
 - **Ajustes** (rueda dentada, en el menú y en la partida; `lib/settings.ts`): sonido,
   volumen de música y de efectos, vibración, confirmar al plantarse y grano (completo, suave o apagado; apagado
   también congela la niebla del fondo: modo rendimiento).
+  Debajo de Repetir tutorial, **Copia de seguridad** (`lib/backup.ts`): ventana con
+  Guardar (COPIAR CÓDIGO: todo lo guardado del juego en un código `MPSAVE1.` al
+  portapapeles; si no deja, se enseña para copiarlo a mano) y Cargar (se pega, se
+  confirma y el dispositivo queda exactamente igual; recarga). No viajan el modo
+  depuración ni la detección de equipo poco potente.
 - **Sellos** (`lib/stamps.ts`, `components/game/Stamps.tsx`): 12 logros por hacer cosas
   concretas. Cada uno es un círculo de tinta con un icono en silueta: conseguido, masa
   naranja que brilla; por conseguir, anillo pizarra. Al ganarse se estampa en pantalla
