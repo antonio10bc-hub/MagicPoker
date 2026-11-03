@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { track } from '@/lib/analytics';
 import { StampId } from '@/lib/stamps';
 import type { Unlock } from '@/lib/bosses';
-import type { Tier } from '@/lib/forest';
+import type { Realm, Tier } from '@/lib/forest';
 
 // Estado de interfaz que no forma parte de la partida (qué modal está abierto, sellos
 // recién ganados pendientes de mostrar)
@@ -36,6 +36,9 @@ interface UiState {
   setForestReplay: (on: boolean) => void;
   /** Depuración: quién sale en el próximo duelo del Bosque */
   forestForce: { id: string; tier: Tier } | null;
+  /** El reino del Bosque en el que estás (null: el de siempre); se mantiene al volver de un duelo */
+  forestRealm: Realm | null;
+  setForestRealm: (r: Realm | null) => void;
   setForestForce: (e: { id: string; tier: Tier } | null) => void;
 }
 
@@ -60,5 +63,7 @@ export const useUiStore = create<UiState>(set => ({
   forestReplay: false,
   setForestReplay: forestReplay => set({ forestReplay }),
   forestForce: null,
+  forestRealm: null,
+  setForestRealm: forestRealm => set({ forestRealm }),
   setForestForce: forestForce => set({ forestForce }),
 }));

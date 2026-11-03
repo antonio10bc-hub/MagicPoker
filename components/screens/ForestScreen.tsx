@@ -270,7 +270,8 @@ export const ForestScreen = () => {
   const layers = useMemo(() => [trunks.filter(tr => tr.d < 0.35), trunks.filter(tr => tr.d >= 0.35 && tr.d < 0.8), trunks.filter(tr => tr.d >= 0.8)], [trunks]);
   const busy = phase !== 'idle';
   // El reino en el que estás (null: el bosque de siempre) y hacia dónde giró la vista
-  const [realm, setRealm] = useState<Realm | null>(null);
+  const realm = useUiStore(st => st.forestRealm);
+  const setRealm = useUiStore(st => st.setForestRealm);
   const [turn, setTurn] = useState<1 | -1>(1);
   const [seen, setSeen] = useState<string[]>(() => (typeof window === 'undefined' ? [] : realmsSeen()));
   const here = realm ?? 'main';
@@ -386,7 +387,7 @@ export const ForestScreen = () => {
 
       {/* Cabecera: volver, título y bestiario */}
       <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-[6px] pt-[6px]">
-        <IconButton icon={ICONS.home} aria-label={t.aria_forest_back} onClick={() => { if (busy) return; playSound('click'); exitToMenu(); }} />
+        <IconButton icon={ICONS.home} aria-label={t.aria_forest_back} onClick={() => { if (busy) return; playSound('click'); setRealm(null); exitToMenu(); }} />
         <span className="font-display glow-amber" style={{ color: realm ? TIER_INK[realm] : 'var(--ink-amber)', fontSize: 14, letterSpacing: 3,
           textShadow: tint ? `0 0 6px rgba(${tint},0.8)` : undefined }}>{realm ? t[`realm_${realm}` as keyof Translations] : t.forest_title}</span>
         {/* Lo tuyo (sellos y mazo), como en el menú, y el bestiario */}

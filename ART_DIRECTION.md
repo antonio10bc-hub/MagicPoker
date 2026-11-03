@@ -868,6 +868,15 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   filo de luz: árboles muertos, estacas y calaveras (pesadillas, carmesí); estandartes y
   braseros (únicos, oro); menhires y cristales (renegados, azul). El título y la frase
   cambian ("PESADILLAS · Aquí solo se oyen pesadillas…").
+- **La música del Bosque y sus reinos** (`lib/forestMusic.ts`, el motor de `lib/music.ts`):
+  cada bosque suena distinto y la música se funde al girar la vista. El Bosque: nocturno
+  y quieto (lento, grave, con viento). Pesadillas: opresiva (muy grave y lenta, la segunda
+  menor siempre sonando, guitarra áspera con trémolo nervioso y un latido de fondo).
+  Únicos: solemne (Re lidio, la única luminosa, campanas y paso procesional). Renegados:
+  fría (tonos enteros, notas sueltas de seno con eco largo, sin pulso, viento). En un
+  duelo dentro de un reino suena su variante, más viva y con pulso; en el Bosque de
+  siempre, la del jefe que más se parece al rival. El reino se recuerda al volver de un
+  duelo y se olvida al salir al menú.
 - **Rendimiento del mapa:** el suelo (millones de píxeles) se pinta una vez y se
   reutiliza al volver al menú; en la espesura no se mece ningún árbol y nunca más de 700
   en todo el mapa (cada uno es una pieza animada aparte).

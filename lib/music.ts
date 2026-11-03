@@ -24,6 +24,22 @@ export interface MusicVariant {
   chance?: number;
   /** Tensión mínima (el Castillo nunca está en calma) */
   heat?: number;
+  /** Otra escala (notas MIDI de la guitarra) y otra progresión del bordón */
+  scale?: number[];
+  roots?: number[];
+  /** Timbre de campana en lugar de guitarra (seno con armónicos que se apagan) */
+  bell?: boolean;
+  /** Pulso sordo: forzarlo o quitarlo; y cada cuántos tiempos */
+  pulse?: boolean;
+  pulseEvery?: number;
+  /** Eco: retardo (s) y realimentación (0–0,8) */
+  echo?: { time: number; feedback: number };
+  /** Latido de fondo siempre (no solo al borde) */
+  heartbeat?: boolean;
+  /** Bordón: más alto o más bajo (1 = normal) */
+  droneLevel?: number;
+  /** Viento: ruido que sube y baja (0 = sin) */
+  wind?: number;
 }
 
 export interface MusicHandle {
@@ -79,7 +95,9 @@ const tapeCurve = () => {
 
 export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle, volume: number, variant: MusicVariant = {}): MusicHandle => {
   const base = STYLE[style];
-  const cfg = { ...base, bpm: variant.bpm ?? base.bpm, noteChance: variant.chance ?? base.noteChance };
+  const cfg = { ...base, bpm: variant.bpm ?? base.bpm, noteChance: variant.chance ?? base.noteChance, pulse: variant.pulse ?? base.pulse };
+  const SC = variant.scale ?? SCALE;
+  const RT = variant.roots ?? ROOTS;
   const shift = variant.transpose ?? 0;
   const minHeat = variant.heat ?? 0;
   const t0 = ctx.currentTime;
@@ -105,6 +123,21 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
   tone.frequency.value = 2600;
   shaper.connect(wow).connect(tone).connect(bus).connect(out);
 
+  // Eco (algunas variantes): un retardo realimentado hacia el bus
+  let echoIn: AudioNode | null = null;
+  if (variant.echo) {
+    const d = ctx.createDelay(2);
+    d.delayTime.value = variant.echo.time;
+    const fb = ctx.createGain();
+    fb.gain.value = variant.echo.feedback;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1800;
+    d.connect(lp).connect(fb).connect(d);
+    lp.connect(bus);
+    echoIn = d;
+  }
+
   const reverb = ctx.createConvolver();
   reverb.buffer = impulse(ctx);
   const wet = ctx.createGain();
@@ -124,13 +157,34 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
   hiss.start();
   nodes.push(hiss);
 
+  // --- Viento (algunas variantes)
+  if (variant.wind) {
+    const w = ctx.createBufferSource();
+    w.buffer = noiseBuffer(ctx);
+    w.loop = true;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 450;
+    band.Q.value = 0.7;
+    const g = ctx.createGain();
+    g.gain.value = variant.wind;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.08;
+    const depth = ctx.createGain();
+    depth.gain.value = variant.wind * 0.7;
+    lfo.connect(depth).connect(g.gain);
+    w.connect(band).connect(g).connect(bus);
+    w.start(); lfo.start();
+    nodes.push(w, lfo);
+  }
+
   // --- Bordón: dos osciladores por voz, ligeramente desafinados, que respiran
   const droneFilter = ctx.createBiquadFilter();
   droneFilter.type = 'lowpass';
   droneFilter.frequency.value = 320;
   droneFilter.Q.value = 2;
   const droneGain = ctx.createGain();
-  droneGain.gain.value = 0.12;
+  droneGain.gain.value = 0.12 * (variant.droneLevel ?? 1);
   const breath = ctx.createOscillator();
   breath.frequency.value = 0.06;
   const breathDepth = ctx.createGain();
@@ -149,7 +203,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       const o = ctx.createOscillator();
       o.type = i === 0 ? 'sawtooth' : 'triangle';
       o.detune.value = detune;
-      o.frequency.value = midi(ROOTS[0] + shift + interval);
+      o.frequency.value = midi(RT[0] + shift + interval);
       o.connect(g);
       o.start();
       nodes.push(o);
@@ -181,7 +235,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
     const o = ctx.createOscillator();
     o.type = 'sawtooth';
     o.detune.value = detune;
-    o.frequency.value = midi(ROOTS[0] + shift + 25);
+    o.frequency.value = midi(RT[0] + shift + 25);
     o.connect(strainBand);
     o.start();
     nodes.push(o);
@@ -192,6 +246,31 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
   // --- Guitarra con trémolo: una nota = dos osciladores + filtro con envolvente
   const pluck = (when: number, note: number, accent: number) => {
     const f = midi(note + shift);
+    if (variant.bell) {
+      // Campana: seno con armónicos inarmónicos que se apagan antes
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(0.1 * accent, when + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 2.8);
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = (Math.random() * 2 - 1) * 0.5;
+      g.connect(pan);
+      pan.connect(shaper);
+      pan.connect(reverb);
+      if (echoIn) pan.connect(echoIn);
+      [[1, 1, 2.8], [2.76, 0.4, 0.9], [5.4, 0.15, 0.4]].forEach(([mult, amp, dur]) => {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = f * mult;
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(amp, when);
+        og.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+        o.connect(og).connect(g);
+        o.start(when);
+        o.stop(when + dur + 0.05);
+      });
+      return;
+    }
     const g = ctx.createGain();
     const filt = ctx.createBiquadFilter();
     filt.type = 'lowpass';
@@ -226,6 +305,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
     filt.connect(g).connect(trem).connect(pan);
     pan.connect(shaper);
     pan.connect(reverb);
+    if (echoIn) pan.connect(echoIn);
   };
 
   // --- Pulso sordo
@@ -254,7 +334,7 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       const bar = Math.floor(step / 8);
       // Cambio de acorde cada 4 compases: el bordón se desliza a la nueva raíz
       if (step % 32 === 0) {
-        const root = ROOTS[(bar / 4) % ROOTS.length];
+        const root = RT[(bar / 4) % RT.length];
         droneVoices.forEach(v => v.oscs.forEach(o => o.frequency.setTargetAtTime(midi(root + shift + v.interval), nextTime, 0.8)));
         strainOscs.forEach(o => o.frequency.setTargetAtTime(midi(root + shift + 25), nextTime, 0.8));
       }
@@ -262,18 +342,20 @@ export const startMusic = (ctx: AudioContext, out: AudioNode, style: MusicStyle,
       // Guitarra: frases cortas con silencios; más notas en tiempo fuerte
       const chance = cfg.noteChance * (onBeat ? 1 : 0.35) * (1 + heat * 0.5);
       if (Math.random() < chance) {
-        cursor = Math.max(0, Math.min(SCALE.length - 1, cursor + Math.round((Math.random() * 2 - 1) * 2)));
-        pluck(nextTime, SCALE[cursor] - (Math.random() < 0.25 ? 12 : 0), onBeat ? 1 : 0.6);
+        cursor = Math.max(0, Math.min(SC.length - 1, cursor + Math.round((Math.random() * 2 - 1) * 2)));
+        pluck(nextTime, SC[cursor] - (Math.random() < 0.25 ? 12 : 0), onBeat ? 1 : 0.6);
         // A veces una nota doble (quinta abajo), como un rasgueo suave
-        if (onBeat && Math.random() < 0.2) pluck(nextTime + 0.03, SCALE[Math.max(0, cursor - 4)], 0.5);
+        if (onBeat && Math.random() < 0.2) pluck(nextTime + 0.03, SC[Math.max(0, cursor - 4)], 0.5);
       }
       if (cfg.pulse) {
         const beatInBar = (step % 8) / 2;
-        const every = heat > 0.5 ? 1 : 2;
+        const every = heat > 0.5 ? 1 : variant.pulseEvery ?? 2;
         if (onBeat && beatInBar % every === 0) thump(nextTime, 0.5 + heat * 0.5);
         // Al borde: latido doble (pum-pum) en cada tiempo
         if (tension > 0.5 && onBeat) thump(nextTime + beat * 0.22, 0.3 + tension * 0.25);
       }
+      // Latido de fondo (pesadillas): pum-pum lento en el primer tiempo de cada compás
+      if (variant.heartbeat && step % 8 === 0) { thump(nextTime, 0.55); thump(nextTime + beat * 0.3, 0.35); }
       // Al borde el pulso se acelera
       nextTime += beat / 2 / (1 + tension * 0.22);
       step++;
