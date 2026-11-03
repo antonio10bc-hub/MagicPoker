@@ -862,7 +862,8 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   se encienden en el color del reino al abrirse. En el Bosque, en el borde, unos ojos del
   color del reino con su nombre (y NEW la primera vez): las pesadillas a la izquierda, más
   allá los renegados, y los únicos a la derecha. Al tocarlos la vista gira hacia ese lado
-  (el bosque sale por un lado y entra el otro, con un giro 3D). Cada reino tiñe la niebla
+  (como girar la cabeza: al mirar a la derecha el bosque se va hacia la izquierda y el
+  nuevo entra por la derecha, con un giro 3D). Cada reino tiñe la niebla
   de su color, tiene muchos más ojos de ese color y su decoración en primer plano con un
   filo de luz: árboles muertos, estacas y calaveras (pesadillas, carmesí); estandartes y
   braseros (únicos, oro); menhires y cristales (renegados, azul). El título y la frase

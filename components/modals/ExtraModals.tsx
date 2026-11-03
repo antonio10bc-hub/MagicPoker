@@ -556,7 +556,7 @@ const ForestMarks = ({ f }: { f: ForestState }) => {
   const max = REALM_MARKS.renegade;
   const marks = Math.min(max, f.marks ?? 0);
   return (
-    <div className="flex flex-col gap-[3px]">
+    <div className="flex flex-col gap-[4px] pt-[12px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,194,51,0.18)' }}>
       <div className="flex items-center justify-between">
         <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_marks}</span>
         <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 10 }}>{f.marks ?? 0}</span>
@@ -594,7 +594,7 @@ const ForestRecord = ({ f }: { f: ForestState }) => {
   const earned = FOREST_STAMPS.filter(id => stats.stamps[id] !== undefined).length;
   const hot = f.streak > 0;
   return (
-    <div className="relative shrink-0 overflow-hidden rounded-[4px] p-[6px] flex flex-col gap-[6px]" style={{
+    <div className="relative shrink-0 overflow-hidden rounded-[4px] px-[8px] py-[8px] flex flex-col gap-[14px]" style={{
       background: 'radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255,194,51,0.16) 0%, rgba(30,42,40,0.7) 55%, rgba(11,13,12,0.85) 100%)',
       boxShadow: 'inset 0 0 0 1px rgba(255,194,51,0.35), 0 0 12px rgba(255,194,51,0.12)' }}>
       {/* La luna del bosque, arriba a la derecha */}
@@ -607,11 +607,11 @@ const ForestRecord = ({ f }: { f: ForestState }) => {
         <ForestStat label={t.forest_stat_best} n={f.bestStreak} icon={CROWN_ICON} />
       </div>
       <ForestMarks f={f} />
-      <div className="flex items-center gap-[5px]">
+      <div className="flex items-center gap-[5px] pt-[12px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,194,51,0.18)' }}>
         <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_stamps} · {earned}/{FOREST_STAMPS.length}</span>
         <span className="flex-1 h-[1px]" style={{ background: 'rgba(255,194,51,0.3)' }} />
       </div>
-      <div className="grid grid-cols-4 gap-y-[4px] justify-items-center">
+      <div className="grid grid-cols-4 gap-y-[8px] justify-items-center -mt-[4px]">
         {FOREST_STAMPS.map((id, i) => (
           <button key={id} aria-label={`forest stamp ${id}`} className="cursor-pointer rounded-full"
             style={{ outline: picked === id ? '1px solid var(--ink-amber)' : undefined }}
@@ -644,10 +644,10 @@ export const BestiaryModal = () => {
     setTimeout(() => setCopied(c => (c === a.id ? null : c)), 1800);
   };
   return (
-    <Dialog title={t.forest_bestiary} size="lg" tone="amber">
+    <Dialog title={t.forest_bestiary} size="lg" tone="amber" tall>
       <DialogBody className="t-micro gap-[4px]">
         <ForestRecord f={f} />
-        <p className="t-note mt-[2px]">{t.forest_bestiary_hint}</p>
+        <p className="t-note mt-[8px]">{t.forest_bestiary_hint}</p>
         {/* Por niveles: normales, difíciles, pesadillas y, aparte, los únicos y los renegados */}
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-col gap-[4px]">

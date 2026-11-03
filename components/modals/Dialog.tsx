@@ -69,13 +69,15 @@ interface DialogProps {
   footer?: ReactNode;
   /** Ancho a medida (por defecto, el del tamaño) */
   width?: number;
+  /** Grande y además alta (todo el alto que quepa): ventanas con mucho que leer */
+  tall?: boolean;
   /** Sin botón de cerrar ni cierre al tocar fuera (hay que elegir) */
   modal?: boolean;
   onClose?: () => void;
   children: ReactNode;
 }
 
-export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, footer, modal, onClose = closeWithClick, children }: DialogProps) => {
+export const Dialog = ({ title, size = 'lg', tone = 'default', width, tall, actions, footer, modal, onClose = closeWithClick, children }: DialogProps) => {
   const stage = useStage();
   const t = useTranslations();
   const portrait = stage.mode === 'portrait';
@@ -86,7 +88,7 @@ export const Dialog = ({ title, size = 'lg', tone = 'default', width, actions, f
   const pad = fluid ? (portrait ? 8 : 12) : 6;
   const maxH = stage.height - (portrait ? 48 : 16);
   // Las grandes tienen alto fijo (en vertical aprovechan la pantalla); el resto, al contenido
-  const height = size === 'lg' ? Math.min(portrait ? 420 : 270, maxH) : undefined;
+  const height = size === 'lg' ? Math.min(tall ? (portrait ? 560 : 400) : portrait ? 420 : 270, maxH) : undefined;
   // En el ordenador, Esc cierra (igual que tocar fuera)
   useEffect(() => {
     if (modal) return;

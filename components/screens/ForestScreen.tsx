@@ -327,13 +327,15 @@ export const ForestScreen = () => {
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: 'var(--ink-black)', perspective: 700 }}>
-      {/* La vista gira al cambiar de reino: el bosque nuevo entra por el lado al que miras */}
+      {/* La vista gira al cambiar de reino: el bosque nuevo entra por el lado hacia el que miras */}
       <AnimatePresence initial={false} custom={turn}>
       <motion.div key={here} className="absolute inset-0" custom={turn}
         variants={{
-          enter: (d: number) => ({ x: d * -W * 0.55, rotateY: d * 28, opacity: 0 }),
+          // Como girar la cabeza: al mirar a la derecha el bosque se va hacia la izquierda y
+          // el nuevo entra por la derecha (y al revés)
+          enter: (d: number) => ({ x: d * W * 0.55, rotateY: d * -28, opacity: 0 }),
           center: { x: 0, rotateY: 0, opacity: 1 },
-          exit: (d: number) => ({ x: d * W * 0.55, rotateY: d * -28, opacity: 0 }),
+          exit: (d: number) => ({ x: d * -W * 0.55, rotateY: d * 28, opacity: 0 }),
         }}
         initial="enter" animate="center" exit="exit" transition={{ duration: 0.85, ease: [0.45, 0, 0.2, 1] }}>
       {/* El bosque en tres capas que se mecen distinto (y se acercan al abalanzarse) */}
