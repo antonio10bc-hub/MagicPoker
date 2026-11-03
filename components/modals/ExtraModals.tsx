@@ -17,7 +17,10 @@ import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
 import { CastleMap } from '@/components/game/CastleMap';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
-import { Archetype, archetypesOf, forestDeckConfig, getForest, recordOf, TIERS } from '@/lib/forest';
+import { Archetype, archetypesOf, forestDeckConfig, ForestState, getForest, recordOf, TIERS } from '@/lib/forest';
+import { getStats } from '@/lib/stats';
+import { FOREST_STAMPS, StampId } from '@/lib/stamps';
+import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
 import { RARITY_UI } from '@/components/game/BoonChooser';
 import {
   clearDeckConfig, DECK_SLOTS, DeckConfig, defaultDeckConfig, getActiveSlot, getDeckConfig, MAX_COPIES, setActiveSlot, MAX_REMOVED, MAX_SEALS, REMOVABLE,
@@ -31,7 +34,7 @@ import { Card as CardType, Rank, SealId } from '@/types';
 import { PxButton } from '@/components/pixel/ui';
 import { useStage } from '@/components/pixel/Stage';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { CROWN_ICON, HEART, HEART_LOST, ICONS, SEAL_ICONS, SKULLS } from '@/components/pixel/sprites';
+import { CROWN_ICON, FLAME, HEART, HEART_LOST, ICONS, MOON, SEAL_ICONS, SKULLS } from '@/components/pixel/sprites';
 import { CARD_SIZE, INK } from '@/theme/tokens';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
 
@@ -531,6 +534,66 @@ export const ChallengesModal = () => {
 /** Sus sellos con sus copias, tal y como se copian */
 const forestSeals = (a: Archetype) => Object.entries(forestDeckConfig(a).seals) as [SealId, number][];
 
+// --- TUS NOCHES EN EL BOSQUE: duelos, rachas y los logros del Bosque ---
+// Una placa ámbar bajo la luna: tres cifras grandes (duelos, racha con su llama que arde
+// si está viva, mejor racha con corona) y debajo los 8 logros del Bosque en sellos ámbar
+// (toca uno para ver cómo se consigue).
+/** Una cifra de tus noches en el Bosque (la racha viva arde) */
+const ForestStat = ({ label, n, icon, glow }: { label: string; n: number; icon: Sprite; glow?: boolean }) => (
+  <div className="flex-1 flex flex-col items-center gap-[2px] py-[3px] rounded-[3px]"
+    style={{ background: 'rgba(11,13,12,0.45)', boxShadow: glow ? 'inset 0 0 0 1px rgba(255,194,51,0.55), 0 0 8px rgba(255,194,51,0.25)' : 'inset 0 0 0 1px rgba(255,194,51,0.15)' }}>
+    <span className={clsx(glow && 'anim-pulse-soft')} style={{ filter: glow ? 'drop-shadow(0 0 3px rgba(255,194,51,0.9))' : undefined }}>
+      <PixelSprite sprite={icon} tint={glow || n > 0 ? INK.amber : INK.teal} />
+    </span>
+    <span className={clsx('font-display', n > 0 && 'glow-text')} style={{ fontSize: 18, lineHeight: '18px', color: n > 0 ? 'var(--ink-amber)' : 'var(--ink-teal)' }}>{n}</span>
+    <span className="t-micro" style={{ color: 'var(--ink-mint)' }}>{label}</span>
+  </div>
+);
+
+const ForestRecord = ({ f }: { f: ForestState }) => {
+  const t = useTranslations();
+  const [stats] = useState(getStats);
+  const [picked, setPicked] = useState<StampId | null>(null);
+  const earned = FOREST_STAMPS.filter(id => stats.stamps[id] !== undefined).length;
+  const hot = f.streak > 0;
+  return (
+    <div className="relative shrink-0 overflow-hidden rounded-[4px] p-[6px] flex flex-col gap-[6px]" style={{
+      background: 'radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255,194,51,0.16) 0%, rgba(30,42,40,0.7) 55%, rgba(11,13,12,0.85) 100%)',
+      boxShadow: 'inset 0 0 0 1px rgba(255,194,51,0.35), 0 0 12px rgba(255,194,51,0.12)' }}>
+      {/* La luna del bosque, arriba a la derecha */}
+      <span className="absolute rounded-full pointer-events-none" style={{ right: 8, top: 6, width: 14, height: 14,
+        background: 'radial-gradient(circle at 40% 40%, #FFF3C4 0%, var(--ink-amber) 70%)', boxShadow: '0 0 10px 3px rgba(255,194,51,0.35)' }} />
+      <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 10, letterSpacing: 1 }}>{t.forest_stats}</span>
+      <div className="flex gap-[4px]">
+        <ForestStat label={t.forest_stat_duels} n={f.duels} icon={MOON} />
+        <ForestStat label={t.forest_stat_streak} n={f.streak} icon={FLAME} glow={hot} />
+        <ForestStat label={t.forest_stat_best} n={f.bestStreak} icon={CROWN_ICON} />
+      </div>
+      <div className="flex items-center gap-[5px]">
+        <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_stamps} · {earned}/{FOREST_STAMPS.length}</span>
+        <span className="flex-1 h-[1px]" style={{ background: 'rgba(255,194,51,0.3)' }} />
+      </div>
+      <div className="grid grid-cols-4 gap-y-[4px] justify-items-center">
+        {FOREST_STAMPS.map((id, i) => (
+          <button key={id} aria-label={`forest stamp ${id}`} className="cursor-pointer rounded-full"
+            style={{ outline: picked === id ? '1px solid var(--ink-amber)' : undefined }}
+            onClick={() => { playSfx('select', 0.6); setPicked(p => (p === id ? null : id)); }}>
+            <StampSeal id={id} earned={stats.stamps[id] !== undefined} size={26} tilt={((i * 37) % 17) - 8} tone="amber" />
+          </button>
+        ))}
+      </div>
+      <div className="min-h-[20px] text-center">
+        {picked ? (
+          <>
+            <div style={{ color: stats.stamps[picked] !== undefined ? 'var(--ink-amber)' : 'var(--ink-mint)' }}>{stampName(t, picked)}</div>
+            <div style={{ color: 'var(--ink-mint)' }}>{stampDesc(t, picked)}</div>
+          </>
+        ) : <div className="t-note">{t.forest_stamps_hint}</div>}
+      </div>
+    </div>
+  );
+};
+
 export const BestiaryModal = () => {
   const t = useTranslations();
   const [f] = useState(() => getForest());
@@ -545,12 +608,8 @@ export const BestiaryModal = () => {
   return (
     <Dialog title={t.forest_bestiary} size="lg" tone="amber">
       <DialogBody className="t-micro gap-[4px]">
-        <p className="t-note">{t.forest_bestiary_hint}</p>
-        <div className="flex justify-between" style={{ color: 'var(--ink-cream)' }}>
-          <span>{t.forest_duels.replace('{n}', String(f.duels))}</span>
-          <span>{t.forest_streak.replace('{n}', String(f.streak))}</span>
-          <span>{t.forest_best.replace('{n}', String(f.bestStreak))}</span>
-        </div>
+        <ForestRecord f={f} />
+        <p className="t-note mt-[2px]">{t.forest_bestiary_hint}</p>
         {/* Por niveles: normales, difíciles, pesadillas y, aparte, los únicos y los renegados */}
         {TIERS.map(tier => (
           <div key={tier} className="flex flex-col gap-[4px]">

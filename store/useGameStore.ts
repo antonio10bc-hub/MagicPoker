@@ -9,7 +9,7 @@ import {
 } from '@/lib/bosses';
 import { chooseOpponentMove } from '@/lib/ai';
 import { buildMatchDeck, includeNewSeal } from '@/lib/deck';
-import { archetype, buildForestDeck, Encounter, FOREST_LIVES, forestAi, bestiaryComplete, getForest, recordForestDuel } from '@/lib/forest';
+import { archetype, buildForestDeck, Encounter, FOREST_LIVES, forestAi, bestiaryComplete, forestStamps, getForest, recordForestDuel } from '@/lib/forest';
 import { buildRunDeck, CastleOutcome, castleAi, castleBossLevel, castleBossLives, ensureRun, recordCastleLoss, recordCastleWin, trackCastleFight } from '@/lib/castle';
 import { gameTimeout, setPaused } from '@/lib/clock';
 import { playSfx, playSound } from '@/lib/sounds';
@@ -205,6 +205,7 @@ export const useGameStore = create<GameState>((set, get) => {
         });
         if (gameResult === 'win' && forest.tier === 'nightmare') award(['nightmare']);
         if (bestiaryComplete(f)) award(['bestiary']);
+        award(forestStamps(f));
       } else if (castle) {
         // Castillo: subes un piso (y eliges mejora) o se acaba la subida
         const outcome = gameResult === 'win' ? recordCastleWin(nextPlayer.lives) : recordCastleLoss();

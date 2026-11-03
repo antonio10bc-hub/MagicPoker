@@ -333,6 +333,44 @@ export const SKULLS = [
   ),
 ];
 
+// --- LOGROS DEL BOSQUE (9×9) ---
+/** Huella de bestia (racha de 5) */
+export const PAW = s(
+  '.o.....o.',
+  'ooo...ooo',
+  '.o.ooo.o.',
+  '...ooo...',
+  '..ooooo..',
+  '.ooooooo.',
+  '.ooooooo.',
+  '..ooooo..',
+  '...ooo...',
+);
+/** Pino (vencer en las cinco dificultades) */
+export const PINE = s(
+  '....o....',
+  '...ooo...',
+  '..ooooo..',
+  '...ooo...',
+  '..ooooo..',
+  '.ooooooo.',
+  'ooooooooo',
+  '....o....',
+  '...ooo...',
+);
+/** Luna creciente (50 duelos) */
+export const MOON = s(
+  '...oooo..',
+  '..oooo...',
+  '.oooo....',
+  '.ooo.....',
+  '.ooo.....',
+  '.oooo....',
+  '..oooo...',
+  '...oooo..',
+  '.........',
+);
+
 /** Corona en pequeño (progreso hacia el dorso de la Corona) */
 export const CROWN_ICON = s(
   'x..x..x',

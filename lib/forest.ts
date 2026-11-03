@@ -177,5 +177,24 @@ export const recordOf = (f: ForestState, id: string): TierRecord | null => {
   return Object.values(rec).reduce<TierRecord>((t, r) => ({ wins: t.wins + (r?.wins ?? 0), losses: t.losses + (r?.losses ?? 0) }), { wins: 0, losses: 0 });
 };
 
+/** Has ganado alguna vez a alguien de esta dificultad */
+const wonTier = (f: ForestState, tier: Tier) => ARCHETYPES.some(a => (f.seen[a.id]?.[tier]?.wins ?? 0) > 0);
+
+/**
+ * Logros del Bosque que ya se cumplen (los que ya tengas no se repiten: ver unlockStamp).
+ * Rachas de 5 y 10, vencer en las cinco dificultades, a los tres únicos (Príncipe, Reina y
+ * Rey), a un renegado y 50 duelos. (Pesadilla y el bestiario completo van aparte.)
+ */
+export const forestStamps = (f: ForestState): ('forest_streak5' | 'forest_streak10' | 'forest_royal' | 'forest_renegade' | 'forest_tiers' | 'forest_duels50')[] => {
+  const out: ReturnType<typeof forestStamps> = [];
+  if (f.streak >= 5) out.push('forest_streak5');
+  if (f.streak >= 10) out.push('forest_streak10');
+  if (TIERS.every(t => wonTier(f, t))) out.push('forest_tiers');
+  if (archetypesOf('unique').every(a => (recordOf(f, a.id)?.wins ?? 0) > 0)) out.push('forest_royal');
+  if (wonTier(f, 'renegade')) out.push('forest_renegade');
+  if (f.duels >= 50) out.push('forest_duels50');
+  return out;
+};
+
 /** Ya has visto a todos los arquetipos */
 export const bestiaryComplete = (f: ForestState = getForest()) => ARCHETYPES.every(a => f.seen[a.id]);

@@ -95,3 +95,18 @@ describe('el Bosque', () => {
     expect(bestiaryComplete()).toBe(true);
   });
 });
+
+describe('logros del Bosque', () => {
+  const base = { seen: {}, duels: 0, streak: 0, bestStreak: 0 };
+  it('rachas, dificultades, únicos, renegado y duelos', async () => {
+    const { forestStamps, ARCHETYPES } = await import('./forest');
+    expect(forestStamps(base)).toEqual([]);
+    expect(forestStamps({ ...base, streak: 5 })).toEqual(['forest_streak5']);
+    expect(forestStamps({ ...base, streak: 10, duels: 50 })).toEqual(['forest_streak5', 'forest_streak10', 'forest_duels50']);
+    // Una victoria contra cada uno: todas las dificultades, los tres únicos y el renegado
+    const seen = Object.fromEntries(ARCHETYPES.map(a => [a.id, { [a.tier]: { wins: 1, losses: 0 } }]));
+    expect(forestStamps({ ...base, seen })).toEqual(['forest_tiers', 'forest_royal', 'forest_renegade']);
+    // Solo el Príncipe: no basta para Regicida
+    expect(forestStamps({ ...base, seen: { prince: { unique: { wins: 1, losses: 0 } } } })).toEqual([]);
+  });
+});

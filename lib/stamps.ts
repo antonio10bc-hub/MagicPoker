@@ -11,8 +11,11 @@ export const STAMP_IDS = [
   // El Castillo (y uno por cada desafío con el que lo conquistas)
   'castle', 'ch_noHeal', 'ch_fierce', 'ch_sealed', 'ch_short', 'ch_fragile', 'ch_noDeath',
   // El Bosque
-  'nightmare', 'bestiary',
+  'nightmare', 'bestiary', 'forest_streak5', 'forest_streak10', 'forest_royal', 'forest_renegade', 'forest_tiers', 'forest_duels50',
 ] as const;
+
+/** Los logros del Bosque (se enseñan también en su bestiario) */
+export const FOREST_STAMPS = ['forest_streak5', 'forest_streak10', 'forest_tiers', 'forest_royal', 'forest_renegade', 'forest_duels50', 'nightmare', 'bestiary'] as const satisfies readonly StampId[];
 
 export type StampId = typeof STAMP_IDS[number];
 

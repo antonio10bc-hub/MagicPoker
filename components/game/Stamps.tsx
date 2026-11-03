@@ -7,7 +7,7 @@ import { haptic, playSfx } from '@/lib/sounds';
 import { StampId } from '@/lib/stamps';
 import { INK } from '@/theme/tokens';
 import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
-import { ALERT, BURST, CHARACTERS, CROSS, FLAME, HALO, HEART, MASK, HEART_LOST, ICONS, PIP, SEAL_ICONS, STAR } from '@/components/pixel/sprites';
+import { ALERT, BURST, CHARACTERS, CROSS, CROWN_ICON, FLAME, HALO, HEART, MASK, HEART_LOST, ICONS, MOON, PAW, PINE, PIP, SEAL_ICONS, SKULLS, STAR } from '@/components/pixel/sprites';
 import { useStage } from '@/components/pixel/Stage';
 
 // --- SELLOS ---
@@ -44,19 +44,32 @@ const ICON: Record<StampId, Sprite> = {
   ch_noDeath: HALO,
   nightmare: SEAL_ICONS.reveal,
   bestiary: MASK,
+  forest_streak5: PAW,
+  forest_streak10: FLAME,
+  forest_tiers: PINE,
+  forest_royal: CROWN_ICON,
+  forest_renegade: SKULLS[2],
+  forest_duels50: MOON,
 };
 
 export const stampName = (t: Translations, id: StampId) => t[`stamp_${id}` as keyof Translations];
 export const stampDesc = (t: Translations, id: StampId) => t[`stamp_${id}_desc` as keyof Translations];
 
-export const StampSeal = ({ id, earned, size = 30, tilt = -8 }: { id: StampId; earned: boolean; size?: number; tilt?: number }) => {
+/** Tono del sello: naranja (los de siempre) o ámbar (en el bestiario del Bosque) */
+const STAMP_TONE = {
+  orange: { fill: 'radial-gradient(circle at 45% 40%, var(--ink-ember) 0%, var(--ink-orange) 70%)', rgb: '255,74,28' },
+  amber: { fill: 'radial-gradient(circle at 45% 40%, #FFE08A 0%, var(--ink-amber) 55%, #C98A12 100%)', rgb: '255,194,51' },
+};
+
+export const StampSeal = ({ id, earned, size = 30, tilt = -8, tone = 'orange' }: { id: StampId; earned: boolean; size?: number; tilt?: number; tone?: keyof typeof STAMP_TONE }) => {
   const scale = size >= 48 ? 2 : 1;
+  const { fill, rgb } = STAMP_TONE[tone];
   return (
     <div className="relative flex items-center justify-center rounded-full shrink-0" style={{
       width: size, height: size, transform: `rotate(${tilt}deg)`,
-      background: earned ? 'radial-gradient(circle at 45% 40%, var(--ink-ember) 0%, var(--ink-orange) 70%)' : 'rgba(30,42,40,0.6)',
+      background: earned ? fill : 'rgba(30,42,40,0.6)',
       boxShadow: earned
-        ? '0 0 6px 1px rgba(255,74,28,0.55), inset 0 0 0 2px rgba(11,13,12,0.55), inset 0 0 0 4px rgba(255,74,28,0.9), inset 0 0 0 5px rgba(11,13,12,0.45)'
+        ? `0 0 6px 1px rgba(${rgb},0.55), inset 0 0 0 2px rgba(11,13,12,0.55), inset 0 0 0 4px rgba(${rgb},0.9), inset 0 0 0 5px rgba(11,13,12,0.45)`
         : 'inset 0 0 0 1px rgba(94,122,118,0.6), inset 0 0 0 3px transparent, inset 0 0 0 4px rgba(94,122,118,0.3)',
     }}>
       <div style={{ opacity: earned ? 1 : 0.35 }}>
