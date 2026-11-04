@@ -444,7 +444,7 @@ const MoonClearing = ({ at, still }: { at: Pt; still: boolean }) => (
 );
 
 /** El ente: flota sobre el claro, encapuchado, con los ojos encendidos */
-const Wisp = ({ leaving }: { leaving: boolean }) => (
+export const Wisp = ({ leaving }: { leaving: boolean }) => (
   <motion.div className="absolute" style={{ left: 0, bottom: 4, x: '-50%' }}
     initial={{ opacity: 0, y: 6, scale: 0.92, filter: 'blur(6px) brightness(2)' }}
     animate={leaving ? { opacity: 0, y: -18, scale: 1, filter: 'blur(3px) brightness(2.2)' } : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px) brightness(1)' }}
@@ -460,7 +460,7 @@ const Wisp = ({ leaving }: { leaving: boolean }) => (
 
 /** Humillo de brasa (naranja) donde va a aparecer el ente: jirones que se arremolinan y suben; al aparecer
  *  él, se abren y se disipan */
-const WispSmoke = ({ parting, still }: { parting: boolean; still: boolean }) => (
+export const WispSmoke = ({ parting, still }: { parting: boolean; still: boolean }) => (
   <div className="absolute pointer-events-none" style={{ left: 0, top: 0 }}>
     {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => {
       const a = (i / 10) * Math.PI * 2;
@@ -480,7 +480,7 @@ const WispSmoke = ({ parting, still }: { parting: boolean; still: boolean }) => 
 );
 
 /** Bocadillo del ente: el texto sale letra a letra (avisa al terminar) */
-const WispBubble = ({ text, onDone }: { text: string; onDone: () => void }) => {
+export const WispBubble = ({ text, onDone, msPerChar = 32, fit }: { text: string; onDone: () => void; msPerChar?: number; fit?: boolean }) => {
   const [n, setN] = useState(0);
   const done = useRef(onDone);
   useEffect(() => { done.current = onDone; }, [onDone]);
@@ -488,11 +488,11 @@ const WispBubble = ({ text, onDone }: { text: string; onDone: () => void }) => {
     const id = setInterval(() => setN(v => {
       if (v + 1 >= text.length) { clearInterval(id); setTimeout(() => done.current(), 250); }
       return Math.min(text.length, v + 1);
-    }), 32);
+    }), msPerChar);
     return () => clearInterval(id);
-  }, [text]);
+  }, [text, msPerChar]);
   return (
-    <motion.div className="absolute px-[6px] py-[4px] leading-[11px]" style={{ left: 0, bottom: 46, width: 150, x: '-50%',
+    <motion.div className="absolute px-[6px] py-[4px] leading-[11px]" style={{ left: 0, bottom: 46, ...(fit ? { width: 'max-content', maxWidth: 150, textAlign: 'center' } : { width: 150 }), x: '-50%',
       background: 'var(--ink-cream)', color: 'var(--ink-black)', borderRadius: 4, boxShadow: '0 0 0 1px var(--ink-black), 0 0 12px rgba(185,207,200,0.5)' }}
       initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0, transition: { duration: 0.2 } }}
       transition={{ type: 'spring', stiffness: 520, damping: 20 }}>

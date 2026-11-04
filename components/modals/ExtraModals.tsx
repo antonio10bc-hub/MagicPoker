@@ -738,6 +738,7 @@ export const DebugModal = () => {
         {row('Llega el Soberano', BOSSES.length - 1)}
         {row('Se alza el Castillo', BOSSES.length)}
         <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setForestReplay(true); }}>El Bosque despierta</PxButton>
+        <PxButton size="md" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useUiStore.getState().setEnteReplay(true); }}>Vuelve el ente (última marca)</PxButton>
         <PxButton size="md" tone="amber" onClick={() => { playSound('click'); useUiStore.getState().closeModal(); useGameStore.getState().enterForest(); }}>Entrar al Bosque</PxButton>
         <div className="t-section mt-[4px]">Progreso</div>
         <span className="flex gap-[3px]">

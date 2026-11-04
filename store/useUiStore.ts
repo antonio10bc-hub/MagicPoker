@@ -34,6 +34,9 @@ interface UiState {
   /** Depuración: repetir "el Bosque despierta" */
   forestReplay: boolean;
   setForestReplay: (on: boolean) => void;
+  /** Depuración: repetir la visita del ente (al llegar a la última marca del Bosque) */
+  enteReplay: boolean;
+  setEnteReplay: (on: boolean) => void;
   /** Depuración: quién sale en el próximo duelo del Bosque */
   forestForce: { id: string; tier: Tier } | null;
   /** El reino del Bosque en el que estás (null: el de siempre); se mantiene al volver de un duelo */
@@ -62,6 +65,8 @@ export const useUiStore = create<UiState>(set => ({
   setMapReplay: mapReplay => set({ mapReplay }),
   forestReplay: false,
   setForestReplay: forestReplay => set({ forestReplay }),
+  enteReplay: false,
+  setEnteReplay: enteReplay => set({ enteReplay }),
   forestForce: null,
   forestRealm: null,
   setForestRealm: forestRealm => set({ forestRealm }),

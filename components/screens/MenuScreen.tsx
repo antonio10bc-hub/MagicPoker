@@ -11,8 +11,9 @@ import { DUEL_STAGE, getPrologue, pokePrologue, startWalk, subscribePrologue } f
 import { LESSONS } from '@/lib/tutorial';
 import { loadGame } from '@/lib/savegame';
 import { isDebug } from '@/lib/debug';
-import { isForestUnlocked } from '@/lib/forest';
+import { getForest, getServerForest, isForestUnlocked, subscribeForest } from '@/lib/forest';
 import { forestAnnounced, ForestAwaken } from './ForestAwaken';
+import { EnteReturn, enteReturnDue } from './EnteReturn';
 import { isTutorialDone } from '@/lib/tutorial';
 import { Owner, Rank } from '@/types';
 import { ACTIVE_THEME } from '@/themes';
@@ -163,6 +164,11 @@ export const MenuScreen = () => {
   const [awaken, setAwaken] = useState<boolean | null>(null);
   const awakening = !revealing && (forestReplay || (forestOpen && awaken === null && !forestAnnounced()));
   const showForest = forestOpen && !awakening;
+  // Con la última marca del Bosque, al volver al menú, vuelve el ente (una vez)
+  const forestState = useSyncExternalStore(subscribeForest, getForest, getServerForest);
+  const enteReplay = useUiStore(s => s.enteReplay);
+  const [enteSeen, setEnteSeen] = useState(false);
+  const enteVisit = !revealing && !awakening && (enteReplay || (forestOpen && !enteSeen && enteReturnDue(forestState)));
   const locked = !castleSel && selected > current;
   // Revancha: solo contra un boss ya vencido
   const canRematch = selected < progress.defeated;
@@ -268,6 +274,7 @@ export const MenuScreen = () => {
 
       {/* El Bosque despierta: se anuncia por fases la primera vez (o desde depuración) */}
       {awakening && <ForestAwaken replay={!!forestReplay} onDone={() => { setAwaken(true); useUiStore.getState().setForestReplay(false); }} />}
+      {enteVisit && <EnteReturn replay={enteReplay} onDone={() => { setEnteSeen(true); useUiStore.getState().setEnteReplay(false); }} />}
       {/* Mientras se cuenta lo nuevo, nada responde */}
       {/* (en el prólogo, tocar aquí invoca al ente que espera en el humo) */}
       {revealing && <div aria-label="map reveal" className="absolute inset-0 z-[500]" onClickCapture={e => { e.stopPropagation(); pokePrologue(); }} />}

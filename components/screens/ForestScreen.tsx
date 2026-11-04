@@ -50,7 +50,7 @@ interface Trunk { x: number; w: number; d: number; lean: number }
 
 /** Troncos del bosque, deterministas: lejanos finos y grises, medios, y unos pocos
  *  cercanos enormes en los bordes que enmarcan; el centro queda libre para los ojos */
-const trunksFor = (W: number): Trunk[] => {
+export const trunksFor = (W: number): Trunk[] => {
   const out: Trunk[] = [];
   const add = (n: number, dMin: number, dMax: number, seed: number, minGap: number) => {
     for (let i = 0; i < n; i++) {
@@ -67,7 +67,7 @@ const trunksFor = (W: number): Trunk[] => {
   return out.sort((a, b) => a.d - b.d);
 };
 
-type LayerKind = 'far' | 'mid' | 'near';
+export type LayerKind = 'far' | 'mid' | 'near';
 
 /** Pinta una capa del bosque (troncos con profundidad entre dMin y dMax) en un lienzo.
  *  Lejos: cielo, niebla, la linde de pinos del fondo y el sendero. En medio: matorrales
@@ -174,7 +174,7 @@ const paintLayer = (ctx: CanvasRenderingContext2D, W: number, H: number, horizon
   ctx.putImageData(img, 0, 0);
 };
 
-const ForestLayer = ({ W, H, horizon, trunks, kind, sway, zoom }: { W: number; H: number; horizon: number; trunks: Trunk[]; kind: LayerKind; sway: number; zoom: number }) => {
+export const ForestLayer = ({ W, H, horizon, trunks, kind, sway, zoom }: { W: number; H: number; horizon: number; trunks: Trunk[]; kind: LayerKind; sway: number; zoom: number }) => {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const ctx = ref.current?.getContext('2d');

@@ -763,6 +763,14 @@ de antes en la arena de tests, `lib/ai-arena.test.ts`).
   `forest_duel_ended` (rival, dificultad, resultado, `win`, racha). En el panel de
   PostHog: win rate por dificultad y por rival, apariciones por rival y dificultad, y
   visitas y duelos por día.
+- **Vuelve el ente (`EnteReturn.tsx`):** la primera vez que vuelves al menú con la
+  última marca (100, la de los renegados), la pantalla se funde con el bosque en
+  primera persona (las mismas capas de troncos y la misma vida). En el sendero, a media
+  distancia y con un claro de luz pálida, sale del humillo naranja el ente del prólogo
+  (algo más grande: está cerca) y dice, despacio: «…», «…», «Qué lejos has llegado…»,
+  «…». Los puntos suspensivos se escriben muy lentos (son silencios) en un bocadillo
+  ajustado al texto, por encima de todo. Luego se desvanece y el bosque con él. Input
+  bloqueado; se anota en `magic_poker_ente_return` (depuración: «Vuelve el ente»).
 
 ## Cómo crear un escenario nuevo
 
