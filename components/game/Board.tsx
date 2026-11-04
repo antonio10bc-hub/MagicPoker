@@ -220,9 +220,11 @@ const PlacedCard = ({ card, owner, x, y, lunge, arrowsOn, onToggleArrows, from: 
           </AnimatePresence>
         </div>
       </motion.div>
-      {/* Robada: en la esquina, el dorso de su dueño (para saber que era tuya, o suya) */}
+      {/* Robada: en la esquina izquierda, el dorso de su dueño (para saber que era tuya, o
+          suya). La derecha es del sello; si la carta está expuesta, el ojo ocupa la izquierda
+          y el dorso baja un poco */}
       {origin !== owner && (
-        <div className="absolute pointer-events-none z-[2]" style={{ right: -3, top: -4, transform: 'rotate(8deg)' }} aria-label={`stolen from ${origin}`}>
+        <div className="absolute pointer-events-none z-[2]" style={{ left: -3, top: card.isExposed ? 10 : -4, transform: 'rotate(-8deg)' }} aria-label={`stolen from ${origin}`}>
           <ScaledBack owner={origin} w={8} style={{ boxShadow: `0 0 0 1px ${origin === 'player' ? 'rgba(237,235,224,0.9)' : 'rgba(255,74,28,0.95)'}, 0 0 4px rgba(11,13,12,0.8)` }} />
         </div>
       )}

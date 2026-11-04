@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
 import { useUiStore } from '@/store/useUiStore';
 import { Translations, useTranslations } from '@/lib/i18n';
-import { Encounter, getForest, getServerForest, Realm, realmOpen, rollEncounter, subscribeForest } from '@/lib/forest';
+import { Encounter, getForest, getServerForest, Realm, REALM_GAIN, realmOpen, rollEncounter, subscribeForest } from '@/lib/forest';
 import { haptic, playSfx, playSound } from '@/lib/sounds';
 import { track as trackEvent } from '@/lib/analytics';
 import { isCollectionUnlocked, isEditorUnlocked } from '@/lib/bosses';
@@ -436,6 +436,8 @@ export const ForestScreen = () => {
       <motion.div className="absolute inset-x-0 z-20 flex flex-col items-center gap-[5px]" style={{ bottom: mode === 'portrait' ? 24 : 18 }}
         animate={{ opacity: busy ? 0 : 1 }} transition={{ duration: 0.4 }}>
         <span className="t-micro text-center px-[16px]" style={{ color: 'var(--ink-mint)' }}>{realm ? t[`realm_${realm}_idle` as keyof Translations] : t.forest_idle}</span>
+        {/* Lo que suma ganar aquí (más cuanto más difícil el bosque) */}
+        <span className="t-micro font-display" style={{ color: tint ? `rgb(${tint})` : 'var(--ink-amber)', letterSpacing: 1 }}>{t.forest_gain.replace('{n}', String(REALM_GAIN[here]))}</span>
         <PxButton tone="amber" onClick={seek} disabled={busy} className="h-[30px] flex-col gap-[1px] anim-breathe" style={{ width: Math.min(170, W - 24) }}>
           <span className="text-title" style={{ lineHeight: '14px' }}>{t.forest_search}</span>
           <span className="t-micro normal-case" style={{ color: 'rgba(11,13,12,0.75)' }}>

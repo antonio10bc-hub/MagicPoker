@@ -112,17 +112,37 @@ describe('logros del Bosque', () => {
 });
 
 describe('la marca del Bosque y sus reinos', () => {
-  it('+2 al ganar, -1 al perder (nunca bajo 0) y los reinos se abren y no se cierran', async () => {
-    const { nextMarks, realmOpen, rollEncounter } = await import('./forest');
-    expect(nextMarks(0, 'win')).toBe(2);
-    expect(nextMarks(3, 'loss')).toBe(2);
+  it('ganar suma según el sitio (1, 2, 3, 4), perder resta 1 (nunca bajo 0) y los reinos se abren y no se cierran', async () => {
+    const { nextMarks, realmOpen, rollEncounter, REALM_MARKS } = await import('./forest');
+    expect(nextMarks(0, 'win')).toBe(1);
+    expect(nextMarks(0, 'win', 'nightmare')).toBe(2);
+    expect(nextMarks(0, 'win', 'unique')).toBe(3);
+    expect(nextMarks(0, 'win', 'renegade')).toBe(4);
+    expect(nextMarks(3, 'loss', 'renegade')).toBe(2);
     expect(nextMarks(0, 'loss')).toBe(0);
-    expect(nextMarks(5, 'draw')).toBe(5);
-    const f = { seen: {}, duels: 0, streak: 0, bestStreak: 0, marks: 3, bestMarks: 60 };
+    expect(nextMarks(5, 'draw', 'unique')).toBe(5);
+    const f = { seen: {}, duels: 0, streak: 0, bestStreak: 0, marks: 3, bestMarks: REALM_MARKS.unique };
     expect(realmOpen(f, 'nightmare')).toBe(true);
     expect(realmOpen(f, 'unique')).toBe(true);
     expect(realmOpen(f, 'renegade')).toBe(false);
+    // El reino viaja con el encuentro (y decide lo que suma)
+    expect(rollEncounter(Math.random, 'renegade').realm).toBe('renegade');
+    expect(rollEncounter(Math.random).realm).toBeUndefined();
     // En un reino solo sale su dificultad
     for (let i = 0; i < 30; i++) expect(rollEncounter(Math.random, 'unique').tier).toBe('unique');
+  });
+  it('un duelo ganado en un reino suma lo suyo; las marcas de la escala vieja pasan a la nueva', async () => {
+    localStorage.setItem('magic_poker_forest', JSON.stringify({ seen: {}, duels: 10, streak: 0, bestStreak: 0, marks: 100, bestMarks: 100 }));
+    vi.resetModules();
+    const { getForest, recordForestDuel, realmOpen } = await import('./forest');
+    // 100 en la escala vieja (renegados abiertos) → 45: siguen abiertos
+    expect(getForest().marks).toBe(45);
+    expect(realmOpen(getForest(), 'renegade')).toBe(true);
+    expect(recordForestDuel({ id: 'witch', tier: 'nightmare', realm: 'nightmare' }, 'win').marks).toBe(47);
+    expect(recordForestDuel({ id: 'bandit', tier: 'normal' }, 'win').marks).toBe(48);
+    // Ya en la escala nueva: al volver a leer no se reescala
+    vi.resetModules();
+    const again = await import('./forest');
+    expect(again.getForest().marks).toBe(48);
   });
 });

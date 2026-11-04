@@ -66,7 +66,12 @@ export const archetypesOf = (tier: Tier) => ARCHETYPES.filter(a => a.tier === ti
 /** El Bosque se abre al conquistar el Castillo por primera vez */
 export const isForestUnlocked = (castle = getCastle()) => castle.conquered > 0;
 
-export interface Encounter { id: string; tier: Tier }
+export interface Encounter {
+  id: string;
+  tier: Tier;
+  /** El reino donde salió (sin él, el bosque de siempre): decide la marca que suma */
+  realm?: Realm;
+}
 
 /** Quién sale del bosque: primero el nivel, luego alguien de ese nivel */
 /** Quién sale (en un reino, siempre de su dificultad) */
@@ -74,7 +79,8 @@ export const rollEncounter = (rng: () => number = Math.random, realm?: Realm): E
   let roll = rng() * 100;
   const tier = realm ?? TIERS.find(t => (roll -= TIER_WEIGHTS[t]) < 0) ?? 'normal';
   const pool = archetypesOf(tier);
-  return { id: pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))].id, tier };
+  const id = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))].id;
+  return realm ? { id, tier, realm } : { id, tier };
 };
 
 /** Vidas del rival por nivel */
@@ -132,29 +138,44 @@ export interface ForestState {
   marks?: number;
   /** La mayor marca a la que has llegado (los reinos, una vez abiertos, no se cierran) */
   bestMarks?: number;
+  /** Escala de las marcas (ver MARKS_V) */
+  marksV?: number;
 }
 
-const EMPTY: ForestState = { seen: {}, duels: 0, streak: 0, bestStreak: 0, marks: 0, bestMarks: 0 };
+const EMPTY: ForestState = { seen: {}, duels: 0, streak: 0, bestStreak: 0, marks: 0, bestMarks: 0, marksV: 2 };
 
 // --- LOS REINOS DEL BOSQUE ---
 // Con la marca se abren bosques donde solo sale una dificultad: primero las pesadillas,
-// luego los únicos y luego los renegados (calibrado con el simulador: un buen jugador
-// abre el primero en unos 30 duelos, el segundo en unos 80 y el tercero en unos 130).
+// luego los únicos y luego los renegados. Cada victoria suma según dónde la ganes (el
+// bosque de siempre 1, pesadillas 2, únicos 3, renegados 4) y cada derrota resta 1: jugar
+// lo difícil compensa. Calibrado con el simulador (scripts/balance/realms.ts): un buen
+// jugador abre el primero en unos 30 duelos, el segundo en unos 85 y el tercero en unos 135.
 export type Realm = 'nightmare' | 'unique' | 'renegade';
 export const REALMS: Realm[] = ['nightmare', 'unique', 'renegade'];
-export const REALM_MARKS: Record<Realm, number> = { nightmare: 25, unique: 60, renegade: 100 };
+export const REALM_MARKS: Record<Realm, number> = { nightmare: 8, unique: 20, renegade: 45 };
+/** Lo que suma ganar en cada sitio */
+export const REALM_GAIN: Record<Realm | 'main', number> = { main: 1, nightmare: 2, unique: 3, renegade: 4 };
 export const realmOpen = (f: ForestState, r: Realm) => (f.bestMarks ?? 0) >= REALM_MARKS[r];
-/** La marca tras un duelo */
-export const nextMarks = (marks: number, result: GameResult) => Math.max(0, marks + (result === 'win' ? 2 : result === 'loss' ? -1 : 0));
+/** La marca tras un duelo (ganado en `where`) */
+export const nextMarks = (marks: number, result: GameResult, where: Realm | 'main' = 'main') =>
+  Math.max(0, marks + (result === 'win' ? REALM_GAIN[where] : result === 'loss' ? -1 : 0));
+/** Versión de la escala de marcas (1: +2 por victoria y reinos a 25/60/100) */
+const MARKS_V = 2;
+/** De la escala vieja a la nueva: los mismos reinos siguen abiertos */
+const OLD_SCALE = 0.45;
 const listeners = new Set<() => void>();
 let cached: ForestState | null = null;
+
+/** Marcas guardadas con la escala vieja: se pasan a la nueva */
+const migrate = (f: Partial<ForestState>): Partial<ForestState> => (f.marksV === MARKS_V ? f
+  : { ...f, marksV: MARKS_V, marks: Math.round((f.marks ?? 0) * OLD_SCALE), bestMarks: Math.round((f.bestMarks ?? 0) * OLD_SCALE) });
 
 export const getForest = (): ForestState => {
   if (typeof window === 'undefined') return EMPTY;
   if (!cached) {
     try {
       const raw = localStorage.getItem(KEY);
-      cached = raw ? { ...EMPTY, ...(JSON.parse(raw) as Partial<ForestState>) } : EMPTY;
+      cached = raw ? { ...EMPTY, ...migrate(JSON.parse(raw) as Partial<ForestState>) } : EMPTY;
     } catch {
       cached = EMPTY;
     }
@@ -181,8 +202,9 @@ export const recordForestDuel = (e: Encounter, result: GameResult): ForestState 
     duels: f.duels + 1,
     streak,
     bestStreak: Math.max(f.bestStreak, streak),
-    marks: nextMarks(f.marks ?? 0, result),
-    bestMarks: Math.max(f.bestMarks ?? 0, nextMarks(f.marks ?? 0, result)),
+    marks: nextMarks(f.marks ?? 0, result, e.realm),
+    bestMarks: Math.max(f.bestMarks ?? 0, nextMarks(f.marks ?? 0, result, e.realm)),
+    marksV: MARKS_V,
   };
   save(next);
   return next;

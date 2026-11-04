@@ -580,7 +580,8 @@ se mueve rápido y una vibración leve a las masas naranjas.
   - Cartas que caen en un choque: se dan la vuelta en 2D (se estrechan hasta una línea
     y se abren boca abajo, con el dorso de su dueño) y salen despedidas. En 2D porque el
     tablero va en perspectiva y los giros 3D dentro se pintan mal en Safari de iOS.
-  - Cartas robadas: en la esquina, el dorso de su dueño en miniatura (sabes cuál era tuya).
+  - Cartas robadas: en la esquina superior izquierda, el dorso de su dueño en miniatura
+    (sabes cuál era tuya). La derecha es del sello: no se pisan.
   - Pantalla final: tu mazo en abanico, boca abajo, asomando tras el panel (abierto al
     ganar, desparramado al perder).
   - Menú y Bosque: el botón del mazo son dos cartas con tu dorso.
@@ -764,7 +765,7 @@ de antes en la arena de tests, `lib/ai-arena.test.ts`).
   PostHog: win rate por dificultad y por rival, apariciones por rival y dificultad, y
   visitas y duelos por día.
 - **Vuelve el ente (`EnteReturn.tsx`):** la primera vez que vuelves al menú con la
-  última marca (100, la de los renegados), la pantalla se funde con el bosque en
+  última marca (45, la de los renegados), la pantalla se funde con el bosque en
   primera persona (las mismas capas de troncos y la misma vida). En el sendero, a media
   distancia y con un claro de luz pálida, sale del humillo naranja el ente del prólogo
   (algo más grande: está cerca) y dice, despacio: «…», «…», «Qué lejos has llegado…»,
@@ -864,7 +865,10 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   Príncipe, la Reina y el Rey, corona), Sin fe (a un renegado, calavera con cuernos) y
   Noctámbulo (50 duelos, luna); más Sin miedo y Bestiario. También salen en Estadísticas.
 - **La marca del Bosque y sus reinos** (`REALMS` en `lib/forest.ts`): además de la racha,
-  cada duelo suma +2 si ganas y resta 1 si pierdes (nunca bajo 0). A 25, 60 y 100 se
+  cada victoria suma según dónde la ganas (+1 en el Bosque de siempre, +2 en pesadillas,
+  +3 en únicos, +4 en renegados: jugar lo difícil compensa) y cada derrota resta 1 (nunca
+  bajo 0). Encima de BUSCAR DUELO, en el color del reino, «Ganar aquí: +N de marca».
+  Calibrado con `scripts/balance/realms.ts`. A 8, 20 y 45 se
   abren tres bosques donde solo sale una dificultad: pesadillas, únicos y renegados (no
   se cierran). En el bestiario, bajo las cifras, una barra ámbar con los tres hitos, que
   se encienden en el color del reino al abrirse. En el Bosque, en el borde, unos ojos del
