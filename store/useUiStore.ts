@@ -72,3 +72,8 @@ export const useUiStore = create<UiState>(set => ({
   setForestRealm: forestRealm => set({ forestRealm }),
   setForestForce: forestForce => set({ forestForce }),
 }));
+
+// Tests visuales (Playwright): en desarrollo se pueden abrir ventanas desde la página
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  (window as unknown as { __ui: typeof useUiStore }).__ui = useUiStore;
+}

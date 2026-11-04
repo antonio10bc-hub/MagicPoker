@@ -21,6 +21,8 @@ export interface Settings {
   /** Velocidad de la partida (x1 o x2) */
   speed: 1 | 2;
   uiSize: UiSize;
+  /** Idioma elegido a mano (sin elegir: el del navegador, ver lib/i18n) */
+  lang?: 'es' | 'en';
 }
 
 const KEY = 'magic_poker_settings';

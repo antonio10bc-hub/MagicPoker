@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useUiStore } from '@/store/useUiStore';
 import { useGameStore } from '@/store/useGameStore';
-import { useTranslations, Translations } from '@/lib/i18n';
+import { Lang, useLang, useTranslations, Translations } from '@/lib/i18n';
 import { getStats } from '@/lib/stats';
 import { haptic, playSfx, playSound, setMusicMuffled, toggleMute } from '@/lib/sounds';
 import { GrainLevel, Quality, UiSize, updateSettings } from '@/lib/settings';
@@ -220,6 +220,7 @@ const QuitGame = () => {
 const SettingsModal = () => {
   const t = useTranslations();
   const settings = useSettings();
+  const lang = useLang();
   const isMuted = useMuted();
   const [fullscreen, setFullscreen] = useFullscreen();
   return (
@@ -253,6 +254,9 @@ const SettingsModal = () => {
               <Choice value={fullscreen} options={[[true, t.on], [false, t.off]]} onChange={setFullscreen} />
             </OptionRow>
           )}
+          <OptionRow label={t.set_lang}>
+            <Choice<Lang> value={lang} options={[['es', 'Español'], ['en', 'English']]} onChange={l => updateSettings({ lang: l })} />
+          </OptionRow>
           <OptionRow label={t.set_ui_size}>
             <Choice<UiSize> value={settings.uiSize} options={[['normal', t.ui_normal], ['large', t.ui_large]]} onChange={uiSize => updateSettings({ uiSize })} />
           </OptionRow>

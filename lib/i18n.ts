@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { getSettings, subscribeSettings } from './settings';
 
 // --- DICCIONARIO DE TRADUCCIONES ---
 // Para añadir un idioma, añade su bloque: TypeScript obliga a que tenga todas las claves de `es`.
@@ -283,6 +284,7 @@ const es = {
   tutorial: "TUTORIAL",
   set_fullscreen: "Pantalla completa",
   set_ui_size: "Tamaño de la interfaz",
+  set_lang: "Idioma",
   ui_normal: "Normal",
   ui_large: "Grande",
   quit_game: "Salir del juego",
@@ -957,6 +959,7 @@ const en: Translations = {
   tutorial: "TUTORIAL",
   set_fullscreen: "Fullscreen",
   set_ui_size: "Interface size",
+  set_lang: "Language",
   ui_normal: "Normal",
   ui_large: "Large",
   quit_game: "Quit game",
@@ -1369,16 +1372,14 @@ export const detectLang = (): Lang => {
   } catch { /* sin Intl */ }
   return 'en';
 };
-const noopSubscribe = () => () => {};
+// El elegido en Ajustes manda; si no, el detectado (una vez)
 let browserLang: Lang | null = null;
-const getBrowserLang = (): Lang => {
-  if (!browserLang) {
-    browserLang = detectLang();
-    document.documentElement.lang = browserLang;
-  }
-  return browserLang;
+export const currentLang = (): Lang => {
+  const lang = getSettings().lang ?? (browserLang ??= detectLang());
+  if (document.documentElement.lang !== lang) document.documentElement.lang = lang;
+  return lang;
 };
 const getServerLang = (): Lang => 'en';
 
-export const useTranslations = (): Translations =>
-  TRANSLATIONS[useSyncExternalStore(noopSubscribe, getBrowserLang, getServerLang)];
+export const useLang = (): Lang => useSyncExternalStore(subscribeSettings, currentLang, getServerLang);
+export const useTranslations = (): Translations => TRANSLATIONS[useLang()];
