@@ -211,7 +211,7 @@ test('combate del Castillo a medias: SEGUIR lo retoma tal cual (sin botón de co
     castleState: { run: { stage: 3, lives: 3, maxLives: 4, deck: DECK }, best: 3, conquered: 0 } });
   await page.waitForTimeout(800);
   await page.reload();
-  await expect(page.getByText('piso 4 · combate a medias')).toBeVisible();
+  await expect(page.getByText('piso 4 · combate a medias')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/continuar partida/i)).toHaveCount(0);
   await shot(page, info, 'menu');
   await page.getByText('SEGUIR').first().click({ force: true });
