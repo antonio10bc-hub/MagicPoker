@@ -17,7 +17,7 @@ import { ChestReveal } from '@/components/game/ChestReveal';
 import { MiniCard, RunStatus } from '@/components/game/RunStatus';
 import { CastleMap } from '@/components/game/CastleMap';
 import { ForestFigure, TIER_INK, TIER_RGB } from '@/components/game/ForestFigure';
-import { Archetype, archetypesOf, forestDeckConfig, ForestState, getForest, REALM_MARKS, REALMS, realmOpen, recordOf, TIERS } from '@/lib/forest';
+import { Archetype, archetypesOf, forestDeckConfig, ForestState, getForest, recordOf, TIERS } from '@/lib/forest';
 import { getStats } from '@/lib/stats';
 import { FOREST_STAMPS, StampId } from '@/lib/stamps';
 import { StampSeal, stampDesc, stampName } from '@/components/game/Stamps';
@@ -37,6 +37,7 @@ import { PixelSprite, Sprite } from '@/components/pixel/PixelSprite';
 import { CROWN_ICON, FLAME, HEART, HEART_LOST, ICONS, MOON, SEAL_ICONS, SKULLS } from '@/components/pixel/sprites';
 import { CARD_SIZE, INK } from '@/theme/tokens';
 import { closeWithClick, Dialog, DialogBody, OptionRow, Section, Tabs } from './Dialog';
+import { ForestMoon } from './ForestMoon';
 
 const sealName = (t: Translations, s: SealId) => t[`seal_${s}` as keyof Translations];
 const sealDesc = (t: Translations, s: SealId) => t[`seal_${s}_desc` as keyof Translations];
@@ -534,14 +535,15 @@ export const ChallengesModal = () => {
 /** Sus sellos con sus copias, tal y como se copian */
 const forestSeals = (a: Archetype) => Object.entries(forestDeckConfig(a).seals) as [SealId, number][];
 
-// --- TUS NOCHES EN EL BOSQUE: duelos, rachas y los logros del Bosque ---
-// Una placa ámbar bajo la luna: tres cifras grandes (duelos, racha con su llama que arde
-// si está viva, mejor racha con corona) y debajo los 8 logros del Bosque en sellos ámbar
-// (toca uno para ver cómo se consigue).
+// --- TUS NOCHES EN EL BOSQUE: duelos, rachas, la marca y los logros del Bosque ---
+// Una placa ámbar: tres cifras grandes en óvalos (duelos, racha con su llama que arde si
+// está viva, mejor racha con corona), la marca del Bosque como una luna con sus tres
+// lunas de reino (ForestMoon) y debajo los 8 logros del Bosque en sellos ámbar.
 /** Una cifra de tus noches en el Bosque (la racha viva arde) */
 const ForestStat = ({ label, n, icon, glow }: { label: string; n: number; icon: Sprite; glow?: boolean }) => (
-  <div className="flex-1 flex flex-col items-center gap-[2px] py-[3px] rounded-[3px]"
-    style={{ background: 'rgba(11,13,12,0.45)', boxShadow: glow ? 'inset 0 0 0 1px rgba(255,194,51,0.55), 0 0 8px rgba(255,194,51,0.25)' : 'inset 0 0 0 1px rgba(255,194,51,0.15)' }}>
+  <div className="flex-1 flex flex-col items-center gap-[2px] py-[4px] rounded-full"
+    style={{ background: 'radial-gradient(ellipse 70% 80% at 50% 35%, rgba(255,194,51,0.14) 0%, rgba(11,13,12,0.55) 75%)',
+      boxShadow: glow ? 'inset 0 0 0 1px rgba(255,194,51,0.55), 0 0 8px rgba(255,194,51,0.25)' : 'inset 0 0 0 1px rgba(255,194,51,0.15)' }}>
     <span className={clsx('h-[9px] flex items-center', glow && 'anim-pulse-soft')} style={{ filter: glow ? 'drop-shadow(0 0 3px rgba(255,194,51,0.9))' : undefined }}>
       <PixelSprite sprite={icon} tint={glow || n > 0 ? INK.amber : INK.teal} />
     </span>
@@ -549,43 +551,6 @@ const ForestStat = ({ label, n, icon, glow }: { label: string; n: number; icon: 
     <span className="t-micro" style={{ color: 'var(--ink-mint)' }}>{label}</span>
   </div>
 );
-
-/** La marca del Bosque: una barra con los tres hitos que abren los reinos (en su color) */
-const ForestMarks = ({ f }: { f: ForestState }) => {
-  const t = useTranslations();
-  const max = REALM_MARKS.renegade;
-  const marks = Math.min(max, f.marks ?? 0);
-  return (
-    <div className="flex flex-col gap-[4px] pt-[12px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,194,51,0.18)' }}>
-      <div className="flex items-center justify-between">
-        <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_marks}</span>
-        <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 10 }}>{f.marks ?? 0}</span>
-      </div>
-      <div className="relative h-[6px] rounded-full" style={{ background: 'rgba(11,13,12,0.6)', boxShadow: 'inset 0 0 0 1px rgba(255,194,51,0.25)' }}>
-        <motion.div className="absolute left-0 top-0 bottom-0 rounded-full" style={{ background: 'linear-gradient(to right, #C98A12, var(--ink-amber))', boxShadow: '0 0 6px rgba(255,194,51,0.6)' }}
-          initial={{ width: 0 }} animate={{ width: `${(marks / max) * 100}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} />
-        {REALMS.map(r => {
-          const open = realmOpen(f, r);
-          return (
-            <span key={r} className="absolute flex flex-col items-center" style={{ left: `${(REALM_MARKS[r] / max) * 100}%`, top: -3, transform: 'translateX(-50%)' }}>
-              <span className={clsx('rounded-[1px]', open && 'anim-pulse-soft')} style={{ width: 4, height: 12, background: open ? TIER_INK[r] : 'var(--ink-slate)',
-                boxShadow: open ? `0 0 6px rgba(${TIER_RGB[r]},0.9)` : 'inset 0 0 0 1px rgba(94,122,118,0.6)' }} />
-            </span>
-          );
-        })}
-      </div>
-      <div className="relative h-[16px]">
-        {REALMS.map(r => (
-          <span key={r} className="absolute font-display whitespace-nowrap" style={{ left: `${(REALM_MARKS[r] / max) * 100}%`, transform: r === 'renegade' ? 'translateX(-100%)' : 'translateX(-50%)',
-            fontSize: 7, lineHeight: '8px', textAlign: 'center', color: realmOpen(f, r) ? TIER_INK[r] : 'var(--ink-teal)' }}>
-            {t[`realm_${r}` as keyof Translations]}<br />{REALM_MARKS[r]}
-          </span>
-        ))}
-      </div>
-      <span className="t-micro" style={{ color: 'var(--ink-mint)' }}>{t.forest_marks_hint}</span>
-    </div>
-  );
-};
 
 const ForestRecord = ({ f }: { f: ForestState }) => {
   const t = useTranslations();
@@ -597,16 +562,13 @@ const ForestRecord = ({ f }: { f: ForestState }) => {
     <div className="relative shrink-0 overflow-hidden rounded-[4px] px-[8px] py-[8px] flex flex-col gap-[14px]" style={{
       background: 'radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255,194,51,0.16) 0%, rgba(30,42,40,0.7) 55%, rgba(11,13,12,0.85) 100%)',
       boxShadow: 'inset 0 0 0 1px rgba(255,194,51,0.35), 0 0 12px rgba(255,194,51,0.12)' }}>
-      {/* La luna del bosque, arriba a la derecha */}
-      <span className="absolute rounded-full pointer-events-none" style={{ right: 8, top: 6, width: 14, height: 14,
-        background: 'radial-gradient(circle at 40% 40%, #FFF3C4 0%, var(--ink-amber) 70%)', boxShadow: '0 0 10px 3px rgba(255,194,51,0.35)' }} />
       <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 10, letterSpacing: 1 }}>{t.forest_stats}</span>
       <div className="flex gap-[4px]">
         <ForestStat label={t.forest_stat_duels} n={f.duels} icon={MOON} />
         <ForestStat label={t.forest_stat_streak} n={f.streak} icon={FLAME} glow={hot} />
         <ForestStat label={t.forest_stat_best} n={f.bestStreak} icon={CROWN_ICON} />
       </div>
-      <ForestMarks f={f} />
+      <ForestMoon f={f} />
       <div className="flex items-center gap-[5px] pt-[12px]" style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,194,51,0.18)' }}>
         <span className="font-display" style={{ color: 'var(--ink-amber)', fontSize: 9, letterSpacing: 1 }}>{t.forest_stamps} · {earned}/{FOREST_STAMPS.length}</span>
         <span className="flex-1 h-[1px]" style={{ background: 'rgba(255,194,51,0.3)' }} />

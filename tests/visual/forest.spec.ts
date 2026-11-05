@@ -77,6 +77,13 @@ test('bosque: buscar duelo, alguien sale y se abalanza; el duelo; volver al bosq
   await expect(page.locator(`[aria-label="bestiary ${forest!.id}"]`)).toBeVisible();
   await page.waitForTimeout(400);
   await shot(page, info, 'bosque-7-bestiario');
+  // La marca del Bosque: la (i) explica lo que suma cada duelo (antes era un párrafo fijo)
+  await expect(page.getByText(/Ganar suma \+1/)).toHaveCount(0);
+  await page.locator('[aria-label="qué es la marca del Bosque"]').click();
+  await expect(page.getByText('Ganar en Pesadillas')).toBeVisible();
+  await shot(page, info, 'bosque-7b-marca-info');
+  await page.locator('[aria-label="cerrar"]').last().click();
+  await expect(page.getByText('Ganar en Pesadillas')).toHaveCount(0);
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('magic_poker_forest')!));
   expect(stored.duels).toBe(1);
   expect(stored.streak).toBe(1);

@@ -856,9 +856,10 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   partida se suman pasos (un bajo pellizcado en el 1 y el 3) y un latido sordo; en la
   pelea la caja toca más y el viento sube. Sin la cuerda tensa de los jefes: el ente no
   aprieta. Al acabar el prólogo vuelve la música del menú.
-- **Bestiario del Bosque: tus noches en el Bosque.** Arriba, una placa ámbar bajo una
-  luna: tres cifras grandes en ámbar (Duelos con luna, Racha con una llama que late y un
-  filo que brilla si está viva, Mejor racha con corona) y debajo LOGROS DEL BOSQUE · n/8:
+- **Bestiario del Bosque: tus noches en el Bosque.** Arriba, una placa ámbar: tres cifras
+  grandes en ámbar dentro de óvalos (Duelos con luna, Racha con una llama que late y un
+  filo que brilla si está viva, Mejor racha con corona), la MARCA DEL BOSQUE como una luna
+  (ver abajo) y debajo LOGROS DEL BOSQUE · n/8:
   los 8 logros del Bosque en sellos ámbar (los de siempre son naranjas), al tocarlos su
   nombre y cómo se consiguen. Los nuevos: Cazador (racha de 5, huella), Fuego fatuo
   (racha de 10, llama), Raíces (ganar en las cinco dificultades, pino), Regicida (al
@@ -870,8 +871,14 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   bajo 0). Encima de BUSCAR DUELO, en el color del reino, «Ganar aquí: +N de marca».
   Calibrado con `scripts/balance/realms.ts`. A 8, 20 y 45 se
   abren tres bosques donde solo sale una dificultad: pesadillas, únicos y renegados (no
-  se cierran). En el bestiario, bajo las cifras, una barra ámbar con los tres hitos, que
-  se encienden en el color del reino al abrirse. En el Bosque, en el borde, unos ojos del
+  se cierran). En el bestiario (`components/modals/ForestMoon.tsx`) la marca es una luna
+  ámbar con cráteres que pasa de nueva a llena (llena en 45) con tu marca dentro, y al
+  abrirlo se llena desde 0 y suena. Los reinos son tres lunas pequeñas en su color sobre un
+  anillo de órbita punteado que pasa por detrás de la grande (Pesadillas a la izquierda,
+  Únicos abajo, Renegados a la derecha), meciéndose despacio por él: en sombra con un
+  filo de su color hasta abrirse (con la mejor marca), y abiertas, llenas, con brillo y
+  latiendo. Una (i) ámbar en la esquina de la sección abre una ventanita con lo que suma
+  cada duelo y qué abre cada cifra. En el Bosque, en el borde, unos ojos del
   color del reino con su nombre (y NEW la primera vez): las pesadillas a la izquierda, más
   allá los renegados, y los únicos a la derecha. Al tocarlos la vista gira hacia ese lado
   (como girar la cabeza: al mirar a la derecha el bosque se va hacia la izquierda y el
