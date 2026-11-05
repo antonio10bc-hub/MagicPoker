@@ -1,5 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { animate, AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { animate, AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Translations, useTranslations } from '@/lib/i18n';
 import { playSfx } from '@/lib/sounds';
@@ -13,20 +13,28 @@ import { INK } from '@/theme/tokens';
 // --- LA MARCA DEL BOSQUE: LA LUNA Y SUS TRES LUNAS ---
 // En el bestiario, bajo tus noches. La marca es una luna ámbar que pasa de nueva a llena
 // (llena en la marca de Renegados) con tu marca dentro. Los tres reinos son tres lunas
-// pequeñas en su color (Pesadillas a la izquierda, Únicos abajo, Renegados a la derecha)
-// sobre un anillo de órbita que pasa por detrás de la grande; se mecen despacio por él.
+// pequeñas en su color que giran a su alrededor, cada una en su órbita (Pesadillas cerca
+// y deprisa, Renegados lejos y despacio). Las órbitas están inclinadas: por detrás la luna
+// pequeña mengua, se apaga un poco y la tapa la grande; por delante crece y la tapa ella.
 // Apagadas hasta abrirse con tu mejor marca (no se cierran); abiertas, laten en su color.
-// Al abrir el bestiario la luna se llena desde 0. La (i) explica la marca en una ventanita.
+// Sus nombres, en una leyenda fija debajo (girando quedarían tapados). Al abrir el
+// bestiario la luna se llena desde 0. La (i) explica la marca en una ventanita.
 
 const FULL = REALM_MARKS.renegade;
-/** Dónde está cada reino en la órbita (grados: 0 derecha, 90 abajo, 180 izquierda) */
-const SPOT: Record<Realm, number> = { nightmare: 180, unique: 90, renegade: 0 };
-/** Lo que se mece cada luna por la órbita (grados) y en cuánto tiempo */
-const SWAY = 9;
-const SWAY_S = 7;
-const STAGE_H = 128;
-const CY = 52;
-const ORBIT_RY = 43;
+/** Cada reino en su órbita (de dentro afuera), cuánto tarda en dar la vuelta y dónde empieza (grados) */
+const ORBIT: Record<Realm, { k: number; period: number; start: number }> = {
+  nightmare: { k: 0, period: 9, start: 200 },
+  unique: { k: 1, period: 14, start: 70 },
+  renegade: { k: 2, period: 21, start: 320 },
+};
+/** Sin movimiento (preferencia del sistema): quietas, por delante y a la vista */
+const STILL_AT: Record<Realm, number> = { nightmare: 165, unique: 25, renegade: 115 };
+/** Inclinación: lo alto de cada órbita respecto a su ancho */
+const TILT = 0.3;
+const CY = 44;
+/** Las órbitas van un poco por debajo del centro: por delante no tapan la cifra */
+const ORBIT_DY = 5;
+const STAGE_H = 96;
 
 /** Una luna pequeña de un reino: abierta, llena en su color; cerrada, en sombra */
 const RealmMoon = ({ realm, open, r }: { realm: Realm; open: boolean; r: number }) => {
@@ -134,28 +142,33 @@ const MarkInfo = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-/** Una luna de reino en su sitio de la órbita, meciéndose, con su nombre y su cifra debajo */
-const Satellite = ({ realm, open, cx, rx, r, still }: { realm: Realm; open: boolean; cx: number; rx: number; r: number; still: boolean }) => {
-  const t = useTranslations();
-  const at = (deg: number) => {
+/** Una luna de reino dando vueltas a la grande por su órbita (con profundidad) */
+const Satellite = ({ realm, open, cx, cy, rx, ry, r, still }: {
+  realm: Realm; open: boolean; cx: number; cy: number; rx: number; ry: number; r: number; still: boolean;
+}) => {
+  const x = useMotionValue(cx);
+  const y = useMotionValue(cy);
+  const scale = useMotionValue(1);
+  const z = useMotionValue(3);
+  const opacity = useMotionValue(1);
+  const { period, start } = ORBIT[realm];
+  /** Coloca la luna en un ángulo: abajo (delante) más grande y por encima de la grande */
+  const place = useCallback((deg: number) => {
     const a = (deg * Math.PI) / 180;
-    return { x: cx + Math.cos(a) * rx, y: CY + Math.sin(a) * ORBIT_RY };
-  };
-  const base = SPOT[realm];
-  const [a, b, c] = [at(base - SWAY), at(base), at(base + SWAY)];
-  const color = open ? TIER_INK[realm] : 'var(--ink-teal)';
+    const depth = Math.sin(a);
+    x.set(cx + Math.cos(a) * rx);
+    y.set(cy + depth * ry);
+    scale.set(0.74 + 0.36 * (depth + 1) / 2);
+    z.set(depth >= 0 ? 3 : 1);
+    opacity.set(0.55 + 0.45 * (depth + 1) / 2);
+  }, [cx, cy, rx, ry, x, y, scale, z, opacity]);
+  useLayoutEffect(() => { place(still ? STILL_AT[realm] : start); }, [place, still, realm, start]);
+  useAnimationFrame(t => { if (!still) place(start + (t / 1000 / period) * 360); });
   return (
-    <motion.div className="absolute z-[3]" style={{ left: 0, top: 0 }}
-      initial={false}
-      animate={still ? { x: b.x, y: b.y } : { x: [b.x, c.x, b.x, a.x, b.x], y: [b.y, c.y, b.y, a.y, b.y] }}
-      transition={still ? { duration: 0 } : { duration: SWAY_S, repeat: Infinity, ease: 'easeInOut', delay: REALMS.indexOf(realm) * 1.3 }}>
-      {/* La luna, centrada en su punto de la órbita; el nombre y la cifra, colgando debajo */}
-      <div className="absolute" style={{ left: -(r + 1), top: -(r + 1) }}><RealmMoon realm={realm} open={open} r={r} /></div>
-      <span className={clsx('absolute font-display whitespace-nowrap text-center', open && realm === 'unique' && 'glow-gold')}
-        style={{ top: r + 3, left: 0, transform: 'translateX(-50%)', color, fontSize: 7, lineHeight: '8px', letterSpacing: 0.5,
-          textShadow: open ? `0 0 4px rgba(${TIER_RGB[realm]},0.7)` : undefined }}>
-        {t[`realm_${realm}` as keyof Translations]}<br />{REALM_MARKS[realm]}
-      </span>
+    <motion.div className="absolute pointer-events-none" style={{ left: 0, top: 0, x, y, zIndex: z, opacity }}>
+      <motion.div className="absolute" style={{ left: -(r + 1), top: -(r + 1), scale }}>
+        <RealmMoon realm={realm} open={open} r={r} />
+      </motion.div>
     </motion.div>
   );
 };
@@ -191,18 +204,28 @@ export const ForestMoon = ({ f }: { f: ForestState }) => {
 
   const narrow = w < 200;
   const moonR = narrow ? 22 : 29;
-  const satR = narrow ? 8 : 9;
-  const rx = Math.min(w / 2 - 22, 98);
+  const satR = narrow ? 7 : 9;
   const cx = w / 2;
+  const oy = CY + ORBIT_DY;
+  // Tres órbitas, de justo fuera de la luna grande hasta el borde de la placa
+  const inner = moonR + satR + 4;
+  const outer = Math.max(inner + 20, Math.min(w / 2 - satR - 3, moonR * 4));
+  const radius = (r: Realm) => inner + ((outer - inner) / 2) * ORBIT[r].k;
   const fill = Math.min(1, shown / FULL);
   const full = marks >= FULL;
-  // El anillo de la órbita: la mitad de atrás va por detrás de la luna, la de delante por delante
-  const ring = (half: 'back' | 'front') => (
+  // Las órbitas: la mitad de atrás va por detrás de la luna, la de delante por delante
+  const rings = (half: 'back' | 'front') => (
     <svg className={clsx('absolute left-0 top-0 pointer-events-none', half === 'back' ? 'z-[1]' : 'z-[2]')} width={w} height={STAGE_H}>
-      <path d={half === 'back'
-        ? `M ${cx - rx} ${CY} A ${rx} ${ORBIT_RY} 0 0 1 ${cx + rx} ${CY}`
-        : `M ${cx + rx} ${CY} A ${rx} ${ORBIT_RY} 0 0 1 ${cx - rx} ${CY}`}
-        fill="none" stroke="rgba(255,194,51,1)" strokeOpacity={half === 'back' ? 0.18 : 0.32} strokeWidth="1" strokeDasharray="2 3" />
+      {REALMS.map(r => {
+        const rx = radius(r), ry = rx * TILT, open = realmOpen(f, r);
+        return (
+          <path key={r} d={half === 'back'
+            ? `M ${cx - rx} ${oy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${oy}`
+            : `M ${cx + rx} ${oy} A ${rx} ${ry} 0 0 1 ${cx - rx} ${oy}`}
+            fill="none" stroke={open ? `rgb(${TIER_RGB[r]})` : 'rgb(255,194,51)'}
+            strokeOpacity={(open ? 0.4 : 0.16) * (half === 'back' ? 0.6 : 1)} strokeWidth="1" strokeDasharray="2 3" />
+        );
+      })}
     </svg>
   );
 
@@ -219,7 +242,7 @@ export const ForestMoon = ({ f }: { f: ForestState }) => {
         </button>
       </div>
       <div ref={stage} className="relative" style={{ height: STAGE_H }} aria-label={`${t.forest_marks} ${marks}`}>
-        {ring('back')}
+        {rings('back')}
         {/* La luna grande con tu marca dentro */}
         <div className="absolute z-[2]" style={{ left: cx, top: CY, transform: 'translate(-50%, -50%)' }}>
           <div className={clsx('relative', full && 'anim-pulse-soft')}>
@@ -232,8 +255,24 @@ export const ForestMoon = ({ f }: { f: ForestState }) => {
             </span>
           </div>
         </div>
-        {ring('front')}
-        {REALMS.map(r => <Satellite key={r} realm={r} open={realmOpen(f, r)} cx={cx} rx={rx} r={satR} still={still} />)}
+        {rings('front')}
+        {REALMS.map(r => (
+          <Satellite key={r} realm={r} open={realmOpen(f, r)} cx={cx} cy={oy} rx={radius(r)} ry={radius(r) * TILT} r={satR} still={still} />
+        ))}
+      </div>
+      {/* Leyenda: cada reino con su luna, su nombre y su cifra (en su color si está abierto) */}
+      <div className="flex flex-wrap justify-center gap-x-[10px] gap-y-[2px]">
+        {REALMS.map(r => {
+          const open = realmOpen(f, r);
+          return (
+            <span key={r} className={clsx('flex items-center gap-[3px] font-display whitespace-nowrap', open && r === 'unique' && 'glow-gold')}
+              style={{ color: open ? TIER_INK[r] : 'var(--ink-teal)', fontSize: 8, lineHeight: '9px', letterSpacing: 0.5, paddingTop: 1,
+                textShadow: open ? `0 0 4px rgba(${TIER_RGB[r]},0.7)` : undefined }}>
+              <RealmMoon realm={r} open={open} r={3.5} />
+              {t[`realm_${r}` as keyof Translations]} · {REALM_MARKS[r]}
+            </span>
+          );
+        })}
       </div>
       <AnimatePresence>{info && <MarkInfo key="info" onClose={() => setInfo(false)} />}</AnimatePresence>
     </div>

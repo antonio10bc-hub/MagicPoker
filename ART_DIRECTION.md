@@ -873,11 +873,13 @@ solo sistema para que todo tenga la misma jerarquía (`components/modals/Dialog.
   abren tres bosques donde solo sale una dificultad: pesadillas, únicos y renegados (no
   se cierran). En el bestiario (`components/modals/ForestMoon.tsx`) la marca es una luna
   ámbar con cráteres que pasa de nueva a llena (llena en 45) con tu marca dentro, y al
-  abrirlo se llena desde 0 y suena. Los reinos son tres lunas pequeñas en su color sobre un
-  anillo de órbita punteado que pasa por detrás de la grande (Pesadillas a la izquierda,
-  Únicos abajo, Renegados a la derecha), meciéndose despacio por él: en sombra con un
-  filo de su color hasta abrirse (con la mejor marca), y abiertas, llenas, con brillo y
-  latiendo. Una (i) ámbar en la esquina de la sección abre una ventanita con lo que suma
+  abrirlo se llena desde 0 y suena. Los reinos son tres lunas pequeñas en su color que
+  dan vueltas completas a la grande, cada una en su órbita punteada e inclinada
+  (Pesadillas cerca y deprisa, Únicos en medio, Renegados lejos y despacio): por detrás
+  menguan, se apagan un poco y la grande las tapa; por delante crecen y la tapan ellas.
+  En sombra con un filo de su color hasta abrirse (con la mejor marca); abiertas, llenas,
+  con brillo y latiendo, y su órbita se tiñe de su color. Sus nombres van en una leyenda
+  fija debajo (luna, nombre y cifra). Con "reducir movimiento", quietas y por delante. Una (i) ámbar en la esquina de la sección abre una ventanita con lo que suma
   cada duelo y qué abre cada cifra. En el Bosque, en el borde, unos ojos del
   color del reino con su nombre (y NEW la primera vez): las pesadillas a la izquierda, más
   allá los renegados, y los únicos a la derecha. Al tocarlos la vista gira hacia ese lado
