@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // La app de escritorio (Electron, CommonJS) va aparte
     "desktop/**",
+    // Build de itch.io (npm run build:itch)
+    "itch/**",
   ]),
 ]);
 

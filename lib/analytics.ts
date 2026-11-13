@@ -5,7 +5,7 @@
 // identificador anónimo por navegador. La librería se carga aparte para no frenar el
 // arranque; los eventos de antes de que esté lista esperan en una cola.
 import type { PostHog } from 'posthog-js';
-import { IS_DESKTOP } from './platform';
+import { IS_DESKTOP, IS_STATIC_WEB } from './platform';
 
 /** Clave pública del proyecto (va en la web por diseño) */
 const KEY = 'phc_xnbbVrZbqhjzk6GfeLxopJHkhtxFFXAxM96symjc2snN';
@@ -21,7 +21,7 @@ let starting = false;
 const queue: [string, Props | undefined][] = [];
 
 // En escritorio, de momento, nada (sin /ingest y, para Steam, solo si el jugador acepta)
-const enabled = () => typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && !IS_DESKTOP
+const enabled = () => typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && !IS_DESKTOP && !IS_STATIC_WEB
   && !['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 /** Arranca PostHog (una vez). `base`: propiedades que van en todos los eventos */

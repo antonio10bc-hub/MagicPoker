@@ -108,7 +108,7 @@ const loadBuffer = (file: string): Promise<AudioBuffer | null> => {
     const e = getEngine();
     p = !e
       ? Promise.resolve(null)
-      : fetch(`/sounds/${file}`)
+      : fetch(`sounds/${file}`)
           .then(r => r.arrayBuffer())
           .then(data => e.ctx.decodeAudioData(data))
           .catch(err => { console.warn('Audio not loaded:', file, err); return null; });

@@ -2,8 +2,8 @@
 
 Todo lo necesario para la página: textos para copiar y pegar, portada, capturas y
 builds. Las builds (`itch/builds/`) no se suben al repositorio: se generan con
-`npm run build:desktop` y luego `cd desktop && npm run dist` (Windows) y
-`npm run dist:mac` (Mac).
+`npm run build:itch` (HTML5, para jugar en el navegador), y con `npm run build:desktop`
+y luego `cd desktop && npm run dist` (Windows) y `npm run dist:mac` (Mac).
 
 ---
 
@@ -67,11 +67,25 @@ Pon tus cartas en cuatro huecos, frente a las del rival, y mira cómo chocan: ga
 |---|---|
 | `itch/cover-630x500.png` (o `cover-1260x1000.png`, más nítida, misma proporción) | Cover image |
 | `itch/screenshots/1-duel.jpg` … `5-the-forest.jpg` | Screenshots |
+| `itch/builds/MagicPoker-web.zip` | Upload → marcar **This file will be played in the browser** |
 | `itch/builds/MagicPoker-windows.zip` | Upload → marcar **Windows** |
 | `itch/builds/MagicPoker-mac-apple-silicon.zip` | Upload → marcar **macOS** (nombre: "Mac (Apple Silicon: M1, M2, M3…)") |
 | `itch/builds/MagicPoker-mac-intel.zip` | Upload → marcar **macOS** (nombre: "Mac (Intel)") |
 
-Sugerencias para el resto de campos: *Kind of project*: Downloadable · *Genre*: Card Game ·
+### Versión para el navegador (HTML5)
+
+1. *Kind of project*: **HTML** (así la página muestra el juego jugable arriba; las
+   descargas de Windows y Mac siguen debajo, como archivos normales).
+2. Sube `MagicPoker-web.zip` y marca **This file will be played in the browser**.
+3. *Embed options*: **Embed in page**, tamaño **1280 × 720** (o 960 × 600 si prefieres que
+   quepa entero sin pantalla completa), marca **Mobile friendly** (orientación
+   *Default*), **Automatically start on page load** y **Fullscreen button**.
+4. *Frame options*: deja *Click to launch in fullscreen* desmarcado.
+
+El progreso se guarda en el navegador del jugador (como en la web).
+
+Sugerencias para el resto de campos: *Kind of project*: HTML (o Downloadable si solo
+subes las descargas) · *Genre*: Card Game ·
 *Tags*: card-game, pixel-art, roguelike, deckbuilding, dark, singleplayer, poker ·
 *Release status*: Released (o In development) · *Languages*: English, Spanish.
 

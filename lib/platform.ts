@@ -4,6 +4,9 @@
 
 /** Versión de escritorio (build con DESKTOP=1) */
 export const IS_DESKTOP = process.env.NEXT_PUBLIC_DESKTOP === '1';
+/** Web estática para jugar en el navegador fuera de nuestra web (itch.io, build con
+ *  WEB_EXPORT=1): sin servidor, sin service worker y sin analíticas */
+export const IS_STATIC_WEB = process.env.NEXT_PUBLIC_STATIC_WEB === '1';
 
 /** Lo que la app de escritorio le da al juego (desktop/preload.js) */
 interface DesktopBridge {

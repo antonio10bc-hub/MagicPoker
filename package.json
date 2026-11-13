@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:visual": "playwright test",
-    "build:desktop": "node scripts/build-desktop.mjs"
+    "build:desktop": "node scripts/build-desktop.mjs",
+    "build:itch": "node scripts/build-itch.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
