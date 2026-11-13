@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/store/useGameStore';
 import { useTranslations } from '@/lib/i18n';
 import { playSfx, playSound } from '@/lib/sounds';
-import { markTutorialDone, stepCard, stepsOf, TutorialStep } from '@/lib/tutorial';
+import { stepCard, stepsOf, TutorialStep } from '@/lib/tutorial';
 import { useGameLayout } from '@/components/pixel/Stage';
 import { PxButton } from '@/components/pixel/ui';
 import { CARD_SIZE } from '@/theme/tokens';
@@ -53,9 +53,9 @@ const fitFont = (text: string, textW: number, maxH: number) => {
 export const TutorialCoach = () => {
   const t = useTranslations();
   const { board } = useGameLayout();
-  const { stepIndex, phase, finish, next, exit, id, passed, round } = useGameStore(useShallow(s => ({
-    stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, exit: s.exitToMenu, id: s.tutorialId,
-    passed: s.player.isPassed, round: s.roundNumber,
+  const { stepIndex, phase, finish, next, skip, id, passed, round, turn } = useGameStore(useShallow(s => ({
+    stepIndex: s.tutorialStep, phase: s.phase, finish: s.finishCombatPhase, next: s.nextTutorialNote, skip: s.skipTutorialStep, id: s.tutorialId,
+    passed: s.player.isPassed, round: s.roundNumber, turn: s.turn,
   })));
   if (stepIndex === null || phase === 'end') return null;
   const steps = stepsOf(id);
@@ -68,6 +68,8 @@ export const TutorialCoach = () => {
   if (step.kind === 'review' && phase !== 'combat-reveal') return null;
   if (step.kind !== 'review' && phase !== 'placement') return null;
 
+  // El ente está respondiendo a tu jugada (o a que te plantas)
+  const rivalMoving = step.kind !== 'review' && turn !== 'player';
   // Repasos y explicaciones: cartel grande abajo que espera a "Continuar"
   const blocking = step.kind === 'review' || step.kind === 'note';
   const text = t[step.text];
@@ -93,10 +95,12 @@ export const TutorialCoach = () => {
         exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.12 } }}
         transition={{ type: 'spring', stiffness: 420, damping: 26 }}
       >
-        {/* Saltar: pestaña encima del cartel (no ocupa sitio dentro), con el paso por el que vas */}
-        <button className="absolute cursor-pointer px-[4px] rounded-t-[3px]" data-skip
-          style={{ right: 6, top: -10, height: 10, fontSize: 8, lineHeight: '10px', color: 'var(--ink-teal)', background: 'rgba(11,13,12,0.95)' }}
-          onClick={() => { playSound('click'); markTutorialDone(); exit(); }}>{stepIndex + 1}/{steps.length} · {t.tut_skip}</button>
+        {/* Saltar este paso (lo hace por ti; el tramo libre del final, termina el tutorial):
+            pestaña encima del cartel (no ocupa sitio dentro), con el paso por el que vas */}
+        {/* (mientras el ente responde, no hay nada que saltar: espera atenuado) */}
+        <button className="absolute cursor-pointer px-[4px] rounded-t-[3px] disabled:cursor-default" data-skip disabled={rivalMoving}
+          style={{ right: 6, top: -10, height: 10, fontSize: 8, lineHeight: '10px', color: 'var(--ink-teal)', background: 'rgba(11,13,12,0.95)', opacity: rivalMoving ? 0.4 : 1 }}
+          onClick={() => { playSound('click'); skip(); }}>{stepIndex + 1}/{steps.length} · {t.tut_skip}</button>
         <span className={clsx('text-outline', blocking && 'flex-1')} style={{ fontSize: font, lineHeight: `${font}px` }}>{text}</span>
         {blocking && (
           <PxButton tone="green" className="h-[15px] shrink-0 px-[5px]" data-coach-next

@@ -133,3 +133,20 @@ describe('doble mazo: cartas y sellos aparte (todos)', () => {
     expect(s.deck.length).toBe(deck - 2);
   });
 });
+
+describe('el Forastero (primer jefe)', () => {
+  it('la primera vez no lleva ni As ni Rey y piensa con la IA fácil; en revancha, el mazo entero', async () => {
+    const b = await load();
+    const drifter = b.BOSSES[0];
+    expect(drifter.easy).toBe(true);
+    const first = b.buildBossDeck(drifter, 0).map(c => c.rank);
+    expect(first).not.toContain('A');
+    expect(first).not.toContain('K');
+    expect(first).toContain('Q');
+    const rematch = b.buildBossDeck(drifter, 1).map(c => c.rank);
+    expect(rematch).toContain('A');
+    expect(rematch).toContain('K');
+    // El resto de jefes, como siempre
+    expect(b.buildBossDeck(b.BOSSES[1], 0).map(c => c.rank)).toContain('A');
+  });
+});

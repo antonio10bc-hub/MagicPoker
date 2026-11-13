@@ -26,7 +26,7 @@ export const deckFor = (defeated: number, config?: DeckConfig): Card[] => {
 };
 
 /** Una partida contra un jefe (la primera vez, o en revancha de nivel `level`) */
-export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?: number; defeated?: number; config?: DeckConfig; cantrip?: boolean; ai?: 'normal' | 'hard'; lives?: number } = {}): MatchResult => {
+export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?: number; defeated?: number; config?: DeckConfig; cantrip?: boolean; ai?: 'easy' | 'normal' | 'hard'; lives?: number } = {}): MatchResult => {
   const boss = BOSSES[bossIndex];
   const level = opts.level ?? 0;
   const rematch = level > 0;
@@ -35,7 +35,7 @@ export const bossMatch = (persona: PersonaId, bossIndex: number, opts: { level?:
     player: playerStart(deckFor(defeated, opts.config)),
     opponent: createBossState(boss, level, opts.lives ?? bossLives(boss, level), STARTING_HAND_SIZE),
     bot: chooserOf(persona), botSeesAll: seesAll(persona),
-    rival: rivalAi(opts.ai ?? (rematch ? 'hard' : 'normal')),
+    rival: rivalAi(opts.ai ?? (rematch ? 'hard' : boss.easy ? 'easy' : 'normal')),
     sealCantrip: opts.cantrip, rivalCantrip: opts.cantrip,
   });
 };

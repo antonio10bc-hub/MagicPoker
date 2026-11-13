@@ -5,7 +5,7 @@
 // el último normal aparece un jefe secreto que usa todos los sellos.
 // Revancha: un jefe ya vencido vuelve más fuerte, y cada revancha ganada sube su nivel
 // (ver bossSeals y bossLives). Con 5 victorias contra un jefe se gana su dorso de carta.
-import { Card, PlayerState, SealId } from '@/types';
+import { Card, PlayerState, Rank, SealId } from '@/types';
 import { createDeck, createDualState, createSealCard, shuffle } from '@/lib/game-utils';
 
 export interface Boss {
@@ -15,12 +15,18 @@ export interface Boss {
   lives: number;
   /** Jefe secreto: no sale en la lista hasta que lo alcanzas */
   secret?: boolean;
+  /** La primera vez (no en revancha): cartas que no lleva en el mazo */
+  removed?: Rank[];
+  /** La primera vez (no en revancha): piensa con la IA fácil */
+  easy?: boolean;
 }
 
 export const BOSSES: Boss[] = [
   // Vidas ajustadas con la simulación de balanceo (scripts/balance): la primera vez todos
   // piensan con la IA normal y la dificultad sube poco a poco, sin escalones
-  { id: 'drifter', seal: null, lives: 3 },
+  // El primero tras el tutorial, mucho más fácil: piensa con la IA fácil y no lleva ni el
+  // As ni el Rey (casual: ~87 % de victorias; experto: ~95 %)
+  { id: 'drifter', seal: null, lives: 3, removed: ['A', 'K'], easy: true },
   { id: 'wall', seal: 'shield', lives: 3 },
   { id: 'duelist', seal: 'double', lives: 4 },
   { id: 'trickster', seal: 'shift', lives: 5 },
@@ -170,7 +176,10 @@ export const buildPlayerDeck = (seals: SealId[] = unlockedSeals()): Card[] =>
 
 /** Mazo del boss: el estándar más sus sellos (ver bossSeals) */
 export const buildBossDeck = (boss: Boss, level = 0): Card[] =>
-  shuffle([...createDeck('opponent'), ...bossSeals(boss, level).map(s => createSealCard('opponent', s))]);
+  shuffle([
+    ...createDeck('opponent').filter(c => level > 0 || !boss.removed?.includes(c.rank)),
+    ...bossSeals(boss, level).map(s => createSealCard('opponent', s)),
+  ]);
 
 /**
  * Estado del boss al empezar: su mano y sus dos mazos (el de póker y el de sellos, como

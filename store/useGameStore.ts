@@ -88,6 +88,8 @@ interface GameState {
   drawCard: (target: Owner, amount?: number) => void;
   /** Tutorial: "Continuar" en un paso de explicación */
   nextTutorialNote: () => void;
+  /** Tutorial: salta el paso en el que estás (lo hace por ti); en el tramo libre, termina */
+  skipTutorialStep: () => void;
   /** Truco de pruebas: gana la partida en curso */
   debugWin: () => void;
   /** Tras el cara o cruz: empieza la primera ronda, la abra quien la abra */
@@ -284,9 +286,9 @@ export const useGameStore = create<GameState>((set, get) => {
       ...initialMatchState(),
       screen: 'game',
       ...tossCoin(),
-      // La primera vez, todos los jefes piensan con la IA normal (la dificultad la ponen sus
-      // vidas y sus sellos); en las revanchas, con la difícil
-      difficulty: rematch ? 'hard' : 'normal',
+      // La primera vez, los jefes piensan con la IA normal (la dificultad la ponen sus vidas
+      // y sus sellos; el primero, con la fácil); en las revanchas, con la difícil
+      difficulty: rematch ? 'hard' : boss.easy ? 'easy' : 'normal',
       bossIndex,
       rematch,
       rematchLevel: level,
@@ -360,6 +362,26 @@ export const useGameStore = create<GameState>((set, get) => {
   nextTutorialNote: () => {
     const { tutorialStep } = get();
     if (tutorialStep !== null && stepsOf(get().tutorialId)[tutorialStep]?.kind === 'note') set({ tutorialStep: tutorialStep + 1 });
+  },
+
+  skipTutorialStep: () => {
+    const { tutorialStep, player } = get();
+    if (tutorialStep === null) return;
+    const step = stepsOf(get().tutorialId)[tutorialStep];
+    if (!step) return;
+    if (step.kind === 'note') get().nextTutorialNote();
+    else if (step.kind === 'review') get().finishCombatPhase();
+    else if (step.kind === 'stand') get().passTurn();
+    else if (step.kind === 'play') {
+      // La carta que pide, en su hueco (sin hueco fijo: el primero libre)
+      const card = stepCard(player.hand, step);
+      const slot = step.slot ?? player.board.findIndex(b => !b.card);
+      if (card && slot >= 0) get().placeCard(card.id, slot);
+    } else {
+      // El tramo libre es el final: saltarlo es acabar el tutorial
+      markTutorialDone();
+      get().exitToMenu();
+    }
   },
 
   exitToMenu: () => {

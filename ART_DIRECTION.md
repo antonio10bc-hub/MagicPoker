@@ -678,7 +678,9 @@ se mueve rápido y una vibración leve a las masas naranjas.
   lecciones y el duelo del paseo son guiones con las reglas reales (mazos ordenados, el
   rival juega lo que dice el guion). Ajustes → Repetir tutorial juega el duelo contra el
   ente. Todos los carteles salen en el mismo sitio, la franja central entre las dos filas
-  (se lee mejor), con una pestaña encima con el paso y Saltar ("2/3 · Saltar"); los
+  (se lee mejor), con una pestaña encima con el paso y «Saltar paso» ("2/3 · Saltar
+  paso"): hace por ti ese paso (pone la carta, se planta o cierra el repaso) y en el tramo
+  libre del final termina el tutorial; atenuada mientras el ente responde. Los
   repasos de pelea llevan "Continuar" a la derecha del texto. La carta y el hueco que
   tocan laten con un halo; lo demás queda bloqueado (en el tramo libre del duelo, nada).
   Al ganar el duelo, la pantalla final habla en clave de historia ("Ya estás preparado
