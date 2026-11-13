@@ -27,6 +27,17 @@ editan sin él). Lo que se sube a Steam es la carpeta `dist/win-unpacked`, con
 - En la build de escritorio (`NEXT_PUBLIC_DESKTOP=1`, ver `lib/platform.ts`) no hay
   analíticas ni service worker, y en Ajustes no sale la vibración.
 
+## Mac (para itch.io)
+
+```bash
+npm run dist:mac               # dist/Magic Poker-…-arm64-mac.zip (Apple Silicon) y …-mac.zip (Intel)
+```
+
+Se puede construir desde Linux, pero **sin firmar**: Gatekeeper avisa la primera vez (clic
+derecho → Abrir) y, si dice que "está dañada", `xattr -cr "Magic Poker.app"`. Para
+distribuirla sin avisos hace falta firmarla y notarizarla en un Mac con una cuenta de
+Apple Developer. Textos, portada y capturas de la página de itch.io: `itch/`.
+
 ## Pendiente
 
 - Guardado en archivos propios (para la nube de Steam) en vez de localStorage.

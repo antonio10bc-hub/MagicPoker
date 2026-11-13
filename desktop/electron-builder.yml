@@ -1,4 +1,4 @@
-# Empaquetado para Windows (x64). "dir" es la carpeta que se sube a Steam; "zip", para probarla.
+# Empaquetado: Windows (x64; "dir" es la carpeta que se sube a Steam; "zip", para itch.io) y Mac (zip, para itch.io).
 appId: com.magicpoker.game
 productName: Magic Poker
 copyright: Copyright © 2026 Magic Poker
@@ -21,3 +21,11 @@ win:
       arch: [x64]
   icon: build/icon.png
   executableName: MagicPoker
+# Mac (para itch.io): un .zip por arquitectura (Apple Silicon y procesadores Intel), sin firmar
+mac:
+  target:
+    - target: zip
+      arch: [arm64, x64]
+  icon: build/icon.png
+  category: public.app-category.card-games
+  identity: null
