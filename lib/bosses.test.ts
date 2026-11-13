@@ -150,3 +150,17 @@ describe('el Forastero (primer jefe)', () => {
     expect(b.buildBossDeck(b.BOSSES[1], 0).map(c => c.rank)).toContain('A');
   });
 });
+
+describe('el Muro y el Duelista (2.º y 3.º)', () => {
+  it('la primera vez, IA fácil y una vida menos; en revancha, como siempre', async () => {
+    const b = await load();
+    const [, wall, duelist] = b.BOSSES;
+    expect(wall.easy && duelist.easy).toBe(true);
+    expect(b.bossLives(wall, 0)).toBe(2);
+    expect(b.bossLives(duelist, 0)).toBe(3);
+    expect(b.bossLives(wall, 1)).toBe(4);
+    expect(b.bossLives(duelist, 3)).toBe(6);
+    // Su mazo, entero
+    expect(b.buildBossDeck(wall, 0).map(c => c.rank)).toContain('A');
+  });
+});

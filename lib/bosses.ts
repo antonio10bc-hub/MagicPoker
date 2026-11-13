@@ -19,6 +19,8 @@ export interface Boss {
   removed?: Rank[];
   /** La primera vez (no en revancha): piensa con la IA fácil */
   easy?: boolean;
+  /** La primera vez (no en revancha): estas vidas en vez de `lives` */
+  firstLives?: number;
 }
 
 export const BOSSES: Boss[] = [
@@ -27,8 +29,10 @@ export const BOSSES: Boss[] = [
   // El primero tras el tutorial, mucho más fácil: piensa con la IA fácil y no lleva ni el
   // As ni el Rey (casual: ~87 % de victorias; experto: ~95 %)
   { id: 'drifter', seal: null, lives: 3, removed: ['A', 'K'], easy: true },
-  { id: 'wall', seal: 'shield', lives: 3 },
-  { id: 'duelist', seal: 'double', lives: 4 },
+  // Los dos siguientes, algo más fáciles la primera vez (IA fácil y una vida menos), para
+  // que la curva suba poco a poco hasta el cuarto (casual: 65 % y 56 %; experto: 77 % y 74 %)
+  { id: 'wall', seal: 'shield', lives: 3, easy: true, firstLives: 2 },
+  { id: 'duelist', seal: 'double', lives: 4, easy: true, firstLives: 3 },
   { id: 'trickster', seal: 'shift', lives: 5 },
   { id: 'thief', seal: 'swap', lives: 5 },
   { id: 'matriarch', seal: 'life', lives: 5 },
@@ -68,7 +72,7 @@ export const bossSeals = (boss: Boss, level = 0): SealId[] => {
 };
 
 /** Vidas de un jefe (en revancha: +1, y +2 desde el nivel 3) */
-export const bossLives = (boss: Boss, level = 0) => boss.lives + (level >= 3 ? 2 : level >= 1 ? 1 : 0);
+export const bossLives = (boss: Boss, level = 0) => (level === 0 ? boss.firstLives ?? boss.lives : boss.lives + (level >= 3 ? 2 : 1));
 
 // --- PROGRESO (Local Storage, con suscripción para la interfaz) ---
 const KEY = 'magic_poker_progress';
