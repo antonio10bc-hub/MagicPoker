@@ -72,6 +72,16 @@ Pon tus cartas en cuatro huecos, frente a las del rival, y mira cómo chocan: ga
 | `itch/builds/MagicPoker-mac-apple-silicon.zip` | Upload → marcar **macOS** (nombre: "Mac (Apple Silicon: M1, M2, M3…)") |
 | `itch/builds/MagicPoker-mac-intel.zip` | Upload → marcar **macOS** (nombre: "Mac (Intel)") |
 
+### GIFs para la descripción
+
+En el editor de la descripción, botón de imagen → subir el GIF, en estos sitios:
+
+| GIF | Dónde |
+|---|---|
+| `itch/gifs/1-duel.gif` (560 px, 3 MB) | Después del primer párrafo (cómo chocan las cartas) |
+| `itch/gifs/2-the-spirit.gif` (630 px, 1 MB) | Después de **A spirit shows you the way** |
+| `itch/gifs/3-the-forest.gif` (630 px, 1,3 MB) | Después de **The Forest** |
+
 ### Tema de la página (Edit theme → Images)
 
 | Fichero | Campo | Ajuste recomendado |
