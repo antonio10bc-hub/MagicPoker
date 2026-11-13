@@ -72,6 +72,17 @@ Pon tus cartas en cuatro huecos, frente a las del rival, y mira cómo chocan: ga
 | `itch/builds/MagicPoker-mac-apple-silicon.zip` | Upload → marcar **macOS** (nombre: "Mac (Apple Silicon: M1, M2, M3…)") |
 | `itch/builds/MagicPoker-mac-intel.zip` | Upload → marcar **macOS** (nombre: "Mac (Intel)") |
 
+### Tema de la página (Edit theme → Images)
+
+| Fichero | Campo | Ajuste recomendado |
+|---|---|---|
+| `itch/theme/banner-960x300.png` (o `banner-1920x600.png`, más nítido) | **Banner** | Sustituye al título de la página: puedes ocultar el título en *Edit theme* |
+| `itch/theme/background-1920x1080.jpg` | **Background** | *Repeat*: No repeat · *Position*: Center top · fondo de página (BG color) `#0B0D0C` para que funda en los bordes |
+| `itch/theme/embed-bg-1280x720.jpg` | **Embed BG** | Se ve detrás del juego mientras carga |
+
+Colores del tema a juego con el juego: fondo `#0B0D0C`, fondo del texto `#14181A`, texto
+`#EDEBE0`, enlaces y botones `#FF4A1C` (el naranja del logo).
+
 ### Versión para el navegador (HTML5)
 
 1. *Kind of project*: **HTML** (así la página muestra el juego jugable arriba; las
