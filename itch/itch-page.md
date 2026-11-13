@@ -65,7 +65,7 @@ Pon tus cartas en cuatro huecos, frente a las del rival, y mira cómo chocan: ga
 
 | Fichero | En itch.io |
 |---|---|
-| `itch/cover-630x500.png` (o `cover-1260x1000.png`, más nítida, misma proporción) | Cover image |
+| `itch/cover-animated-630x500.gif` (animada, bucle de 3,6 s, 2 MB) o `itch/cover-630x500.png` (fija; `cover-1260x1000.png`, más nítida) | Cover image (el GIF se sube en el mismo campo) |
 | `itch/screenshots/1-duel.jpg` … `5-the-forest.jpg` | Screenshots |
 | `itch/builds/MagicPoker-web.zip` | Upload → marcar **This file will be played in the browser** |
 | `itch/builds/MagicPoker-windows.zip` | Upload → marcar **Windows** |
