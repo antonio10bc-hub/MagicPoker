@@ -1,0 +1,42 @@
+name: Tuit diario
+
+on:
+  schedule:
+    - cron: '39 17 * * *' # 18:39 en Madrid (horario de invierno; 19:39 en verano)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Solo elegir imagen y texto, sin publicar'
+        type: boolean
+        default: false
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm i --no-save twitter-api-v2@^1.24
+      - run: npx playwright install --with-deps chromium
+      # Oculta el indicador de Next.js en las capturas (solo en este job, no se guarda)
+      - run: sed -i 's/skipTrailingSlashRedirect: true,/skipTrailingSlashRedirect: true, devIndicators: false,/' next.config.ts
+      - name: Capturas (tests visuales)
+        run: npx playwright test --project=horizontal || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: test-results/**/*.png
+          retention-days: 3
+      - name: Publicar en X
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/tweet/post.mjs
